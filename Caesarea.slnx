@@ -1,0 +1,21 @@
+<Solution>
+  <Folder Name="/Apps/">
+    <Project Path="Apps/CommandCenter.Web/CommandCenter.Web.csproj" />
+    <Project Path="Apps/DemoControl.Web/DemoControl.Web.csproj" />
+  </Folder>
+  <Folder Name="/Services/">
+    <Project Path="Services/CommandCenter.Api/CommandCenter.Api.csproj" />
+    <Project Path="Services/DemoScenario.Api/DemoScenario.Api.csproj" />
+    <Project Path="Services/EnergyHub.Api/EnergyHub.Api.csproj" />
+    <Project Path="Services/SmartPole.Simulator.Api/SmartPole.Simulator.Api.csproj" />
+  </Folder>
+  <Folder Name="/Shared/" />
+  <Folder Name="/Shared/Contracts/">
+    <Project Path="Shared/Contracts/Caesarea.Contracts.csproj" />
+  </Folder>
+  <Folder Name="/Tests/">
+    <Project Path="Tests/Caesarea.Deterministic.Tests/Caesarea.Deterministic.Tests.csproj" />
+  </Folder>
+  <Project Path="Caesarea.AppHost/Caesarea.AppHost.csproj" />
+  <Project Path="Caesarea.ServiceDefaults/Caesarea.ServiceDefaults.csproj" />
+</Solution>

@@ -1,0 +1,305 @@
+@page "/"
+@implements IAsyncDisposable
+@inject CommandCenterApiClient ApiClient
+@inject IConfiguration Configuration
+
+<PageTitle>Caesarea Command Center</PageTitle>
+
+<div class="page-shell">
+    <header class="hero">
+        <div>
+            <p class="eyebrow">Caesarea Command and Control</p>
+            <h1>North Promenade Deterministic Operations</h1>
+            <p class="subtitle">Projector-friendly operational view for L-417. Stage: @StageName.</p>
+        </div>
+        <div class="hero-actions">
+            <button class="button secondary" @onclick="RefreshAsync" disabled="@_busy">Refresh</button>
+            <button class="button primary" @onclick="RestoreScheduledModeAsync" disabled="@_busy">Restore Scheduled Mode</button>
+        </div>
+    </header>
+
+    @if (!string.IsNullOrWhiteSpace(_message))
+    {
+        <section class="message-banner @(_messageIsError ? "error" : "success")">
+            <strong>@(_messageIsError ? "Attention:" : "Update:")</strong>
+            <span>@_message</span>
+        </section>
+    }
+
+    @if (_snapshot is null)
+    {
+        <section class="panel empty-state">
+            <p>Loading deterministic snapshot for L-417...</p>
+        </section>
+    }
+    else
+    {
+        <section class="layout-grid">
+            <article class="panel map-panel">
+                <div class="panel-heading">
+                    <h2>North Promenade Map</h2>
+                    <span class="stamp">@_snapshot.MapLabel</span>
+                </div>
+
+                <div class="promenade-map">
+                    <div class="promenade-line"></div>
+                    <div class="asset-node @LampClass">
+                        <span class="asset-id">@_snapshot.AssetId</span>
+                        <span class="asset-area">@_snapshot.Area</span>
+                        <span class="asset-state">Reported: @OnOff(_snapshot.OperationalState.ReportedIsOn)</span>
+                    </div>
+                </div>
+
+                <div class="map-caption">
+                    <span class="legend-chip green">Green = healthy reported state</span>
+                    <span class="legend-chip blue">Blue = deterministic control state</span>
+                </div>
+            </article>
+
+            <article class="panel state-panel">
+                <div class="panel-heading">
+                    <h2>Operational Snapshot</h2>
+                    <span class="stamp">Updated @FormatTimestamp(_lastRefreshed)</span>
+                </div>
+
+                <div class="state-grid">
+                    <div class="state-card">
+                        <span class="state-label">Reported State</span>
+                        <strong class="state-value @LampClass">@OnOff(_snapshot.OperationalState.ReportedIsOn)</strong>
+                    </div>
+                    <div class="state-card">
+                        <span class="state-label">Desired State</span>
+                        <strong class="state-value @DesiredClass">@OnOff(_snapshot.OperationalState.DesiredIsOn)</strong>
+                    </div>
+                    <div class="state-card">
+                        <span class="state-label">Daylight</span>
+                        <strong class="state-value">@YesNo(_snapshot.OperationalState.IsDaylight)</strong>
+                    </div>
+                    <div class="state-card">
+                        <span class="state-label">Schedule</span>
+                        <strong class="state-value">@OnOff(_snapshot.OperationalState.ExpectedScheduledState)</strong>
+                    </div>
+                    <div class="state-card">
+                        <span class="state-label">Manual Override</span>
+                        <strong class="state-value">@YesNo(_snapshot.OperationalState.ManualOverride)</strong>
+                    </div>
+                    <div class="state-card">
+                        <span class="state-label">Controller Health</span>
+                        <strong class="state-value @HealthClass">@_snapshot.OperationalState.ControllerHealth.Status</strong>
+                    </div>
+                </div>
+
+                <dl class="details-list">
+                    <div>
+                        <dt>Requires Lighting</dt>
+                        <dd>@YesNo(_snapshot.OperationalState.OperationContext.RequiresLighting)</dd>
+                    </div>
+                    <div>
+                        <dt>Security Context</dt>
+                        <dd>@_snapshot.OperationalState.OperationContext.Summary</dd>
+                    </div>
+                    <div>
+                        <dt>Desired/Reported Match</dt>
+                        <dd>@YesNo(DesiredMatchesReported)</dd>
+                    </div>
+                    <div>
+                        <dt>Recent Maintenance</dt>
+                        <dd>@MaintenanceText</dd>
+                    </div>
+                    <div>
+                        <dt>Last Command</dt>
+                        <dd>@LastCommandSummary</dd>
+                    </div>
+                </dl>
+            </article>
+
+            <article class="panel context-panel">
+                <div class="panel-heading">
+                    <h2>Scenario and Incident</h2>
+                    <span class="stamp">@_snapshot.CurrentScenario.Name</span>
+                </div>
+
+                <div class="context-stack">
+                    <div class="context-card">
+                        <span class="state-label">Current Scenario</span>
+                        <strong>@_snapshot.CurrentScenario.Name</strong>
+                        <p>@_snapshot.CurrentScenario.Description</p>
+                    </div>
+
+                    <div class="context-card">
+                        <span class="state-label">Open Incident</span>
+                        @if (_snapshot.OpenIncident is null)
+                        {
+                            <strong>None</strong>
+                            <p>No open incident is tracked for L-417.</p>
+                        }
+                        else
+                        {
+                            <strong>@_snapshot.OpenIncident.Id</strong>
+                            <p>@_snapshot.OpenIncident.Title</p>
+                            <p>@_snapshot.OpenIncident.Description</p>
+                        }
+                    </div>
+
+                    <div class="context-card">
+                        <span class="state-label">Controller Narrative</span>
+                        <strong>@_snapshot.OperationalState.ControllerHealth.Summary</strong>
+                        <p>Correlation-ready activity below shows command intent, Energy Hub confirmation, and any failure visibility.</p>
+                    </div>
+                </div>
+            </article>
+
+            <article class="panel timeline-panel">
+                <div class="panel-heading">
+                    <h2>Recent Activity Timeline</h2>
+                    <span class="stamp">@_snapshot.RecentActivity.Count item(s)</span>
+                </div>
+
+                <ul class="timeline">
+                    @foreach (var activity in _snapshot.RecentActivity)
+                    {
+                        <li class="timeline-item @(activity.IsSuccess ? "ok" : "alert")">
+                            <div class="timeline-meta">
+                                <span>@activity.Source</span>
+                                <span>@FormatTimestamp(activity.OccurredAt)</span>
+                            </div>
+                            <strong>@activity.Kind</strong>
+                            <p>@activity.Message</p>
+                            <small>Correlation: @activity.CorrelationId</small>
+                        </li>
+                    }
+                </ul>
+            </article>
+        </section>
+    }
+</div>
+
+@code {
+    private CommandCenterSnapshot? _snapshot;
+    private string? _message;
+    private bool _messageIsError;
+    private bool _busy;
+    private DateTimeOffset? _lastRefreshed;
+    private CancellationTokenSource? _pollingTokenSource;
+    private Task? _pollingTask;
+
+    private string StageName => Configuration["DemoStage"] ?? DemoStageNames.Deterministic;
+    private string LampClass => _snapshot?.OperationalState.ReportedIsOn == true ? "green" : "blue";
+    private string DesiredClass => DesiredMatchesReported ? "green" : "blue";
+    private string HealthClass => _snapshot?.OperationalState.ControllerHealth.Status == ControllerHealthStatus.Healthy ? "green" : "alert";
+    private bool DesiredMatchesReported => _snapshot?.OperationalState.DesiredIsOn == _snapshot?.OperationalState.ReportedIsOn;
+
+    private string MaintenanceText =>
+        _snapshot?.OperationalState.HasRecentMaintenance == true && _snapshot.OperationalState.LastMaintenanceTime is { } lastMaintenance
+            ? $"{FormatTimestamp(lastMaintenance)}"
+            : "No recent maintenance recorded";
+
+    private string LastCommandSummary => _snapshot?.OperationalState.LastCommand?.Summary ?? "No recent command";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSnapshotAsync(CancellationToken.None, showErrorIfMissing: true);
+
+        _pollingTokenSource = new CancellationTokenSource();
+        _pollingTask = PollSnapshotAsync(_pollingTokenSource.Token);
+    }
+
+    private async Task PollSnapshotAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(3));
+
+            while (await timer.WaitForNextTickAsync(cancellationToken))
+            {
+                await InvokeAsync(async () =>
+                {
+                    await LoadSnapshotAsync(cancellationToken, showErrorIfMissing: _snapshot is null);
+                    StateHasChanged();
+                });
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
+    private async Task RefreshAsync()
+    {
+        await LoadSnapshotAsync(CancellationToken.None, showErrorIfMissing: true);
+    }
+
+    private async Task RestoreScheduledModeAsync()
+    {
+        _busy = true;
+
+        try
+        {
+            var result = await ApiClient.RestoreScheduledModeAsync(CancellationToken.None);
+            _message = result.Message;
+            _messageIsError = !result.Succeeded;
+        }
+        catch (Exception exception)
+        {
+            _message = $"Restore Scheduled Mode could not be completed: {exception.Message}";
+            _messageIsError = true;
+        }
+        finally
+        {
+            _busy = false;
+            await LoadSnapshotAsync(CancellationToken.None, showErrorIfMissing: true);
+        }
+    }
+
+    private async Task LoadSnapshotAsync(CancellationToken cancellationToken, bool showErrorIfMissing)
+    {
+        try
+        {
+            _snapshot = await ApiClient.GetSnapshotAsync(cancellationToken);
+            _lastRefreshed = DateTimeOffset.Now;
+
+            if (!_messageIsError)
+            {
+                _message = null;
+            }
+        }
+        catch (Exception exception)
+        {
+            if (showErrorIfMissing || _snapshot is null)
+            {
+                _message = $"Unable to load the authoritative snapshot: {exception.Message}";
+                _messageIsError = true;
+            }
+        }
+    }
+
+    private static string OnOff(bool value) => value ? "On" : "Off";
+
+    private static string YesNo(bool value) => value ? "Yes" : "No";
+
+    private static string FormatTimestamp(DateTimeOffset? value) =>
+        value?.ToLocalTime().ToString("HH:mm:ss") ?? "n/a";
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_pollingTokenSource is null)
+        {
+            return;
+        }
+
+        await _pollingTokenSource.CancelAsync();
+
+        if (_pollingTask is not null)
+        {
+            try
+            {
+                await _pollingTask;
+            }
+            catch (OperationCanceledException)
+            {
+            }
+        }
+
+        _pollingTokenSource.Dispose();
+    }
+}

@@ -1,0 +1,192 @@
+@page "/"
+@implements IAsyncDisposable
+@inject DemoScenarioApiClient ApiClient
+@inject IConfiguration Configuration
+
+<PageTitle>Caesarea Demo Control</PageTitle>
+
+<div class="page-shell">
+    <header class="hero">
+        <div>
+            <p class="eyebrow">Presenter Only</p>
+            <h1>Deterministic Scenario Control</h1>
+            <p class="subtitle">Use the six curated Stage 0 scenarios to drive the Energy and Command Center vertical slice. Stage: @StageName.</p>
+        </div>
+        <div class="hero-actions">
+            <button class="button secondary" @onclick="RefreshAsync" disabled="@_busy">Refresh</button>
+            <button class="button primary" @onclick="ResetAsync" disabled="@_busy">Reset to Normal Operation</button>
+        </div>
+    </header>
+
+    @if (!string.IsNullOrWhiteSpace(_message))
+    {
+        <section class="message-banner @(_messageIsError ? "error" : "success")">
+            <strong>@(_messageIsError ? "Attention:" : "Update:")</strong>
+            <span>@_message</span>
+        </section>
+    }
+
+    @if (_catalog is null)
+    {
+        <section class="panel empty-state">
+            <p>Loading scenario catalog...</p>
+        </section>
+    }
+    else
+    {
+        <section class="panel current-panel">
+            <div class="panel-heading">
+                <h2>Current Scenario</h2>
+                <span class="stamp">@_catalog.CurrentScenario.AppliedAt.ToLocalTime().ToString("HH:mm:ss")</span>
+            </div>
+            <strong class="scenario-name">@_catalog.CurrentScenario.Name</strong>
+            <p>@_catalog.CurrentScenario.Description</p>
+        </section>
+
+        <section class="scenario-grid">
+            @foreach (var scenario in _catalog.Scenarios)
+            {
+                <article class="panel scenario-card @(scenario.Id == _catalog.CurrentScenario.Id ? "active" : string.Empty)">
+                    <span class="card-tag">@scenario.Id</span>
+                    <h2>@scenario.Name</h2>
+                    <p>@scenario.Description</p>
+                    <button class="button secondary" @onclick="() => ApplyScenarioAsync(scenario.Id)" disabled="@_busy">
+                        Apply Scenario
+                    </button>
+                </article>
+            }
+        </section>
+    }
+</div>
+
+@code {
+    private ScenarioCatalogResponse? _catalog;
+    private string? _message;
+    private bool _messageIsError;
+    private bool _busy;
+    private CancellationTokenSource? _pollingTokenSource;
+    private Task? _pollingTask;
+
+    private string StageName => Configuration["DemoStage"] ?? DemoStageNames.Deterministic;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCatalogAsync(CancellationToken.None, showErrors: true);
+
+        _pollingTokenSource = new CancellationTokenSource();
+        _pollingTask = PollCatalogAsync(_pollingTokenSource.Token);
+    }
+
+    private async Task PollCatalogAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(4));
+
+            while (await timer.WaitForNextTickAsync(cancellationToken))
+            {
+                await InvokeAsync(async () =>
+                {
+                    await LoadCatalogAsync(cancellationToken, showErrors: _catalog is null);
+                    StateHasChanged();
+                });
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
+    private async Task RefreshAsync()
+    {
+        await LoadCatalogAsync(CancellationToken.None, showErrors: true);
+    }
+
+    private async Task ApplyScenarioAsync(ScenarioId scenarioId)
+    {
+        _busy = true;
+
+        try
+        {
+            var result = await ApiClient.ApplyScenarioAsync(scenarioId, CancellationToken.None);
+            _message = result.Message;
+            _messageIsError = !result.Succeeded;
+        }
+        catch (Exception exception)
+        {
+            _message = $"Scenario application failed: {exception.Message}";
+            _messageIsError = true;
+        }
+        finally
+        {
+            _busy = false;
+            await LoadCatalogAsync(CancellationToken.None, showErrors: true);
+        }
+    }
+
+    private async Task ResetAsync()
+    {
+        _busy = true;
+
+        try
+        {
+            var result = await ApiClient.ResetAsync(CancellationToken.None);
+            _message = result.Message;
+            _messageIsError = !result.Succeeded;
+        }
+        catch (Exception exception)
+        {
+            _message = $"Reset failed: {exception.Message}";
+            _messageIsError = true;
+        }
+        finally
+        {
+            _busy = false;
+            await LoadCatalogAsync(CancellationToken.None, showErrors: true);
+        }
+    }
+
+    private async Task LoadCatalogAsync(CancellationToken cancellationToken, bool showErrors)
+    {
+        try
+        {
+            _catalog = await ApiClient.GetCatalogAsync(cancellationToken);
+
+            if (!_messageIsError)
+            {
+                _message = null;
+            }
+        }
+        catch (Exception exception)
+        {
+            if (showErrors || _catalog is null)
+            {
+                _message = $"Unable to load the demo scenario catalog: {exception.Message}";
+                _messageIsError = true;
+            }
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_pollingTokenSource is null)
+        {
+            return;
+        }
+
+        await _pollingTokenSource.CancelAsync();
+
+        if (_pollingTask is not null)
+        {
+            try
+            {
+                await _pollingTask;
+            }
+            catch (OperationCanceledException)
+            {
+            }
+        }
+
+        _pollingTokenSource.Dispose();
+    }
+}
