@@ -67,7 +67,7 @@ public sealed class ScenarioCatalog(TimeProvider timeProvider)
                     true,
                     OperationalContext.None,
                     SmartPoleBehaviorConfiguration.Default),
-                new EnergyScenarioSyncRequest(true, null, "Energy Hub synchronized to the Forgotten Override scenario."),
+                new EnergyScenarioSyncRequest(true, null, "Energy Hub confirmed the customer-reported daylight lighting anomaly."),
                 new CustomerReportRecord(
                     "REPORT-L417-001",
                     DemoAssets.StreetlightAssetId,

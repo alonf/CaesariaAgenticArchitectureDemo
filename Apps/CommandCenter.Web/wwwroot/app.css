@@ -65,6 +65,10 @@ body {
     font-family: "Segoe UI", Aptos, Calibri, -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
+html {
+    font-size: 18px;
+}
+
 button {
     color: inherit;
     font: inherit;
@@ -248,7 +252,7 @@ svg {
     height: calc(100vh - 120px);
     min-height: 680px;
     display: grid;
-    grid-template-columns: 260px minmax(500px, 1fr) 340px;
+    grid-template-columns: 290px minmax(560px, 1fr) 390px;
     overflow: hidden;
 }
 
@@ -660,12 +664,12 @@ svg {
 .customer-report-pin {
     position: absolute;
     z-index: 5;
-    width: 292px;
-    min-height: 148px;
-    padding: 8px;
+    width: 370px;
+    min-height: 192px;
+    padding: 10px;
     display: grid;
-    grid-template-columns: 82px 1fr;
-    gap: 10px;
+    grid-template-columns: 108px 1fr;
+    gap: 14px;
     background: var(--cp-panel-strong);
     border: 1px solid var(--cp-accent);
     border-radius: 0.625rem;
@@ -673,23 +677,23 @@ svg {
 }
 
 .customer-report-pin img {
-    width: 82px;
-    height: 132px;
+    width: 108px;
+    height: 172px;
     object-fit: cover;
     object-position: center;
     border: 1px solid var(--cp-border);
     border-radius: 0.625rem;
 }
 
-.report-connector {
+.report-arrow {
     position: absolute;
-    top: -25px;
-    left: -22px;
-    width: 28px;
-    height: 34px;
-    border-right: 2px solid var(--cp-accent);
-    border-bottom: 2px solid var(--cp-accent);
-    transform: rotate(-30deg);
+    top: -82px;
+    left: -98px;
+    width: 110px;
+    height: 90px;
+    color: var(--cp-accent);
+    overflow: visible;
+    stroke-width: 5;
 }
 
 .report-copy {
@@ -701,24 +705,24 @@ svg {
     align-items: center;
     gap: 6px;
     color: var(--cp-accent);
-    font-size: 0.64rem;
+    font-size: 0.72rem;
     font-weight: 750;
     letter-spacing: 0.04em;
     text-transform: uppercase;
 }
 
 .report-label i {
-    width: 7px;
-    height: 7px;
+    width: 9px;
+    height: 9px;
     display: inline-block;
     background: var(--cp-accent);
     border-radius: 50%;
 }
 
 .customer-report-pin blockquote {
-    margin: 9px 0 8px;
+    margin: 12px 0 10px;
     color: var(--cp-text);
-    font-size: 0.78rem;
+    font-size: 0.92rem;
     font-style: normal;
     font-weight: 650;
     line-height: 1.4;
@@ -727,7 +731,7 @@ svg {
 .customer-report-pin small {
     display: block;
     color: var(--cp-text-muted);
-    font-size: 0.62rem;
+    font-size: 0.7rem;
 }
 
 .map-legend {

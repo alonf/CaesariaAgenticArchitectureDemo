@@ -198,7 +198,10 @@
                     @if (_snapshot.CustomerReport is { } customerReport)
                     {
                         <article class="customer-report-pin" style="left: 52%; top: 48%;">
-                            <span class="report-connector"></span>
+                            <svg class="report-arrow" viewBox="0 0 110 90" aria-hidden="true">
+                                <path d="M104 84C82 70 60 45 18 16" />
+                                <path d="m20 31-4-17 18 2" />
+                            </svg>
                             <img src="@customerReport.ImageUrl" alt="Customer photo showing streetlight L-417 illuminated during daylight" />
                             <div class="report-copy">
                                 <span class="report-label"><i></i> Incoming customer report</span>
