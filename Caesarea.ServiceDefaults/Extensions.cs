@@ -1,4 +1,3 @@
-using System.Text.Json.Serialization;
 using Caesarea.ServiceDefaults;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
@@ -38,7 +37,7 @@ public static class Extensions
         builder.Services.AddSingleton(TimeProvider.System);
         builder.Services.ConfigureHttpJsonOptions(options =>
         {
-            options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+            CaesareaJsonDefaults.Configure(options.SerializerOptions);
         });
 
         builder.Services.ConfigureHttpClientDefaults(http =>

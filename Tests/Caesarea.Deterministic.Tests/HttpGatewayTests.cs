@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using CommandCenter.Api.Services;
 using DemoScenario.Api.Services;
 using EnergyHub.Api.Services;
@@ -9,13 +10,15 @@ namespace Caesarea.Deterministic.Tests;
 
 public sealed class HttpGatewayTests
 {
+    private static readonly JsonSerializerOptions SerializerOptions = CaesareaJsonDefaults.CreateSerializerOptions();
+
     [Fact]
     public async Task SmartPoleGatewayReadsStateAndPropagatesCorrelationId()
     {
         var state = CreatePhysicalState();
         var handler = new RecordingHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
         {
-            Content = JsonContent.Create(state)
+            Content = JsonContent.Create(state, options: SerializerOptions)
         });
         var gateway = new HttpSmartPoleGateway(CreateClient(handler), TimeProvider.System, NullLogger<HttpSmartPoleGateway>.Instance);
 

@@ -6,6 +6,8 @@ namespace EnergyHub.Api.Services;
 /// <inheritdoc cref="ISmartPoleGateway"/>
 public sealed partial class HttpSmartPoleGateway(HttpClient httpClient, TimeProvider timeProvider, ILogger<HttpSmartPoleGateway> logger) : ISmartPoleGateway
 {
+    private static readonly JsonSerializerOptions SerializerOptions = CaesareaJsonDefaults.CreateSerializerOptions();
+
     /// <inheritdoc />
     public async Task<SmartPolePhysicalState> GetStateAsync(string assetId, string correlationId, CancellationToken cancellationToken)
     {
@@ -26,7 +28,7 @@ public sealed partial class HttpSmartPoleGateway(HttpClient httpClient, TimeProv
 
             try
             {
-                return await response.Content.ReadFromJsonAsync<SmartPolePhysicalState>(cancellationToken)
+                return await response.Content.ReadFromJsonAsync<SmartPolePhysicalState>(SerializerOptions, cancellationToken)
                     ?? throw new InvalidOperationException("SmartPole state response was empty.");
             }
             catch (JsonException exception)
@@ -67,7 +69,7 @@ public sealed partial class HttpSmartPoleGateway(HttpClient httpClient, TimeProv
             {
                 try
                 {
-                    return await response.Content.ReadFromJsonAsync<SmartPoleCommandResult>(cancellationToken)
+                    return await response.Content.ReadFromJsonAsync<SmartPoleCommandResult>(SerializerOptions, cancellationToken)
                         ?? throw new InvalidOperationException("SmartPole command response was empty.");
                 }
                 catch (JsonException exception)
@@ -115,7 +117,7 @@ public sealed partial class HttpSmartPoleGateway(HttpClient httpClient, TimeProv
 
         if (body is not null)
         {
-            request.Content = JsonContent.Create(body);
+            request.Content = JsonContent.Create(body, options: SerializerOptions);
         }
 
         return request;
@@ -125,7 +127,7 @@ public sealed partial class HttpSmartPoleGateway(HttpClient httpClient, TimeProv
     {
         try
         {
-            var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>(cancellationToken);
+            var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>(SerializerOptions, cancellationToken);
             return problem?.Detail ?? problem?.Title;
         }
         catch (Exception exception) when (exception is JsonException or InvalidOperationException or NotSupportedException)

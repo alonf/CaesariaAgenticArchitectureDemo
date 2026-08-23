@@ -125,6 +125,8 @@ public sealed partial class HttpCommandCenterScenarioClient(HttpClient httpClien
 
 file static class ScenarioHttpRequestSender
 {
+    private static readonly JsonSerializerOptions SerializerOptions = CaesareaJsonDefaults.CreateSerializerOptions();
+
     public static async Task SendAsync(
         HttpClient httpClient,
         ILogger logger,
@@ -166,7 +168,7 @@ file static class ScenarioHttpRequestSender
     {
         try
         {
-            var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>(cancellationToken);
+            var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>(SerializerOptions, cancellationToken);
             return problem?.Detail ?? problem?.Title;
         }
         catch (Exception exception) when (exception is JsonException or InvalidOperationException or NotSupportedException)
@@ -179,6 +181,8 @@ file static class ScenarioHttpRequestSender
 
 file static class ScenarioHttpRequestFactory
 {
+    private static readonly JsonSerializerOptions SerializerOptions = CaesareaJsonDefaults.CreateSerializerOptions();
+
     public static HttpRequestMessage CreateRequest(HttpMethod method, string relativeUri, string correlationId, object? body = null)
     {
         var request = new HttpRequestMessage(method, relativeUri);
@@ -186,7 +190,7 @@ file static class ScenarioHttpRequestFactory
 
         if (body is not null)
         {
-            request.Content = JsonContent.Create(body);
+            request.Content = JsonContent.Create(body, options: SerializerOptions);
         }
 
         return request;

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CommandCenter.Web.Configuration;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
@@ -6,6 +7,7 @@ namespace CommandCenter.Web.Services;
 
 internal sealed class CommandCenterApiClient
 {
+    private static readonly JsonSerializerOptions SerializerOptions = CaesareaJsonDefaults.CreateSerializerOptions();
     private readonly HttpClient _httpClient;
     private readonly CommandCenterWebOptions _options;
 
@@ -28,7 +30,7 @@ internal sealed class CommandCenterApiClient
 
         response.EnsureSuccessStatusCode();
 
-        return await response.Content.ReadFromJsonAsync<CommandCenterSnapshot>(cancellationToken)
+        return await response.Content.ReadFromJsonAsync<CommandCenterSnapshot>(SerializerOptions, cancellationToken)
             ?? throw new InvalidOperationException("Command Center snapshot response was empty.");
     }
 
@@ -44,11 +46,11 @@ internal sealed class CommandCenterApiClient
 
         if (response.IsSuccessStatusCode)
         {
-            var result = await response.Content.ReadFromJsonAsync<RestoreScheduledModeResult>(cancellationToken);
+            var result = await response.Content.ReadFromJsonAsync<RestoreScheduledModeResult>(SerializerOptions, cancellationToken);
             return new CommandInvocationResult(true, result?.Summary ?? "Restore Scheduled Mode completed.", effectiveCorrelationId);
         }
 
-        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>(cancellationToken);
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>(SerializerOptions, cancellationToken);
         return new CommandInvocationResult(false, problem?.Detail ?? "Restore Scheduled Mode failed.", effectiveCorrelationId);
     }
 

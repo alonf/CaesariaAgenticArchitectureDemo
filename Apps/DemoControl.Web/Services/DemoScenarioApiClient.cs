@@ -1,9 +1,12 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DemoControl.Web.Services;
 
 internal sealed class DemoScenarioApiClient(HttpClient httpClient)
 {
+    private static readonly JsonSerializerOptions SerializerOptions = CaesareaJsonDefaults.CreateSerializerOptions();
+
     public async Task<ScenarioCatalogResponse> GetCatalogAsync(CancellationToken cancellationToken)
     {
         var correlationId = CorrelationIds.Create();
@@ -12,7 +15,7 @@ internal sealed class DemoScenarioApiClient(HttpClient httpClient)
 
         response.EnsureSuccessStatusCode();
 
-        return await response.Content.ReadFromJsonAsync<ScenarioCatalogResponse>(cancellationToken)
+        return await response.Content.ReadFromJsonAsync<ScenarioCatalogResponse>(SerializerOptions, cancellationToken)
             ?? throw new InvalidOperationException("Scenario catalog response was empty.");
     }
 
@@ -25,11 +28,11 @@ internal sealed class DemoScenarioApiClient(HttpClient httpClient)
 
         if (response.IsSuccessStatusCode)
         {
-            var result = await response.Content.ReadFromJsonAsync<ScenarioApplicationResult>(cancellationToken);
+            var result = await response.Content.ReadFromJsonAsync<ScenarioApplicationResult>(SerializerOptions, cancellationToken);
             return new ScenarioApiCommandResult(true, result?.Summary ?? "Scenario applied.", effectiveCorrelationId);
         }
 
-        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>(cancellationToken);
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>(SerializerOptions, cancellationToken);
         return new ScenarioApiCommandResult(false, problem?.Detail ?? "Scenario apply failed.", effectiveCorrelationId);
     }
 
@@ -42,11 +45,11 @@ internal sealed class DemoScenarioApiClient(HttpClient httpClient)
 
         if (response.IsSuccessStatusCode)
         {
-            var result = await response.Content.ReadFromJsonAsync<ScenarioApplicationResult>(cancellationToken);
+            var result = await response.Content.ReadFromJsonAsync<ScenarioApplicationResult>(SerializerOptions, cancellationToken);
             return new ScenarioApiCommandResult(true, result?.Summary ?? "Scenario reset completed.", effectiveCorrelationId);
         }
 
-        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>(cancellationToken);
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>(SerializerOptions, cancellationToken);
         return new ScenarioApiCommandResult(false, problem?.Detail ?? "Scenario reset failed.", effectiveCorrelationId);
     }
 

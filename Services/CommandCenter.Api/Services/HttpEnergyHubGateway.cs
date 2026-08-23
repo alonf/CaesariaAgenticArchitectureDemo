@@ -7,6 +7,8 @@ namespace CommandCenter.Api.Services;
 /// <inheritdoc cref="IEnergyHubGateway"/>
 public sealed partial class HttpEnergyHubGateway(HttpClient httpClient, TimeProvider timeProvider, ILogger<HttpEnergyHubGateway> logger) : IEnergyHubGateway
 {
+    private static readonly JsonSerializerOptions SerializerOptions = CaesareaJsonDefaults.CreateSerializerOptions();
+
     /// <inheritdoc />
     public async Task<EnergyOperationalTwin> GetStateAsync(string assetId, string correlationId, CancellationToken cancellationToken)
     {
@@ -27,7 +29,7 @@ public sealed partial class HttpEnergyHubGateway(HttpClient httpClient, TimeProv
 
             try
             {
-                return await response.Content.ReadFromJsonAsync<EnergyOperationalTwin>(cancellationToken)
+                return await response.Content.ReadFromJsonAsync<EnergyOperationalTwin>(SerializerOptions, cancellationToken)
                     ?? throw new InvalidOperationException("Energy Hub state response was empty.");
             }
             catch (JsonException exception)
@@ -73,7 +75,7 @@ public sealed partial class HttpEnergyHubGateway(HttpClient httpClient, TimeProv
 
             try
             {
-                return await response.Content.ReadFromJsonAsync<ActivityRecord[]>(cancellationToken)
+                return await response.Content.ReadFromJsonAsync<ActivityRecord[]>(SerializerOptions, cancellationToken)
                     ?? [];
             }
             catch (JsonException exception)
@@ -113,7 +115,7 @@ public sealed partial class HttpEnergyHubGateway(HttpClient httpClient, TimeProv
             {
                 try
                 {
-                    return await response.Content.ReadFromJsonAsync<RestoreScheduledModeResult>(cancellationToken)
+                    return await response.Content.ReadFromJsonAsync<RestoreScheduledModeResult>(SerializerOptions, cancellationToken)
                         ?? throw new InvalidOperationException("Energy Hub command response was empty.");
                 }
                 catch (JsonException exception)
@@ -190,7 +192,7 @@ public sealed partial class HttpEnergyHubGateway(HttpClient httpClient, TimeProv
     {
         try
         {
-            return await response.Content.ReadFromJsonAsync<ProblemDetails>(cancellationToken);
+            return await response.Content.ReadFromJsonAsync<ProblemDetails>(SerializerOptions, cancellationToken);
         }
         catch (Exception exception) when (exception is JsonException or InvalidOperationException or NotSupportedException)
         {
