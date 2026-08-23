@@ -1,4 +1,3 @@
-using Caesarea.Contracts;
 using CommandCenter.Api.Services;
 
 namespace Caesarea.Deterministic.Tests;
@@ -6,7 +5,7 @@ namespace Caesarea.Deterministic.Tests;
 public sealed class CommandCenterServiceTests
 {
     [Fact]
-    public void GetIncident_ReturnsSeededIncident()
+    public void GetIncidentReturnsSeededIncident()
     {
         var clock = new TestTimeProvider();
         var service = CreateService(clock);
@@ -35,7 +34,7 @@ public sealed class CommandCenterServiceTests
     }
 
     [Fact]
-    public async Task GetSnapshotAsync_MergesLocalAndEnergyActivity()
+    public async Task GetSnapshotAsyncMergesLocalAndEnergyActivity()
     {
         var clock = new TestTimeProvider();
         var service = CreateService(clock);
@@ -67,7 +66,34 @@ public sealed class CommandCenterServiceTests
         Assert.Equal("Normal Operation", snapshot.CurrentScenario.Name);
     }
 
-    private static CommandCenterService CreateService(TestTimeProvider clock)
+    [Fact]
+    public async Task RestoreScheduledModeReturnsFailureWhenEnergyHubGatewayThrows()
+    {
+        var clock = new TestTimeProvider();
+        var gateway = CreateGateway(clock);
+        var service = CreateService(clock, gateway);
+        gateway.OnRestoreScheduledModeAsync = static (assetId, correlationId, cancellationToken) => throw new HttpRequestException("Energy Hub unavailable.");
+
+        var result = await service.RestoreScheduledModeAsync(DemoAssets.StreetlightAssetId, "gateway-failure-corr", CancellationToken.None);
+        var activity = await service.GetRecentActivityAsync(DemoAssets.StreetlightAssetId, 10, "gateway-failure-corr", CancellationToken.None);
+
+        Assert.Equal(CommandExecutionStatus.Failed, result.Status);
+        Assert.Null(result.DesiredIsOn);
+        Assert.Null(result.ReportedIsOn);
+        Assert.Contains(activity, record => !record.IsSuccess && record.CorrelationId == "gateway-failure-corr");
+    }
+
+    private static CommandCenterService CreateService(TestTimeProvider clock, FakeEnergyHubGateway? gateway = null) =>
+        new(
+            gateway ?? CreateGateway(clock),
+            new IncidentModule(),
+            new ActivityTimelineModule(),
+            new ScenarioContextModule(clock),
+            new SpatialContextModule(),
+            clock,
+            NullLogger<CommandCenterService>.Instance);
+
+    private static FakeEnergyHubGateway CreateGateway(TestTimeProvider clock)
     {
         var state = new EnergyOperationalTwin(
             DemoAssets.StreetlightAssetId,
@@ -111,12 +137,6 @@ public sealed class CommandCenterServiceTests
                 clock.GetUtcNow())
         };
 
-        return new CommandCenterService(
-            energyGateway,
-            new IncidentModule(),
-            new ActivityTimelineModule(),
-            new ScenarioContextModule(clock),
-            new SpatialContextModule(),
-            clock);
+        return energyGateway;
     }
 }

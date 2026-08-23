@@ -1,19 +1,30 @@
-using System.Net.Http.Json;
-using Caesarea.Contracts;
+using CommandCenter.Web.Configuration;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 
 namespace CommandCenter.Web.Services;
 
-public sealed class CommandCenterApiClient(HttpClient httpClient)
+internal sealed class CommandCenterApiClient
 {
+    private readonly HttpClient _httpClient;
+    private readonly CommandCenterWebOptions _options;
+
+    public CommandCenterApiClient(HttpClient httpClient, IOptions<CommandCenterWebOptions> options)
+    {
+        _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+        _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
+        ArgumentException.ThrowIfNullOrWhiteSpace(_options.AssetId);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(_options.SnapshotActivityLimit);
+    }
+
     public async Task<CommandCenterSnapshot> GetSnapshotAsync(CancellationToken cancellationToken)
     {
         var correlationId = CorrelationIds.Create();
         using var request = CreateRequest(
             HttpMethod.Get,
-            $"/api/command-center/snapshot/{DemoAssets.StreetlightAssetId}?limit=16",
+            $"/api/command-center/snapshot/{Uri.EscapeDataString(_options.AssetId)}?limit={_options.SnapshotActivityLimit}",
             correlationId);
-        using var response = await httpClient.SendAsync(request, cancellationToken);
+        using var response = await _httpClient.SendAsync(request, cancellationToken);
 
         response.EnsureSuccessStatusCode();
 
@@ -26,9 +37,9 @@ public sealed class CommandCenterApiClient(HttpClient httpClient)
         var correlationId = CorrelationIds.Create();
         using var request = CreateRequest(
             HttpMethod.Post,
-            $"/api/command-center/assets/{DemoAssets.StreetlightAssetId}/restore-scheduled-mode",
+            $"/api/command-center/assets/{Uri.EscapeDataString(_options.AssetId)}/restore-scheduled-mode",
             correlationId);
-        using var response = await httpClient.SendAsync(request, cancellationToken);
+        using var response = await _httpClient.SendAsync(request, cancellationToken);
         var effectiveCorrelationId = TryGetCorrelationId(response) ?? correlationId;
 
         if (response.IsSuccessStatusCode)
@@ -54,4 +65,4 @@ public sealed class CommandCenterApiClient(HttpClient httpClient)
             : null;
 }
 
-public sealed record CommandInvocationResult(bool Succeeded, string Message, string CorrelationId);
+internal sealed record CommandInvocationResult(bool Succeeded, string Message, string CorrelationId);

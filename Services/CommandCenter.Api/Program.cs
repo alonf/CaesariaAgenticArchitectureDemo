@@ -1,15 +1,20 @@
-using Caesarea.Contracts;
-using Caesarea.ServiceDefaults;
+using CommandCenter.Api.Configuration;
 using CommandCenter.Api.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
 builder.Services.AddOpenApi();
-builder.Services.AddHttpClient<IEnergyHubGateway, HttpEnergyHubGateway>(client =>
+builder.Services.AddOptions<CommandCenterApiOptions>()
+    .BindConfiguration(CommandCenterApiOptions.SectionName)
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+builder.Services.AddHttpClient<IEnergyHubGateway, HttpEnergyHubGateway>((serviceProvider, client) =>
 {
-    client.BaseAddress = new Uri("https+http://energyhub-api");
+    var options = serviceProvider.GetRequiredService<IOptions<CommandCenterApiOptions>>().Value;
+    client.BaseAddress = new Uri(options.EnergyHubBaseUri, UriKind.Absolute);
 });
 builder.Services.AddSingleton<IncidentModule>();
 builder.Services.AddSingleton<ActivityTimelineModule>();
@@ -37,15 +42,42 @@ commandCenter.MapPost("/assets/{assetId}/restore-scheduled-mode", RestoreSchedul
 
 var admin = commandCenter.MapGroup("/admin");
 admin.MapPost("/reset", Reset);
-admin.MapPost("/scenario", ApplyScenarioContext);
+admin.MapPost("/scenario", ApplyScenarioContext)
+    .ValidateBody<CommandCenterScenarioContext>();
 
 app.Run();
 
-static async Task<IResult> GetSnapshotAsync(HttpContext context, string assetId, int? limit, CommandCenterService service, CancellationToken cancellationToken)
+static async Task<IResult> GetSnapshotAsync(
+    HttpContext context,
+    string assetId,
+    int? limit,
+    CommandCenterService service,
+    IOptions<CommandCenterApiOptions> options,
+    CancellationToken cancellationToken)
 {
     try
     {
-        return TypedResults.Ok(await service.GetSnapshotAsync(assetId, limit ?? 12, context.GetCorrelationId(), cancellationToken));
+        var correlationId = context.GetCorrelationId();
+        var resolvedAssetId = ValidateAssetId(assetId);
+        var resolvedLimit = ResolveLimit(limit, options.Value.DefaultSnapshotActivityLimit, options.Value.MaxActivityLimit);
+
+        return TypedResults.Ok(await service.GetSnapshotAsync(resolvedAssetId, resolvedLimit, correlationId, cancellationToken));
+    }
+    catch (ArgumentOutOfRangeException exception)
+    {
+        return TypedResults.BadRequest(ProblemDetailsFactory.Create(
+            StatusCodes.Status400BadRequest,
+            "Invalid request",
+            exception.Message,
+            context.GetCorrelationId()));
+    }
+    catch (ArgumentException exception) when (string.IsNullOrWhiteSpace(assetId))
+    {
+        return TypedResults.BadRequest(ProblemDetailsFactory.Create(
+            StatusCodes.Status400BadRequest,
+            "Invalid request",
+            exception.Message,
+            context.GetCorrelationId()));
     }
     catch (ArgumentException exception)
     {
@@ -57,11 +89,37 @@ static async Task<IResult> GetSnapshotAsync(HttpContext context, string assetId,
     }
 }
 
-static async Task<IResult> GetActivityAsync(HttpContext context, string assetId, int? limit, CommandCenterService service, CancellationToken cancellationToken)
+static async Task<IResult> GetActivityAsync(
+    HttpContext context,
+    string assetId,
+    int? limit,
+    CommandCenterService service,
+    IOptions<CommandCenterApiOptions> options,
+    CancellationToken cancellationToken)
 {
     try
     {
-        return TypedResults.Ok(await service.GetRecentActivityAsync(assetId, limit ?? 20, context.GetCorrelationId(), cancellationToken));
+        var correlationId = context.GetCorrelationId();
+        var resolvedAssetId = ValidateAssetId(assetId);
+        var resolvedLimit = ResolveLimit(limit, options.Value.DefaultRecentActivityLimit, options.Value.MaxActivityLimit);
+
+        return TypedResults.Ok(await service.GetRecentActivityAsync(resolvedAssetId, resolvedLimit, correlationId, cancellationToken));
+    }
+    catch (ArgumentOutOfRangeException exception)
+    {
+        return TypedResults.BadRequest(ProblemDetailsFactory.Create(
+            StatusCodes.Status400BadRequest,
+            "Invalid request",
+            exception.Message,
+            context.GetCorrelationId()));
+    }
+    catch (ArgumentException exception) when (string.IsNullOrWhiteSpace(assetId))
+    {
+        return TypedResults.BadRequest(ProblemDetailsFactory.Create(
+            StatusCodes.Status400BadRequest,
+            "Invalid request",
+            exception.Message,
+            context.GetCorrelationId()));
     }
     catch (ArgumentException exception)
     {
@@ -75,6 +133,27 @@ static async Task<IResult> GetActivityAsync(HttpContext context, string assetId,
 
 static IResult GetIncident(HttpContext context, string incidentId, CommandCenterService service)
 {
+    try
+    {
+        ValidateRequiredText(incidentId, nameof(incidentId));
+    }
+    catch (ArgumentException exception) when (string.IsNullOrWhiteSpace(incidentId))
+    {
+        return TypedResults.BadRequest(ProblemDetailsFactory.Create(
+            StatusCodes.Status400BadRequest,
+            "Invalid request",
+            exception.Message,
+            context.GetCorrelationId()));
+    }
+    catch (ArgumentException exception)
+    {
+        return TypedResults.NotFound(ProblemDetailsFactory.Create(
+            StatusCodes.Status404NotFound,
+            "Asset not found",
+            exception.Message,
+            context.GetCorrelationId()));
+    }
+
     var incident = service.GetIncident(incidentId);
 
     return incident is null
@@ -90,7 +169,7 @@ static async Task<IResult> RestoreScheduledModeAsync(HttpContext context, string
 {
     try
     {
-        var result = await service.RestoreScheduledModeAsync(assetId, context.GetCorrelationId(), cancellationToken);
+        var result = await service.RestoreScheduledModeAsync(ValidateAssetId(assetId), context.GetCorrelationId(), cancellationToken);
 
         return result.Status switch
         {
@@ -107,9 +186,9 @@ static async Task<IResult> RestoreScheduledModeAsync(HttpContext context, string
     }
     catch (ArgumentException exception)
     {
-        return TypedResults.NotFound(ProblemDetailsFactory.Create(
-            StatusCodes.Status404NotFound,
-            "Asset not found",
+        return TypedResults.BadRequest(ProblemDetailsFactory.Create(
+            StatusCodes.Status400BadRequest,
+            "Invalid request",
             exception.Message,
             context.GetCorrelationId()));
     }
@@ -118,15 +197,64 @@ static async Task<IResult> RestoreScheduledModeAsync(HttpContext context, string
 static IResult Reset(HttpContext context, CommandCenterService service) =>
     TypedResults.Ok(service.Reset(context.GetCorrelationId()));
 
-static IResult ApplyScenarioContext(HttpContext context, CommandCenterScenarioContext scenarioContext, CommandCenterService service) =>
-    TypedResults.Ok(service.ApplyScenarioContext(scenarioContext, context.GetCorrelationId()));
+static IResult ApplyScenarioContext(HttpContext context, CommandCenterScenarioContext scenarioContext, CommandCenterService service)
+{
+    try
+    {
+        return TypedResults.Ok(service.ApplyScenarioContext(scenarioContext, context.GetCorrelationId()));
+    }
+    catch (ArgumentException exception)
+    {
+        return TypedResults.BadRequest(ProblemDetailsFactory.Create(
+            StatusCodes.Status400BadRequest,
+            "Invalid request",
+            exception.Message,
+            context.GetCorrelationId()));
+    }
+}
 
 static ProblemDetails CreateCommandProblem(int statusCode, string title, RestoreScheduledModeResult result)
 {
     var problem = ProblemDetailsFactory.Create(statusCode, title, result.Summary, result.CorrelationId);
     problem.Extensions["assetId"] = result.AssetId;
-    problem.Extensions["desiredIsOn"] = result.DesiredIsOn;
-    problem.Extensions["reportedIsOn"] = result.ReportedIsOn;
+    if (result.DesiredIsOn is not null)
+    {
+        problem.Extensions["desiredIsOn"] = result.DesiredIsOn;
+    }
+
+    if (result.ReportedIsOn is not null)
+    {
+        problem.Extensions["reportedIsOn"] = result.ReportedIsOn;
+    }
     problem.Extensions["commandStatus"] = result.Status.ToString();
     return problem;
 }
+
+static string ValidateAssetId(string assetId)
+{
+    ValidateRequiredText(assetId, nameof(assetId));
+    return assetId;
+}
+
+static int ResolveLimit(int? limit, int defaultValue, int maxValue)
+{
+    ArgumentOutOfRangeException.ThrowIfNegativeOrZero(defaultValue);
+    ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxValue);
+
+    if (defaultValue > maxValue)
+    {
+        throw new ArgumentOutOfRangeException(nameof(defaultValue), defaultValue, "The configured default activity limit cannot exceed the configured maximum limit.");
+    }
+
+    var resolvedLimit = limit ?? defaultValue;
+
+    if (resolvedLimit < 1 || resolvedLimit > maxValue)
+    {
+        throw new ArgumentOutOfRangeException(nameof(limit), resolvedLimit, $"The activity limit must be between 1 and {maxValue}.");
+    }
+
+    return resolvedLimit;
+}
+
+static void ValidateRequiredText(string value, string parameterName) =>
+    ArgumentException.ThrowIfNullOrWhiteSpace(value, parameterName);

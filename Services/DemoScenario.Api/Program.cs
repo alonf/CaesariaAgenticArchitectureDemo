@@ -1,22 +1,29 @@
-using Caesarea.Contracts;
-using Caesarea.ServiceDefaults;
+using DemoScenario.Api.Configuration;
 using DemoScenario.Api.Services;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
 builder.Services.AddOpenApi();
-builder.Services.AddHttpClient<ISmartPoleScenarioClient, HttpSmartPoleScenarioClient>(client =>
+builder.Services.AddOptions<DemoScenarioApiOptions>()
+    .BindConfiguration(DemoScenarioApiOptions.SectionName)
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+builder.Services.AddHttpClient<ISmartPoleScenarioClient, HttpSmartPoleScenarioClient>((serviceProvider, client) =>
 {
-    client.BaseAddress = new Uri("https+http://smartpole-simulator-api");
+    var options = serviceProvider.GetRequiredService<IOptions<DemoScenarioApiOptions>>().Value;
+    client.BaseAddress = new Uri(options.SmartPoleBaseUri, UriKind.Absolute);
 });
-builder.Services.AddHttpClient<IEnergyScenarioClient, HttpEnergyScenarioClient>(client =>
+builder.Services.AddHttpClient<IEnergyScenarioClient, HttpEnergyScenarioClient>((serviceProvider, client) =>
 {
-    client.BaseAddress = new Uri("https+http://energyhub-api");
+    var options = serviceProvider.GetRequiredService<IOptions<DemoScenarioApiOptions>>().Value;
+    client.BaseAddress = new Uri(options.EnergyHubBaseUri, UriKind.Absolute);
 });
-builder.Services.AddHttpClient<ICommandCenterScenarioClient, HttpCommandCenterScenarioClient>(client =>
+builder.Services.AddHttpClient<ICommandCenterScenarioClient, HttpCommandCenterScenarioClient>((serviceProvider, client) =>
 {
-    client.BaseAddress = new Uri("https+http://commandcenter-api");
+    var options = serviceProvider.GetRequiredService<IOptions<DemoScenarioApiOptions>>().Value;
+    client.BaseAddress = new Uri(options.CommandCenterBaseUri, UriKind.Absolute);
 });
 builder.Services.AddSingleton<ScenarioCatalog>();
 builder.Services.AddSingleton<ScenarioCoordinator>();

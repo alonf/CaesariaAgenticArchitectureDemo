@@ -3,6 +3,12 @@
     <Project Path="Apps/CommandCenter.Web/CommandCenter.Web.csproj" />
     <Project Path="Apps/DemoControl.Web/DemoControl.Web.csproj" />
   </Folder>
+  <Folder Name="/Contracts/">
+    <Project Path="Contracts/CommandCenter.Contracts/CommandCenter.Contracts.csproj" />
+    <Project Path="Contracts/DemoScenario.Contracts/DemoScenario.Contracts.csproj" />
+    <Project Path="Contracts/Energy.Contracts/Energy.Contracts.csproj" />
+    <Project Path="Contracts/SmartPole.Contracts/SmartPole.Contracts.csproj" />
+  </Folder>
   <Folder Name="/Services/">
     <Project Path="Services/CommandCenter.Api/CommandCenter.Api.csproj" />
     <Project Path="Services/DemoScenario.Api/DemoScenario.Api.csproj" />
@@ -10,8 +16,8 @@
     <Project Path="Services/SmartPole.Simulator.Api/SmartPole.Simulator.Api.csproj" />
   </Folder>
   <Folder Name="/Shared/" />
-  <Folder Name="/Shared/Contracts/">
-    <Project Path="Shared/Contracts/Caesarea.Contracts.csproj" />
+  <Folder Name="/Shared/CanonicalModel/">
+    <Project Path="Shared/CanonicalModel/Caesarea.CanonicalModel.csproj" />
   </Folder>
   <Folder Name="/Tests/">
     <Project Path="Tests/Caesarea.Deterministic.Tests/Caesarea.Deterministic.Tests.csproj" />

@@ -19,8 +19,4 @@
     <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="1.15.1" />
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\Shared\Contracts\Caesarea.Contracts.csproj" />
-  </ItemGroup>
-
 </Project>

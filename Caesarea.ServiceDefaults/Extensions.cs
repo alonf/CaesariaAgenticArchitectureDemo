@@ -1,28 +1,34 @@
+using System.Text.Json.Serialization;
+using Caesarea.ServiceDefaults;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
-using Microsoft.AspNetCore.Http.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.ServiceDiscovery;
 using OpenTelemetry;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
-using System.Text.Json.Serialization;
-using Caesarea.Contracts;
 
 namespace Microsoft.Extensions.Hosting;
 
-// Adds common Aspire services: service discovery, resilience, health checks, and OpenTelemetry.
-// This project should be referenced by each service project in your solution.
-// To learn more about using this project, see https://aka.ms/aspire/service-defaults
+/// <summary>
+/// Adds shared Aspire-oriented hosting defaults for Caesarea Stage 0 services and web applications.
+/// </summary>
 public static class Extensions
 {
     private const string HealthEndpointPath = "/health";
     private const string AlivenessEndpointPath = "/alive";
 
+    /// <summary>
+    /// Registers the standard Caesarea hosting defaults for service discovery, resilience, health checks, JSON settings, and OpenTelemetry.
+    /// </summary>
+    /// <typeparam name="TBuilder">The host builder type.</typeparam>
+    /// <param name="builder">The application builder being configured.</param>
+    /// <returns>The same builder instance for chaining.</returns>
     public static TBuilder AddServiceDefaults<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
     {
+        ArgumentNullException.ThrowIfNull(builder);
+
         builder.ConfigureOpenTelemetry();
 
         builder.AddDefaultHealthChecks();
@@ -53,8 +59,16 @@ public static class Extensions
         return builder;
     }
 
+    /// <summary>
+    /// Configures OpenTelemetry logging, metrics, and tracing for the current application.
+    /// </summary>
+    /// <typeparam name="TBuilder">The host builder type.</typeparam>
+    /// <param name="builder">The application builder being configured.</param>
+    /// <returns>The same builder instance for chaining.</returns>
     public static TBuilder ConfigureOpenTelemetry<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
     {
+        ArgumentNullException.ThrowIfNull(builder);
+
         builder.Logging.AddOpenTelemetry(logging =>
         {
             logging.IncludeFormattedMessage = true;
@@ -106,8 +120,16 @@ public static class Extensions
         return builder;
     }
 
+    /// <summary>
+    /// Registers the default readiness and liveness health checks used across the demo.
+    /// </summary>
+    /// <typeparam name="TBuilder">The host builder type.</typeparam>
+    /// <param name="builder">The application builder being configured.</param>
+    /// <returns>The same builder instance for chaining.</returns>
     public static TBuilder AddDefaultHealthChecks<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
     {
+        ArgumentNullException.ThrowIfNull(builder);
+
         builder.Services.AddHealthChecks()
             // Add a default liveness check to ensure app is responsive
             .AddCheck("self", () => HealthCheckResult.Healthy(), ["live"]);
@@ -115,17 +137,24 @@ public static class Extensions
         return builder;
     }
 
+    /// <summary>
+    /// Adds default correlation and health-check endpoints to the current web application.
+    /// </summary>
+    /// <param name="app">The web application being configured.</param>
+    /// <returns>The same <see cref="WebApplication"/> instance for chaining.</returns>
     public static WebApplication MapDefaultEndpoints(this WebApplication app)
     {
+        ArgumentNullException.ThrowIfNull(app);
+
         app.Use(async (context, next) =>
         {
-            var incomingCorrelationId = context.Request.Headers[CorrelationHeaderNames.XCorrelationId].FirstOrDefault();
+            var incomingCorrelationId = context.Request.Headers[CorrelationIds.HeaderName].FirstOrDefault();
             var correlationId = string.IsNullOrWhiteSpace(incomingCorrelationId)
                 ? CorrelationIds.Create()
                 : incomingCorrelationId.Trim();
 
-            context.Items[CorrelationHeaderNames.XCorrelationId] = correlationId;
-            context.Response.Headers[CorrelationHeaderNames.XCorrelationId] = correlationId;
+            context.Items[CorrelationIds.HeaderName] = correlationId;
+            context.Response.Headers[CorrelationIds.HeaderName] = correlationId;
 
             await next();
         });

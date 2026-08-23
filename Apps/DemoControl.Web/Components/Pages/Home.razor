@@ -2,6 +2,7 @@
 @implements IAsyncDisposable
 @inject DemoScenarioApiClient ApiClient
 @inject IConfiguration Configuration
+@inject IOptions<DemoControlWebOptions> WebOptions
 
 <PageTitle>Caesarea Demo Control</PageTitle>
 
@@ -41,6 +42,11 @@
             </div>
             <strong class="scenario-name">@_catalog.CurrentScenario.Name</strong>
             <p>@_catalog.CurrentScenario.Description</p>
+            <p><strong>Status:</strong> @_catalog.CurrentScenario.ApplicationStatus</p>
+            @if (!string.IsNullOrWhiteSpace(_catalog.CurrentScenario.FailureSummary))
+            {
+                <p class="status-error">@_catalog.CurrentScenario.FailureSummary</p>
+            }
         </section>
 
         <section class="scenario-grid">
@@ -67,7 +73,8 @@
     private CancellationTokenSource? _pollingTokenSource;
     private Task? _pollingTask;
 
-    private string StageName => Configuration["DemoStage"] ?? DemoStageNames.Deterministic;
+    private string StageName => Configuration["DemoStage"] ?? "Deterministic";
+    private TimeSpan PollingInterval => TimeSpan.FromSeconds(WebOptions.Value.PollingIntervalSeconds);
 
     protected override async Task OnInitializedAsync()
     {
@@ -81,7 +88,7 @@
     {
         try
         {
-            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(4));
+            using var timer = new PeriodicTimer(PollingInterval);
 
             while (await timer.WaitForNextTickAsync(cancellationToken))
             {

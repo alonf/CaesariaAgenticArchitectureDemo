@@ -9,7 +9,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Caesarea.ServiceDefaults\Caesarea.ServiceDefaults.csproj" />
-    <ProjectReference Include="..\..\Shared\Contracts\Caesarea.Contracts.csproj" />
+    <ProjectReference Include="..\..\Shared\CanonicalModel\Caesarea.CanonicalModel.csproj" />
+    <ProjectReference Include="..\..\Contracts\CommandCenter.Contracts\CommandCenter.Contracts.csproj" />
+    <ProjectReference Include="..\..\Contracts\Energy.Contracts\Energy.Contracts.csproj" />
   </ItemGroup>
 
 </Project>

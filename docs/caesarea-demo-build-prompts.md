@@ -102,6 +102,9 @@ Architectural decisions:
 - Keep incident management, minimal spatial context, and the activity timeline as modules inside `CommandCenter.Api`.
 - Keep `EnergyHub.Api` independently deployable from the beginning because it is the authoritative security and operational boundary used by REST, MCP, workflows, and agents.
 - Keep SmartPole vendor behavior behind the Energy Hub.
+- Keep transport contracts owned by their API boundary: SmartPole, Energy, Command Center, and Demo Scenario each have a focused contracts project.
+- Share only the explicitly canonical operational language through `Caesarea.CanonicalModel`; never create a miscellaneous `Common` or `Shared.Contracts` bucket.
+- Keep `Caesarea.ServiceDefaults` independent of domain and API contract projects.
 - Use service-owned persistence. SQLite is sufficient for the local conference profile; the simulator may use resettable in-memory state.
 - Do not add Dapr initially. Introduce it only if a later requirement needs its portable runtime abstractions and that choice adds teaching value.
 - Do not add a message broker initially. Add Azure Service Bus when event-driven activation is introduced.
@@ -367,7 +370,11 @@ Services/CommandCenter.Api
 Services/EnergyHub.Api
 Services/SmartPole.Simulator.Api
 Services/DemoScenario.Api
-Shared/Contracts
+Shared/CanonicalModel
+Contracts/SmartPole.Contracts
+Contracts/Energy.Contracts
+Contracts/CommandCenter.Contracts
+Contracts/DemoScenario.Contracts
 Tests
 ```
 

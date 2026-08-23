@@ -1,19 +1,33 @@
-using Caesarea.Contracts;
-
 namespace SmartPole.Simulator.Api.Services;
 
-public sealed class SmartPoleSimulatorService
+/// <summary>
+/// Simulates the vendor-facing physical streetlight system behind the authoritative Energy Hub.
+/// </summary>
+public sealed partial class SmartPoleSimulatorService
 {
+    private const string SetLampStateOperation = "Set lamp state";
     private readonly object _gate = new();
     private readonly TimeProvider _timeProvider;
+    private readonly ILogger<SmartPoleSimulatorService> _logger;
     private SmartPolePhysicalState _state;
 
-    public SmartPoleSimulatorService(TimeProvider timeProvider)
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SmartPoleSimulatorService"/> class.
+    /// </summary>
+    /// <param name="timeProvider">The clock used for deterministic timestamps.</param>
+    /// <param name="logger">The logger used for simulator state changes.</param>
+    public SmartPoleSimulatorService(TimeProvider timeProvider, ILogger<SmartPoleSimulatorService> logger)
     {
-        _timeProvider = timeProvider;
+        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _state = CreateBaselineState(_timeProvider.GetUtcNow());
     }
 
+    /// <summary>
+    /// Gets the current authoritative simulator state for the supplied asset.
+    /// </summary>
+    /// <param name="assetId">The asset identifier to read.</param>
+    /// <returns>The current physical state.</returns>
     public SmartPolePhysicalState GetState(string assetId)
     {
         EnsureAsset(assetId);
@@ -24,17 +38,39 @@ public sealed class SmartPoleSimulatorService
         }
     }
 
+    /// <summary>
+    /// Resets the simulator back to its deterministic baseline state.
+    /// </summary>
+    /// <param name="correlationId">The correlation identifier spanning the reset.</param>
+    /// <returns>The reset physical state.</returns>
     public SmartPolePhysicalState Reset(string correlationId)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(correlationId);
+
         lock (_gate)
         {
             _state = CreateBaselineState(_timeProvider.GetUtcNow());
-            return _state;
         }
+
+        SmartPoleSimulatorServiceLog.ResetCompleted(_logger, DemoAssets.StreetlightAssetId, correlationId);
+        return GetState(DemoAssets.StreetlightAssetId);
     }
 
+    /// <summary>
+    /// Applies the supplied deterministic scenario state to the simulator.
+    /// </summary>
+    /// <param name="scenarioState">The scenario state to apply.</param>
+    /// <param name="correlationId">The correlation identifier spanning the scenario application.</param>
+    /// <returns>The resulting physical state.</returns>
     public SmartPolePhysicalState ApplyScenario(SmartPoleScenarioState scenarioState, string correlationId)
     {
+        ArgumentNullException.ThrowIfNull(scenarioState);
+        ArgumentNullException.ThrowIfNull(scenarioState.ControllerHealth);
+        ArgumentNullException.ThrowIfNull(scenarioState.OperationContext);
+        ArgumentNullException.ThrowIfNull(scenarioState.Configuration);
+        ValidateConfiguration(scenarioState.Configuration);
+        ArgumentException.ThrowIfNullOrWhiteSpace(correlationId);
+
         lock (_gate)
         {
             var now = _timeProvider.GetUtcNow();
@@ -52,13 +88,24 @@ public sealed class SmartPoleSimulatorService
                 scenarioState.OperationContext,
                 now,
                 scenarioState.Configuration);
-
-            return _state;
         }
+
+        SmartPoleSimulatorServiceLog.ScenarioApplied(_logger, DemoAssets.StreetlightAssetId, scenarioState.IsOn, correlationId);
+        return GetState(DemoAssets.StreetlightAssetId);
     }
 
+    /// <summary>
+    /// Updates the simulator behavior configuration used for subsequent commands.
+    /// </summary>
+    /// <param name="configuration">The configuration to apply.</param>
+    /// <param name="correlationId">The correlation identifier spanning the configuration change.</param>
+    /// <returns>The resulting physical state.</returns>
     public SmartPolePhysicalState UpdateConfiguration(SmartPoleBehaviorConfiguration configuration, string correlationId)
     {
+        ArgumentNullException.ThrowIfNull(configuration);
+        ValidateConfiguration(configuration);
+        ArgumentException.ThrowIfNullOrWhiteSpace(correlationId);
+
         lock (_gate)
         {
             var now = _timeProvider.GetUtcNow();
@@ -67,14 +114,26 @@ public sealed class SmartPoleSimulatorService
                 Configuration = configuration,
                 LastCommand = CreateCommand("Configure simulator", _state.IsOn, CommandExecutionStatus.Succeeded, correlationId, now, now, "SmartPole simulator behavior updated.")
             };
-
-            return _state;
         }
+
+        SmartPoleSimulatorServiceLog.ConfigurationUpdated(_logger, DemoAssets.StreetlightAssetId, configuration.CommandDelayMs, configuration.SimulateTimeout, configuration.SimulateFailure, correlationId);
+        return GetState(DemoAssets.StreetlightAssetId);
     }
 
+    /// <summary>
+    /// Applies a lamp-state command to the simulator and returns the deterministic command result.
+    /// </summary>
+    /// <param name="command">The command to apply.</param>
+    /// <param name="correlationId">The correlation identifier spanning the command request.</param>
+    /// <param name="cancellationToken">The token used to cancel the operation.</param>
+    /// <returns>The deterministic command result.</returns>
     public async Task<SmartPoleCommandResult> SetLampStateAsync(SetLampStateCommand command, string correlationId, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(command);
         EnsureAsset(command.AssetId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(correlationId);
+        var desiredIsOn = command.DesiredIsOn
+            ?? throw new ArgumentException("Desired lamp state is required.", nameof(command));
 
         var requestedAt = _timeProvider.GetUtcNow();
         SmartPoleBehaviorConfiguration configuration;
@@ -87,8 +146,8 @@ public sealed class SmartPoleSimulatorService
             _state = _state with
             {
                 LastCommand = CreateCommand(
-                    "Set lamp state",
-                    command.DesiredIsOn,
+                    SetLampStateOperation,
+                    desiredIsOn,
                     CommandExecutionStatus.Pending,
                     correlationId,
                     requestedAt,
@@ -97,9 +156,36 @@ public sealed class SmartPoleSimulatorService
             };
         }
 
-        if (configuration.CommandDelayMs > 0)
+        SmartPoleSimulatorServiceLog.CommandAccepted(_logger, command.AssetId, desiredIsOn, correlationId);
+
+        try
         {
-            await Task.Delay(configuration.CommandDelayMs, cancellationToken);
+            if (configuration.CommandDelayMs > 0)
+            {
+                await Task.Delay(configuration.CommandDelayMs, cancellationToken);
+            }
+        }
+        catch (OperationCanceledException exception) when (cancellationToken.IsCancellationRequested)
+        {
+            var canceledAt = _timeProvider.GetUtcNow();
+
+            lock (_gate)
+            {
+                _state = _state with
+                {
+                    LastCommand = CreateCommand(
+                        SetLampStateOperation,
+                        desiredIsOn,
+                        CommandExecutionStatus.Failed,
+                        correlationId,
+                        requestedAt,
+                        canceledAt,
+                        "SmartPole command was canceled before device acknowledgement.")
+                };
+            }
+
+            SmartPoleSimulatorServiceLog.CommandCanceled(_logger, command.AssetId, correlationId, exception);
+            throw;
         }
 
         var completedAt = _timeProvider.GetUtcNow();
@@ -111,8 +197,8 @@ public sealed class SmartPoleSimulatorService
                 _state = _state with
                 {
                     LastCommand = CreateCommand(
-                        "Set lamp state",
-                        command.DesiredIsOn,
+                        SetLampStateOperation,
+                        desiredIsOn,
                         CommandExecutionStatus.TimedOut,
                         correlationId,
                         requestedAt,
@@ -120,6 +206,8 @@ public sealed class SmartPoleSimulatorService
                         "SmartPole command timed out before device acknowledgement.")
                 };
             }
+
+            SmartPoleSimulatorServiceLog.CommandTimedOut(_logger, command.AssetId, correlationId);
 
             return new SmartPoleCommandResult(
                 command.AssetId,
@@ -137,8 +225,8 @@ public sealed class SmartPoleSimulatorService
                 _state = _state with
                 {
                     LastCommand = CreateCommand(
-                        "Set lamp state",
-                        command.DesiredIsOn,
+                        SetLampStateOperation,
+                        desiredIsOn,
                         CommandExecutionStatus.Failed,
                         correlationId,
                         requestedAt,
@@ -146,6 +234,8 @@ public sealed class SmartPoleSimulatorService
                         "SmartPole controller rejected the command.")
                 };
             }
+
+            SmartPoleSimulatorServiceLog.CommandFailed(_logger, command.AssetId, correlationId);
 
             return new SmartPoleCommandResult(
                 command.AssetId,
@@ -160,12 +250,12 @@ public sealed class SmartPoleSimulatorService
         {
             _state = _state with
             {
-                IsOn = command.DesiredIsOn,
+                IsOn = desiredIsOn,
                 ManualOverride = false,
                 LastReportedAt = completedAt,
                 LastCommand = CreateCommand(
-                    "Set lamp state",
-                    command.DesiredIsOn,
+                    SetLampStateOperation,
+                    desiredIsOn,
                     CommandExecutionStatus.Succeeded,
                     correlationId,
                     requestedAt,
@@ -174,15 +264,22 @@ public sealed class SmartPoleSimulatorService
             };
         }
 
+        SmartPoleSimulatorServiceLog.CommandSucceeded(_logger, command.AssetId, desiredIsOn, correlationId);
+
         return new SmartPoleCommandResult(
             command.AssetId,
-            command.DesiredIsOn,
+            desiredIsOn,
             CommandExecutionStatus.Succeeded,
             correlationId,
             "SmartPole confirmed the requested lamp state.",
             completedAt);
     }
 
+    /// <summary>
+    /// Creates the deterministic baseline simulator state used at service startup and reset.
+    /// </summary>
+    /// <param name="now">The timestamp to stamp onto the baseline state.</param>
+    /// <returns>The baseline simulator state.</returns>
     public static SmartPolePhysicalState CreateBaselineState(DateTimeOffset now) =>
         new(
             DemoAssets.StreetlightAssetId,
@@ -218,9 +315,72 @@ public sealed class SmartPoleSimulatorService
 
     private static void EnsureAsset(string assetId)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(assetId);
+
         if (!string.Equals(assetId, DemoAssets.StreetlightAssetId, StringComparison.OrdinalIgnoreCase))
         {
             throw new ArgumentException($"The SmartPole simulator only exposes asset {DemoAssets.StreetlightAssetId}.", nameof(assetId));
         }
     }
+
+    private static void ValidateConfiguration(SmartPoleBehaviorConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(configuration);
+
+        if (configuration.CommandDelayMs < 0 || configuration.CommandDelayMs > 30000)
+        {
+            throw new ArgumentOutOfRangeException(nameof(configuration), configuration.CommandDelayMs, "CommandDelayMs must be between 0 and 30000 milliseconds.");
+        }
+    }
+}
+
+internal static partial class SmartPoleSimulatorServiceLog
+{
+    [LoggerMessage(
+        EventId = 2100,
+        Level = LogLevel.Information,
+        Message = "SmartPole simulator reset to baseline for asset {AssetId}. CorrelationId: {CorrelationId}.")]
+    internal static partial void ResetCompleted(ILogger logger, string assetId, string correlationId);
+
+    [LoggerMessage(
+        EventId = 2101,
+        Level = LogLevel.Information,
+        Message = "SmartPole scenario applied for asset {AssetId}. IsOn: {IsOn}. CorrelationId: {CorrelationId}.")]
+    internal static partial void ScenarioApplied(ILogger logger, string assetId, bool isOn, string correlationId);
+
+    [LoggerMessage(
+        EventId = 2102,
+        Level = LogLevel.Information,
+        Message = "SmartPole simulator configuration updated for asset {AssetId}. CommandDelayMs: {CommandDelayMs}, SimulateTimeout: {SimulateTimeout}, SimulateFailure: {SimulateFailure}. CorrelationId: {CorrelationId}.")]
+    internal static partial void ConfigurationUpdated(ILogger logger, string assetId, int commandDelayMs, bool simulateTimeout, bool simulateFailure, string correlationId);
+
+    [LoggerMessage(
+        EventId = 2103,
+        Level = LogLevel.Information,
+        Message = "SmartPole accepted Set Lamp State for asset {AssetId}. DesiredIsOn: {DesiredIsOn}. CorrelationId: {CorrelationId}.")]
+    internal static partial void CommandAccepted(ILogger logger, string assetId, bool desiredIsOn, string correlationId);
+
+    [LoggerMessage(
+        EventId = 2104,
+        Level = LogLevel.Information,
+        Message = "SmartPole Set Lamp State was canceled for asset {AssetId}. CorrelationId: {CorrelationId}.")]
+    internal static partial void CommandCanceled(ILogger logger, string assetId, string correlationId, Exception exception);
+
+    [LoggerMessage(
+        EventId = 2105,
+        Level = LogLevel.Warning,
+        Message = "SmartPole Set Lamp State timed out for asset {AssetId}. CorrelationId: {CorrelationId}.")]
+    internal static partial void CommandTimedOut(ILogger logger, string assetId, string correlationId);
+
+    [LoggerMessage(
+        EventId = 2106,
+        Level = LogLevel.Warning,
+        Message = "SmartPole Set Lamp State failed for asset {AssetId}. CorrelationId: {CorrelationId}.")]
+    internal static partial void CommandFailed(ILogger logger, string assetId, string correlationId);
+
+    [LoggerMessage(
+        EventId = 2107,
+        Level = LogLevel.Information,
+        Message = "SmartPole Set Lamp State succeeded for asset {AssetId}. DesiredIsOn: {DesiredIsOn}. CorrelationId: {CorrelationId}.")]
+    internal static partial void CommandSucceeded(ILogger logger, string assetId, bool desiredIsOn, string correlationId);
 }

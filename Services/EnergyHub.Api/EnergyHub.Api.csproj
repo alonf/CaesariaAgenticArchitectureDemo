@@ -11,8 +11,14 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Caesarea.Deterministic.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\Caesarea.ServiceDefaults\Caesarea.ServiceDefaults.csproj" />
-    <ProjectReference Include="..\..\Shared\Contracts\Caesarea.Contracts.csproj" />
+    <ProjectReference Include="..\..\Shared\CanonicalModel\Caesarea.CanonicalModel.csproj" />
+    <ProjectReference Include="..\..\Contracts\Energy.Contracts\Energy.Contracts.csproj" />
+    <ProjectReference Include="..\..\Contracts\SmartPole.Contracts\SmartPole.Contracts.csproj" />
   </ItemGroup>
 
 </Project>

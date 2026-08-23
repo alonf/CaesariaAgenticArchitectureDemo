@@ -2,6 +2,7 @@
 @implements IAsyncDisposable
 @inject CommandCenterApiClient ApiClient
 @inject IConfiguration Configuration
+@inject IOptions<CommandCenterWebOptions> WebOptions
 
 <PageTitle>Caesarea Command Center</PageTitle>
 
@@ -183,7 +184,8 @@
     private CancellationTokenSource? _pollingTokenSource;
     private Task? _pollingTask;
 
-    private string StageName => Configuration["DemoStage"] ?? DemoStageNames.Deterministic;
+    private string StageName => Configuration["DemoStage"] ?? "Deterministic";
+    private TimeSpan PollingInterval => TimeSpan.FromSeconds(WebOptions.Value.PollingIntervalSeconds);
     private string LampClass => _snapshot?.OperationalState.ReportedIsOn == true ? "green" : "blue";
     private string DesiredClass => DesiredMatchesReported ? "green" : "blue";
     private string HealthClass => _snapshot?.OperationalState.ControllerHealth.Status == ControllerHealthStatus.Healthy ? "green" : "alert";
@@ -208,7 +210,7 @@
     {
         try
         {
-            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(3));
+            using var timer = new PeriodicTimer(PollingInterval);
 
             while (await timer.WaitForNextTickAsync(cancellationToken))
             {

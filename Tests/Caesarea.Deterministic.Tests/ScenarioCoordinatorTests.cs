@@ -1,4 +1,3 @@
-using Caesarea.Contracts;
 using DemoScenario.Api.Services;
 
 namespace Caesarea.Deterministic.Tests;
@@ -6,14 +5,14 @@ namespace Caesarea.Deterministic.Tests;
 public sealed class ScenarioCoordinatorTests
 {
     [Fact]
-    public async Task ApplyAsync_ResetsAllServicesForEveryScenario()
+    public async Task ApplyAsyncResetsAllServicesForEveryScenario()
     {
         var clock = new TestTimeProvider();
         var smartpole = new FakeSmartPoleScenarioClient();
         var energy = new FakeEnergyScenarioClient();
         var commandCenter = new FakeCommandCenterScenarioClient();
         var catalog = new ScenarioCatalog(clock);
-        var coordinator = new ScenarioCoordinator(smartpole, energy, commandCenter, catalog, clock);
+        var coordinator = new ScenarioCoordinator(smartpole, energy, commandCenter, catalog, clock, NullLogger<ScenarioCoordinator>.Instance);
 
         foreach (var scenario in catalog.GetAll())
         {
@@ -29,5 +28,27 @@ public sealed class ScenarioCoordinatorTests
         Assert.Equal(catalog.GetAll().Count, energy.ResetCalls);
         Assert.Equal(catalog.GetAll().Count, commandCenter.ResetCalls);
         Assert.NotNull(commandCenter.LastScenarioContext);
+    }
+
+    [Fact]
+    public async Task ApplyAsyncMarksRequestedScenarioFailedWhenFinalSynchronizationFails()
+    {
+        var clock = new TestTimeProvider();
+        var smartpole = new FakeSmartPoleScenarioClient();
+        var energy = new FakeEnergyScenarioClient();
+        var commandCenter = new FakeCommandCenterScenarioClient
+        {
+            OnApplyScenarioAsync = static (scenarioContext, correlationId, cancellationToken) => throw new HttpRequestException("Command Center unavailable.")
+        };
+        var catalog = new ScenarioCatalog(clock);
+        var coordinator = new ScenarioCoordinator(smartpole, energy, commandCenter, catalog, clock, NullLogger<ScenarioCoordinator>.Instance);
+
+        await Assert.ThrowsAsync<HttpRequestException>(() => coordinator.ApplyAsync(ScenarioId.ForgottenOverride, "failure-corr", CancellationToken.None));
+
+        var status = coordinator.GetCurrentScenario();
+        Assert.Equal(ScenarioId.ForgottenOverride, status.Id);
+        Assert.Equal(ScenarioApplicationStatus.Failed, status.ApplicationStatus);
+        Assert.False(string.IsNullOrWhiteSpace(status.FailureSummary));
+        Assert.Equal("failure-corr", status.CorrelationId);
     }
 }

@@ -1,15 +1,20 @@
-using Caesarea.Contracts;
-using Caesarea.ServiceDefaults;
+using EnergyHub.Api.Configuration;
 using EnergyHub.Api.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
 builder.Services.AddOpenApi();
-builder.Services.AddHttpClient<ISmartPoleGateway, HttpSmartPoleGateway>(client =>
+builder.Services.AddOptions<EnergyHubApiOptions>()
+    .BindConfiguration(EnergyHubApiOptions.SectionName)
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+builder.Services.AddHttpClient<ISmartPoleGateway, HttpSmartPoleGateway>((serviceProvider, client) =>
 {
-    client.BaseAddress = new Uri("https+http://smartpole-simulator-api");
+    var options = serviceProvider.GetRequiredService<IOptions<EnergyHubApiOptions>>().Value;
+    client.BaseAddress = new Uri(options.SmartPoleBaseUri, UriKind.Absolute);
 });
 builder.Services.AddSingleton<EnergyHubService>();
 
@@ -32,7 +37,8 @@ energy.MapPost("/assets/{assetId}/restore-scheduled-mode", RestoreScheduledModeA
 
 var admin = energy.MapGroup("/admin");
 admin.MapPost("/reset", ResetAsync);
-admin.MapPost("/scenario", ApplyScenarioAsync);
+admin.MapPost("/scenario", ApplyScenarioAsync)
+    .ValidateBody<EnergyScenarioSyncRequest>();
 
 app.Run();
 
@@ -40,7 +46,15 @@ static IResult GetState(HttpContext context, string assetId, EnergyHubService hu
 {
     try
     {
-        return TypedResults.Ok(hub.GetState(assetId));
+        return TypedResults.Ok(hub.GetState(ValidateAssetId(assetId)));
+    }
+    catch (ArgumentException exception) when (string.IsNullOrWhiteSpace(assetId))
+    {
+        return TypedResults.BadRequest(ProblemDetailsFactory.Create(
+            StatusCodes.Status400BadRequest,
+            "Invalid request",
+            exception.Message,
+            context.GetCorrelationId()));
     }
     catch (ArgumentException exception)
     {
@@ -52,11 +66,29 @@ static IResult GetState(HttpContext context, string assetId, EnergyHubService hu
     }
 }
 
-static IResult GetActivity(HttpContext context, string assetId, int? limit, EnergyHubService hub)
+static IResult GetActivity(HttpContext context, string assetId, int? limit, EnergyHubService hub, IOptions<EnergyHubApiOptions> options)
 {
     try
     {
-        return TypedResults.Ok(hub.GetRecentActivity(assetId, limit ?? 20));
+        var resolvedAssetId = ValidateAssetId(assetId);
+        var resolvedLimit = ResolveLimit(limit, options.Value.DefaultRecentActivityLimit, options.Value.MaxActivityLimit);
+        return TypedResults.Ok(hub.GetRecentActivity(resolvedAssetId, resolvedLimit));
+    }
+    catch (ArgumentOutOfRangeException exception)
+    {
+        return TypedResults.BadRequest(ProblemDetailsFactory.Create(
+            StatusCodes.Status400BadRequest,
+            "Invalid request",
+            exception.Message,
+            context.GetCorrelationId()));
+    }
+    catch (ArgumentException exception) when (string.IsNullOrWhiteSpace(assetId))
+    {
+        return TypedResults.BadRequest(ProblemDetailsFactory.Create(
+            StatusCodes.Status400BadRequest,
+            "Invalid request",
+            exception.Message,
+            context.GetCorrelationId()));
     }
     catch (ArgumentException exception)
     {
@@ -72,7 +104,7 @@ static async Task<IResult> RestoreScheduledModeAsync(HttpContext context, string
 {
     try
     {
-        var result = await hub.RestoreScheduledModeAsync(assetId, context.GetCorrelationId(), cancellationToken);
+        var result = await hub.RestoreScheduledModeAsync(ValidateAssetId(assetId), context.GetCorrelationId(), cancellationToken);
 
         return result.Status switch
         {
@@ -86,6 +118,14 @@ static async Task<IResult> RestoreScheduledModeAsync(HttpContext context, string
                 "Restore scheduled mode failed",
                 result))
         };
+    }
+    catch (ArgumentException exception) when (string.IsNullOrWhiteSpace(assetId))
+    {
+        return TypedResults.BadRequest(ProblemDetailsFactory.Create(
+            StatusCodes.Status400BadRequest,
+            "Invalid request",
+            exception.Message,
+            context.GetCorrelationId()));
     }
     catch (ArgumentException exception)
     {
@@ -110,8 +150,41 @@ static ProblemDetails CreateCommandProblem(int statusCode, string title, Restore
 {
     var problem = ProblemDetailsFactory.Create(statusCode, title, result.Summary, result.CorrelationId);
     problem.Extensions["assetId"] = result.AssetId;
-    problem.Extensions["desiredIsOn"] = result.DesiredIsOn;
-    problem.Extensions["reportedIsOn"] = result.ReportedIsOn;
+    if (result.DesiredIsOn is not null)
+    {
+        problem.Extensions["desiredIsOn"] = result.DesiredIsOn;
+    }
+
+    if (result.ReportedIsOn is not null)
+    {
+        problem.Extensions["reportedIsOn"] = result.ReportedIsOn;
+    }
     problem.Extensions["commandStatus"] = result.Status.ToString();
     return problem;
+}
+
+static string ValidateAssetId(string assetId)
+{
+    ArgumentException.ThrowIfNullOrWhiteSpace(assetId);
+    return assetId;
+}
+
+static int ResolveLimit(int? limit, int defaultValue, int maxValue)
+{
+    ArgumentOutOfRangeException.ThrowIfNegativeOrZero(defaultValue);
+    ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxValue);
+
+    if (defaultValue > maxValue)
+    {
+        throw new ArgumentOutOfRangeException(nameof(defaultValue), defaultValue, "The configured default activity limit cannot exceed the configured maximum limit.");
+    }
+
+    var resolvedLimit = limit ?? defaultValue;
+
+    if (resolvedLimit < 1 || resolvedLimit > maxValue)
+    {
+        throw new ArgumentOutOfRangeException(nameof(limit), resolvedLimit, $"The activity limit must be between 1 and {maxValue}.");
+    }
+
+    return resolvedLimit;
 }

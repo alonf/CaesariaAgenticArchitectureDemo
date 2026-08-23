@@ -1,12 +1,19 @@
 using CommandCenter.Web.Components;
+using CommandCenter.Web.Configuration;
 using CommandCenter.Web.Services;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
-builder.Services.AddHttpClient<CommandCenterApiClient>(client =>
+builder.Services.AddOptions<CommandCenterWebOptions>()
+    .BindConfiguration(CommandCenterWebOptions.SectionName)
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+builder.Services.AddHttpClient<CommandCenterApiClient>((serviceProvider, client) =>
 {
-    client.BaseAddress = new Uri("https+http://commandcenter-api");
+    var options = serviceProvider.GetRequiredService<IOptions<CommandCenterWebOptions>>().Value;
+    client.BaseAddress = new Uri(options.BaseUri, UriKind.Absolute);
 });
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();

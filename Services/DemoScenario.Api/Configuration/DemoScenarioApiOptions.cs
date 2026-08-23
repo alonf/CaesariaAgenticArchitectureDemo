@@ -1,0 +1,41 @@
+using System.ComponentModel.DataAnnotations;
+
+namespace DemoScenario.Api.Configuration;
+
+internal sealed class DemoScenarioApiOptions : IValidatableObject
+{
+    internal const string SectionName = "DemoScenarioApi";
+
+    [Required]
+    public string SmartPoleBaseUri { get; set; } = string.Empty;
+
+    [Required]
+    public string EnergyHubBaseUri { get; set; } = string.Empty;
+
+    [Required]
+    public string CommandCenterBaseUri { get; set; } = string.Empty;
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (!ServiceUriValidator.TryValidateAbsoluteOrServiceDiscoveryUri(SmartPoleBaseUri, out _))
+        {
+            yield return new ValidationResult(
+                "DemoScenarioApi:SmartPoleBaseUri must be a valid absolute or Aspire service-discovery URI.",
+                [nameof(SmartPoleBaseUri)]);
+        }
+
+        if (!ServiceUriValidator.TryValidateAbsoluteOrServiceDiscoveryUri(EnergyHubBaseUri, out _))
+        {
+            yield return new ValidationResult(
+                "DemoScenarioApi:EnergyHubBaseUri must be a valid absolute or Aspire service-discovery URI.",
+                [nameof(EnergyHubBaseUri)]);
+        }
+
+        if (!ServiceUriValidator.TryValidateAbsoluteOrServiceDiscoveryUri(CommandCenterBaseUri, out _))
+        {
+            yield return new ValidationResult(
+                "DemoScenarioApi:CommandCenterBaseUri must be a valid absolute or Aspire service-discovery URI.",
+                [nameof(CommandCenterBaseUri)]);
+        }
+    }
+}

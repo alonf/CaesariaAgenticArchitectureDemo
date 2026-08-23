@@ -65,7 +65,11 @@ Services/CommandCenter.Api
 Services/EnergyHub.Api
 Services/SmartPole.Simulator.Api
 Services/DemoScenario.Api
-Shared/Contracts
+Shared/CanonicalModel
+Contracts/SmartPole.Contracts
+Contracts/Energy.Contracts
+Contracts/CommandCenter.Contracts
+Contracts/DemoScenario.Contracts
 Tests
 
 Implement:
@@ -107,6 +111,10 @@ Implement:
    - Keep scenario manipulation separate from normal operational APIs.
 
 7. Contracts and cross-cutting behavior
+   - Give each API boundary its own focused contracts project.
+   - Use Caesarea.CanonicalModel only for the deliberately shared operational language.
+   - Do not create a generic Common or Shared.Contracts project.
+   - Keep ServiceDefaults independent of domain and transport contracts.
    - Use correlation IDs across scenario selection, Hub commands, simulator calls, events, and activity records.
    - Add health checks and OpenTelemetry through ServiceDefaults.
    - Keep service-owned state. SQLite is sufficient for persistent local state; SmartPole may use in-memory state.

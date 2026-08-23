@@ -1,10 +1,8 @@
-using System.Net.Http.Json;
-using Caesarea.Contracts;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DemoControl.Web.Services;
 
-public sealed class DemoScenarioApiClient(HttpClient httpClient)
+internal sealed class DemoScenarioApiClient(HttpClient httpClient)
 {
     public async Task<ScenarioCatalogResponse> GetCatalogAsync(CancellationToken cancellationToken)
     {
@@ -65,4 +63,4 @@ public sealed class DemoScenarioApiClient(HttpClient httpClient)
             : null;
 }
 
-public sealed record ScenarioApiCommandResult(bool Succeeded, string Message, string CorrelationId);
+internal sealed record ScenarioApiCommandResult(bool Succeeded, string Message, string CorrelationId);

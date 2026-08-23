@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat Code Coverage">
+        <Configuration>
+          <Format>cobertura</Format>
+          <Include>[CommandCenter.Api]*,[DemoScenario.Api]*,[EnergyHub.Api]*,[SmartPole.Simulator.Api]*</Include>
+          <ExcludeByFile>**/Program.cs,**/obj/**,**/ContractUsings.cs</ExcludeByFile>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>

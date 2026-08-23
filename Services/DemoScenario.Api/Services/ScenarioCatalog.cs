@@ -1,7 +1,14 @@
-using Caesarea.Contracts;
-
 namespace DemoScenario.Api.Services;
 
+/// <summary>
+/// Represents a deterministic recipe that can be applied across SmartPole, Energy Hub, and Command Center boundaries.
+/// </summary>
+/// <param name="Descriptor">The scenario descriptor exposed to the presenter console.</param>
+/// <param name="SmartPoleState">The simulator state to apply first.</param>
+/// <param name="EnergyState">The Energy Hub synchronization request.</param>
+/// <param name="OpenIncident">The Command Center incident to seed, if any.</param>
+/// <param name="Activity">The Command Center activity to seed.</param>
+/// <param name="ApplicationSummary">The projector-friendly completion summary.</param>
 public sealed record ScenarioRecipe(
     ScenarioDescriptor Descriptor,
     SmartPoleScenarioState SmartPoleState,
@@ -10,6 +17,10 @@ public sealed record ScenarioRecipe(
     IReadOnlyList<ActivityRecord> Activity,
     string ApplicationSummary);
 
+/// <summary>
+/// Stores the deterministic scenario definitions used by the presenter console and scenario coordinator.
+/// </summary>
+/// <param name="timeProvider">The clock used to stamp scenario activities and seeded incidents.</param>
 public sealed class ScenarioCatalog(TimeProvider timeProvider)
 {
     private static readonly ScenarioDescriptor[] Descriptors =
@@ -22,11 +33,22 @@ public sealed class ScenarioCatalog(TimeProvider timeProvider)
         new(ScenarioId.NightOperation, "Night Operation", "The nightly lighting schedule is active and L-417 is operating normally.")
     ];
 
+    private readonly TimeProvider _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+
+    /// <summary>
+    /// Gets the full deterministic scenario catalog.
+    /// </summary>
+    /// <returns>The available scenario descriptors.</returns>
     public IReadOnlyList<ScenarioDescriptor> GetAll() => Descriptors;
 
+    /// <summary>
+    /// Gets the fully materialized deterministic recipe for the supplied scenario identifier.
+    /// </summary>
+    /// <param name="scenarioId">The scenario identifier to resolve.</param>
+    /// <returns>The scenario recipe.</returns>
     public ScenarioRecipe GetRecipe(ScenarioId scenarioId)
     {
-        var now = timeProvider.GetUtcNow();
+        var now = _timeProvider.GetUtcNow();
         var descriptor = GetDescriptor(scenarioId);
 
         return scenarioId switch
@@ -152,6 +174,11 @@ public sealed class ScenarioCatalog(TimeProvider timeProvider)
         };
     }
 
+    /// <summary>
+    /// Gets the presenter-facing descriptor for the supplied scenario identifier.
+    /// </summary>
+    /// <param name="scenarioId">The scenario identifier to resolve.</param>
+    /// <returns>The matching descriptor.</returns>
     public ScenarioDescriptor GetDescriptor(ScenarioId scenarioId) =>
         Descriptors.FirstOrDefault(candidate => candidate.Id == scenarioId)
         ?? throw new ArgumentOutOfRangeException(nameof(scenarioId), scenarioId, "The requested scenario is not defined for Stage 0.");

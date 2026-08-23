@@ -1,4 +1,3 @@
-using Caesarea.Contracts;
 using EnergyHub.Api.Services;
 
 namespace Caesarea.Deterministic.Tests;
@@ -6,7 +5,7 @@ namespace Caesarea.Deterministic.Tests;
 public sealed class EnergyHubServiceTests
 {
     [Fact]
-    public async Task GetState_ReturnsScenarioSynchronizedTwin()
+    public async Task GetStateReturnsScenarioSynchronizedTwin()
     {
         var clock = new TestTimeProvider();
         var gateway = new FakeSmartPoleGateway
@@ -14,7 +13,7 @@ public sealed class EnergyHubServiceTests
             PhysicalState = CreatePhysicalState(isOn: true, manualOverride: true, controllerHealth: ControllerHealthInfo.Healthy, requiresLighting: false, now: clock.GetUtcNow())
         };
 
-        var service = new EnergyHubService(gateway, clock);
+        var service = new EnergyHubService(gateway, clock, NullLogger<EnergyHubService>.Instance);
 
         await service.ApplyScenarioAsync(new EnergyScenarioSyncRequest(true, null, "seed"), "seed-corr", CancellationToken.None);
 
@@ -25,7 +24,7 @@ public sealed class EnergyHubServiceTests
     }
 
     [Fact]
-    public async Task RestoreScheduledMode_UpdatesDesiredBeforeReportedOnSuccess()
+    public async Task RestoreScheduledModeUpdatesDesiredBeforeReportedOnSuccess()
     {
         var clock = new TestTimeProvider();
         var gateway = new FakeSmartPoleGateway
@@ -41,7 +40,7 @@ public sealed class EnergyHubServiceTests
             return commandRelease.Task;
         };
 
-        var service = new EnergyHubService(gateway, clock);
+        var service = new EnergyHubService(gateway, clock, NullLogger<EnergyHubService>.Instance);
         await service.ApplyScenarioAsync(new EnergyScenarioSyncRequest(true, null, "seed"), "seed", CancellationToken.None);
 
         var restoreTask = service.RestoreScheduledModeAsync(DemoAssets.StreetlightAssetId, "restore-corr", CancellationToken.None);
@@ -70,7 +69,7 @@ public sealed class EnergyHubServiceTests
     }
 
     [Fact]
-    public async Task RestoreScheduledMode_FailureKeepsReportedStateAndPublishesFailureActivity()
+    public async Task RestoreScheduledModeFailureKeepsReportedStateAndPublishesFailureActivity()
     {
         var clock = new TestTimeProvider();
         var gateway = new FakeSmartPoleGateway
@@ -85,7 +84,7 @@ public sealed class EnergyHubServiceTests
                 clock.GetUtcNow()))
         };
 
-        var service = new EnergyHubService(gateway, clock);
+        var service = new EnergyHubService(gateway, clock, NullLogger<EnergyHubService>.Instance);
         await service.ApplyScenarioAsync(new EnergyScenarioSyncRequest(false, null, "seed"), "seed", CancellationToken.None);
 
         var result = await service.RestoreScheduledModeAsync(DemoAssets.StreetlightAssetId, "failure-corr", CancellationToken.None);
@@ -99,7 +98,7 @@ public sealed class EnergyHubServiceTests
     }
 
     [Fact]
-    public async Task RestoreScheduledMode_TimeoutKeepsReportedStateVisible()
+    public async Task RestoreScheduledModeTimeoutKeepsReportedStateVisible()
     {
         var clock = new TestTimeProvider();
         var gateway = new FakeSmartPoleGateway
@@ -114,7 +113,7 @@ public sealed class EnergyHubServiceTests
                 clock.GetUtcNow()))
         };
 
-        var service = new EnergyHubService(gateway, clock);
+        var service = new EnergyHubService(gateway, clock, NullLogger<EnergyHubService>.Instance);
         await service.ApplyScenarioAsync(new EnergyScenarioSyncRequest(false, null, "seed"), "seed", CancellationToken.None);
 
         var result = await service.RestoreScheduledModeAsync(DemoAssets.StreetlightAssetId, "timeout-corr", CancellationToken.None);
@@ -127,7 +126,7 @@ public sealed class EnergyHubServiceTests
     }
 
     [Fact]
-    public async Task RestoreScheduledMode_UsesRequiresLightingRule()
+    public async Task RestoreScheduledModeUsesRequiresLightingRule()
     {
         var clock = new TestTimeProvider();
         var gateway = new FakeSmartPoleGateway
@@ -135,13 +134,34 @@ public sealed class EnergyHubServiceTests
             PhysicalState = CreatePhysicalState(isOn: true, manualOverride: false, controllerHealth: ControllerHealthInfo.Healthy, requiresLighting: true, now: clock.GetUtcNow())
         };
 
-        var service = new EnergyHubService(gateway, clock);
+        var service = new EnergyHubService(gateway, clock, NullLogger<EnergyHubService>.Instance);
         await service.ApplyScenarioAsync(new EnergyScenarioSyncRequest(true, null, "seed"), "seed", CancellationToken.None);
 
         var result = await service.RestoreScheduledModeAsync(DemoAssets.StreetlightAssetId, "security-corr", CancellationToken.None);
 
         Assert.True(result.DesiredIsOn);
         Assert.True(gateway.LastCommand?.DesiredIsOn);
+    }
+
+    [Fact]
+    public async Task RestoreScheduledModeReturnsFailureWhenAuthoritativeReadFails()
+    {
+        var clock = new TestTimeProvider();
+        var gateway = new FakeSmartPoleGateway
+        {
+            PhysicalState = CreatePhysicalState(isOn: true, manualOverride: false, controllerHealth: ControllerHealthInfo.Healthy, requiresLighting: false, now: clock.GetUtcNow()),
+            OnGetStateAsync = static (assetId, correlationId, cancellationToken) => throw new HttpRequestException("SmartPole unavailable.")
+        };
+
+        var service = new EnergyHubService(gateway, clock, NullLogger<EnergyHubService>.Instance);
+
+        var result = await service.RestoreScheduledModeAsync(DemoAssets.StreetlightAssetId, "read-failure-corr", CancellationToken.None);
+        var state = service.GetState(DemoAssets.StreetlightAssetId);
+
+        Assert.Equal(CommandExecutionStatus.Failed, result.Status);
+        Assert.Contains("could not reach SmartPole", result.Summary, StringComparison.OrdinalIgnoreCase);
+        Assert.Null(gateway.LastCommand);
+        Assert.Equal(CommandExecutionStatus.Failed, state.LastCommand?.Status);
     }
 
     private static SmartPolePhysicalState CreatePhysicalState(

@@ -1,12 +1,19 @@
 using DemoControl.Web.Components;
+using DemoControl.Web.Configuration;
 using DemoControl.Web.Services;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
-builder.Services.AddHttpClient<DemoScenarioApiClient>(client =>
+builder.Services.AddOptions<DemoControlWebOptions>()
+    .BindConfiguration(DemoControlWebOptions.SectionName)
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+builder.Services.AddHttpClient<DemoScenarioApiClient>((serviceProvider, client) =>
 {
-    client.BaseAddress = new Uri("https+http://demoscenario-api");
+    var options = serviceProvider.GetRequiredService<IOptions<DemoControlWebOptions>>().Value;
+    client.BaseAddress = new Uri(options.BaseUri, UriKind.Absolute);
 });
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();

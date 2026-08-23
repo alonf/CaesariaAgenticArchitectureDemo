@@ -1,4 +1,3 @@
-using Caesarea.Contracts;
 using SmartPole.Simulator.Api.Services;
 
 namespace Caesarea.Deterministic.Tests;
@@ -6,10 +5,10 @@ namespace Caesarea.Deterministic.Tests;
 public sealed class SmartPoleSimulatorServiceTests
 {
     [Fact]
-    public async Task SetLampStateAsync_SucceedsAndClearsManualOverride()
+    public async Task SetLampStateAsyncSucceedsAndClearsManualOverride()
     {
         var clock = new TestTimeProvider();
-        var simulator = new SmartPoleSimulatorService(clock);
+        var simulator = new SmartPoleSimulatorService(clock, NullLogger<SmartPoleSimulatorService>.Instance);
 
         simulator.ApplyScenario(
             new SmartPoleScenarioState(
@@ -34,10 +33,10 @@ public sealed class SmartPoleSimulatorServiceTests
     }
 
     [Fact]
-    public async Task SetLampStateAsync_FailureKeepsPhysicalStateUnchanged()
+    public async Task SetLampStateAsyncFailureKeepsPhysicalStateUnchanged()
     {
         var clock = new TestTimeProvider();
-        var simulator = new SmartPoleSimulatorService(clock);
+        var simulator = new SmartPoleSimulatorService(clock, NullLogger<SmartPoleSimulatorService>.Instance);
 
         simulator.ApplyScenario(
             new SmartPoleScenarioState(
@@ -61,10 +60,10 @@ public sealed class SmartPoleSimulatorServiceTests
     }
 
     [Fact]
-    public async Task SetLampStateAsync_TimeoutKeepsPhysicalStateUnchanged()
+    public async Task SetLampStateAsyncTimeoutKeepsPhysicalStateUnchanged()
     {
         var clock = new TestTimeProvider();
-        var simulator = new SmartPoleSimulatorService(clock);
+        var simulator = new SmartPoleSimulatorService(clock, NullLogger<SmartPoleSimulatorService>.Instance);
 
         simulator.ApplyScenario(
             new SmartPoleScenarioState(
@@ -85,5 +84,23 @@ public sealed class SmartPoleSimulatorServiceTests
         Assert.Equal(CommandExecutionStatus.TimedOut, result.Status);
         Assert.True(state.IsOn);
         Assert.Equal(CommandExecutionStatus.TimedOut, state.LastCommand?.Status);
+    }
+
+    [Fact]
+    public async Task SetLampStateAsyncCancellationMarksLastCommandAsFailed()
+    {
+        var clock = new TestTimeProvider();
+        var simulator = new SmartPoleSimulatorService(clock, NullLogger<SmartPoleSimulatorService>.Instance);
+
+        simulator.UpdateConfiguration(new SmartPoleBehaviorConfiguration(250, false, false), "config");
+
+        using var cancellationTokenSource = new CancellationTokenSource();
+        var commandTask = simulator.SetLampStateAsync(new SetLampStateCommand(DemoAssets.StreetlightAssetId, true), "cancel-corr", cancellationTokenSource.Token);
+        cancellationTokenSource.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => commandTask);
+
+        var state = simulator.GetState(DemoAssets.StreetlightAssetId);
+        Assert.Equal(CommandExecutionStatus.Failed, state.LastCommand?.Status);
     }
 }
