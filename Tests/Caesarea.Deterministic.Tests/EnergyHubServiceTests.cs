@@ -160,8 +160,61 @@ public sealed class EnergyHubServiceTests
 
         Assert.Equal(CommandExecutionStatus.Failed, result.Status);
         Assert.Contains("could not reach SmartPole", result.Summary, StringComparison.OrdinalIgnoreCase);
+        Assert.Null(result.DesiredIsOn);
+        Assert.Null(result.ReportedIsOn);
         Assert.Null(gateway.LastCommand);
         Assert.Equal(CommandExecutionStatus.Failed, state.LastCommand?.Status);
+    }
+
+    [Fact]
+    public async Task RestoreReadFailureDoesNotRollBackConcurrentScenarioState()
+    {
+        var clock = new TestTimeProvider();
+        var restoreReadStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var restoreReadRelease = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var scenarioPhysicalState = CreatePhysicalState(
+            isOn: true,
+            manualOverride: true,
+            controllerHealth: ControllerHealthInfo.Healthy,
+            requiresLighting: true,
+            now: clock.GetUtcNow());
+        var gateway = new FakeSmartPoleGateway
+        {
+            PhysicalState = scenarioPhysicalState,
+            OnGetStateAsync = async (assetId, correlationId, cancellationToken) =>
+            {
+                if (correlationId == "restore-corr")
+                {
+                    restoreReadStarted.SetResult();
+                    await restoreReadRelease.Task.WaitAsync(cancellationToken);
+                    throw new HttpRequestException("SmartPole unavailable.");
+                }
+
+                return scenarioPhysicalState;
+            }
+        };
+        var service = new EnergyHubService(gateway, clock, NullLogger<EnergyHubService>.Instance);
+
+        var restoreTask = service.RestoreScheduledModeAsync(DemoAssets.StreetlightAssetId, "restore-corr", CancellationToken.None);
+        await restoreReadStarted.Task;
+
+        await service.ApplyScenarioAsync(
+            new EnergyScenarioSyncRequest(true, "INC-CONCURRENT", "Apply concurrent scenario."),
+            "scenario-corr",
+            CancellationToken.None);
+        restoreReadRelease.SetResult();
+
+        var result = await restoreTask;
+        var state = service.GetState(DemoAssets.StreetlightAssetId);
+
+        Assert.Equal(CommandExecutionStatus.Failed, result.Status);
+        Assert.Null(result.DesiredIsOn);
+        Assert.Null(result.ReportedIsOn);
+        Assert.True(state.DesiredIsOn);
+        Assert.True(state.ReportedIsOn);
+        Assert.True(state.ManualOverride);
+        Assert.Equal("INC-CONCURRENT", state.OpenIncidentId);
+        Assert.Equal("restore-corr", state.LastCommand?.CorrelationId);
     }
 
     private static SmartPolePhysicalState CreatePhysicalState(

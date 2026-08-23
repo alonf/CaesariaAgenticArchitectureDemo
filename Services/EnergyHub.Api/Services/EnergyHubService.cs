@@ -172,7 +172,6 @@ public sealed partial class EnergyHubService
         ArgumentException.ThrowIfNullOrWhiteSpace(correlationId);
 
         var requestedAt = _timeProvider.GetUtcNow();
-        var currentTwin = GetTwinSnapshot();
 
         EnergyHubServiceLog.RestoreRequested(_logger, assetId, correlationId);
 
@@ -191,7 +190,6 @@ public sealed partial class EnergyHubService
         {
             EnergyHubServiceLog.RestoreReadTimedOut(_logger, assetId, correlationId, exception);
             return CompleteReadFailure(
-                currentTwin,
                 correlationId,
                 requestedAt,
                 CommandExecutionStatus.TimedOut,
@@ -201,7 +199,6 @@ public sealed partial class EnergyHubService
         {
             EnergyHubServiceLog.RestoreReadFailed(_logger, assetId, correlationId, exception);
             return CompleteReadFailure(
-                currentTwin,
                 correlationId,
                 requestedAt,
                 CommandExecutionStatus.Failed,
@@ -211,7 +208,6 @@ public sealed partial class EnergyHubService
         {
             EnergyHubServiceLog.RestoreReadInvalid(_logger, assetId, correlationId, exception);
             return CompleteReadFailure(
-                currentTwin,
                 correlationId,
                 requestedAt,
                 CommandExecutionStatus.Failed,
@@ -380,7 +376,6 @@ public sealed partial class EnergyHubService
             OperationalContext.None);
 
     private RestoreScheduledModeResult CompleteReadFailure(
-        EnergyOperationalTwin currentTwin,
         string correlationId,
         DateTimeOffset requestedAt,
         CommandExecutionStatus status,
@@ -390,11 +385,11 @@ public sealed partial class EnergyHubService
 
         lock (_gate)
         {
-            _twin = currentTwin with
+            _twin = _twin with
             {
                 LastCommand = new CommandRecord(
                     RestoreScheduledModeOperation,
-                    currentTwin.DesiredIsOn,
+                    _twin.DesiredIsOn,
                     status,
                     correlationId,
                     requestedAt,
@@ -405,9 +400,9 @@ public sealed partial class EnergyHubService
             AddActivity(summary, correlationId, ActivityKind.Command, false, status);
 
             return new RestoreScheduledModeResult(
-                currentTwin.AssetId,
-                _twin.DesiredIsOn,
-                _twin.ReportedIsOn,
+                _twin.AssetId,
+                null,
+                null,
                 status,
                 correlationId,
                 summary,
@@ -507,14 +502,6 @@ public sealed partial class EnergyHubService
             _timeProvider.GetUtcNow(),
             isSuccess,
             commandStatus));
-    }
-
-    private EnergyOperationalTwin GetTwinSnapshot()
-    {
-        lock (_gate)
-        {
-            return _twin;
-        }
     }
 
     private static void EnsureAsset(string assetId)
