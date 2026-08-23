@@ -4,174 +4,298 @@
 @inject IConfiguration Configuration
 @inject IOptions<CommandCenterWebOptions> WebOptions
 
-<PageTitle>Caesarea Command Center</PageTitle>
+<PageTitle>Caesarea City Command Center</PageTitle>
 
-<div class="page-shell">
-    <header class="hero">
-        <div>
-            <p class="eyebrow">Caesarea Command and Control</p>
-            <h1>North Promenade Deterministic Operations</h1>
-            <p class="subtitle">Projector-friendly operational view for L-417. Stage: @StageName.</p>
+<div class="command-center">
+    <header class="command-bar">
+        <div class="brand">
+            <div class="city-mark" aria-hidden="true">
+                <svg viewBox="0 0 48 48">
+                    <path d="M7 38h34M11 38V19l13-9 13 9v19M18 38V27h12v11M8 20h32" />
+                </svg>
+            </div>
+            <div>
+                <span class="brand-kicker">Caesarea Smart City</span>
+                <h1>Command &amp; Control Center</h1>
+            </div>
         </div>
-        <div class="hero-actions">
-            <button class="button secondary" @onclick="RefreshAsync" disabled="@_busy">Refresh</button>
-            <button class="button primary" @onclick="RestoreScheduledModeAsync" disabled="@_busy">Restore Scheduled Mode</button>
+
+        <div class="command-status">
+            <div class="status-clock">
+                <span>@DateTimeOffset.Now.ToString("dd MMM yyyy")</span>
+                <strong>@DateTimeOffset.Now.ToString("HH:mm")</strong>
+            </div>
+            <span class="system-pill healthy"><i></i> Systems operational</span>
+            <span class="operator-badge">OP</span>
         </div>
     </header>
+
+    <nav class="workspace-tabs" aria-label="Command Center workspaces">
+        <button class="workspace-tab active">Operations Overview</button>
+        <button class="workspace-tab">Incidents <span class="tab-count">@IncidentCount</span></button>
+        <button class="workspace-tab">Assets</button>
+        <button class="workspace-tab">Activity</button>
+        <span class="stage-chip">@StageName stage</span>
+    </nav>
 
     @if (!string.IsNullOrWhiteSpace(_message))
     {
         <section class="message-banner @(_messageIsError ? "error" : "success")">
-            <strong>@(_messageIsError ? "Attention:" : "Update:")</strong>
+            <strong>@(_messageIsError ? "Action required" : "Operation complete")</strong>
             <span>@_message</span>
         </section>
     }
 
     @if (_snapshot is null)
     {
-        <section class="panel empty-state">
-            <p>Loading deterministic snapshot for L-417...</p>
+        <section class="loading-state">
+            <div class="loading-pulse"></div>
+            <div>
+                <strong>Establishing operational picture</strong>
+                <span>Loading authoritative state from the Energy Hub...</span>
+            </div>
         </section>
     }
     else
     {
-        <section class="layout-grid">
-            <article class="panel map-panel">
-                <div class="panel-heading">
-                    <h2>North Promenade Map</h2>
-                    <span class="stamp">@_snapshot.MapLabel</span>
-                </div>
+        <main class="operations-grid">
+            <aside class="left-rail">
+                <section class="rail-section">
+                    <div class="section-title">
+                        <span>City domains</span>
+                        <small>3 hubs</small>
+                    </div>
 
-                <div class="promenade-map">
-                    <div class="promenade-line"></div>
-                    <div class="asset-node @LampClass">
-                        <span class="asset-id">@_snapshot.AssetId</span>
-                        <span class="asset-area">@_snapshot.Area</span>
-                        <span class="asset-state">Reported: @OnOff(_snapshot.OperationalState.ReportedIsOn)</span>
-                    </div>
-                </div>
+                    <button class="hub-row active">
+                        <span class="hub-icon energy-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24"><path d="m13 2-8 12h6l-1 8 8-12h-6l1-8Z" /></svg>
+                        </span>
+                        <span class="hub-copy">
+                            <strong>Energy Hub</strong>
+                            <small>Connected · 1 monitored asset</small>
+                        </span>
+                        <span class="hub-state healthy"></span>
+                    </button>
 
-                <div class="map-caption">
-                    <span class="legend-chip green">Green = healthy reported state</span>
-                    <span class="legend-chip blue">Blue = deterministic control state</span>
-                </div>
-            </article>
+                    <button class="hub-row">
+                        <span class="hub-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24"><path d="M12 3 4 6v5c0 5 3.4 8.5 8 10 4.6-1.5 8-5 8-10V6l-8-3Z" /></svg>
+                        </span>
+                        <span class="hub-copy">
+                            <strong>Security Hub</strong>
+                            <small>Context only in Stage 0</small>
+                        </span>
+                        <span class="hub-state muted"></span>
+                    </button>
 
-            <article class="panel state-panel">
-                <div class="panel-heading">
-                    <h2>Operational Snapshot</h2>
-                    <span class="stamp">Updated @FormatTimestamp(_lastRefreshed)</span>
-                </div>
+                    <button class="hub-row">
+                        <span class="hub-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24"><path d="M5 17h14M7 17l1-8h8l1 8M9 9V6h6v3M8 20h.01M16 20h.01" /></svg>
+                        </span>
+                        <span class="hub-copy">
+                            <strong>Mobility Hub</strong>
+                            <small>Not connected in Stage 0</small>
+                        </span>
+                        <span class="hub-state muted"></span>
+                    </button>
+                </section>
 
-                <div class="state-grid">
-                    <div class="state-card">
-                        <span class="state-label">Reported State</span>
-                        <strong class="state-value @LampClass">@OnOff(_snapshot.OperationalState.ReportedIsOn)</strong>
+                <section class="rail-section">
+                    <div class="section-title">
+                        <span>Operational summary</span>
+                        <small>Live</small>
                     </div>
-                    <div class="state-card">
-                        <span class="state-label">Desired State</span>
-                        <strong class="state-value @DesiredClass">@OnOff(_snapshot.OperationalState.DesiredIsOn)</strong>
+                    <div class="metric-list">
+                        <div class="metric-row">
+                            <span>Monitored assets</span>
+                            <strong>1</strong>
+                        </div>
+                        <div class="metric-row">
+                            <span>Assets requiring attention</span>
+                            <strong class="@AttentionClass">@AttentionCount</strong>
+                        </div>
+                        <div class="metric-row">
+                            <span>Open incidents</span>
+                            <strong class="@IncidentClass">@IncidentCount</strong>
+                        </div>
+                        <div class="metric-row">
+                            <span>Events in timeline</span>
+                            <strong>@_snapshot.RecentActivity.Count</strong>
+                        </div>
                     </div>
-                    <div class="state-card">
-                        <span class="state-label">Daylight</span>
-                        <strong class="state-value">@YesNo(_snapshot.OperationalState.IsDaylight)</strong>
-                    </div>
-                    <div class="state-card">
-                        <span class="state-label">Schedule</span>
-                        <strong class="state-value">@OnOff(_snapshot.OperationalState.ExpectedScheduledState)</strong>
-                    </div>
-                    <div class="state-card">
-                        <span class="state-label">Manual Override</span>
-                        <strong class="state-value">@YesNo(_snapshot.OperationalState.ManualOverride)</strong>
-                    </div>
-                    <div class="state-card">
-                        <span class="state-label">Controller Health</span>
-                        <strong class="state-value @HealthClass">@_snapshot.OperationalState.ControllerHealth.Status</strong>
-                    </div>
-                </div>
+                </section>
 
-                <dl class="details-list">
+                <section class="rail-section selected-asset">
+                    <div class="section-title">
+                        <span>Selected asset</span>
+                        <small>@_snapshot.Area</small>
+                    </div>
+                    <div class="asset-identity">
+                        <span class="lamp-symbol @LampClass" aria-hidden="true">
+                            <svg viewBox="0 0 32 48">
+                                <path d="M11 44h10M16 44V12c0-4 3-7 7-7h4M22 5h7v8h-7z" />
+                            </svg>
+                        </span>
+                        <div>
+                            <strong>@_snapshot.AssetId</strong>
+                            <span>Promenade streetlight</span>
+                        </div>
+                    </div>
+                    <dl class="compact-facts">
+                        <div><dt>Reported</dt><dd class="@LampClass">@OnOff(_snapshot.OperationalState.ReportedIsOn)</dd></div>
+                        <div><dt>Expected</dt><dd>@OnOff(_snapshot.OperationalState.ExpectedScheduledState)</dd></div>
+                        <div><dt>Health</dt><dd class="@HealthClass">@_snapshot.OperationalState.ControllerHealth.Status</dd></div>
+                    </dl>
+                </section>
+            </aside>
+
+            <section class="map-workspace">
+                <div class="map-toolbar">
                     <div>
-                        <dt>Requires Lighting</dt>
-                        <dd>@YesNo(_snapshot.OperationalState.OperationContext.RequiresLighting)</dd>
+                        <span class="section-eyebrow">Live operational map</span>
+                        <h2>@_snapshot.MapLabel</h2>
                     </div>
-                    <div>
-                        <dt>Security Context</dt>
-                        <dd>@_snapshot.OperationalState.OperationContext.Summary</dd>
-                    </div>
-                    <div>
-                        <dt>Desired/Reported Match</dt>
-                        <dd>@YesNo(DesiredMatchesReported)</dd>
-                    </div>
-                    <div>
-                        <dt>Recent Maintenance</dt>
-                        <dd>@MaintenanceText</dd>
-                    </div>
-                    <div>
-                        <dt>Last Command</dt>
-                        <dd>@LastCommandSummary</dd>
-                    </div>
-                </dl>
-            </article>
-
-            <article class="panel context-panel">
-                <div class="panel-heading">
-                    <h2>Scenario and Incident</h2>
-                    <span class="stamp">@_snapshot.CurrentScenario.Name</span>
-                </div>
-
-                <div class="context-stack">
-                    <div class="context-card">
-                        <span class="state-label">Current Scenario</span>
-                        <strong>@_snapshot.CurrentScenario.Name</strong>
-                        <p>@_snapshot.CurrentScenario.Description</p>
-                    </div>
-
-                    <div class="context-card">
-                        <span class="state-label">Open Incident</span>
-                        @if (_snapshot.OpenIncident is null)
-                        {
-                            <strong>None</strong>
-                            <p>No open incident is tracked for L-417.</p>
-                        }
-                        else
-                        {
-                            <strong>@_snapshot.OpenIncident.Id</strong>
-                            <p>@_snapshot.OpenIncident.Title</p>
-                            <p>@_snapshot.OpenIncident.Description</p>
-                        }
-                    </div>
-
-                    <div class="context-card">
-                        <span class="state-label">Controller Narrative</span>
-                        <strong>@_snapshot.OperationalState.ControllerHealth.Summary</strong>
-                        <p>Correlation-ready activity below shows command intent, Energy Hub confirmation, and any failure visibility.</p>
+                    <div class="map-actions">
+                        <span class="updated-label">Updated @FormatTimestamp(_lastRefreshed)</span>
+                        <button class="icon-button" title="Refresh operational state" @onclick="RefreshAsync" disabled="@_busy">
+                            <svg viewBox="0 0 24 24"><path d="M20 6v5h-5M4 18v-5h5M6.1 9A7 7 0 0 1 18 6l2 5M17.9 15A7 7 0 0 1 6 18l-2-5" /></svg>
+                        </button>
                     </div>
                 </div>
-            </article>
 
-            <article class="panel timeline-panel">
-                <div class="panel-heading">
-                    <h2>Recent Activity Timeline</h2>
-                    <span class="stamp">@_snapshot.RecentActivity.Count item(s)</span>
+                <div class="city-map">
+                    <svg class="map-drawing" viewBox="0 0 900 610" preserveAspectRatio="none" aria-label="Stylized map of the North Promenade">
+                        <path class="sea" d="M0 0h255c37 76 22 146 72 210 46 59 22 122 69 185 40 54 32 136 88 215H0Z" />
+                        <path class="coastline" d="M255 0c37 76 22 146 72 210 46 59 22 122 69 185 40 54 32 136 88 215" />
+                        <path class="primary-road" d="M330-20c37 90 30 157 79 229 45 67 36 129 80 197 34 53 40 113 80 224" />
+                        <path class="road" d="M419 105 880 36M389 216l511 22M446 339l454 80M493 462l407 132M550 0l-43 610M700 0l-48 610M830 0l-30 610" />
+                        <path class="road minor" d="m490 70 390 63M460 277l420 63M510 399l370 75M590 0l-31 610M760 0l-40 610" />
+                        <g class="city-blocks">
+                            <path d="m459 117 82-13-3 69-79 8Z" /><path d="m568 99 96-14-5 78-90 8Z" />
+                            <path d="m692 78 95-15-4 91-88 7Z" /><path d="m471 236 84 5-5 71-72-10Z" />
+                            <path d="m587 246 94 8-8 71-88-11Z" /><path d="m713 257 91 8-7 78-88-15Z" />
+                            <path d="m508 357 77 13-2 69-68-13Z" /><path d="m615 379 91 17-7 68-85-19Z" />
+                            <path d="m744 403 78 17-10 70-73-20Z" /><path d="m557 479 75 19-2 70-70-22Z" />
+                            <path d="m661 510 81 24-6 62-76-22Z" />
+                        </g>
+                    </svg>
+
+                    <div class="map-label promenade-label">North Promenade</div>
+                    <div class="map-label sea-label">Mediterranean Sea</div>
+
+                    <button class="asset-marker @MarkerClass" style="left: 48%; top: 41%;" aria-label="Select streetlight L-417">
+                        <span class="marker-pulse"></span>
+                        <span class="marker-icon">
+                            <svg viewBox="0 0 24 24"><path d="M9 21h6M12 21V7c0-2.2 1.8-4 4-4h4M17 3h4v5h-4z" /></svg>
+                        </span>
+                        <span class="marker-card">
+                            <strong>@_snapshot.AssetId</strong>
+                            <small>@OnOff(_snapshot.OperationalState.ReportedIsOn) · @AssetCondition</small>
+                        </span>
+                    </button>
+
+                    <span class="context-marker" style="left: 72%; top: 23%;" title="Security context">
+                        <svg viewBox="0 0 24 24"><path d="M12 3 4 6v5c0 5 3.4 8.5 8 10 4.6-1.5 8-5 8-10V6l-8-3Z" /></svg>
+                    </span>
+
+                    <div class="map-legend">
+                        <span><i class="legend-dot healthy"></i> Normal</span>
+                        <span><i class="legend-dot warning"></i> Attention</span>
+                        <span><i class="legend-dot muted"></i> Context only</span>
+                    </div>
                 </div>
 
-                <ul class="timeline">
-                    @foreach (var activity in _snapshot.RecentActivity)
+                <section class="event-strip">
+                    <div class="event-summary">
+                        <span class="section-eyebrow">Current operational question</span>
+                        <strong>@OperationalQuestion</strong>
+                    </div>
+                    <div class="event-facts">
+                        <div><span>Observed</span><strong>@OnOff(_snapshot.OperationalState.ReportedIsOn)</strong></div>
+                        <div><span>Schedule</span><strong>@OnOff(_snapshot.OperationalState.ExpectedScheduledState)</strong></div>
+                        <div><span>Override</span><strong>@YesNo(_snapshot.OperationalState.ManualOverride)</strong></div>
+                    </div>
+                </section>
+            </section>
+
+            <aside class="right-rail">
+                <section class="incident-panel @IncidentPanelClass">
+                    <div class="section-title">
+                        <span>Active incident</span>
+                        <span class="severity-badge">@IncidentSeverityText</span>
+                    </div>
+
+                    @if (_snapshot.OpenIncident is null)
                     {
-                        <li class="timeline-item @(activity.IsSuccess ? "ok" : "alert")">
-                            <div class="timeline-meta">
-                                <span>@activity.Source</span>
-                                <span>@FormatTimestamp(activity.OccurredAt)</span>
-                            </div>
-                            <strong>@activity.Kind</strong>
-                            <p>@activity.Message</p>
-                            <small>Correlation: @activity.CorrelationId</small>
-                        </li>
+                        <div class="incident-empty">
+                            <span class="incident-symbol">
+                                <svg viewBox="0 0 24 24"><path d="m12 3 9 17H3L12 3Zm0 6v5m0 3h.01" /></svg>
+                            </span>
+                            <strong>No incident created</strong>
+                            <p>The system exposes the operational anomaly, but Stage 0 does not investigate why it happened.</p>
+                        </div>
                     }
-                </ul>
-            </article>
-        </section>
+                    else
+                    {
+                        <div class="incident-record">
+                            <span class="incident-id">@_snapshot.OpenIncident.Id</span>
+                            <h3>@_snapshot.OpenIncident.Title</h3>
+                            <p>@_snapshot.OpenIncident.Description</p>
+                            <dl class="incident-facts">
+                                <div><dt>Status</dt><dd>@_snapshot.OpenIncident.Status</dd></div>
+                                <div><dt>Severity</dt><dd>@_snapshot.OpenIncident.Severity</dd></div>
+                                <div><dt>Asset</dt><dd>@_snapshot.OpenIncident.AssetId</dd></div>
+                                <div><dt>Opened</dt><dd>@FormatTimestamp(_snapshot.OpenIncident.CreatedAt)</dd></div>
+                            </dl>
+                        </div>
+                    }
+                </section>
+
+                <section class="workflow-panel">
+                    <div class="section-title">
+                        <span>Operator workflow</span>
+                        <small>Deterministic</small>
+                    </div>
+                    <div class="workflow-steps">
+                        <div class="workflow-step complete"><i>1</i><span><strong>Detect state</strong><small>Energy Hub reports the lamp state</small></span></div>
+                        <div class="workflow-step current"><i>2</i><span><strong>Assess anomaly</strong><small>Compare reported state with schedule</small></span></div>
+                        <div class="workflow-step"><i>3</i><span><strong>Execute action</strong><small>Restore the scheduled mode</small></span></div>
+                    </div>
+                    <button class="action-button" @onclick="RestoreScheduledModeAsync" disabled="@_busy">
+                        <span>@(_busy ? "Executing workflow..." : "Restore Scheduled Mode")</span>
+                        <svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" /></svg>
+                    </button>
+                    <p class="workflow-note">This action follows the predefined Energy Hub workflow. It does not explain the cause.</p>
+                </section>
+
+                <section class="timeline-panel">
+                    <div class="section-title">
+                        <span>Live event stream</span>
+                        <small>@_snapshot.RecentActivity.Count events</small>
+                    </div>
+                    <ol class="timeline">
+                        @if (_snapshot.RecentActivity.Count == 0)
+                        {
+                            <li class="timeline-empty">No activity recorded for this scenario.</li>
+                        }
+                        @foreach (var activity in _snapshot.RecentActivity.Take(6))
+                        {
+                            <li class="timeline-item">
+                                <span class="timeline-dot @(activity.IsSuccess ? "healthy" : "warning")"></span>
+                                <div>
+                                    <div class="timeline-heading">
+                                        <strong>@activity.Kind</strong>
+                                        <time>@FormatTimestamp(activity.OccurredAt)</time>
+                                    </div>
+                                    <p>@activity.Message</p>
+                                    <small>@activity.Source · @ShortCorrelation(activity.CorrelationId)</small>
+                                </div>
+                            </li>
+                        }
+                    </ol>
+                </section>
+            </aside>
+        </main>
     }
 </div>
 
@@ -186,17 +310,21 @@
 
     private string StageName => Configuration["DemoStage"] ?? "Deterministic";
     private TimeSpan PollingInterval => TimeSpan.FromSeconds(WebOptions.Value.PollingIntervalSeconds);
-    private string LampClass => _snapshot?.OperationalState.ReportedIsOn == true ? "green" : "blue";
-    private string DesiredClass => DesiredMatchesReported ? "green" : "blue";
-    private string HealthClass => _snapshot?.OperationalState.ControllerHealth.Status == ControllerHealthStatus.Healthy ? "green" : "alert";
-    private bool DesiredMatchesReported => _snapshot?.OperationalState.DesiredIsOn == _snapshot?.OperationalState.ReportedIsOn;
-
-    private string MaintenanceText =>
-        _snapshot?.OperationalState.HasRecentMaintenance == true && _snapshot.OperationalState.LastMaintenanceTime is { } lastMaintenance
-            ? $"{FormatTimestamp(lastMaintenance)}"
-            : "No recent maintenance recorded";
-
-    private string LastCommandSummary => _snapshot?.OperationalState.LastCommand?.Summary ?? "No recent command";
+    private string LampClass => _snapshot?.OperationalState.ReportedIsOn == true ? "success-text" : "neutral-text";
+    private string HealthClass => _snapshot?.OperationalState.ControllerHealth.Status == ControllerHealthStatus.Healthy ? "success-text" : "warning-text";
+    private bool IsAnomaly => _snapshot is not null
+        && _snapshot.OperationalState.ReportedIsOn != _snapshot.OperationalState.ExpectedScheduledState;
+    private string MarkerClass => IsAnomaly ? "attention" : "normal";
+    private string IncidentPanelClass => _snapshot?.OpenIncident is null ? "no-incident" : "has-incident";
+    private string AttentionClass => IsAnomaly ? "warning-text" : "success-text";
+    private string IncidentClass => _snapshot?.OpenIncident is null ? "success-text" : "warning-text";
+    private int AttentionCount => IsAnomaly ? 1 : 0;
+    private int IncidentCount => _snapshot?.OpenIncident is null ? 0 : 1;
+    private string IncidentSeverityText => _snapshot?.OpenIncident?.Severity.ToString() ?? "None";
+    private string AssetCondition => IsAnomaly ? "Schedule mismatch" : "Normal";
+    private string OperationalQuestion => IsAnomaly
+        ? $"Why is streetlight {_snapshot!.AssetId} {OnOff(_snapshot.OperationalState.ReportedIsOn).ToLowerInvariant()} against its schedule?"
+        : $"Streetlight {_snapshot!.AssetId} matches its expected schedule.";
 
     protected override async Task OnInitializedAsync()
     {
@@ -226,10 +354,8 @@
         }
     }
 
-    private async Task RefreshAsync()
-    {
-        await LoadSnapshotAsync(CancellationToken.None, showErrorIfMissing: true);
-    }
+    private Task RefreshAsync() =>
+        LoadSnapshotAsync(CancellationToken.None, showErrorIfMissing: true);
 
     private async Task RestoreScheduledModeAsync()
     {
@@ -281,6 +407,9 @@
 
     private static string FormatTimestamp(DateTimeOffset? value) =>
         value?.ToLocalTime().ToString("HH:mm:ss") ?? "n/a";
+
+    private static string ShortCorrelation(string value) =>
+        value.Length <= 12 ? value : value[..12];
 
     public async ValueTask DisposeAsync()
     {
