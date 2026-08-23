@@ -27,7 +27,7 @@ public sealed class ScenarioCatalog(TimeProvider timeProvider)
 {
     private static readonly ScenarioDescriptor[] Descriptors =
     [
-        new(ScenarioId.ForgottenOverride, "Forgotten Override", "Daylight is active, schedule expects off, and a recent maintenance override left L-417 on."),
+        new(ScenarioId.ForgottenOverride, "Lights On Reported by a Client", "A customer reports L-417 illuminated during daylight; the Command Center confirms that it is on against schedule."),
         new(ScenarioId.SecurityOperation, "Security Operation", "North Promenade requires lighting during a daytime security operation."),
         new(ScenarioId.ControllerFault, "Controller Fault", "The controller is faulted and rejects attempts to return L-417 to schedule."),
         new(ScenarioId.ExistingIncident, "Existing Incident", "An anomaly is already known and an incident exists before the operator acts."),

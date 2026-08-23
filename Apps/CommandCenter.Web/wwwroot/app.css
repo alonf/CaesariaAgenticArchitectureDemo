@@ -683,10 +683,10 @@ svg {
 
 .report-connector {
     position: absolute;
-    top: -45px;
-    left: -34px;
-    width: 46px;
-    height: 58px;
+    top: -25px;
+    left: -22px;
+    width: 28px;
+    height: 34px;
     border-right: 2px solid var(--cp-accent);
     border-bottom: 2px solid var(--cp-accent);
     transform: rotate(-30deg);
