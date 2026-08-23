@@ -1,6 +1,7 @@
 @page "/"
 @implements IAsyncDisposable
 @inject CommandCenterApiClient ApiClient
+@inject OperationsAgentApiClient OperationsAgentClient
 @inject IConfiguration Configuration
 @inject IOptions<CommandCenterWebOptions> WebOptions
 
@@ -59,7 +60,7 @@
     }
     else
     {
-        <main class="operations-grid">
+        <main class="operations-grid @(IsInvestigationStage ? "with-investigation" : string.Empty)">
             <aside class="left-rail">
                 <section class="rail-section">
                     <div class="section-title">
@@ -312,6 +313,125 @@
                     </ol>
                 </section>
             </aside>
+
+            @if (IsInvestigationStage)
+            {
+                <aside class="investigation-rail">
+                    <section class="investigation-panel">
+                        <div class="section-title">
+                            <span>Operations Agent</span>
+                            <span class="agent-status-badge @InvestigationStatusClass">@InvestigationStatusText</span>
+                        </div>
+
+                        <div class="agent-identity">
+                            <span class="agent-avatar" aria-hidden="true">
+                                <svg viewBox="0 0 24 24"><path d="M12 2a5 5 0 0 1 5 5v1a5 5 0 0 1-10 0V7a5 5 0 0 1 5-5Zm-7 19a7 7 0 0 1 14 0Z" /></svg>
+                            </span>
+                            <div>
+                                <strong>@(_investigation?.AgentName ?? "Operations Agent")</strong>
+                                <small>Read-only investigator · L-417</small>
+                            </div>
+                        </div>
+
+                        <button class="action-button investigate-button" @onclick="InvestigateAsync" disabled="@_investigationBusy">
+                            <span>@(_investigationBusy ? "Investigating..." : "Investigate")</span>
+                            <svg viewBox="0 0 24 24"><path d="M11 4a7 7 0 1 0 4.9 12.1l4.5 4.5 1.4-1.4-4.5-4.5A7 7 0 0 0 11 4Zm0 2a5 5 0 1 1 0 10 5 5 0 0 1 0-10Z" /></svg>
+                        </button>
+
+                        @if (!string.IsNullOrWhiteSpace(_investigationMessage))
+                        {
+                            <p class="agent-message @(_investigationMessageIsError ? "status-error" : string.Empty)">@_investigationMessage</p>
+                        }
+
+                        @if (_investigation is { } investigation)
+                        {
+                            <div class="agent-summary">
+                                <p>@investigation.Summary</p>
+                            </div>
+
+                            <div class="agent-subsection">
+                                <div class="subsection-title">Verified facts <span class="tab-count">@investigation.VerifiedFacts.Count</span></div>
+                                @if (investigation.VerifiedFacts.Count == 0)
+                                {
+                                    <p class="agent-empty">No facts were verified.</p>
+                                }
+                                else
+                                {
+                                    <ul class="agent-fact-list">
+                                        @foreach (var fact in investigation.VerifiedFacts)
+                                        {
+                                            <li><p>@fact.Statement</p><small>@fact.Source</small></li>
+                                        }
+                                    </ul>
+                                }
+                            </div>
+
+                            <div class="agent-subsection">
+                                <div class="subsection-title">Hypotheses <span class="tab-count">@investigation.Hypotheses.Count</span></div>
+                                @if (investigation.Hypotheses.Count == 0)
+                                {
+                                    <p class="agent-empty">No hypotheses were formed.</p>
+                                }
+                                else
+                                {
+                                    <ul class="agent-hypothesis-list">
+                                        @foreach (var hypothesis in investigation.Hypotheses)
+                                        {
+                                            <li>
+                                                <div class="hypothesis-heading">
+                                                    <p>@hypothesis.Statement</p>
+                                                    <span class="confidence-badge">@FormatConfidence(hypothesis.Confidence)</span>
+                                                </div>
+                                                <small>@hypothesis.Reason</small>
+                                            </li>
+                                        }
+                                    </ul>
+                                }
+                            </div>
+
+                            <div class="agent-subsection">
+                                <div class="subsection-title">Missing evidence <span class="tab-count">@investigation.MissingEvidence.Count</span></div>
+                                @if (investigation.MissingEvidence.Count == 0)
+                                {
+                                    <p class="agent-empty">No missing evidence was reported.</p>
+                                }
+                                else
+                                {
+                                    <ul class="agent-missing-list">
+                                        @foreach (var missing in investigation.MissingEvidence)
+                                        {
+                                            <li>@missing</li>
+                                        }
+                                    </ul>
+                                }
+                            </div>
+
+                            <div class="agent-subsection">
+                                <div class="subsection-title">Evidence trace <span class="tab-count">@investigation.EvidenceTrace.Count</span></div>
+                                <ol class="agent-trace-list">
+                                    @foreach (var entry in investigation.EvidenceTrace)
+                                    {
+                                        <li class="@(entry.Succeeded ? string.Empty : "trace-failed")">
+                                            <span class="trace-sequence">@entry.Sequence</span>
+                                            <div>
+                                                <strong>@entry.ToolName</strong>
+                                                <p>@entry.OutputSummary</p>
+                                                <small>@FormatTimestamp(entry.InvokedAt)</small>
+                                            </div>
+                                        </li>
+                                    }
+                                </ol>
+                            </div>
+
+                            <p class="agent-footnote">CorrelationId @ShortCorrelation(investigation.CorrelationId) · @FormatTimestamp(investigation.StartedAt) → @FormatTimestamp(investigation.CompletedAt)</p>
+                        }
+                        else if (!_investigationBusy && string.IsNullOrWhiteSpace(_investigationMessage))
+                        {
+                            <p class="agent-empty">Press Investigate to run a read-only evidence review of L-417.</p>
+                        }
+                    </section>
+                </aside>
+            }
         </main>
     }
 </div>
@@ -324,8 +444,24 @@
     private DateTimeOffset? _lastRefreshed;
     private CancellationTokenSource? _pollingTokenSource;
     private Task? _pollingTask;
+    private InvestigationResult? _investigation;
+    private bool _investigationBusy;
+    private string? _investigationMessage;
+    private bool _investigationMessageIsError;
+    private string? _investigationEvidenceVersion;
 
-    private string StageName => Configuration["DemoStage"] ?? "Deterministic";
+    private string StageName => _snapshot?.CurrentStage.Name ?? Configuration["DemoStage"] ?? "Deterministic";
+    private bool IsInvestigationStage => _snapshot?.CurrentStage.Id == DemoStage.InvestigationAgent;
+    private string InvestigationStatusText => _investigationBusy
+        ? "Investigating"
+        : _investigation is not null
+            ? _investigation.Status.ToString()
+            : "Idle";
+    private string InvestigationStatusClass => _investigationBusy
+        ? "busy"
+        : _investigation is not null
+            ? "success"
+            : "idle";
     private TimeSpan PollingInterval => TimeSpan.FromSeconds(WebOptions.Value.PollingIntervalSeconds);
     private string LampClass => _snapshot?.OperationalState.ReportedIsOn == true ? "success-text" : "neutral-text";
     private string HealthClass => _snapshot?.OperationalState.ControllerHealth.Status == ControllerHealthStatus.Healthy ? "success-text" : "warning-text";
@@ -399,12 +535,67 @@
         }
     }
 
+    private async Task InvestigateAsync()
+    {
+        var requestedEvidenceVersion = GetEvidenceVersion(_snapshot);
+        _investigationBusy = true;
+        _investigation = null;
+        _investigationEvidenceVersion = null;
+        _investigationMessage = null;
+        _investigationMessageIsError = false;
+
+        try
+        {
+            var outcome = await OperationsAgentClient.InvestigateAsync(CancellationToken.None);
+
+            if (outcome.Succeeded)
+            {
+                if (string.Equals(requestedEvidenceVersion, GetEvidenceVersion(_snapshot), StringComparison.Ordinal))
+                {
+                    _investigation = outcome.Result;
+                    _investigationEvidenceVersion = requestedEvidenceVersion;
+                }
+                else
+                {
+                    _investigationMessage = "Operational evidence changed during the investigation. Run Investigate again.";
+                    _investigationMessageIsError = true;
+                }
+            }
+            else
+            {
+                _investigation = null;
+                _investigationMessage = outcome.FailureMessage;
+                _investigationMessageIsError = true;
+            }
+        }
+        catch (Exception exception)
+        {
+            _investigation = null;
+            _investigationMessage = $"Investigation could not be completed: {exception.Message}";
+            _investigationMessageIsError = true;
+        }
+        finally
+        {
+            _investigationBusy = false;
+        }
+    }
+
     private async Task LoadSnapshotAsync(CancellationToken cancellationToken, bool showErrorIfMissing)
     {
         try
         {
-            _snapshot = await ApiClient.GetSnapshotAsync(cancellationToken);
+            var snapshot = await ApiClient.GetSnapshotAsync(cancellationToken);
+            _snapshot = snapshot;
             _lastRefreshed = DateTimeOffset.Now;
+
+            if (_investigation is not null
+                && !string.Equals(_investigationEvidenceVersion, GetEvidenceVersion(snapshot), StringComparison.Ordinal))
+            {
+                _investigation = null;
+                _investigationEvidenceVersion = null;
+                _investigationMessage = "Operational evidence changed. Run a new investigation.";
+                _investigationMessageIsError = false;
+            }
 
             if (!_messageIsError)
             {
@@ -423,6 +614,8 @@
 
     private static string OnOff(bool value) => value ? "On" : "Off";
 
+    private static string FormatConfidence(double confidence) => $"{confidence:P0}";
+
     private static string YesNo(bool value) => value ? "Yes" : "No";
 
     private static string FormatTimestamp(DateTimeOffset? value) =>
@@ -430,6 +623,18 @@
 
     private static string ShortCorrelation(string value) =>
         value.Length <= 12 ? value : value[..12];
+
+    private static string? GetEvidenceVersion(CommandCenterSnapshot? snapshot) =>
+        snapshot is null
+            ? null
+            : string.Join(
+                '|',
+                snapshot.CurrentStage.CorrelationId,
+                snapshot.CurrentScenario.CorrelationId,
+                snapshot.CustomerReport?.CorrelationId,
+                snapshot.OpenIncident?.CorrelationId,
+                snapshot.OperationalState.LastReportedAt.ToString("O"),
+                snapshot.OperationalState.LastCommand?.CorrelationId);
 
     public async ValueTask DisposeAsync()
     {

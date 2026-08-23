@@ -10,6 +10,9 @@ internal sealed class CommandCenterWebOptions : IValidatableObject
     public string BaseUri { get; set; } = string.Empty;
 
     [Required]
+    public string OperationsAgentBaseUri { get; set; } = string.Empty;
+
+    [Required]
     [MinLength(1)]
     public string AssetId { get; set; } = DemoAssets.StreetlightAssetId;
 
@@ -26,6 +29,13 @@ internal sealed class CommandCenterWebOptions : IValidatableObject
             yield return new ValidationResult(
                 "CommandCenterWeb:BaseUri must be a valid absolute or Aspire service-discovery URI.",
                 [nameof(BaseUri)]);
+        }
+
+        if (!ServiceUriValidator.TryValidateAbsoluteOrServiceDiscoveryUri(OperationsAgentBaseUri, out _))
+        {
+            yield return new ValidationResult(
+                "CommandCenterWeb:OperationsAgentBaseUri must be a valid absolute or Aspire service-discovery URI.",
+                [nameof(OperationsAgentBaseUri)]);
         }
     }
 }

@@ -12,6 +12,7 @@ public sealed partial class CommandCenterService
     private readonly CustomerReportModule _customerReportModule;
     private readonly ScenarioContextModule _scenarioContextModule;
     private readonly SpatialContextModule _spatialContextModule;
+    private readonly StageContextModule _stageContextModule;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<CommandCenterService> _logger;
 
@@ -24,6 +25,7 @@ public sealed partial class CommandCenterService
     /// <param name="customerReportModule">The inbound customer-report store.</param>
     /// <param name="scenarioContextModule">The module tracking the current deterministic scenario.</param>
     /// <param name="spatialContextModule">The module that validates the projected map asset.</param>
+    /// <param name="stageContextModule">The module tracking the current demo stage propagated from the presenter switchboard.</param>
     /// <param name="timeProvider">The clock used for correlated activity timestamps.</param>
     /// <param name="logger">The logger used for scenario and command events.</param>
     public CommandCenterService(
@@ -33,6 +35,7 @@ public sealed partial class CommandCenterService
         CustomerReportModule customerReportModule,
         ScenarioContextModule scenarioContextModule,
         SpatialContextModule spatialContextModule,
+        StageContextModule stageContextModule,
         TimeProvider timeProvider,
         ILogger<CommandCenterService> logger)
     {
@@ -42,6 +45,7 @@ public sealed partial class CommandCenterService
         _customerReportModule = customerReportModule ?? throw new ArgumentNullException(nameof(customerReportModule));
         _scenarioContextModule = scenarioContextModule ?? throw new ArgumentNullException(nameof(scenarioContextModule));
         _spatialContextModule = spatialContextModule ?? throw new ArgumentNullException(nameof(spatialContextModule));
+        _stageContextModule = stageContextModule ?? throw new ArgumentNullException(nameof(stageContextModule));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -72,7 +76,52 @@ public sealed partial class CommandCenterService
             _scenarioContextModule.GetCurrent(),
             _customerReportModule.GetCurrent(),
             incident,
-            activity);
+            activity,
+            _stageContextModule.GetCurrent());
+    }
+
+    /// <summary>
+    /// Gets the current customer-report evidence context for the supplied asset.
+    /// </summary>
+    /// <param name="assetId">The asset identifier to project.</param>
+    /// <returns>The current customer-report context.</returns>
+    public CustomerReportContext GetCustomerReportContext(string assetId)
+    {
+        _spatialContextModule.EnsureAsset(assetId);
+        return new CustomerReportContext(assetId, _customerReportModule.GetCurrent());
+    }
+
+    /// <summary>
+    /// Gets the current open-incident evidence context for the supplied asset.
+    /// </summary>
+    /// <param name="assetId">The asset identifier to project.</param>
+    /// <returns>The current incident context.</returns>
+    public IncidentContext GetIncidentContext(string assetId)
+    {
+        _spatialContextModule.EnsureAsset(assetId);
+        return new IncidentContext(assetId, _incidentModule.GetOpenIncidentForAsset(assetId));
+    }
+
+    /// <summary>
+    /// Gets the demo stage currently propagated from the presenter switchboard.
+    /// </summary>
+    /// <returns>The current demo stage.</returns>
+    public DemoStageStatus GetCurrentStage() => _stageContextModule.GetCurrent();
+
+    /// <summary>
+    /// Applies the presenter-controlled demo stage propagated from the switchboard.
+    /// </summary>
+    /// <param name="stage">The demo stage to apply.</param>
+    /// <param name="correlationId">The correlation identifier spanning the stage change.</param>
+    /// <returns>The stage now current in the Command Center.</returns>
+    public DemoStageStatus ApplyStage(DemoStageStatus stage, string correlationId)
+    {
+        ArgumentNullException.ThrowIfNull(stage);
+        ArgumentException.ThrowIfNullOrWhiteSpace(correlationId);
+
+        var applied = _stageContextModule.SetCurrent(stage);
+        CommandCenterServiceLog.StageApplied(_logger, applied.Name, correlationId);
+        return applied;
     }
 
     /// <summary>
@@ -191,6 +240,8 @@ public sealed partial class CommandCenterService
 
     /// <summary>
     /// Resets the local Command Center modules to their deterministic baseline state.
+    /// The currently selected demo stage is intentionally preserved; presenters switch stages
+    /// through the switchboard independently from resetting the L-417 scenario data.
     /// </summary>
     /// <param name="correlationId">The correlation identifier spanning the reset.</param>
     /// <returns>The resulting current scenario.</returns>
@@ -339,4 +390,10 @@ internal static partial class CommandCenterServiceLog
         Level = LogLevel.Information,
         Message = "Scenario {ScenarioName} applied to the Command Center. OpenIncidentId: {IncidentId}. CorrelationId: {CorrelationId}.")]
     internal static partial void ScenarioApplied(ILogger logger, string scenarioName, string incidentId, string correlationId);
+
+    [LoggerMessage(
+        EventId = 1810,
+        Level = LogLevel.Information,
+        Message = "Demo stage {StageName} applied to the Command Center. CorrelationId: {CorrelationId}.")]
+    internal static partial void StageApplied(ILogger logger, string stageName, string correlationId);
 }

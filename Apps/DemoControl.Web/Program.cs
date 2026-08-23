@@ -15,6 +15,11 @@ builder.Services.AddHttpClient<DemoScenarioApiClient>((serviceProvider, client) 
     var options = serviceProvider.GetRequiredService<IOptions<DemoControlWebOptions>>().Value;
     client.BaseAddress = new Uri(options.BaseUri, UriKind.Absolute);
 });
+builder.Services.AddHttpClient<DemoStageApiClient>((serviceProvider, client) =>
+{
+    var options = serviceProvider.GetRequiredService<IOptions<DemoControlWebOptions>>().Value;
+    client.BaseAddress = new Uri(options.BaseUri, UriKind.Absolute);
+});
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 

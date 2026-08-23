@@ -187,6 +187,29 @@ button {
     margin-bottom: 1rem;
 }
 
+.switchboard-panel {
+    padding: 1.2rem;
+    margin-bottom: 1rem;
+}
+
+.capability-list {
+    margin: 0.4rem 0 0.9rem;
+    padding-left: 1.2rem;
+    color: var(--muted);
+}
+
+.stage-switch-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.switchboard-note {
+    margin: 0.75rem 0 0;
+    color: var(--muted);
+    font-size: 0.82rem;
+}
+
 #blazor-error-ui {
     background: rgba(255, 239, 191, 0.96);
     bottom: 0;

@@ -21,6 +21,7 @@ builder.Services.AddSingleton<ActivityTimelineModule>();
 builder.Services.AddSingleton<CustomerReportModule>();
 builder.Services.AddSingleton<ScenarioContextModule>();
 builder.Services.AddSingleton<SpatialContextModule>();
+builder.Services.AddSingleton<StageContextModule>();
 builder.Services.AddSingleton<CommandCenterService>();
 
 var app = builder.Build();
@@ -39,12 +40,16 @@ var commandCenter = app.MapGroup("/api/command-center")
 commandCenter.MapGet("/snapshot/{assetId}", GetSnapshotAsync);
 commandCenter.MapGet("/activity/{assetId}", GetActivityAsync);
 commandCenter.MapGet("/incidents/{incidentId}", GetIncident);
+commandCenter.MapGet("/customer-report/{assetId}", GetCustomerReportContext);
+commandCenter.MapGet("/incidents/current/{assetId}", GetIncidentContext);
+commandCenter.MapGet("/stage", GetStage);
 commandCenter.MapPost("/assets/{assetId}/restore-scheduled-mode", RestoreScheduledModeAsync);
 
 var admin = commandCenter.MapGroup("/admin");
 admin.MapPost("/reset", Reset);
 admin.MapPost("/scenario", ApplyScenarioContext)
     .ValidateBody<CommandCenterScenarioContext>();
+admin.MapPost("/stage", ApplyStage);
 
 app.Run();
 
@@ -166,6 +171,57 @@ static IResult GetIncident(HttpContext context, string incidentId, CommandCenter
         : TypedResults.Ok(incident);
 }
 
+static IResult GetCustomerReportContext(HttpContext context, string assetId, CommandCenterService service)
+{
+    try
+    {
+        return TypedResults.Ok(service.GetCustomerReportContext(ValidateAssetId(assetId)));
+    }
+    catch (ArgumentException exception) when (string.IsNullOrWhiteSpace(assetId))
+    {
+        return TypedResults.BadRequest(ProblemDetailsFactory.Create(
+            StatusCodes.Status400BadRequest,
+            "Invalid request",
+            exception.Message,
+            context.GetCorrelationId()));
+    }
+    catch (ArgumentException exception)
+    {
+        return TypedResults.NotFound(ProblemDetailsFactory.Create(
+            StatusCodes.Status404NotFound,
+            "Asset not found",
+            exception.Message,
+            context.GetCorrelationId()));
+    }
+}
+
+static IResult GetIncidentContext(HttpContext context, string assetId, CommandCenterService service)
+{
+    try
+    {
+        return TypedResults.Ok(service.GetIncidentContext(ValidateAssetId(assetId)));
+    }
+    catch (ArgumentException exception) when (string.IsNullOrWhiteSpace(assetId))
+    {
+        return TypedResults.BadRequest(ProblemDetailsFactory.Create(
+            StatusCodes.Status400BadRequest,
+            "Invalid request",
+            exception.Message,
+            context.GetCorrelationId()));
+    }
+    catch (ArgumentException exception)
+    {
+        return TypedResults.NotFound(ProblemDetailsFactory.Create(
+            StatusCodes.Status404NotFound,
+            "Asset not found",
+            exception.Message,
+            context.GetCorrelationId()));
+    }
+}
+
+static IResult GetStage(CommandCenterService service) =>
+    TypedResults.Ok(service.GetCurrentStage());
+
 static async Task<IResult> RestoreScheduledModeAsync(HttpContext context, string assetId, CommandCenterService service, CancellationToken cancellationToken)
 {
     try
@@ -203,6 +259,22 @@ static IResult ApplyScenarioContext(HttpContext context, CommandCenterScenarioCo
     try
     {
         return TypedResults.Ok(service.ApplyScenarioContext(scenarioContext, context.GetCorrelationId()));
+    }
+    catch (ArgumentException exception)
+    {
+        return TypedResults.BadRequest(ProblemDetailsFactory.Create(
+            StatusCodes.Status400BadRequest,
+            "Invalid request",
+            exception.Message,
+            context.GetCorrelationId()));
+    }
+}
+
+static IResult ApplyStage(HttpContext context, DemoStageStatus stage, CommandCenterService service)
+{
+    try
+    {
+        return TypedResults.Ok(service.ApplyStage(stage, context.GetCorrelationId()));
     }
     catch (ArgumentException exception)
     {

@@ -244,6 +244,54 @@ public sealed class ScenarioContextModule(TimeProvider timeProvider)
 }
 
 /// <summary>
+/// Tracks the demo stage currently propagated from the presenter switchboard to the Command Center.
+/// </summary>
+/// <param name="timeProvider">The clock used to stamp stage changes.</param>
+public sealed class StageContextModule(TimeProvider timeProvider)
+{
+    private readonly object _gate = new();
+    private readonly TimeProvider _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+    private DemoStageStatus _currentStage = CreateDeterministicStage(timeProvider.GetUtcNow(), "startup");
+
+    /// <summary>
+    /// Gets the current demo stage.
+    /// </summary>
+    /// <returns>The current stage.</returns>
+    public DemoStageStatus GetCurrent()
+    {
+        lock (_gate)
+        {
+            return _currentStage;
+        }
+    }
+
+    /// <summary>
+    /// Replaces the current demo stage with the supplied value.
+    /// </summary>
+    /// <param name="stage">The new current stage.</param>
+    /// <returns>The stored stage.</returns>
+    public DemoStageStatus SetCurrent(DemoStageStatus stage)
+    {
+        ArgumentNullException.ThrowIfNull(stage);
+
+        lock (_gate)
+        {
+            _currentStage = stage;
+            return _currentStage;
+        }
+    }
+
+    private static DemoStageStatus CreateDeterministicStage(DateTimeOffset appliedAt, string correlationId) =>
+        new(
+            DemoStage.Deterministic,
+            "Deterministic",
+            "Only the deterministic Stage 0 capabilities are enabled.",
+            ["Deterministic scenarios", "Manual operator actions"],
+            appliedAt,
+            correlationId);
+}
+
+/// <summary>
 /// Provides the small spatial context projected in the Stage 0 Command Center map.
 /// </summary>
 public sealed class SpatialContextModule

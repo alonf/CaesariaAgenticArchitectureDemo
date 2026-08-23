@@ -1,3 +1,5 @@
+using OperationsAgent.Api.Services;
+
 namespace Caesarea.Deterministic.Tests;
 
 public sealed class ArchitectureBoundaryTests
@@ -16,6 +18,71 @@ public sealed class ArchitectureBoundaryTests
             Environment.NewLine,
             Directory.GetFiles(sourceDirectory, "*.cs", SearchOption.AllDirectories).Select(File.ReadAllText));
         Assert.DoesNotContain("SmartPole.Simulator", sourceText, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void OperationsAgentProjectDoesNotReferenceSmartPoleSimulator()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var projectPath = Path.Combine(repositoryRoot, "Services", "OperationsAgent.Api", "OperationsAgent.Api.csproj");
+        var sourceDirectory = Path.Combine(repositoryRoot, "Services", "OperationsAgent.Api");
+
+        var projectText = File.ReadAllText(projectPath);
+        Assert.DoesNotContain("SmartPole.Simulator.Api.csproj", projectText, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("SmartPole.Contracts", projectText, StringComparison.OrdinalIgnoreCase);
+
+        var sourceText = string.Join(
+            Environment.NewLine,
+            Directory.GetFiles(sourceDirectory, "*.cs", SearchOption.AllDirectories).Select(File.ReadAllText));
+        Assert.DoesNotContain("SmartPole", sourceText, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void OperationsAgentExposesOnlyReadOnlyTools()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var toolsetPath = Path.Combine(repositoryRoot, "Services", "OperationsAgent.Api", "Services", "OperationsToolset.cs");
+        var toolsetText = File.ReadAllText(toolsetPath);
+
+        string[] forbiddenTokens =
+        [
+            "RestoreScheduledMode",
+            "ApplyScenario",
+            "SetLampState",
+            "Reset(",
+            "ResetAsync",
+            "Write",
+            "Command(",
+            "CommandAsync"
+        ];
+
+        foreach (var token in forbiddenTokens)
+        {
+            Assert.DoesNotContain(token, toolsetText, StringComparison.Ordinal);
+        }
+
+        var toolMethodNames = new[]
+        {
+            OperationsToolset.CustomerReportToolName,
+            OperationsToolset.EnergyAssetStateToolName,
+            OperationsToolset.EnergyRecentActivityToolName,
+            OperationsToolset.IncidentContextToolName
+        };
+
+        Assert.All(toolMethodNames, name => Assert.StartsWith("get_", name, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void OperationsAgentProjectExposesNoCommandOrWriteEndpoints()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var programPath = Path.Combine(repositoryRoot, "Services", "OperationsAgent.Api", "Program.cs");
+        var programText = File.ReadAllText(programPath);
+
+        Assert.DoesNotContain("restore-scheduled-mode", programText, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("/admin/", programText, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("MapPut", programText, StringComparison.Ordinal);
+        Assert.DoesNotContain("MapDelete", programText, StringComparison.Ordinal);
     }
 
     [Fact]

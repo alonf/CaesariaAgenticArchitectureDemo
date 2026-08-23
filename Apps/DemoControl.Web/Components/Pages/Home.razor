@@ -1,6 +1,7 @@
 @page "/"
 @implements IAsyncDisposable
 @inject DemoScenarioApiClient ApiClient
+@inject DemoStageApiClient StageClient
 @inject IConfiguration Configuration
 @inject IOptions<DemoControlWebOptions> WebOptions
 
@@ -26,6 +27,49 @@
             <span>@_message</span>
         </section>
     }
+
+    @if (!string.IsNullOrWhiteSpace(_stageMessage))
+    {
+        <section class="message-banner @(_stageMessageIsError ? "error" : "success")">
+            <strong>@(_stageMessageIsError ? "Attention:" : "Update:")</strong>
+            <span>@_stageMessage</span>
+        </section>
+    }
+
+    <section class="panel switchboard-panel">
+        <div class="panel-heading">
+            <h2>Presenter Switchboard</h2>
+            <span class="stamp">@(_stageCatalog is null ? "Loading..." : _stageCatalog.CurrentStage.AppliedAt.ToLocalTime().ToString("HH:mm:ss"))</span>
+        </div>
+        @if (_stageCatalog is null)
+        {
+            <p>Loading demo stage catalog...</p>
+        }
+        else
+        {
+            <p>
+                Current stage: <strong>@_stageCatalog.CurrentStage.Name</strong> - @_stageCatalog.CurrentStage.Description
+            </p>
+            <ul class="capability-list">
+                @foreach (var capability in _stageCatalog.CurrentStage.Capabilities)
+                {
+                    <li>@capability</li>
+                }
+            </ul>
+            <div class="stage-switch-actions">
+                @foreach (var stage in _stageCatalog.Stages)
+                {
+                    <button
+                        class="button @(stage.Id == _stageCatalog.CurrentStage.Id ? "primary" : "secondary")"
+                        @onclick="() => ApplyStageAsync(stage.Id)"
+                        disabled="@(_stageBusy || stage.Id == _stageCatalog.CurrentStage.Id)">
+                        @stage.Name
+                    </button>
+                }
+            </div>
+            <p class="switchboard-note">Resetting to Normal Operation preserves the currently selected stage.</p>
+        }
+    </section>
 
     @if (_catalog is null)
     {
@@ -67,18 +111,23 @@
 
 @code {
     private ScenarioCatalogResponse? _catalog;
+    private DemoStageCatalogResponse? _stageCatalog;
     private string? _message;
     private bool _messageIsError;
     private bool _busy;
+    private bool _stageBusy;
+    private string? _stageMessage;
+    private bool _stageMessageIsError;
     private CancellationTokenSource? _pollingTokenSource;
     private Task? _pollingTask;
 
-    private string StageName => Configuration["DemoStage"] ?? "Deterministic";
+    private string StageName => _stageCatalog?.CurrentStage.Name ?? Configuration["DemoStage"] ?? "Deterministic";
     private TimeSpan PollingInterval => TimeSpan.FromSeconds(WebOptions.Value.PollingIntervalSeconds);
 
     protected override async Task OnInitializedAsync()
     {
         await LoadCatalogAsync(CancellationToken.None, showErrors: true);
+        await LoadStageCatalogAsync(CancellationToken.None, showErrors: true);
 
         _pollingTokenSource = new CancellationTokenSource();
         _pollingTask = PollCatalogAsync(_pollingTokenSource.Token);
@@ -95,6 +144,7 @@
                 await InvokeAsync(async () =>
                 {
                     await LoadCatalogAsync(cancellationToken, showErrors: _catalog is null);
+                    await LoadStageCatalogAsync(cancellationToken, showErrors: _stageCatalog is null);
                     StateHasChanged();
                 });
             }
@@ -153,6 +203,28 @@
         }
     }
 
+    private async Task ApplyStageAsync(DemoStage stage)
+    {
+        _stageBusy = true;
+
+        try
+        {
+            var result = await StageClient.ApplyStageAsync(stage, CancellationToken.None);
+            _stageMessage = result.Message;
+            _stageMessageIsError = !result.Succeeded;
+        }
+        catch (Exception exception)
+        {
+            _stageMessage = $"Stage change failed: {exception.Message}";
+            _stageMessageIsError = true;
+        }
+        finally
+        {
+            _stageBusy = false;
+            await LoadStageCatalogAsync(CancellationToken.None, showErrors: true);
+        }
+    }
+
     private async Task LoadCatalogAsync(CancellationToken cancellationToken, bool showErrors)
     {
         try
@@ -170,6 +242,27 @@
             {
                 _message = $"Unable to load the demo scenario catalog: {exception.Message}";
                 _messageIsError = true;
+            }
+        }
+    }
+
+    private async Task LoadStageCatalogAsync(CancellationToken cancellationToken, bool showErrors)
+    {
+        try
+        {
+            _stageCatalog = await StageClient.GetCatalogAsync(cancellationToken);
+
+            if (!_stageMessageIsError)
+            {
+                _stageMessage = null;
+            }
+        }
+        catch (Exception exception)
+        {
+            if (showErrors || _stageCatalog is null)
+            {
+                _stageMessage = $"Unable to load the demo stage catalog: {exception.Message}";
+                _stageMessageIsError = true;
             }
         }
     }

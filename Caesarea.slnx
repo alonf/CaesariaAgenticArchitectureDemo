@@ -7,12 +7,14 @@
     <Project Path="Contracts/CommandCenter.Contracts/CommandCenter.Contracts.csproj" />
     <Project Path="Contracts/DemoScenario.Contracts/DemoScenario.Contracts.csproj" />
     <Project Path="Contracts/Energy.Contracts/Energy.Contracts.csproj" />
+    <Project Path="Contracts/OperationsAgent.Contracts/OperationsAgent.Contracts.csproj" />
     <Project Path="Contracts/SmartPole.Contracts/SmartPole.Contracts.csproj" />
   </Folder>
   <Folder Name="/Services/">
     <Project Path="Services/CommandCenter.Api/CommandCenter.Api.csproj" />
     <Project Path="Services/DemoScenario.Api/DemoScenario.Api.csproj" />
     <Project Path="Services/EnergyHub.Api/EnergyHub.Api.csproj" />
+    <Project Path="Services/OperationsAgent.Api/OperationsAgent.Api.csproj" />
     <Project Path="Services/SmartPole.Simulator.Api/SmartPole.Simulator.Api.csproj" />
   </Folder>
   <Folder Name="/Shared/" />

@@ -110,6 +110,7 @@ public sealed record CommandCenterScenarioContext(
 /// <param name="CustomerReport">The inbound customer report that triggered the operational view, if any.</param>
 /// <param name="OpenIncident">The current open incident, if any.</param>
 /// <param name="RecentActivity">The recent correlated activity timeline.</param>
+/// <param name="CurrentStage">The demo stage currently propagated from the presenter switchboard.</param>
 public sealed record CommandCenterSnapshot(
     string AssetId,
     string Area,
@@ -118,4 +119,19 @@ public sealed record CommandCenterSnapshot(
     ScenarioStatus CurrentScenario,
     CustomerReportRecord? CustomerReport,
     IncidentRecord? OpenIncident,
-    IReadOnlyList<ActivityRecord> RecentActivity);
+    IReadOnlyList<ActivityRecord> RecentActivity,
+    DemoStageStatus CurrentStage);
+
+/// <summary>
+/// Represents the current customer-report evidence context for a single asset.
+/// </summary>
+/// <param name="AssetId">The asset identifier the context describes.</param>
+/// <param name="Report">The current customer report, or <see langword="null"/> when none has been received.</param>
+public sealed record CustomerReportContext(string AssetId, CustomerReportRecord? Report);
+
+/// <summary>
+/// Represents the current open-incident evidence context for a single asset.
+/// </summary>
+/// <param name="AssetId">The asset identifier the context describes.</param>
+/// <param name="Incident">The current open incident, or <see langword="null"/> when none is tracked.</param>
+public sealed record IncidentContext(string AssetId, IncidentRecord? Incident);

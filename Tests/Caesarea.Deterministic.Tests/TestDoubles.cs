@@ -1,6 +1,7 @@
 using CommandCenter.Api.Services;
 using DemoScenario.Api.Services;
 using EnergyHub.Api.Services;
+using OperationsAgent.Api.Services;
 
 namespace Caesarea.Deterministic.Tests;
 
@@ -213,5 +214,97 @@ internal sealed class FakeCommandCenterScenarioClient : ICommandCenterScenarioCl
         }
 
         return Task.CompletedTask;
+    }
+}
+
+internal sealed class FakeCommandCenterStageClient : ICommandCenterStageClient
+{
+    public int ApplyCalls { get; private set; }
+
+    public DemoStageStatus? LastStage { get; private set; }
+
+    public Func<DemoStageStatus, string, CancellationToken, Task>? OnApplyStageAsync { get; set; }
+
+    public Task ApplyStageAsync(DemoStageStatus stage, string correlationId, CancellationToken cancellationToken)
+    {
+        ApplyCalls++;
+        LastStage = stage;
+
+        if (OnApplyStageAsync is not null)
+        {
+            return OnApplyStageAsync(stage, correlationId, cancellationToken);
+        }
+
+        return Task.CompletedTask;
+    }
+}
+
+internal sealed class FakeEnergyReadGateway : IEnergyReadGateway
+{
+    public required EnergyOperationalTwin State { get; init; }
+
+    public required IReadOnlyList<ActivityRecord> Activity { get; init; }
+
+    public Func<string, string, CancellationToken, Task<EnergyOperationalTwin>>? OnGetStateAsync { get; set; }
+
+    public Func<string, int, string, CancellationToken, Task<IReadOnlyList<ActivityRecord>>>? OnGetRecentActivityAsync { get; set; }
+
+    public Task<EnergyOperationalTwin> GetStateAsync(string assetId, string correlationId, CancellationToken cancellationToken) =>
+        OnGetStateAsync is not null
+            ? OnGetStateAsync(assetId, correlationId, cancellationToken)
+            : Task.FromResult(State);
+
+    public Task<IReadOnlyList<ActivityRecord>> GetRecentActivityAsync(string assetId, int limit, string correlationId, CancellationToken cancellationToken) =>
+        OnGetRecentActivityAsync is not null
+            ? OnGetRecentActivityAsync(assetId, limit, correlationId, cancellationToken)
+            : Task.FromResult(Activity);
+}
+
+internal sealed class FakeCommandCenterReadGateway : ICommandCenterReadGateway
+{
+    public CustomerReportContext? CustomerReportContext { get; set; }
+
+    public IncidentContext? IncidentContext { get; set; }
+
+    public Func<string, string, CancellationToken, Task<CustomerReportContext>>? OnGetCustomerReportContextAsync { get; set; }
+
+    public Func<string, string, CancellationToken, Task<IncidentContext>>? OnGetIncidentContextAsync { get; set; }
+
+    public Task<CustomerReportContext> GetCustomerReportContextAsync(string assetId, string correlationId, CancellationToken cancellationToken) =>
+        OnGetCustomerReportContextAsync is not null
+            ? OnGetCustomerReportContextAsync(assetId, correlationId, cancellationToken)
+            : Task.FromResult(CustomerReportContext ?? new CustomerReportContext(assetId, null));
+
+    public Task<IncidentContext> GetIncidentContextAsync(string assetId, string correlationId, CancellationToken cancellationToken) =>
+        OnGetIncidentContextAsync is not null
+            ? OnGetIncidentContextAsync(assetId, correlationId, cancellationToken)
+            : Task.FromResult(IncidentContext ?? new IncidentContext(assetId, null));
+}
+
+internal sealed class FakeInvestigationAgentRunner : IInvestigationAgentRunner
+{
+    public required ModelInvestigationResponse Response { get; init; }
+
+    public Func<OperationsToolset, CancellationToken, Task>? OnBeforeReturn { get; set; }
+
+    public string? LastAssetId { get; private set; }
+
+    public string? LastQuestion { get; private set; }
+
+    public async Task<ModelInvestigationResponse> InvestigateAsync(
+        OperationsToolset toolset,
+        string assetId,
+        string question,
+        CancellationToken cancellationToken)
+    {
+        LastAssetId = assetId;
+        LastQuestion = question;
+
+        if (OnBeforeReturn is not null)
+        {
+            await OnBeforeReturn(toolset, cancellationToken);
+        }
+
+        return Response;
     }
 }

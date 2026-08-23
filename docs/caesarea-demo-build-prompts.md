@@ -31,9 +31,10 @@ Evaluation
 Hosted
 ```
 
-Lecture-ready prompts are maintained as standalone files under `docs/prompts`. The first stage is:
+Lecture-ready prompts are maintained as standalone files under `docs/prompts`. Implemented stages so far:
 
 - [Stage 0 — Deterministic Foundation](prompts/00-deterministic-foundation.md)
+- [Stage 1 — Investigation Agent](prompts/01-investigation-agent.md)
 
 As further stages are implemented, add one independently presentable prompt file per stage and link it here. Do not duplicate full prompt bodies in this overview after extraction.
 

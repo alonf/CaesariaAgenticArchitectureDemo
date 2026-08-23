@@ -15,6 +15,11 @@ builder.Services.AddHttpClient<CommandCenterApiClient>((serviceProvider, client)
     var options = serviceProvider.GetRequiredService<IOptions<CommandCenterWebOptions>>().Value;
     client.BaseAddress = new Uri(options.BaseUri, UriKind.Absolute);
 });
+builder.Services.AddHttpClient<OperationsAgentApiClient>((serviceProvider, client) =>
+{
+    var options = serviceProvider.GetRequiredService<IOptions<CommandCenterWebOptions>>().Value;
+    client.BaseAddress = new Uri(options.OperationsAgentBaseUri, UriKind.Absolute);
+});
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 

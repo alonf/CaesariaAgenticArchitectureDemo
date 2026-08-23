@@ -18,9 +18,17 @@ var demoScenarioApi = builder.AddProject<Projects.DemoScenario_Api>("demoscenari
     .WaitFor(energyHub)
     .WaitFor(commandCenterApi);
 
+var operationsAgentApi = builder.AddProject<Projects.OperationsAgent_Api>("operationsagent-api")
+    .WithReference(energyHub)
+    .WithReference(commandCenterApi)
+    .WaitFor(energyHub)
+    .WaitFor(commandCenterApi);
+
 builder.AddProject<Projects.CommandCenter_Web>("commandcenter-web")
     .WithReference(commandCenterApi)
+    .WithReference(operationsAgentApi)
     .WaitFor(commandCenterApi)
+    .WaitFor(operationsAgentApi)
     .WithExternalHttpEndpoints();
 
 builder.AddProject<Projects.DemoControl_Web>("democontrol-web")

@@ -25,8 +25,15 @@ builder.Services.AddHttpClient<ICommandCenterScenarioClient, HttpCommandCenterSc
     var options = serviceProvider.GetRequiredService<IOptions<DemoScenarioApiOptions>>().Value;
     client.BaseAddress = new Uri(options.CommandCenterBaseUri, UriKind.Absolute);
 });
+builder.Services.AddHttpClient<ICommandCenterStageClient, HttpCommandCenterStageClient>((serviceProvider, client) =>
+{
+    var options = serviceProvider.GetRequiredService<IOptions<DemoScenarioApiOptions>>().Value;
+    client.BaseAddress = new Uri(options.CommandCenterBaseUri, UriKind.Absolute);
+});
 builder.Services.AddSingleton<ScenarioCatalog>();
 builder.Services.AddSingleton<ScenarioCoordinator>();
+builder.Services.AddSingleton<StageCatalog>();
+builder.Services.AddSingleton<StageCoordinator>();
 
 var app = builder.Build();
 
@@ -45,6 +52,13 @@ scenarios.MapGet(string.Empty, GetCatalog);
 scenarios.MapGet("/current", GetCurrent);
 scenarios.MapPost("/apply/{scenarioId}", ApplyScenarioAsync);
 scenarios.MapPost("/reset", ResetAsync);
+
+var stages = app.MapGroup("/api/demo-stage")
+    .WithTags("Demo Stage");
+
+stages.MapGet(string.Empty, GetStageCatalog);
+stages.MapGet("/current", GetCurrentStage);
+stages.MapPost("/apply/{stage}", ApplyStageAsync);
 
 app.Run();
 
@@ -72,3 +86,25 @@ static async Task<IResult> ApplyScenarioAsync(HttpContext context, ScenarioId sc
 
 static async Task<IResult> ResetAsync(HttpContext context, ScenarioCoordinator coordinator, CancellationToken cancellationToken) =>
     TypedResults.Ok(await coordinator.ResetAsync(context.GetCorrelationId(), cancellationToken));
+
+static IResult GetStageCatalog(StageCatalog catalog, StageCoordinator coordinator) =>
+    TypedResults.Ok(new DemoStageCatalogResponse(catalog.GetAll(), coordinator.GetCurrentStage()));
+
+static IResult GetCurrentStage(StageCoordinator coordinator) =>
+    TypedResults.Ok(coordinator.GetCurrentStage());
+
+static async Task<IResult> ApplyStageAsync(HttpContext context, DemoStage stage, StageCoordinator coordinator, CancellationToken cancellationToken)
+{
+    try
+    {
+        return TypedResults.Ok(await coordinator.ApplyAsync(stage, context.GetCorrelationId(), cancellationToken));
+    }
+    catch (ArgumentOutOfRangeException exception)
+    {
+        return TypedResults.BadRequest(ProblemDetailsFactory.Create(
+            StatusCodes.Status400BadRequest,
+            "Unknown demo stage",
+            exception.Message,
+            context.GetCorrelationId()));
+    }
+}

@@ -85,6 +85,40 @@ public sealed class CommandCenterServiceTests
         Assert.Contains(activity, record => !record.IsSuccess && record.CorrelationId == "gateway-failure-corr");
     }
 
+    [Fact]
+    public async Task ApplyStagePropagatesToSnapshotAndSurvivesReset()
+    {
+        var clock = new TestTimeProvider();
+        var service = CreateService(clock);
+        var stage = new DemoStageStatus(
+            DemoStage.InvestigationAgent,
+            "Investigation Agent",
+            "The read-only Operations Agent can investigate the current anomaly.",
+            ["Deterministic scenarios", "Read-only Operations Agent investigation"],
+            clock.GetUtcNow(),
+            "stage-corr");
+
+        var applied = service.ApplyStage(stage, "stage-corr");
+
+        Assert.Equal(DemoStage.InvestigationAgent, applied.Id);
+        Assert.Equal(DemoStage.InvestigationAgent, service.GetCurrentStage().Id);
+
+        var snapshot = await service.GetSnapshotAsync(DemoAssets.StreetlightAssetId, 5, "snapshot-corr", CancellationToken.None);
+        Assert.Equal(DemoStage.InvestigationAgent, snapshot.CurrentStage.Id);
+
+        service.Reset("reset-corr");
+
+        Assert.Equal(DemoStage.InvestigationAgent, service.GetCurrentStage().Id);
+    }
+
+    [Fact]
+    public void GetCurrentStageDefaultsToDeterministic()
+    {
+        var service = CreateService(new TestTimeProvider());
+
+        Assert.Equal(DemoStage.Deterministic, service.GetCurrentStage().Id);
+    }
+
     private static CommandCenterService CreateService(TestTimeProvider clock, FakeEnergyHubGateway? gateway = null) =>
         new(
             gateway ?? CreateGateway(clock),
@@ -93,6 +127,7 @@ public sealed class CommandCenterServiceTests
             new CustomerReportModule(),
             new ScenarioContextModule(clock),
             new SpatialContextModule(),
+            new StageContextModule(clock),
             clock,
             NullLogger<CommandCenterService>.Instance);
 

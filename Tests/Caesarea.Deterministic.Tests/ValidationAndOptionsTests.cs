@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using CommandCenter.Api.Configuration;
 using DemoScenario.Api.Configuration;
+using OperationsAgent.Api.Configuration;
 
 namespace Caesarea.Deterministic.Tests;
 
@@ -74,6 +75,58 @@ public sealed class ValidationAndOptionsTests
         var results = Validate(command);
 
         Assert.Contains(results, result => result.MemberNames.Contains(nameof(SetLampStateCommand.DesiredIsOn), StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public void OperationsAgentApiOptionsAcceptValidConfiguration()
+    {
+        var options = new OperationsAgentApiOptions
+        {
+            EnergyHubBaseUri = "https+http://energyhub-api",
+            CommandCenterBaseUri = "https+http://commandcenter-api",
+            FoundryProjectEndpoint = "https://alonlecturedemo-resource.services.ai.azure.com/api/projects/alonlecturedemo",
+            ModelDeploymentName = "gpt-5.2-chat",
+            AgentName = "Operations Agent"
+        };
+
+        var results = Validate(options);
+
+        Assert.Empty(results);
+    }
+
+    [Fact]
+    public void OperationsAgentApiOptionsRejectNonHttpsFoundryEndpoint()
+    {
+        var options = new OperationsAgentApiOptions
+        {
+            EnergyHubBaseUri = "https+http://energyhub-api",
+            CommandCenterBaseUri = "https+http://commandcenter-api",
+            FoundryProjectEndpoint = "http://insecure-endpoint.example.com/api/projects/demo",
+            ModelDeploymentName = "gpt-5.2-chat",
+            AgentName = "Operations Agent"
+        };
+
+        var results = Validate(options);
+
+        Assert.Contains(results, result => result.MemberNames.Contains(nameof(OperationsAgentApiOptions.FoundryProjectEndpoint), StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public void OperationsAgentApiOptionsRejectInvalidServiceUris()
+    {
+        var options = new OperationsAgentApiOptions
+        {
+            EnergyHubBaseUri = "not-a-uri",
+            CommandCenterBaseUri = "also-not-a-uri",
+            FoundryProjectEndpoint = "https://alonlecturedemo-resource.services.ai.azure.com/api/projects/alonlecturedemo",
+            ModelDeploymentName = "gpt-5.2-chat",
+            AgentName = "Operations Agent"
+        };
+
+        var results = Validate(options);
+
+        Assert.Contains(results, result => result.MemberNames.Contains(nameof(OperationsAgentApiOptions.EnergyHubBaseUri), StringComparer.Ordinal));
+        Assert.Contains(results, result => result.MemberNames.Contains(nameof(OperationsAgentApiOptions.CommandCenterBaseUri), StringComparer.Ordinal));
     }
 
     private static List<ValidationResult> Validate(object instance)
