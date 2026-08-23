@@ -113,7 +113,7 @@ public sealed partial class ScenarioCoordinator : IDisposable
                 ScenarioApplicationStatus.Applied);
 
             await _commandCenterScenarioClient.ApplyScenarioAsync(
-                new CommandCenterScenarioContext(status, recipe.OpenIncident, recipe.Activity),
+                new CommandCenterScenarioContext(status, recipe.CustomerReport, recipe.OpenIncident, recipe.Activity),
                 correlationId,
                 cancellationToken);
 

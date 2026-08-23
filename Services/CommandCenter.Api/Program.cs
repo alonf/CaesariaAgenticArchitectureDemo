@@ -18,6 +18,7 @@ builder.Services.AddHttpClient<IEnergyHubGateway, HttpEnergyHubGateway>((service
 });
 builder.Services.AddSingleton<IncidentModule>();
 builder.Services.AddSingleton<ActivityTimelineModule>();
+builder.Services.AddSingleton<CustomerReportModule>();
 builder.Services.AddSingleton<ScenarioContextModule>();
 builder.Services.AddSingleton<SpatialContextModule>();
 builder.Services.AddSingleton<CommandCenterService>();

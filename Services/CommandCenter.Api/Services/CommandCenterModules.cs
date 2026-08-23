@@ -137,6 +137,50 @@ public sealed class ActivityTimelineModule
 }
 
 /// <summary>
+/// Stores the current synthetic customer report projected into the Command Center.
+/// </summary>
+public sealed class CustomerReportModule
+{
+    private readonly object _gate = new();
+    private CustomerReportRecord? _current;
+
+    /// <summary>
+    /// Gets the current customer report.
+    /// </summary>
+    /// <returns>The current report, or <see langword="null"/> when no report has arrived.</returns>
+    public CustomerReportRecord? GetCurrent()
+    {
+        lock (_gate)
+        {
+            return _current;
+        }
+    }
+
+    /// <summary>
+    /// Removes the current customer report.
+    /// </summary>
+    public void Reset()
+    {
+        lock (_gate)
+        {
+            _current = null;
+        }
+    }
+
+    /// <summary>
+    /// Replaces the current customer report.
+    /// </summary>
+    /// <param name="report">The report to store, or <see langword="null"/> to clear it.</param>
+    public void Replace(CustomerReportRecord? report)
+    {
+        lock (_gate)
+        {
+            _current = report;
+        }
+    }
+}
+
+/// <summary>
 /// Tracks the scenario currently projected by the Command Center.
 /// </summary>
 /// <param name="timeProvider">The clock used to stamp scenario state changes.</param>

@@ -31,6 +31,27 @@ public sealed class ScenarioCoordinatorTests
     }
 
     [Fact]
+    public async Task ForgottenOverrideStartsWithCustomerReportAndPhoto()
+    {
+        var clock = new TestTimeProvider();
+        var commandCenter = new FakeCommandCenterScenarioClient();
+        var coordinator = new ScenarioCoordinator(
+            new FakeSmartPoleScenarioClient(),
+            new FakeEnergyScenarioClient(),
+            commandCenter,
+            new ScenarioCatalog(clock),
+            clock,
+            NullLogger<ScenarioCoordinator>.Instance);
+
+        await coordinator.ApplyAsync(ScenarioId.ForgottenOverride, "customer-report-corr", CancellationToken.None);
+
+        var report = Assert.IsType<CustomerReportRecord>(commandCenter.LastScenarioContext?.CustomerReport);
+        Assert.Equal(DemoAssets.StreetlightAssetId, report.AssetId);
+        Assert.Equal("/images/customer-report-l417.png", report.ImageUrl);
+        Assert.Contains("ON during the day", report.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task ApplyAsyncMarksRequestedScenarioFailedWhenFinalSynchronizationFails()
     {
         var clock = new TestTimeProvider();

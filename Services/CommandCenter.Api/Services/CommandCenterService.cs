@@ -9,6 +9,7 @@ public sealed partial class CommandCenterService
     private readonly IEnergyHubGateway _energyHubGateway;
     private readonly IncidentModule _incidentModule;
     private readonly ActivityTimelineModule _activityTimelineModule;
+    private readonly CustomerReportModule _customerReportModule;
     private readonly ScenarioContextModule _scenarioContextModule;
     private readonly SpatialContextModule _spatialContextModule;
     private readonly TimeProvider _timeProvider;
@@ -20,6 +21,7 @@ public sealed partial class CommandCenterService
     /// <param name="energyHubGateway">The gateway used to read and command the authoritative Energy Hub.</param>
     /// <param name="incidentModule">The incident store used by the Command Center.</param>
     /// <param name="activityTimelineModule">The local activity timeline store.</param>
+    /// <param name="customerReportModule">The inbound customer-report store.</param>
     /// <param name="scenarioContextModule">The module tracking the current deterministic scenario.</param>
     /// <param name="spatialContextModule">The module that validates the projected map asset.</param>
     /// <param name="timeProvider">The clock used for correlated activity timestamps.</param>
@@ -28,6 +30,7 @@ public sealed partial class CommandCenterService
         IEnergyHubGateway energyHubGateway,
         IncidentModule incidentModule,
         ActivityTimelineModule activityTimelineModule,
+        CustomerReportModule customerReportModule,
         ScenarioContextModule scenarioContextModule,
         SpatialContextModule spatialContextModule,
         TimeProvider timeProvider,
@@ -36,6 +39,7 @@ public sealed partial class CommandCenterService
         _energyHubGateway = energyHubGateway ?? throw new ArgumentNullException(nameof(energyHubGateway));
         _incidentModule = incidentModule ?? throw new ArgumentNullException(nameof(incidentModule));
         _activityTimelineModule = activityTimelineModule ?? throw new ArgumentNullException(nameof(activityTimelineModule));
+        _customerReportModule = customerReportModule ?? throw new ArgumentNullException(nameof(customerReportModule));
         _scenarioContextModule = scenarioContextModule ?? throw new ArgumentNullException(nameof(scenarioContextModule));
         _spatialContextModule = spatialContextModule ?? throw new ArgumentNullException(nameof(spatialContextModule));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
@@ -66,6 +70,7 @@ public sealed partial class CommandCenterService
             _spatialContextModule.GetMapLabel(assetId),
             operationalState,
             _scenarioContextModule.GetCurrent(),
+            _customerReportModule.GetCurrent(),
             incident,
             activity);
     }
@@ -195,6 +200,7 @@ public sealed partial class CommandCenterService
 
         _incidentModule.Reset();
         _activityTimelineModule.Reset();
+        _customerReportModule.Reset();
 
         CommandCenterServiceLog.ResetCompleted(_logger, correlationId);
         return _scenarioContextModule.Reset(correlationId);
@@ -214,6 +220,7 @@ public sealed partial class CommandCenterService
         ArgumentException.ThrowIfNullOrWhiteSpace(correlationId);
 
         _incidentModule.Replace(scenarioContext.OpenIncident);
+        _customerReportModule.Replace(scenarioContext.CustomerReport);
         _activityTimelineModule.Replace(scenarioContext.Activity);
         _activityTimelineModule.Add(CreateActivity(
             DemoAssets.StreetlightAssetId,

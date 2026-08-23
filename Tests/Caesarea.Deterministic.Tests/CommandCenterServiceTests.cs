@@ -23,6 +23,7 @@ public sealed class CommandCenterServiceTests
         service.ApplyScenarioContext(
             new CommandCenterScenarioContext(
                 new ScenarioStatus(ScenarioId.ExistingIncident, "Existing Incident", "Existing incident seeded.", clock.GetUtcNow(), "scenario-corr"),
+                null,
                 incident,
                 []),
             "scenario-corr");
@@ -42,6 +43,7 @@ public sealed class CommandCenterServiceTests
         service.ApplyScenarioContext(
             new CommandCenterScenarioContext(
                 new ScenarioStatus(ScenarioId.NormalOperation, "Normal Operation", "Baseline", clock.GetUtcNow(), "scenario-corr"),
+                null,
                 null,
                 [
                     new ActivityRecord(
@@ -88,6 +90,7 @@ public sealed class CommandCenterServiceTests
             gateway ?? CreateGateway(clock),
             new IncidentModule(),
             new ActivityTimelineModule(),
+            new CustomerReportModule(),
             new ScenarioContextModule(clock),
             new SpatialContextModule(),
             clock,

@@ -6,6 +6,7 @@ namespace DemoScenario.Api.Services;
 /// <param name="Descriptor">The scenario descriptor exposed to the presenter console.</param>
 /// <param name="SmartPoleState">The simulator state to apply first.</param>
 /// <param name="EnergyState">The Energy Hub synchronization request.</param>
+/// <param name="CustomerReport">The synthetic customer report that triggers the scenario, if any.</param>
 /// <param name="OpenIncident">The Command Center incident to seed, if any.</param>
 /// <param name="Activity">The Command Center activity to seed.</param>
 /// <param name="ApplicationSummary">The projector-friendly completion summary.</param>
@@ -13,6 +14,7 @@ public sealed record ScenarioRecipe(
     ScenarioDescriptor Descriptor,
     SmartPoleScenarioState SmartPoleState,
     EnergyScenarioSyncRequest EnergyState,
+    CustomerReportRecord? CustomerReport,
     IncidentRecord? OpenIncident,
     IReadOnlyList<ActivityRecord> Activity,
     string ApplicationSummary);
@@ -66,11 +68,20 @@ public sealed class ScenarioCatalog(TimeProvider timeProvider)
                     OperationalContext.None,
                     SmartPoleBehaviorConfiguration.Default),
                 new EnergyScenarioSyncRequest(true, null, "Energy Hub synchronized to the Forgotten Override scenario."),
+                new CustomerReportRecord(
+                    "REPORT-L417-001",
+                    DemoAssets.StreetlightAssetId,
+                    DemoAssets.NorthPromenadeArea,
+                    "This light on this pole is ON during the day.",
+                    "/images/customer-report-l417.png",
+                    "Resident mobile report",
+                    now.AddMinutes(-2),
+                    "customer-report-seed"),
                 null,
                 [
-                    CreateScenarioActivity("Recent maintenance left manual override enabled during daylight.", now)
+                    CreateScenarioActivity("Customer report received with a photo of L-417 illuminated during daylight.", now)
                 ],
-                "Forgotten Override applied deterministically."),
+                "Customer report received and Forgotten Override applied deterministically."),
             ScenarioId.SecurityOperation => new ScenarioRecipe(
                 descriptor,
                 new SmartPoleScenarioState(
@@ -84,6 +95,7 @@ public sealed class ScenarioCatalog(TimeProvider timeProvider)
                     new OperationalContext(true, true, "Security operation requires lighting in North Promenade."),
                     SmartPoleBehaviorConfiguration.Default),
                 new EnergyScenarioSyncRequest(true, null, "Energy Hub synchronized to the Security Operation scenario."),
+                null,
                 null,
                 [
                     CreateScenarioActivity("Security operations require lighting even though the daylight schedule is off.", now)
@@ -103,6 +115,7 @@ public sealed class ScenarioCatalog(TimeProvider timeProvider)
                     SmartPoleBehaviorConfiguration.Default),
                 new EnergyScenarioSyncRequest(false, null, "Energy Hub synchronized to the Controller Fault scenario."),
                 null,
+                null,
                 [
                     CreateScenarioActivity("The controller is faulted while L-417 remains on against schedule.", now)
                 ],
@@ -120,6 +133,7 @@ public sealed class ScenarioCatalog(TimeProvider timeProvider)
                     OperationalContext.None,
                     SmartPoleBehaviorConfiguration.Default),
                 new EnergyScenarioSyncRequest(false, "INC-L417-001", "Energy Hub synchronized to the Existing Incident scenario."),
+                null,
                 new IncidentRecord(
                     "INC-L417-001",
                     DemoAssets.StreetlightAssetId,
@@ -148,6 +162,7 @@ public sealed class ScenarioCatalog(TimeProvider timeProvider)
                     SmartPoleBehaviorConfiguration.Default),
                 new EnergyScenarioSyncRequest(false, null, "Energy Hub synchronized to normal daytime operation."),
                 null,
+                null,
                 [
                     CreateScenarioActivity("The deterministic baseline is active.", now)
                 ],
@@ -165,6 +180,7 @@ public sealed class ScenarioCatalog(TimeProvider timeProvider)
                     OperationalContext.None,
                     SmartPoleBehaviorConfiguration.Default),
                 new EnergyScenarioSyncRequest(true, null, "Energy Hub synchronized to normal night operation."),
+                null,
                 null,
                 [
                     CreateScenarioActivity("Night schedule is active and L-417 is operating normally.", now)

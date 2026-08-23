@@ -657,6 +657,79 @@ svg {
     border-radius: 50%;
 }
 
+.customer-report-pin {
+    position: absolute;
+    z-index: 5;
+    width: 292px;
+    min-height: 148px;
+    padding: 8px;
+    display: grid;
+    grid-template-columns: 82px 1fr;
+    gap: 10px;
+    background: var(--cp-panel-strong);
+    border: 1px solid var(--cp-accent);
+    border-radius: 0.625rem;
+    box-shadow: var(--cp-shadow);
+}
+
+.customer-report-pin img {
+    width: 82px;
+    height: 132px;
+    object-fit: cover;
+    object-position: center;
+    border: 1px solid var(--cp-border);
+    border-radius: 0.625rem;
+}
+
+.report-connector {
+    position: absolute;
+    top: -45px;
+    left: -34px;
+    width: 46px;
+    height: 58px;
+    border-right: 2px solid var(--cp-accent);
+    border-bottom: 2px solid var(--cp-accent);
+    transform: rotate(-30deg);
+}
+
+.report-copy {
+    min-width: 0;
+}
+
+.report-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--cp-accent);
+    font-size: 0.64rem;
+    font-weight: 750;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.report-label i {
+    width: 7px;
+    height: 7px;
+    display: inline-block;
+    background: var(--cp-accent);
+    border-radius: 50%;
+}
+
+.customer-report-pin blockquote {
+    margin: 9px 0 8px;
+    color: var(--cp-text);
+    font-size: 0.78rem;
+    font-style: normal;
+    font-weight: 650;
+    line-height: 1.4;
+}
+
+.customer-report-pin small {
+    display: block;
+    color: var(--cp-text-muted);
+    font-size: 0.62rem;
+}
+
 .map-legend {
     position: absolute;
     left: 16px;
