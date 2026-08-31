@@ -46,6 +46,28 @@ public sealed class DemoBreakpointsTests
             regionNames.OrderBy(value => value, StringComparer.Ordinal));
     }
 
+    [Fact]
+    public void RegisteredBreakpointsCoverEveryDemoSnippet()
+    {
+        var programPath = Path.Combine(
+            FindRepositoryRoot(), "Services", "OperationsAgent.Api", "Program.cs");
+        var registration = Regex.Match(File.ReadAllText(programPath), @"MapDemoBreakpoints\(([^;]*)\);");
+
+        Assert.True(registration.Success, "Program.cs no longer calls MapDemoBreakpoints.");
+
+        // Runtime registration must name every DemoSnippets constant: a snippet that exists in the
+        // registry and its source region but is missing here could never be armed from DemoControl.
+        var snippetFieldNames = typeof(DemoSnippets)
+            .GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)
+            .Where(field => field.IsLiteral && field.FieldType == typeof(string))
+            .Select(field => field.Name);
+
+        foreach (var fieldName in snippetFieldNames)
+        {
+            Assert.Contains($"{nameof(DemoSnippets)}.{fieldName}", registration.Groups[1].Value, StringComparison.Ordinal);
+        }
+    }
+
     private static List<string> GetDemoSnippetValues() =>
         [.. typeof(DemoSnippets)
             .GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)

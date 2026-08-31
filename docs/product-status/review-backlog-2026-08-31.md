@@ -34,3 +34,13 @@ All findings from the full working-tree review are now resolved.
 6. **Line endings** — normalized via `dotnet format`; `dotnet format --verify-no-changes` passes.
 7. **Package refresh** — Microsoft.Extensions.* 10.9.0 and OpenTelemetry 1.18.0 across
    ServiceDefaults.
+
+## Deferred (with trigger)
+
+- **Snippet region scan scope** (low, from the demo-anchor review): the region synchronization
+  test scans `Services/` only, while the requirements allow snippets in dedicated sample files
+  (e.g. a future `Samples/` root). Trigger: the first snippet region outside
+  `Services/` — then either widen the scan to every source root (generated directories excluded)
+  or introduce an explicit snippet catalog shared by registration and validation. The companion
+  gap (a `DemoSnippets` constant missing from runtime `MapDemoBreakpoints` registration) is
+  closed by `RegisteredBreakpointsCoverEveryDemoSnippet`.
