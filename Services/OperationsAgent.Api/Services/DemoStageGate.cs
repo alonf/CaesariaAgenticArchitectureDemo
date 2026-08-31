@@ -10,19 +10,19 @@ public sealed class DemoStageGate
     private DemoStageStatus _currentStage;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="DemoStageGate"/> class.
+    /// Initializes a new instance of the <see cref="DemoStageGate"/> class. The startup stage is
+    /// stamped with <see cref="DateTimeOffset.MinValue"/> so any authoritative stage - pushed by the
+    /// switchboard or read from the Command Center - supersedes it.
     /// </summary>
-    /// <param name="timeProvider">The clock used to stamp the startup stage.</param>
-    /// <param name="initialStage">The stage assumed until the switchboard propagates one.</param>
-    public DemoStageGate(TimeProvider timeProvider, DemoStage initialStage)
+    /// <param name="initialStage">The stage assumed until an authoritative stage arrives.</param>
+    public DemoStageGate(DemoStage initialStage)
     {
-        ArgumentNullException.ThrowIfNull(timeProvider);
         _currentStage = new DemoStageStatus(
             initialStage,
             initialStage.ToString(),
             "Stage assumed at service startup until the presenter switchboard propagates a stage.",
             [],
-            timeProvider.GetUtcNow(),
+            DateTimeOffset.MinValue,
             "startup");
     }
 
@@ -44,17 +44,22 @@ public sealed class DemoStageGate
     }
 
     /// <summary>
-    /// Replaces the current demo stage with the supplied value.
+    /// Replaces the current demo stage with the supplied value, unless the supplied stage is older
+    /// than the stored one - a stale startup read must never overwrite a newer pushed stage.
     /// </summary>
-    /// <param name="stage">The new current stage.</param>
-    /// <returns>The stored stage.</returns>
+    /// <param name="stage">The stage to apply.</param>
+    /// <returns>The stage that is current after the call.</returns>
     public DemoStageStatus SetCurrent(DemoStageStatus stage)
     {
         ArgumentNullException.ThrowIfNull(stage);
 
         lock (_gate)
         {
-            _currentStage = stage;
+            if (stage.AppliedAt >= _currentStage.AppliedAt)
+            {
+                _currentStage = stage;
+            }
+
             return _currentStage;
         }
     }

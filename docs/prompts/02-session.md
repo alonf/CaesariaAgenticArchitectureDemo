@@ -28,8 +28,10 @@ only — it is never the authoritative operational state, which stays in the det
 - Sessions expire after 30 idle minutes and the store is capped (oldest evicted). A follow-up that
   references an unknown or expired session fails explicitly with **410 Gone** instead of silently
   starting an empty conversation.
-- The demo stage is synchronized from the authoritative Command Center at startup, so a restarted
-  Operations Agent does not diverge from the stage the presenter already applied.
+- The demo stage is continuously reconciled with the authoritative Command Center (10-second poll
+  with an applied-at ordering guard), so neither a restarted Operations Agent nor a failed stage
+  push can leave the local gate diverged - in particular, a change back to Deterministic takes
+  effect here within one poll interval even if the push was lost.
 - The Foundry credential warmup runs once, in the background, and only when an agent-enabled stage
   becomes active — the Deterministic stage keeps its promise that no AI credential is used.
 

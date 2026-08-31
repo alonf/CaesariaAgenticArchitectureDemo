@@ -19,6 +19,11 @@ public sealed class AgentSessionStore(TimeProvider timeProvider)
     private readonly TimeProvider _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
 
     /// <summary>
+    /// Gets the number of stored sessions; never exceeds the capacity cap after a save completes.
+    /// </summary>
+    public int Count => _sessions.Count;
+
+    /// <summary>
     /// Gets the serialized session state for the supplied identifier.
     /// </summary>
     /// <param name="sessionId">The session identifier returned by an earlier request.</param>
@@ -63,6 +68,9 @@ public sealed class AgentSessionStore(TimeProvider timeProvider)
 
         var newSessionId = Guid.NewGuid().ToString("N");
         _sessions[newSessionId] = stored;
+
+        // Enforce the capacity cap after the insertion, so the store never settles above it.
+        Prune();
         return newSessionId;
     }
 

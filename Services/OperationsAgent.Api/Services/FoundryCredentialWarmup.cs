@@ -11,7 +11,7 @@ namespace OperationsAgent.Api.Services;
 /// triggered only when an agent-enabled stage becomes active, so the Deterministic stage keeps its
 /// promise that no AI credential is used.
 /// </summary>
-internal sealed partial class FoundryCredentialWarmup(
+public sealed partial class FoundryCredentialWarmup(
     TokenCredential credential,
     ILogger<FoundryCredentialWarmup> logger)
 {

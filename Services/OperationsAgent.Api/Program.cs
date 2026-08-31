@@ -20,7 +20,7 @@ builder.Services.AddHttpClient<IEnergyReadGateway, HttpEnergyReadGateway>((servi
     var options = serviceProvider.GetRequiredService<IOptions<OperationsAgentApiOptions>>().Value;
     client.BaseAddress = new Uri(options.EnergyHubBaseUri, UriKind.Absolute);
 });
-builder.Services.AddHttpClient<CommandCenterStageReader>((serviceProvider, client) =>
+builder.Services.AddHttpClient<ICommandCenterStageReader, CommandCenterStageReader>((serviceProvider, client) =>
 {
     var options = serviceProvider.GetRequiredService<IOptions<OperationsAgentApiOptions>>().Value;
     client.BaseAddress = new Uri(options.CommandCenterBaseUri, UriKind.Absolute);
@@ -40,12 +40,12 @@ builder.Services.AddSingleton(serviceProvider =>
 });
 builder.Services.AddSingleton<FoundryCredentialWarmup>();
 builder.Services.AddHostedService<DemoStageSynchronizer>();
-builder.Services.AddSingleton(serviceProvider =>
+builder.Services.AddSingleton(_ =>
 {
     var initialStage = Enum.TryParse<DemoStage>(builder.Configuration["DemoStage"], out var configuredStage)
         ? configuredStage
         : DemoStage.Deterministic;
-    return new DemoStageGate(serviceProvider.GetRequiredService<TimeProvider>(), initialStage);
+    return new DemoStageGate(initialStage);
 });
 builder.Services.AddSingleton<AgentSessionStore>();
 builder.Services.AddSingleton<IOperationsAgent>(serviceProvider =>

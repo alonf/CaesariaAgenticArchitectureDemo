@@ -5,16 +5,23 @@ namespace OperationsAgent.Api.Services;
 /// <summary>
 /// Reads the authoritative current demo stage from the Command Center boundary.
 /// </summary>
-internal sealed class CommandCenterStageReader(HttpClient httpClient)
+public interface ICommandCenterStageReader
 {
-    private static readonly JsonSerializerOptions SerializerOptions = CaesareaJsonDefaults.CreateSerializerOptions();
-
     /// <summary>
     /// Gets the current authoritative demo stage.
     /// </summary>
     /// <param name="correlationId">The correlation identifier spanning the read.</param>
     /// <param name="cancellationToken">The token used to cancel the operation.</param>
     /// <returns>The current stage.</returns>
+    public Task<DemoStageStatus> GetCurrentStageAsync(string correlationId, CancellationToken cancellationToken);
+}
+
+/// <inheritdoc cref="ICommandCenterStageReader"/>
+public sealed class CommandCenterStageReader(HttpClient httpClient) : ICommandCenterStageReader
+{
+    private static readonly JsonSerializerOptions SerializerOptions = CaesareaJsonDefaults.CreateSerializerOptions();
+
+    /// <inheritdoc />
     public async Task<DemoStageStatus> GetCurrentStageAsync(string correlationId, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(correlationId);
@@ -30,48 +37,92 @@ internal sealed class CommandCenterStageReader(HttpClient httpClient)
 }
 
 /// <summary>
-/// Seeds the local stage gate from the authoritative Command Center stage at startup, so a restarted
-/// Operations Agent does not diverge from the stage the presenter already applied. The switchboard
-/// remains the push path for later stage changes; this closes the restart gap only.
+/// Continuously reconciles the local stage gate with the authoritative Command Center stage. The
+/// switchboard push remains the fast path; this loop closes every divergence window - a restarted
+/// Operations Agent, or a stage change whose push to this service failed - within one poll interval,
+/// so a direct request can never keep reaching Foundry after the authoritative stage went back to
+/// Deterministic. The <see cref="DemoStageGate"/> ordering guard keeps a stale read from
+/// overwriting a newer pushed stage.
 /// </summary>
-internal sealed partial class DemoStageSynchronizer(
-    CommandCenterStageReader stageReader,
+public sealed partial class DemoStageSynchronizer(
+    ICommandCenterStageReader stageReader,
     DemoStageGate stageGate,
     FoundryCredentialWarmup credentialWarmup,
     ILogger<DemoStageSynchronizer> logger) : BackgroundService
 {
-    private static readonly TimeSpan RetryDelay = TimeSpan.FromSeconds(2);
-    private const int MaxAttempts = 15;
+    private static readonly TimeSpan InitialRetryInterval = TimeSpan.FromSeconds(2);
+    private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(10);
+    private const int FailureLogEvery = 30;
 
     /// <inheritdoc />
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        for (var attempt = 1; attempt <= MaxAttempts && !stoppingToken.IsCancellationRequested; attempt++)
+        var synchronizedOnce = false;
+        var consecutiveFailures = 0;
+
+        while (!stoppingToken.IsCancellationRequested)
         {
+            if (await TrySynchronizeAsync(stoppingToken))
+            {
+                synchronizedOnce = true;
+                consecutiveFailures = 0;
+            }
+            else
+            {
+                consecutiveFailures++;
+
+                if (consecutiveFailures == 1 || consecutiveFailures % FailureLogEvery == 0)
+                {
+                    StageSynchronizerLog.SynchronizationFailing(logger, consecutiveFailures);
+                }
+            }
+
             try
             {
-                var stage = await stageReader.GetCurrentStageAsync(CorrelationIds.Create(), stoppingToken);
-                stageGate.SetCurrent(stage);
-                StageSynchronizerLog.Synchronized(logger, stage.Name);
-
-                if (stageGate.IsAgentEnabled)
-                {
-                    credentialWarmup.EnsureStarted();
-                }
-
+                await Task.Delay(synchronizedOnce ? PollInterval : InitialRetryInterval, stoppingToken);
+            }
+            catch (OperationCanceledException)
+            {
                 return;
             }
-            catch (Exception exception) when (exception is HttpRequestException or InvalidOperationException or TaskCanceledException
-                && !stoppingToken.IsCancellationRequested)
-            {
-                if (attempt == MaxAttempts)
-                {
-                    StageSynchronizerLog.GaveUp(logger, attempt, exception);
-                    return;
-                }
+        }
+    }
 
-                await Task.Delay(RetryDelay, stoppingToken);
+    /// <summary>
+    /// Performs one reconciliation attempt. Every failure except host shutdown is swallowed and
+    /// reported through the return value, so no transport, resilience, or parsing exception can
+    /// escape the background loop and stop the host.
+    /// </summary>
+    /// <param name="cancellationToken">The token that observes host shutdown.</param>
+    /// <returns><see langword="true"/> when the authoritative stage was read and applied.</returns>
+    public async Task<bool> TrySynchronizeAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var stage = await stageReader.GetCurrentStageAsync(CorrelationIds.Create(), cancellationToken);
+            var previous = stageGate.GetCurrent();
+            var applied = stageGate.SetCurrent(stage);
+
+            if (applied.Id != previous.Id)
+            {
+                StageSynchronizerLog.Synchronized(logger, applied.Name);
             }
+
+            if (stageGate.IsAgentEnabled)
+            {
+                credentialWarmup.EnsureStarted();
+            }
+
+            return true;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            StageSynchronizerLog.AttemptFailed(logger, exception);
+            return false;
         }
     }
 }
@@ -81,12 +132,18 @@ internal static partial class StageSynchronizerLog
     [LoggerMessage(
         EventId = 2480,
         Level = LogLevel.Information,
-        Message = "Demo stage synchronized from the Command Center at startup: {StageName}.")]
+        Message = "Demo stage reconciled from the Command Center: {StageName}.")]
     internal static partial void Synchronized(ILogger logger, string stageName);
 
     [LoggerMessage(
         EventId = 2481,
         Level = LogLevel.Warning,
-        Message = "Demo stage could not be synchronized from the Command Center after {Attempts} attempts; keeping the configured startup stage until the switchboard propagates one.")]
-    internal static partial void GaveUp(ILogger logger, int attempts, Exception exception);
+        Message = "Demo stage reconciliation has failed {ConsecutiveFailures} consecutive time(s); keeping the last known stage until the Command Center is reachable.")]
+    internal static partial void SynchronizationFailing(ILogger logger, int consecutiveFailures);
+
+    [LoggerMessage(
+        EventId = 2482,
+        Level = LogLevel.Debug,
+        Message = "Demo stage reconciliation attempt failed.")]
+    internal static partial void AttemptFailed(ILogger logger, Exception exception);
 }

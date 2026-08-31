@@ -77,6 +77,9 @@ public sealed class AgentSessionStoreTests
         }
 
         Assert.False(store.TryGetState(firstSessionId, out _));
+
+        // The cap is an exact invariant after every save, not an eventual one.
+        Assert.Equal(50, store.Count);
     }
 
     private static JsonElement CreateState(string marker)
