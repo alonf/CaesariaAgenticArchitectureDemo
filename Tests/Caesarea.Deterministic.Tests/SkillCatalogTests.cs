@@ -17,35 +17,41 @@ public sealed class SkillCatalogTests
     }
 
     [Fact]
-    public void DescribesTheStreetlightInvestigationSkillFromItsFrontmatter()
+    public async Task DescribesTheStreetlightInvestigationSkillThroughSdkDiscovery()
     {
-        var skills = SkillCatalog.Describe(SkillCatalog.ResolveDirectory("skills"), NullLogger.Instance);
+        // Describe delegates to the SDK's own AgentFileSkillsSource, so the UI trace reports
+        // exactly what the AgentSkillsProvider would advertise.
+        var skills = await SkillCatalog.DescribeAsync(
+            SkillCatalog.ResolveDirectory("skills"), CreateProbeAgent(), NullLoggerFactory.Instance, TestContext.Current.CancellationToken);
 
         var investigation = Assert.Single(skills, skill => skill.Name == "streetlight-investigation");
         Assert.False(string.IsNullOrWhiteSpace(investigation.Description));
     }
 
     [Fact]
-    public void DescribeReturnsNothingForMissingDirectory()
+    public async Task DescribeReturnsNothingForMissingDirectory()
     {
-        Assert.Empty(SkillCatalog.Describe(null, NullLogger.Instance));
-        Assert.Empty(SkillCatalog.Describe(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N")), NullLogger.Instance));
+        Assert.Empty(await SkillCatalog.DescribeAsync(null, CreateProbeAgent(), NullLoggerFactory.Instance, TestContext.Current.CancellationToken));
+        Assert.Empty(await SkillCatalog.DescribeAsync(
+            Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N")), CreateProbeAgent(), NullLoggerFactory.Instance, TestContext.Current.CancellationToken));
     }
 
     [Fact]
-    public void DescribeSkipsFilesWithoutAFrontmatterBlock()
+    public async Task DescribeSkipsFilesWithoutAFrontmatterBlock()
     {
-        // Field lines outside a --- block are not frontmatter; the SDK would skip such a file, so
-        // the catalog must not advertise it either.
+        // Field lines outside a --- block are not frontmatter; SDK discovery skips such a file,
+        // and Describe reports whatever the SDK decided.
         var directory = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "broken-skill"));
 
         try
         {
-            File.WriteAllText(
+            await File.WriteAllTextAsync(
                 Path.Combine(directory.FullName, "SKILL.md"),
-                "name: broken-skill\ndescription: No delimiters around these fields.\n# Body");
+                "name: broken-skill\ndescription: No delimiters around these fields.\n# Body",
+                TestContext.Current.CancellationToken);
 
-            Assert.Empty(SkillCatalog.Describe(directory.Parent!.FullName, NullLogger.Instance));
+            Assert.Empty(await SkillCatalog.DescribeAsync(
+                directory.Parent!.FullName, CreateProbeAgent(), NullLoggerFactory.Instance, TestContext.Current.CancellationToken));
         }
         finally
         {
@@ -97,6 +103,16 @@ public sealed class SkillCatalogTests
     }
 
     [Fact]
+    public async Task ShippedSkillPassesSdkDiscoveryValidation()
+    {
+        // Discovery IS the SDK's validation: a bad presenter edit fails here, not on stage.
+        var skills = await SkillCatalog.DescribeAsync(
+            SkillCatalog.ResolveDirectory("skills"), CreateProbeAgent(), NullLoggerFactory.Instance, TestContext.Current.CancellationToken);
+
+        Assert.NotEmpty(skills);
+    }
+
+    [Fact]
     public void ShippedSkillPinsTheProcedureAndContainsNoSecrets()
     {
         var skillPath = Path.Combine(SkillCatalog.ResolveDirectory("skills")!, "streetlight-investigation", "SKILL.md");
@@ -117,6 +133,9 @@ public sealed class SkillCatalogTests
             Assert.DoesNotContain(forbidden, content, StringComparison.OrdinalIgnoreCase);
         }
     }
+
+    private static ChatClientAgent CreateProbeAgent() =>
+        new(new CapturingChatClient(), new ChatClientAgentOptions());
 
     private sealed class CapturingChatClient : IChatClient
     {

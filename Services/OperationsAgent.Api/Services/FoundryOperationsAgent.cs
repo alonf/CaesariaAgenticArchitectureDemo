@@ -150,10 +150,6 @@ public sealed partial class FoundryOperationsAgent(
                 _skillsDirectory,
                 options: new AgentSkillsProviderOptions { DisableLoadSkillApproval = true },
                 loggerFactory: _loggerFactory);
-
-            // Snapshot the catalog before the run: the response must describe what was advertised
-            // for THIS request even if the presenter edits the files while the model works.
-            advertisedSkills = SkillCatalog.Describe(_skillsDirectory, _logger);
         }
         #endregion
 
@@ -236,6 +232,14 @@ public sealed partial class FoundryOperationsAgent(
             },
             loggerFactory: _loggerFactory);
         #endregion
+
+        if (skills is not null)
+        {
+            // Snapshot the advertised skills before the run - through the SDK's own discovery, so
+            // the response reports exactly what the provider would advertise for THIS request even
+            // if the presenter edits the files while the model works.
+            advertisedSkills = await SkillCatalog.DescribeAsync(_skillsDirectory, agent, _loggerFactory, cancellationToken);
+        }
 
         OperationsAgentLog.RequestStarted(_logger, _modelDeploymentName, correlationId);
 
