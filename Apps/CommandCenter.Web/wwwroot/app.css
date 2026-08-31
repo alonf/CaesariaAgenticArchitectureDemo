@@ -1144,6 +1144,10 @@ svg {
     color: var(--cp-text);
     font-size: 0.85rem;
     line-height: 1.5;
+    /* Model-generated content is unpredictable: wide tables scroll locally instead of
+       stretching the rail, and long unbroken tokens wrap instead of overflowing. */
+    overflow-x: auto;
+    overflow-wrap: anywhere;
 }
 
 .agent-answer > :first-child {
@@ -1212,6 +1216,7 @@ svg {
     padding: 5px 8px;
     border: 1px solid var(--cp-border);
     text-align: left;
+    overflow-wrap: anywhere;
 }
 
 .agent-answer th {

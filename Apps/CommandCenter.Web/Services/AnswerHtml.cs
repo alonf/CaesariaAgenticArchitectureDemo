@@ -7,8 +7,10 @@ namespace CommandCenter.Web.Services;
 
 /// <summary>
 /// Renders model-produced markdown into safe HTML for the agent answer panel. Model output is
-/// untrusted: raw HTML is escaped by the pipeline, and link destinations are restricted to
-/// http/https/mailto - anything else (for example javascript:) is stripped down to its text.
+/// untrusted: raw HTML is escaped by the pipeline, images are reduced to their alt text (no
+/// outbound requests from model output), and link destinations - regular links and autolinks
+/// alike - must be absolute http, https, or mailto URLs; anything else (javascript:, data:,
+/// file:, relative paths) is reduced to plain text.
 /// </summary>
 internal static class AnswerHtml
 {
@@ -28,9 +30,21 @@ internal static class AnswerHtml
 
         var document = Markdown.Parse(markdown, Pipeline);
 
-        foreach (var link in document.Descendants<LinkInline>().Where(link => !IsSafeUrl(link.Url)))
+        foreach (var link in document.Descendants<LinkInline>().ToList())
         {
-            link.Url = string.Empty;
+            if (link.IsImage || !IsSafeUrl(link.Url))
+            {
+                // Unwrap to the link's text (an image's children are its alt text).
+                link.ReplaceBy(new ContainerInline(), copyChildren: true);
+            }
+        }
+
+        foreach (var autolink in document.Descendants<AutolinkInline>().ToList())
+        {
+            if (!autolink.IsEmail && !IsSafeUrl(autolink.Url))
+            {
+                autolink.ReplaceBy(new LiteralInline(autolink.Url));
+            }
         }
 
         using var writer = new StringWriter();
@@ -43,6 +57,5 @@ internal static class AnswerHtml
 
     private static bool IsSafeUrl(string? url) =>
         Uri.TryCreate(url, UriKind.Absolute, out var parsed)
-            ? parsed.Scheme is "http" or "https" or "mailto"
-            : url is not null && !url.Contains(':', StringComparison.Ordinal);
+        && parsed.Scheme is "http" or "https" or "mailto";
 }

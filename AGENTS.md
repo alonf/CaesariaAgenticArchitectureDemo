@@ -29,8 +29,14 @@ agents, read the microsoft-foundry skill first.
 dotnet restore
 dotnet format
 dotnet build
-dotnet test
+dotnet test --project Tests/Caesarea.Deterministic.Tests/Caesarea.Deterministic.Tests.csproj
 git diff --check
 ```
 
 Run these before considering any change complete. All existing tests must keep passing.
+
+`dotnet test` runs in Microsoft.Testing.Platform mode (opted in via `global.json`; the test project
+is an xunit.v3 executable). The `--project` form is the reliable invocation: a bare `dotnet test`
+walks every project in the solution and can fail on machines where the Aspire AppHost SDK does not
+resolve during test discovery. VS Code's Test Explorer uses the Testing Platform protocol
+(`.vscode/settings.json`).

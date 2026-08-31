@@ -1,0 +1,5 @@
+{
+    // The test project runs on Microsoft.Testing.Platform (xunit.v3); the VSTest protocol would
+    // abort looking for testhost.dll.
+    "dotnet.testWindow.useTestingPlatformProtocol": true
+}

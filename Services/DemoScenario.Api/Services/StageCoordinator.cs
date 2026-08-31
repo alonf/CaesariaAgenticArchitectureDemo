@@ -86,7 +86,7 @@ public sealed partial class StageCoordinator : IDisposable
                 || (exception is OperationCanceledException && !cancellationToken.IsCancellationRequested))
             {
                 StageCoordinatorLog.AgentPropagationFailed(_logger, descriptor.Name, correlationId, exception);
-                summary += " Warning: the Operations Agent did not receive the stage change.";
+                summary += " Warning: could not confirm the stage change reached the Operations Agent; background reconciliation will retry.";
             }
 
             StageCoordinatorLog.StageApplied(_logger, descriptor.Name, correlationId);

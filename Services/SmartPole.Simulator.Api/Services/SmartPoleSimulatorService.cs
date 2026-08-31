@@ -7,7 +7,7 @@ public sealed partial class SmartPoleSimulatorService
 {
     private const string SetLampStateOperation = "Set lamp state";
     private const string SupersededSummary =
-        "SmartPole command was superseded by a scenario change or reset; the new state was preserved.";
+        "SmartPole command was superseded by a newer operation, scenario change, or reset; the newer state was preserved.";
     private readonly object _gate = new();
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<SmartPoleSimulatorService> _logger;

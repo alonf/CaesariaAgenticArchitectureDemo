@@ -154,7 +154,8 @@ public sealed partial class FoundryOperationsAgent(
                     ]
                 },
                 // Capabilities join as context providers: knowledge retrieval contributes an
-                // on-demand search tool, case memory contributes hypothesis instructions.
+                // on-demand search tool; case memory contributes trusted hypothesis rules plus
+                // recalled cases as separate untrusted reference data.
                 AIContextProviders = contextProviders.Count > 0 ? contextProviders : null
             },
             clientFactory: client =>

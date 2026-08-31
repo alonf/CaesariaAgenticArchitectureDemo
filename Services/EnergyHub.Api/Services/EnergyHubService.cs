@@ -7,7 +7,7 @@ public sealed partial class EnergyHubService
 {
     private const string RestoreScheduledModeOperation = "Restore scheduled mode";
     private const string SupersededSummary =
-        "Restore Scheduled Mode was superseded by a scenario change or reset; the new state was preserved.";
+        "Restore Scheduled Mode was superseded by a newer operation, scenario change, or reset; the newer state was preserved.";
     private readonly object _gate = new();
     private readonly ISmartPoleGateway _smartpoleGateway;
     private readonly TimeProvider _timeProvider;
@@ -326,10 +326,12 @@ public sealed partial class EnergyHubService
 
                 EnergyHubServiceLog.RestoreSucceeded(_logger, assetId, scheduledTarget, correlationId);
 
+                // Report the physical state SmartPole confirmed for THIS command; reading the live
+                // twin here could pick up a concurrent operation's state.
                 return new RestoreScheduledModeResult(
                     assetId,
                     scheduledTarget,
-                    _twin.ReportedIsOn,
+                    confirmedIsOn,
                     CommandExecutionStatus.Succeeded,
                     correlationId,
                     "Scheduled mode restored after SmartPole confirmation.",

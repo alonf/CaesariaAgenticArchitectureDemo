@@ -202,7 +202,9 @@ public sealed class CaseMemoryProvider(
     /// <summary>
     /// Builds the invocation context for the recalled cases: trusted static rules in
     /// <see cref="AIContext.Instructions"/>, the untrusted case content JSON-serialized into a
-    /// separate data message. Stored text can therefore never rewrite the rules.
+    /// separate data message. The separation keeps stored text out of the trusted instruction
+    /// channel, reducing the risk that recalled content overrides the rules - model behavior is
+    /// probabilistic, so this is a mitigation, not a guarantee.
     /// </summary>
     /// <param name="recalledCases">The cases the store recalled for the current question.</param>
     /// <returns>The context to merge into the invocation.</returns>

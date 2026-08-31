@@ -62,6 +62,31 @@ All findings from the full working-tree review are now resolved.
    Test SDK and the VSTest-only coverlet collector were removed (MTP coverage would use
    `Microsoft.Testing.Extensions.CodeCoverage` when needed).
 
+## Fixed in the markdown-rendering review pass
+
+1. **Autolink scheme bypass (high)** — `<javascript:...>` autolinks parse as `AutolinkInline`,
+   which the first sanitizer pass missed. AnswerHtml now handles regular links and autolinks:
+   destinations must be absolute http/https/mailto; anything else - javascript:, data:,
+   vbscript:, file:, and relative paths - is reduced to plain text (unwrapped, not left as an
+   empty-href anchor). Markdown images are reduced to their alt text so model output can never
+   trigger outbound requests. Adversarial tests cover all four schemes in both link forms,
+   relative links, and images.
+2. **Restore result race** — the success `RestoreScheduledModeResult` now reports the
+   `confirmedIsOn` captured for this command instead of re-reading the live twin outside the lock.
+3. **Test-runner migration completed (MTP-only)** — the VSTest adapter package is removed, VS Code
+   Test Explorer uses the Testing Platform protocol via `.vscode/settings.json`, and the
+   documented quality command is `dotnet test --project Tests/...` (a bare solution-wide
+   `dotnet test` can fail on machines where the Aspire AppHost SDK does not resolve during test
+   discovery).
+4. **Message honesty** — superseded summaries name the newer-operation cause; the stage-push
+   warning says propagation could not be confirmed (reconciliation retries) instead of claiming
+   the agent did not receive it.
+5. **Close-case boundary validation** extracted to `CloseCaseValidation` and tested through the
+   validator (invalid/blank/over-limit/at-limit).
+6. **Stale wording** — comments and 04-memory.md now describe trusted static rules plus untrusted
+   JSON reference data, and call the separation a risk reduction, not a guarantee.
+7. **Table containment** — `.agent-answer` scrolls wide content locally and wraps long tokens.
+
 ## Deferred (with trigger)
 
 - **Snippet region scan scope** (low, from the demo-anchor review): the region synchronization

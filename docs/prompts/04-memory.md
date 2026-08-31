@@ -10,14 +10,19 @@ gives it its own accumulated experience - and teaches that memory is a lead, nev
 
 ## Scope
 
-- `ClosedCase` + `ICaseMemoryStore` with a deterministic keyword-matched in-memory implementation.
-  The seam exists so an embedding-backed store (IEmbeddingGenerator + a vector store) can slot in
-  without changing the provider - deliberately not demoed: at one or two cases semantic search is
-  indistinguishable on stage, and Memory's differentiator is provenance, not retrieval machinery.
+- `ClosedCase` + `ICaseMemoryStore` with a deterministic token-matched in-memory implementation
+  (word-boundary tokens, stop words excluded, at least two shared meaningful terms, top three
+  matches). The seam exists so an embedding-backed store (IEmbeddingGenerator + a vector store)
+  can slot in without changing the provider - deliberately not demoed: at one or two cases
+  semantic search is indistinguishable on stage, and Memory's differentiator is provenance, not
+  retrieval machinery.
 - `CaseMemoryProvider` - the demo's first **hand-written `AIContextProvider`** (Knowledge used the
-  SDK's `TextSearchProvider`). It overrides `ProvideAIContextAsync`, recalls cases matching the
-  latest user message, and injects transient per-invocation instructions framing them as
-  hypotheses: verify live state, search real evidence, cite the case id as an analogy only.
+  SDK's `TextSearchProvider`). It overrides `ProvideAIContextAsync` and recalls cases matching the
+  latest user message. Trusted static rules travel in `AIContext.Instructions` (verify live state,
+  search real evidence, cite a recalled case id only as an unconfirmed analogy); the recalled case
+  content - operator input and earlier model output - travels separately as a JSON reference-data
+  message the rules mark as data, never instructions. The separation reduces prompt-injection
+  risk from stored text; it cannot make probabilistic model behavior certain.
 - New `CASE_MEMORY` snippet region composing the provider at the Memory stage or later.
 - **L-528 fixture**: the Energy Hub exposes a second streetlight as a deterministic read-only twin
   in the same on-during-daylight-with-override anomaly, but with no maintenance history - and the
