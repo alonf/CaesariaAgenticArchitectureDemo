@@ -1,7 +1,63 @@
+using System.Reflection;
+using System.Text.RegularExpressions;
+
 namespace Caesarea.Deterministic.Tests;
 
 public sealed class DemoBreakpointsTests
 {
+    [Fact]
+    public void SnippetIdentifiersAreStableSemanticValues()
+    {
+        var snippetValues = GetDemoSnippetValues();
+
+        Assert.Equal(
+            ["H08_AGENT_CREATION", "H08_AGENT_SESSION", "H08_FUNCTION_TOOL", "H08_KNOWLEDGE_RETRIEVAL"],
+            snippetValues.OrderBy(value => value, StringComparer.Ordinal));
+
+        // Slide position is presentation metadata, not identity: no snippet identifier may embed a
+        // physical slide number (the retired H08_S13_AGENT style).
+        foreach (var value in snippetValues)
+        {
+            Assert.DoesNotMatch(@"_S\d+(_|$)", value);
+        }
+    }
+
+    [Fact]
+    public void SnippetIdentifiersMatchTheirSourceRegions()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var regionNames = Directory
+            .GetFiles(Path.Combine(repositoryRoot, "Services"), "*.cs", SearchOption.AllDirectories)
+            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+            .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+            .SelectMany(path => Regex.Matches(File.ReadAllText(path), @"#region\s+(H08_\w+)").Select(match => match.Groups[1].Value))
+            .ToList();
+
+        // Every snippet the registry names has exactly one exported source region, and every
+        // exported region is registered - the two lists cannot drift apart.
+        Assert.Equal(
+            GetDemoSnippetValues().OrderBy(value => value, StringComparer.Ordinal),
+            regionNames.OrderBy(value => value, StringComparer.Ordinal));
+    }
+
+    private static List<string> GetDemoSnippetValues() =>
+        [.. typeof(DemoSnippets)
+            .GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)
+            .Where(field => field.IsLiteral && field.FieldType == typeof(string))
+            .Select(field => (string)field.GetRawConstantValue()!)];
+
+    private static string FindRepositoryRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "Caesarea.slnx")))
+        {
+            directory = directory.Parent;
+        }
+
+        return directory?.FullName ?? throw new InvalidOperationException("Repository root could not be located from the test output directory.");
+    }
+
     [Fact]
     public void RegisterAddsSnippetsDisarmed()
     {

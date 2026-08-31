@@ -1,4 +1,6 @@
-# Stage 2 — Session (H08 slides 18/19)
+# Stage 2 — Session
+
+Deck anchor: `H08_AGENT_SESSION` (session-context demo).
 
 ## Goal
 
@@ -14,7 +16,7 @@ only — it is never the authoritative operational state, which stays in the det
 - Command Center shows an **Ask "Why?" (same session)** button once a session exists, plus a
   footnote with the session identifier and the "context, not authority" caveat. The button
   survives a transient failure so the presenter can retry.
-- New `H08_S18_SESSION` snippet region, registered with the demo breakpoints.
+- New `H08_AGENT_SESSION` snippet region, registered with the demo breakpoints.
 
 ## Implementation decisions
 
@@ -22,7 +24,7 @@ only — it is never the authoritative operational state, which stays in the det
   `JsonElement` produced by `AIAgent.SerializeSessionAsync`; each request restores its own private
   `AgentSession` through the current agent's `DeserializeSessionAsync`. No session instance is ever
   shared across requests or agent instances, so the per-request agent composition (the
-  `H08_S13_AGENT` snippet) stays untouched.
+  `H08_AGENT_CREATION` snippet) stays untouched.
 - Concurrent saves for the same identifier are last-writer-wins: the worst case is one lost turn of
   conversational context, never corrupted state. The UI serializes its own requests anyway.
 - Sessions expire after 30 idle minutes and the store is capped (oldest evicted). A follow-up that
@@ -41,7 +43,7 @@ only — it is never the authoritative operational state, which stays in the det
 1. Switch to the Session stage; ask **"Is streetlight L-417 on?"** — tool invoked, 2 round trips.
 2. Click **Ask "Why?" (same session)** — the model resolves "Why?" to L-417 purely from session
    context: zero tool calls, one round trip, a few seconds.
-3. Land the slide-19 line: *conversation continuity is useful context, not evidence about reality* —
+3. Land the line: *conversation continuity is useful context, not evidence about reality* —
    the agent did not re-check the city. Knowledge retrieval (Stage 3) is what closes that gap.
 
 ## Verification

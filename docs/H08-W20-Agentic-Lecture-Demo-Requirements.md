@@ -104,12 +104,20 @@ Snippet export
 PowerPoint
 ```
 
-Every code-bearing H08 slide SHALL map to a source region or a small dedicated sample file.
+Every code-bearing H08 slide SHALL map to a source region or a small dedicated sample file, and SHALL carry that region's identifier in its speaker notes.
+
+Snippet identifiers SHALL be stable semantic names (`H08_<CONCEPT>`, e.g. `H08_AGENT_CREATION`,
+`H08_KNOWLEDGE_RETRIEVAL`) that name the concept being demonstrated. Physical slide numbers SHALL
+NOT appear in identifiers, region names, code, or comments: slide position is presentation
+metadata that changes whenever the deck is edited. The deck anchors to the code, not the code to
+the deck: each demo slide carries its snippet identifier in its speaker notes, so the mapping
+survives slide insertion, deletion, and reordering. Tests enforce that registered breakpoint
+identifiers match their `#region` markers and contain no slide numbers.
 
 Recommended pattern:
 
 ```csharp
-#region H08_S13_AGENT
+#region H08_AGENT_CREATION
 // exact compiling code shown in the lecture
 #endregion
 ```
@@ -2197,7 +2205,7 @@ Before implementation:
 - use current APIs, not memory.
 
 Objective:
-Implement the real Caesarea Operations Agent corresponding to H08 slides 13/14.
+Implement the real Caesarea Operations Agent (deck anchor `H08_AGENT_CREATION`).
 
 Configuration:
 Foundry:ProjectEndpoint
@@ -2214,7 +2222,7 @@ Create an agent factory that obtains the Foundry project client and constructs a
 - explicitly state insufficient evidence.
 
 Add:
-#region H08_S13_AGENT
+#region H08_AGENT_CREATION
 
 Tests:
 - configuration validation;
@@ -2233,7 +2241,7 @@ Do not add tools yet.
 
 ```text
 Objective:
-Add real function tools corresponding to H08 slides 16/17.
+Add real function tools (deck anchor `H08_FUNCTION_TOOL`).
 
 Expose deterministic Energy Hub operations first:
 - GetStreetlightStateAsync.
@@ -2245,7 +2253,7 @@ Requirements:
 - descriptions are precise;
 - no business logic duplicated in tool wrappers;
 - trace tool name + validated arguments;
-- add source region H08_S16_FUNCTION_TOOL.
+- add source region H08_FUNCTION_TOOL.
 
 Tests:
 - direct function tests;
@@ -2258,7 +2266,7 @@ Do not add state-changing tools yet.
 
 ```text
 Objective:
-Implement H08 slides 18/19.
+Implement the session-context demo (deck anchor `H08_AGENT_SESSION`).
 
 Create a session-aware interaction service.
 
@@ -2270,7 +2278,7 @@ Requirements:
 - UI shows session ID;
 - session persists conversational context;
 - docs explicitly state that session state is not authoritative operational state;
-- add H08_S18_SESSION source region.
+- add H08_AGENT_SESSION source region.
 
 Tests:
 - second turn resolves L-417 from previous conversational context;
@@ -2283,7 +2291,7 @@ Do not add knowledge yet; the second question may currently respond that more ev
 
 ```text
 Objective:
-Implement H08 slides 20/21.
+Implement the knowledge-retrieval demo (deck anchor `H08_KNOWLEDGE_RETRIEVAL`).
 
 Create:
 IWorkKnowledgeSearch
@@ -2299,7 +2307,7 @@ Requirements:
 - normalized WorkEvidence contract;
 - evidence IDs included in trace/ledger;
 - no invented work order;
-- source region H08_S20_KNOWLEDGE.
+- source region H08_KNOWLEDGE_RETRIEVAL.
 
 Tests:
 - "Why?" retrieves WO-8732;
@@ -2313,7 +2321,7 @@ Do not implement Work IQ yet.
 
 ```text
 Objective:
-Implement H08 slides 22/23 with a tiny custom case-memory provider.
+Implement the case-memory demo (deck anchor `H08_CASE_MEMORY`) with a tiny custom case-memory provider.
 
 Memory may store:
 - prior resolved demo case summary;
@@ -2325,7 +2333,7 @@ Memory must NOT store authoritative valve/light/device state.
 Use the current AIContextProvider API.
 
 Add:
-H08_S22_MEMORY.
+H08_CASE_MEMORY.
 
 Tests:
 - stored case can be retrieved in a later session;
@@ -2341,7 +2349,7 @@ Before implementation:
 inspect the installed relevant Microsoft Foundry/Agent Framework skills and current Agent Skills API.
 
 Objective:
-Implement H08 slides 24/25.
+Implement the skills demo (deck anchor `H08_SKILLS`).
 
 Create:
 skills/streetlight-incident-analysis/SKILL.md
@@ -2359,7 +2367,7 @@ Streetlight procedure:
 Wire AgentSkillsProvider using current API.
 If scripts are enabled, explicitly control which scripts can run.
 
-Add H08_S24_SKILLS.
+Add H08_SKILLS.
 
 Tests:
 - skill discovery;
@@ -2374,7 +2382,7 @@ Before implementation:
 use current MCP C# SDK documentation and installed Foundry/MCP skills if available.
 
 Objective:
-Implement H08 slides 28/29.
+Implement the MCP server demo (deck anchor `H08_MCP_SERVER`).
 
 Create a real ASP.NET Core Streamable HTTP MCP server.
 
@@ -2389,7 +2397,7 @@ Endpoints:
 Tools include read operations for Water and Energy.
 State-changing tools may be registered but remain protected by policy/domain checks.
 
-Add H08_S28_MCP_SERVER.
+Add H08_MCP_SERVER.
 
 Tests:
 - list tools;
@@ -2404,13 +2412,13 @@ Do not add MRTR yet.
 
 ```text
 Objective:
-Implement H08 slides 26/27 against the real server from the previous prompt.
+Implement the MCP client demo (deck anchor `H08_MCP_CLIENT`) against the real server from the previous prompt.
 
 Use current Streamable HTTP client APIs.
 
 The Operations Agent must be able to discover the remote MCP tools and use them.
 
-Add H08_S26_MCP_CLIENT.
+Add H08_MCP_CLIENT.
 
 UI:
 - show discovered tools;
@@ -2434,7 +2442,7 @@ inspect the CURRENT MCP C# SDK documentation for MRTR/InputRequiredException and
 Do not copy the PowerPoint syntax blindly.
 
 Objective:
-Implement the H08 slides 30/31 concept.
+Implement the multi-round-trip-request concept (deck anchor `H08_MRTR`).
 
 Create an MCP state-changing operation that may need human input before completion.
 
@@ -2451,7 +2459,7 @@ Required behavior:
 - no side effect before approval;
 - cancellation returns an explicit result.
 
-Add H08_S30_MRTR.
+Add H08_MRTR.
 
 Tests:
 - approve;
@@ -2498,7 +2506,7 @@ Do not integrate Microsoft ACS yet.
 
 ```text
 Objective:
-Implement H08 slides 32/33 and the W20 deterministic execution spine.
+Implement the workflow demo (deck anchor `H08_WORKFLOW`) and the W20 deterministic execution spine.
 
 Use current Agent Framework workflow APIs.
 
@@ -2519,7 +2527,7 @@ Requirements:
 - typed transitions;
 - visible workflow timeline;
 - failure/escalation paths;
-- source region H08_S32_WORKFLOW.
+- source region H08_WORKFLOW.
 
 Tests:
 - safe branch;
@@ -2533,7 +2541,7 @@ Tests:
 
 ```text
 Objective:
-Implement H08 slides 34/35 using the current ApprovalRequiredAIFunction/tool-approval API.
+Implement the tool-approval demo (deck anchor `H08_TOOL_APPROVAL`) using the current ApprovalRequiredAIFunction/tool-approval API.
 
 Protect a state-changing deterministic tool.
 
@@ -2549,7 +2557,7 @@ Requirements:
 - approval becomes typed ApprovalDecision;
 - approval is consumed and state-bound.
 
-Add H08_S34_TOOL_APPROVAL.
+Add H08_TOOL_APPROVAL.
 
 Tests:
 - approval request emitted;
@@ -2621,7 +2629,7 @@ Tests/evals must verify tools/arguments/forbidden behavior.
 
 ```text
 Objective:
-Implement H08 slide 40 in a small isolated comparison sample.
+Implement the multi-agent demo (deck anchor `H08_MULTI_AGENT`) in a small isolated comparison sample.
 
 Create SecurityAgent (the H08 slide naming: a security-assessment specialist that can "Assess the L-417 situation") with a real specialist reasoning boundary.
 
@@ -2632,7 +2640,7 @@ Demonstrate:
 
 Default application architecture must continue to use the simplest relationship that fits.
 
-Add H08_S40_MULTI_AGENT.
+Add H08_MULTI_AGENT.
 
 Tests:
 - delegation returns specialist result;
@@ -2648,14 +2656,14 @@ Before implementation:
 inspect current Agent Framework A2A hosting/client APIs and relevant installed skills.
 
 Objective:
-Implement H08 slides 41/42.
+Implement the agent-to-agent demo (deck anchor `H08_A2A`).
 
 Host the specialist agent independently.
 Expose Agent Card.
 Resolve the Agent Card from the Operations side.
 Invoke the remote agent over A2A.
 
-Add H08_S41_A2A.
+Add H08_A2A.
 
 Requirements:
 - two processes/services;
@@ -2753,7 +2761,7 @@ Requirements:
 - post-deploy smoke invocation;
 - product-status doc with exact versions.
 
-Add H08_S43_HOSTING and H08_S45_PROTOCOL where current APIs support concise slide snippets.
+Add H08_HOSTING and H08_PROTOCOL where current APIs support concise lecture snippets.
 
 Verification:
 - deploy to presenter's Foundry project;
@@ -2819,7 +2827,7 @@ Before implementation:
 inspect current Agent Framework evaluation APIs and relevant Foundry skill instructions.
 
 Objective:
-Implement H08 slide 49 and W20 Trust Requires Evidence.
+Implement the evaluation demo (deck anchor `H08_EVALUATION`) and W20 Trust Requires Evidence.
 
 Create deterministic and semantic eval suites.
 
@@ -2836,7 +2844,7 @@ Assert:
 Add local evaluator path and current Foundry evaluator path where supported.
 Use ASSERT-style requirement-derived scenario thinking, but do not make the demo depend on external ASSERT tooling unless explicitly chosen.
 
-Add H08_S49_EVALUATION.
+Add H08_EVALUATION.
 
 CI:
 - deterministic behavior tests on every commit;
@@ -2917,26 +2925,26 @@ Also emit docs/lecture-snippets/regions.json mapping each region name to its rep
 start line; DemoControl.Web's "Show code" buttons (Section 39.5) resolve from this index.
 
 Required regions:
-H08_S13_AGENT
-H08_S16_FUNCTION_TOOL
-H08_S18_SESSION
-H08_S20_KNOWLEDGE
-H08_S22_MEMORY
-H08_S24_SKILLS
-H08_S26_MCP_CLIENT
-H08_S28_MCP_SERVER
-H08_S30_MRTR
-H08_S32_WORKFLOW
-H08_S34_TOOL_APPROVAL
-H08_S40_MULTI_AGENT
-H08_S41_A2A
-H08_S43_HOSTING
-H08_S45_PROTOCOL
-H08_S49_EVALUATION
+H08_AGENT_CREATION
+H08_FUNCTION_TOOL
+H08_AGENT_SESSION
+H08_KNOWLEDGE_RETRIEVAL
+H08_CASE_MEMORY
+H08_SKILLS
+H08_MCP_CLIENT
+H08_MCP_SERVER
+H08_MRTR
+H08_WORKFLOW
+H08_TOOL_APPROVAL
+H08_MULTI_AGENT
+H08_A2A
+H08_HOSTING
+H08_PROTOCOL
+H08_EVALUATION
 
 CI fails when generated snippets differ.
 
-Docs map each region to slide number.
+Docs map each region to its demo concept; the deck anchors each region by stamping its identifier into the relevant slide speaker notes.
 ```
 
 ## Prompt 29 — (removed)
@@ -3094,31 +3102,31 @@ application is the **Foundry Hosted Agent / agent identity / Agent 365** portion
 
 ### 39.2 Stage map
 
-| # | DemoStage | H08 slides | Adds | Presenter does | Audience sees |
+| # | DemoStage | Deck anchors | Adds | Presenter does | Audience sees |
 |---|---|---|---|---|---|
-| 0 | `Deterministic` | 8–12 | nothing (no model) | reset `H08: L-417 On During Daylight`; show C&C | the city runs with no AI; state ON vs schedule OFF; the system knows WHAT, not WHY |
-| 1 | `InvestigationAgent` | 13–17 | `AIAgent` + `get_streetlight_state` | click **"Is L-417 on?"** | timeline: model → tool call → answer grounded in the Hub |
-| 2 | `Session` | 18–19 | `AgentSession` | click **"Is L-417 on?"**, then **"Why?"** | "Why?" resolves L-417 from the conversation; honest "not enough evidence" (motivates Knowledge) |
-| 3 | `Knowledge` | 20–21 | `search_work_knowledge` | click **"Why?"** again | WO-8732 + technician note retrieved on demand; evidence-chained explanation |
-| 4 | `Memory` | 22–23 | case-memory provider | close the case; new session: **"Why is L-528 on?"** | prior L-417 case recalled as a hypothesis; live state still verified (memory ≠ evidence) |
-| 5 | `Skills` | 24–25 | `AgentSkillsProvider` + streetlight skill | click **"Investigate L-417"** | skill discovered/loaded; investigation follows the documented procedure |
-| 6 | `McpTools` | 26–29 | Energy Hub MCP server + client | flip **Tools: LOCAL → MCP**; re-ask | same capability, new boundary: discovery + MCP call in timeline, `REMOTE` badge |
-| 7 | `InteractiveInput` | 30–31 | `restore_scheduled_mode` via MCP MRTR | click **"Restore L-417 to scheduled mode"** | tool pauses `input-required` → approval prompt → resume or cancel; no side effect before input |
-| 8 | `Workflow` | 32–33 | explicit remediation workflow + policy gate | click **"Restore…"** again | validate → policy → approval branch → execute → verify, as a visible workflow timeline |
-| 9 | `ToolApproval` | 34–35 | `ApprovalRequiredAIFunction` | click **"Restore…"**; **deny** first, then approve | reactive approval; deny = no side effect; approval is consumed + state-bound; ledger entry |
-| 10 | `MultiAgent` | 36–40 | `SecurityAgent` as tool | click **"Assess the security situation around L-417"** | delegation in the timeline; the Operations Agent keeps ownership |
-| — | toggle | 41–42 | — | flip **SecurityAgent: IN-PROCESS → A2A REMOTE**; re-ask | agent-card resolution + remote invocation; same behavior, new hosting boundary |
-| — | toggle | 43–45 | — | flip **Operations Agent: LOCAL → FOUNDRY HOSTED**; click **"Is L-417 on?"** | identical behavior from the managed runtime; open the trace |
-| 11 | `Governance` | 46–48 + W20 | policy middleware + agent identity + Agent 365 | click the canned **out-of-role action**; open Entra/Agent 365 (Section 38 runbook) | deterministic denial; operator ≠ agent ≠ service identity; registry entry (live or `CAPTURED`) |
-| — | action | 49–51 | evaluation suite | click **"Run evals"** (or `demo eval`) | behavior assertions: expected tool called, forbidden action absent; pass/fail report |
+| 0 | `Deterministic` | — (narrative slides) | nothing (no model) | reset `H08: L-417 On During Daylight`; show C&C | the city runs with no AI; state ON vs schedule OFF; the system knows WHAT, not WHY |
+| 1 | `InvestigationAgent` | `H08_AGENT_CREATION`, `H08_FUNCTION_TOOL` | `AIAgent` + `get_streetlight_state` | click **"Is L-417 on?"** | timeline: model → tool call → answer grounded in the Hub |
+| 2 | `Session` | `H08_AGENT_SESSION` | `AgentSession` | click **"Is L-417 on?"**, then **"Why?"** | "Why?" resolves L-417 from the conversation; honest "not enough evidence" (motivates Knowledge) |
+| 3 | `Knowledge` | `H08_KNOWLEDGE_RETRIEVAL` | `search_work_knowledge` | click **"Why?"** again | WO-8732 + technician note retrieved on demand; evidence-chained explanation |
+| 4 | `Memory` | `H08_CASE_MEMORY` | case-memory provider | close the case; new session: **"Why is L-528 on?"** | prior L-417 case recalled as a hypothesis; live state still verified (memory ≠ evidence) |
+| 5 | `Skills` | `H08_SKILLS` | `AgentSkillsProvider` + streetlight skill | click **"Investigate L-417"** | skill discovered/loaded; investigation follows the documented procedure |
+| 6 | `McpTools` | `H08_MCP_SERVER`, `H08_MCP_CLIENT` | Energy Hub MCP server + client | flip **Tools: LOCAL → MCP**; re-ask | same capability, new boundary: discovery + MCP call in timeline, `REMOTE` badge |
+| 7 | `InteractiveInput` | `H08_MRTR` | `restore_scheduled_mode` via MCP MRTR | click **"Restore L-417 to scheduled mode"** | tool pauses `input-required` → approval prompt → resume or cancel; no side effect before input |
+| 8 | `Workflow` | `H08_WORKFLOW` | explicit remediation workflow + policy gate | click **"Restore…"** again | validate → policy → approval branch → execute → verify, as a visible workflow timeline |
+| 9 | `ToolApproval` | `H08_TOOL_APPROVAL` | `ApprovalRequiredAIFunction` | click **"Restore…"**; **deny** first, then approve | reactive approval; deny = no side effect; approval is consumed + state-bound; ledger entry |
+| 10 | `MultiAgent` | `H08_MULTI_AGENT` | `SecurityAgent` as tool | click **"Assess the security situation around L-417"** | delegation in the timeline; the Operations Agent keeps ownership |
+| — | toggle | `H08_A2A` | — | flip **SecurityAgent: IN-PROCESS → A2A REMOTE**; re-ask | agent-card resolution + remote invocation; same behavior, new hosting boundary |
+| — | toggle | `H08_HOSTING`, `H08_PROTOCOL` | — | flip **Operations Agent: LOCAL → FOUNDRY HOSTED**; click **"Is L-417 on?"** | identical behavior from the managed runtime; open the trace |
+| 11 | `Governance` | — (Section 38 runbook + W20 segment) | policy middleware + agent identity + Agent 365 | click the canned **out-of-role action**; open Entra/Agent 365 (Section 38 runbook) | deterministic denial; operator ≠ agent ≠ service identity; registry entry (live or `CAPTURED`) |
+| — | action | `H08_EVALUATION` | evaluation suite | click **"Run evals"** (or `demo eval`) | behavior assertions: expected tool called, forbidden action absent; pass/fail report |
 
 ### 39.3 Stage rules
 
 - Stages are strictly cumulative: stage N keeps everything from stage N−1. Advancing is one click;
   going back (for a re-run) is one click and SHALL fully restore the earlier composition.
 - The scenario fixture SHALL include a second streetlight `L-528` (similar state, no work evidence)
-  to support the Memory beat exactly as the H08 slide 23 notes describe it.
-- Once the `Session` stage exists, the H08 slide 18 speaker note ("do not live-demo 'Why?'") is
+  to support the Memory beat exactly as the case-memory demo speaker notes (anchor `H08_CASE_MEMORY`) describe it.
+- Once the `Session` stage exists, the session demo speaker note (anchor `H08_AGENT_SESSION`, "do not live-demo 'Why?'") is
   obsolete and MUST be updated in the deck.
 - Toggles SHALL be available only at or after the stage that introduces the underlying mechanism,
   and flipping one SHALL be reflected immediately in the capability panel badges.
@@ -3134,7 +3142,7 @@ application is the **Foundry Hosted Agent / agent identity / Agent 365** portion
 
 ### 39.5 "Show code" — open VS Code at the stage's code
 
-Each stage-map row corresponds to one or more `#region H08_Sxx` snippet regions (Section 2.3). The
+Each stage-map row corresponds to one or more `#region H08_<CONCEPT>` snippet regions (Section 2.3). The
 stage screen SHALL be able to open the relevant source in the editor:
 
 - The SnippetExporter SHALL additionally emit a region index,
@@ -3156,7 +3164,7 @@ stage screen SHALL be able to open the relevant source in the editor:
 Next to each **Show code** button, `DemoControl.Web` SHALL show a **Break on next run** checkbox per
 snippet region, so the presenter can single-step the exact code just shown on the slide:
 
-- Each region's code begins with one call: `DemoBreakpoints.Pause(DemoSnippet.H08_S13_Agent);`
+- Each region's code begins with one call: `DemoBreakpoints.Pause(DemoSnippets.AgentCreation);`
   (a tiny service in `Caesarea.ServiceDefaults`; no domain dependency).
 - `Pause` fires `Debugger.Break()` ONLY when a debugger is attached AND that snippet's checkbox is
   enabled; otherwise it is a complete no-op — it can never halt or crash an undebugged process.

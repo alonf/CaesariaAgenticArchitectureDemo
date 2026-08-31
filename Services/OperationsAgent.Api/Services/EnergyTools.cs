@@ -22,7 +22,7 @@ public sealed partial class EnergyTools(
         : correlationId;
     private readonly ILogger<EnergyTools> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-    #region H08_S16_FUNCTION_TOOL
+    #region H08_FUNCTION_TOOL
     /// <summary>
     /// Gets the current authoritative operational state of a streetlight.
     /// </summary>

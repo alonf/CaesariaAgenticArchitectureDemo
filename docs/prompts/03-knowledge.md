@@ -1,4 +1,6 @@
-# Stage 3 — Knowledge (H08 slides 20/21)
+# Stage 3 — Knowledge
+
+Deck anchor: `H08_KNOWLEDGE_RETRIEVAL` (knowledge-retrieval demo).
 
 ## Goal
 
@@ -19,7 +21,7 @@ happening; knowledge may explain *why*.
   their exact prior behavior.
 - A presenter toggle (DemoControl "Work Knowledge" panel) withholds the seeded evidence to show the
   agent reporting missing evidence instead of inventing a work order.
-- New `H08_S20_KNOWLEDGE` snippet region, registered with the demo breakpoints.
+- New `H08_KNOWLEDGE_RETRIEVAL` snippet region, registered with the demo breakpoints.
 - **Retrieved-evidence trace in Command Center**: the search lambda records the `WorkEvidence` the
   provider returned, the API carries it as `OperationsAgentResponse.Evidence`, and the UI renders
   compact cards under the answer. A card is marked **"Cited in answer"** when the answer text
@@ -31,9 +33,10 @@ happening; knowledge may explain *why*.
 ## API drift note
 
 The string-parameter `AsAIAgent(...)` overload cannot attach `AIContextProviders`, and the SDK's
-provider chat client is internal, so agent creation moved to the `ChatClientAgentOptions` form (the
-shape H08 slide 24 shows) with the model supplied through `ChatOptions.ModelId`. The slide 13 and
-slide 20 concepts are otherwise implemented with the current installed APIs.
+provider chat client is internal, so agent creation moved to the `ChatClientAgentOptions` form (a
+shape the deck also shows for later demos) with the model supplied through `ChatOptions.ModelId`.
+The agent-creation and knowledge-retrieval concepts are otherwise implemented with the current
+installed APIs. Details in `docs/product-status/api-drift.md`.
 
 ## Lecture beat
 
