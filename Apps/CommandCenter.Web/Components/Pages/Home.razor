@@ -60,7 +60,7 @@
     }
     else
     {
-        <main class="operations-grid @(IsInvestigationStage ? "with-investigation" : string.Empty)">
+        <main class="operations-grid @(IsAgentStage ? "with-investigation" : string.Empty)">
             <aside class="left-rail">
                 <section class="rail-section">
                     <div class="section-title">
@@ -314,7 +314,7 @@
                 </section>
             </aside>
 
-            @if (IsInvestigationStage)
+            @if (IsAgentStage)
             {
                 <aside class="investigation-rail">
                     <section class="investigation-panel">
@@ -335,7 +335,7 @@
 
                         <div class="agent-summary">
                             <small>Operator question</small>
-                            <p>@AgentQuestion</p>
+                            <p>@(_lastAgentQuestion ?? AgentQuestion)</p>
                         </div>
 
                         <button class="action-button investigate-button" @onclick="AskAgentAsync" disabled="@_agentBusy">
@@ -354,6 +354,17 @@
                                 <small>Agent answer</small>
                                 <p>@response.Answer</p>
                             </div>
+
+                            @if (IsSessionStage)
+                            {
+                                <button class="action-button investigate-button" @onclick="AskFollowUpAsync" disabled="@_agentBusy">
+                                    <span>@(_agentBusy ? "Asking..." : "Ask \"Why?\" (same session)")</span>
+                                    <svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9h-2a7 7 0 1 1-7-7v3l5-4-5-4Z" /></svg>
+                                </button>
+                                <p class="agent-footnote">
+                                    Session @ShortCorrelation(response.SessionId) keeps conversational context only - it is never the authoritative city state.
+                                </p>
+                            }
 
                             @if (response.ToolCalls.Count > 0)
                             {
@@ -392,13 +403,16 @@
     private CancellationTokenSource? _pollingTokenSource;
     private Task? _pollingTask;
     private OperationsAgentResponse? _agentResponse;
+    private string? _agentSessionId;
+    private string? _lastAgentQuestion;
     private bool _agentBusy;
     private string? _agentMessage;
     private bool _agentMessageIsError;
     private string? _agentEvidenceVersion;
 
     private string StageName => _snapshot?.CurrentStage.Name ?? Configuration["DemoStage"] ?? "Deterministic";
-    private bool IsInvestigationStage => _snapshot?.CurrentStage.Id == DemoStage.InvestigationAgent;
+    private bool IsAgentStage => _snapshot?.CurrentStage.Id >= DemoStage.InvestigationAgent;
+    private bool IsSessionStage => _snapshot?.CurrentStage.Id >= DemoStage.Session;
     private string AgentStatusText => (_agentBusy, _agentResponse) switch
     {
         (true, _) => "Working",
@@ -488,7 +502,11 @@
         }
     }
 
-    private async Task AskAgentAsync()
+    private Task AskAgentAsync() => AskAgentCoreAsync(AgentQuestion, sessionId: null);
+
+    private Task AskFollowUpAsync() => AskAgentCoreAsync("Why?", _agentSessionId);
+
+    private async Task AskAgentCoreAsync(string question, string? sessionId)
     {
         var requestedEvidenceVersion = GetEvidenceVersion(_snapshot);
         _agentBusy = true;
@@ -496,11 +514,13 @@
         _agentEvidenceVersion = null;
         _agentMessage = null;
         _agentMessageIsError = false;
+        _lastAgentQuestion = question;
 
         try
         {
             var outcome = await OperationsAgentClient.AskAsync(
-                AgentQuestion,
+                question,
+                sessionId,
                 CancellationToken.None);
 
             if (outcome.Succeeded)
@@ -508,6 +528,7 @@
                 if (string.Equals(requestedEvidenceVersion, GetEvidenceVersion(_snapshot), StringComparison.Ordinal))
                 {
                     _agentResponse = outcome.Result;
+                    _agentSessionId = outcome.Result?.SessionId;
                     _agentEvidenceVersion = requestedEvidenceVersion;
                 }
                 else

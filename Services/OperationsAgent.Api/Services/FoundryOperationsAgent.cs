@@ -11,6 +11,7 @@ namespace OperationsAgent.Api.Services;
 public sealed partial class FoundryOperationsAgent(
     AIProjectClient projectClient,
     IEnergyReadGateway energyReadGateway,
+    AgentSessionStore sessionStore,
     string modelDeploymentName,
     string agentName,
     int maxFunctionIterations,
@@ -27,6 +28,7 @@ public sealed partial class FoundryOperationsAgent(
 
     private readonly AIProjectClient _projectClient = projectClient ?? throw new ArgumentNullException(nameof(projectClient));
     private readonly IEnergyReadGateway _energyReadGateway = energyReadGateway ?? throw new ArgumentNullException(nameof(energyReadGateway));
+    private readonly AgentSessionStore _sessionStore = sessionStore ?? throw new ArgumentNullException(nameof(sessionStore));
     private readonly string _modelDeploymentName = string.IsNullOrWhiteSpace(modelDeploymentName)
         ? throw new ArgumentException("A model deployment name is required.", nameof(modelDeploymentName))
         : modelDeploymentName;
@@ -45,6 +47,7 @@ public sealed partial class FoundryOperationsAgent(
     /// <inheritdoc />
     public async Task<OperationsAgentAnswer> AskAsync(
         string question,
+        string? sessionId,
         string correlationId,
         CancellationToken cancellationToken)
     {
@@ -96,14 +99,23 @@ public sealed partial class FoundryOperationsAgent(
 
         try
         {
-            var response = await agent.RunAsync(question, cancellationToken: timeoutSource.Token);
+            #region H08_S18_SESSION
+            DemoBreakpoints.Pause(DemoSnippets.Session);
+
+            AgentSession session = (sessionId is null ? null : _sessionStore.TryGet(sessionId))
+                ?? await agent.CreateSessionAsync(timeoutSource.Token);
+
+            var response = await agent.RunAsync(question, session, cancellationToken: timeoutSource.Token);
+            #endregion
+
+            var resolvedSessionId = _sessionStore.Save(sessionId, session);
             OperationsAgentLog.RequestCompleted(_logger, correlationId);
 
             IReadOnlyList<OperationsAgentToolCall> toolCalls = modelFlightRecorder is null
                 ? []
                 : [.. modelFlightRecorder.ToolCalls.Select(call => new OperationsAgentToolCall(call.ToolName, call.Arguments))];
 
-            return new OperationsAgentAnswer(response.Text, toolCalls, modelFlightRecorder?.Exchanges.Count ?? 0);
+            return new OperationsAgentAnswer(response.Text, resolvedSessionId, toolCalls, modelFlightRecorder?.Exchanges.Count ?? 0);
         }
         catch (OperationCanceledException exception) when (!cancellationToken.IsCancellationRequested)
         {

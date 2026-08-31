@@ -52,7 +52,7 @@ public sealed class StageCoordinatorTests
     }
 
     [Fact]
-    public void StageCatalogExposesBothStagesWithCapabilities()
+    public void StageCatalogExposesAllStagesWithCapabilities()
     {
         var catalog = new StageCatalog();
 
@@ -60,6 +60,7 @@ public sealed class StageCoordinatorTests
 
         Assert.Contains(stages, descriptor => descriptor.Id == DemoStage.Deterministic);
         Assert.Contains(stages, descriptor => descriptor.Id == DemoStage.InvestigationAgent);
+        Assert.Contains(stages, descriptor => descriptor.Id == DemoStage.Session);
         Assert.All(stages, descriptor => Assert.NotEmpty(descriptor.Capabilities));
     }
 

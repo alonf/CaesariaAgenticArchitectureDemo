@@ -18,6 +18,11 @@ public static class DemoSnippets
     /// Gets the H08 slide 16/17 snippet: the deterministic streetlight function tool.
     /// </summary>
     public const string FunctionTool = "H08_S16_FUNCTION_TOOL";
+
+    /// <summary>
+    /// Gets the H08 slide 18/19 snippet: continuing the conversation through an agent session.
+    /// </summary>
+    public const string Session = "H08_S18_SESSION";
 }
 
 /// <summary>

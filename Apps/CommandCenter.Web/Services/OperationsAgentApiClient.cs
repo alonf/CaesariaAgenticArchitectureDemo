@@ -15,10 +15,11 @@ internal sealed class OperationsAgentApiClient
 
     public async Task<OperationsAgentOutcome> AskAsync(
         string question,
+        string? sessionId,
         CancellationToken cancellationToken)
     {
         var correlationId = CorrelationIds.Create();
-        var agentRequest = new OperationsAgentRequest(question);
+        var agentRequest = new OperationsAgentRequest(question, sessionId);
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/operations-agent/ask")
         {
             Content = JsonContent.Create(agentRequest, options: SerializerOptions)

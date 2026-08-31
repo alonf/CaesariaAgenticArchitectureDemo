@@ -4,6 +4,8 @@ The demo runs as one cumulative application with a presenter-controlled `DemoSta
 
 - `DemoStage=Deterministic` — the Stage 0 smart-city system with no model or agent.
 - `DemoStage=InvestigationAgent` — adds the first, intentionally minimal Caesarea Operations Agent.
+- `DemoStage=Session` — adds conversational context (`AgentSession`), so a follow-up like
+  **"Why?"** refers to the previous question. Session state is never the authoritative city state.
 
 `CommandCenter.Api` owns the selected stage. `DemoScenario.Api` reads and changes it through that authoritative
 boundary, so switching stages does not restart the application.

@@ -13,7 +13,13 @@ public enum DemoStage
     /// <summary>
     /// The general Caesarea Operations Agent and its first read-only Energy Hub tool are enabled.
     /// </summary>
-    InvestigationAgent
+    InvestigationAgent,
+
+    /// <summary>
+    /// The Operations Agent keeps conversational context across runs, so a follow-up question can
+    /// refer to the previous turn. Session state is not authoritative operational state.
+    /// </summary>
+    Session
 }
 
 /// <summary>

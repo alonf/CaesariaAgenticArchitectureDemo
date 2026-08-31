@@ -4,7 +4,8 @@ namespace OperationsAgent.Contracts;
 /// Asks the general Caesarea Operations Agent a question.
 /// </summary>
 /// <param name="Question">The operator's natural-language question.</param>
-public sealed record OperationsAgentRequest(string Question);
+/// <param name="SessionId">The conversational session to continue, or <see langword="null"/> to start a new one.</param>
+public sealed record OperationsAgentRequest(string Question, string? SessionId = null);
 
 /// <summary>
 /// Describes one tool invocation the model chose during an agent run. Safe execution metadata only:
@@ -19,12 +20,14 @@ public sealed record OperationsAgentToolCall(string ToolName, string Arguments);
 /// </summary>
 /// <param name="AgentName">The stable name of the general operations agent.</param>
 /// <param name="Answer">The agent's natural-language answer.</param>
+/// <param name="SessionId">The conversational session a follow-up question can continue.</param>
 /// <param name="ToolCalls">The tools the model invoked during the run, in order.</param>
 /// <param name="ModelRoundTrips">The number of model round trips the run required.</param>
 /// <param name="CorrelationId">The correlation identifier spanning the request and tool call.</param>
 public sealed record OperationsAgentResponse(
     string AgentName,
     string Answer,
+    string SessionId,
     IReadOnlyList<OperationsAgentToolCall> ToolCalls,
     int ModelRoundTrips,
     string CorrelationId);

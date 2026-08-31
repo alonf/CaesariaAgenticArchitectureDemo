@@ -35,12 +35,14 @@ builder.Services.AddSingleton(serviceProvider =>
         : DemoStage.Deterministic;
     return new DemoStageGate(serviceProvider.GetRequiredService<TimeProvider>(), initialStage);
 });
+builder.Services.AddSingleton<AgentSessionStore>();
 builder.Services.AddSingleton<IOperationsAgent>(serviceProvider =>
 {
     var options = serviceProvider.GetRequiredService<IOptions<OperationsAgentApiOptions>>().Value;
     return new FoundryOperationsAgent(
         serviceProvider.GetRequiredService<AIProjectClient>(),
         serviceProvider.GetRequiredService<IEnergyReadGateway>(),
+        serviceProvider.GetRequiredService<AgentSessionStore>(),
         options.ModelDeploymentName,
         options.AgentName,
         options.MaxFunctionIterations,
@@ -60,7 +62,7 @@ app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.UseHttpsRedirection();
 app.MapDefaultEndpoints();
-app.MapDemoBreakpoints(DemoSnippets.AgentCreation, DemoSnippets.FunctionTool);
+app.MapDemoBreakpoints(DemoSnippets.AgentCreation, DemoSnippets.FunctionTool, DemoSnippets.Session);
 
 var operationsAgent = app.MapGroup("/api/operations-agent")
     .WithTags("Operations Agent");
@@ -110,7 +112,11 @@ static async Task<IResult> AskAsync(
         }
 
         var correlationId = context.GetCorrelationId();
-        var reply = await agent.AskAsync(request.Question, correlationId, cancellationToken);
+
+        // Conversational follow-ups become available at the Session stage; earlier stages run
+        // every question as an independent request even when a client sends a session identifier.
+        var sessionId = stageGate.GetCurrent().Id >= DemoStage.Session ? request.SessionId : null;
+        var reply = await agent.AskAsync(request.Question, sessionId, correlationId, cancellationToken);
 
         if (string.IsNullOrWhiteSpace(reply.Answer))
         {
@@ -124,6 +130,7 @@ static async Task<IResult> AskAsync(
         return TypedResults.Ok(new OperationsAgentResponse(
             options.Value.AgentName,
             reply.Answer,
+            reply.SessionId,
             reply.ToolCalls,
             reply.ModelRoundTrips,
             correlationId));

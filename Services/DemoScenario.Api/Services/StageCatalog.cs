@@ -16,7 +16,12 @@ public sealed class StageCatalog
             DemoStage.InvestigationAgent,
             "First Agent",
             "The general Caesarea Operations Agent can answer a simple question using one authoritative Energy Hub tool.",
-            ["Deterministic scenarios", "Manual operator actions", "Caesarea Operations Agent", "get_streetlight_state tool"])
+            ["Deterministic scenarios", "Manual operator actions", "Caesarea Operations Agent", "get_streetlight_state tool"]),
+        new(
+            DemoStage.Session,
+            "Session",
+            "The agent keeps conversational context, so a follow-up like \"Why?\" refers to the previous question. Session state is not authoritative operational state.",
+            ["Deterministic scenarios", "Manual operator actions", "Caesarea Operations Agent", "get_streetlight_state tool", "AgentSession follow-ups"])
     ];
 
     /// <summary>
