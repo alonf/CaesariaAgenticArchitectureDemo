@@ -296,9 +296,11 @@ svg {
 .section-title {
     margin-bottom: 12px;
     display: flex;
+    /* On a narrowed rail the status badge wraps below the title instead of clipping. */
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: 8px 12px;
     color: var(--cp-text);
     font-size: 0.88rem;
     font-weight: 700;
@@ -368,6 +370,13 @@ svg {
 
 .healthy {
     background: var(--cp-success);
+}
+
+/* The generic .healthy dot background must not swallow the header pill: green text on a surface
+   pill, with the small dot carrying the color. */
+.system-pill.healthy {
+    color: var(--cp-success);
+    background: var(--cp-surface);
 }
 
 .warning {
@@ -810,7 +819,8 @@ svg {
     min-height: 88px;
     padding: 14px 18px;
     display: grid;
-    grid-template-columns: minmax(240px, 1fr) auto;
+    /* The facts column may shrink and wrap; it must never clip at the panel edge. */
+    grid-template-columns: minmax(240px, 1fr) minmax(0, auto);
     align-items: center;
     gap: 24px;
     background: var(--cp-panel-strong);
@@ -825,7 +835,8 @@ svg {
 
 .event-facts {
     display: flex;
-    gap: 24px;
+    flex-wrap: wrap;
+    gap: 12px 20px;
 }
 
 .event-facts div {

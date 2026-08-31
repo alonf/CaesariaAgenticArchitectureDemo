@@ -174,37 +174,28 @@ public sealed partial class FoundryOperationsAgent(
             var mcpHttpClient = _httpClientFactory.CreateClient("energyhub-mcp");
             mcpHttpClient.DefaultRequestHeaders.Add(CorrelationHeaderNames.XCorrelationId, correlationId);
 
-            // When a remote tool pauses input-required (MRTR), this handler carries the question
-            // to the operator and the paused call resumes with the answer - the tool produces no
-            // side effect until then.
+            var transport = new HttpClientTransport(
+                new HttpClientTransportOptions { Endpoint = _mcpEndpoint },
+                mcpHttpClient,
+                _loggerFactory,
+                ownsHttpClient: true);
+
+            // When a remote tool pauses input-required (MRTR), the elicitation handler carries
+            // the question to the operator; the paused call resumes with the answer.
             var mcpOptions = new McpClientOptions
             {
                 Handlers = new McpClientHandlers
                 {
-                    ElicitationHandler = async (elicitation, elicitationCancellation) =>
-                    {
-                        var (_, decision) = _pendingApprovalStore.Create(
-                            elicitation?.Message ?? "A remote tool requests operator approval.",
-                            correlationId,
-                            elicitationCancellation);
-                        var approved = await decision;
-                        return new ElicitResult
-                        {
-                            Action = "accept",
-                            Content = new Dictionary<string, JsonElement>
-                            {
-                                ["approved"] = JsonSerializer.SerializeToElement(approved)
-                            }
-                        };
-                    }
+                    ElicitationHandler = CreateOperatorApprovalHandler(correlationId)
                 }
             };
 
             mcpClient = await McpClient.CreateAsync(
-                new HttpClientTransport(new HttpClientTransportOptions { Endpoint = _mcpEndpoint }, mcpHttpClient, _loggerFactory, ownsHttpClient: true),
+                transport,
                 mcpOptions,
                 loggerFactory: _loggerFactory,
                 cancellationToken: cancellationToken);
+
             var discoveredTools = await mcpClient.ListToolsAsync(cancellationToken: cancellationToken);
             agentTools.Add(discoveredTools.Single(tool => tool.Name == EnergyTools.StreetlightStateToolName));
 
@@ -252,7 +243,7 @@ public sealed partial class FoundryOperationsAgent(
                 {
                     ModelId = _modelDeploymentName,
                     Instructions = Instructions,
-                    Tools = [.. agentTools]
+                    Tools = agentTools
                 },
                 // Capabilities join as context providers: knowledge retrieval contributes an
                 // on-demand search tool; case memory contributes trusted hypothesis rules plus
@@ -372,6 +363,31 @@ public sealed partial class FoundryOperationsAgent(
             }
         }
     }
+
+    /// <summary>
+    /// Creates the MRTR elicitation handler that bridges a paused remote tool to the operator:
+    /// the question parks in the pending-approval store, the Command Center collects the
+    /// decision, and the tool call resumes with it. The tool produces no side effect until then.
+    /// </summary>
+    /// <param name="correlationId">The correlation identifier spanning the agent run.</param>
+    private Func<ElicitRequestParams?, CancellationToken, ValueTask<ElicitResult>> CreateOperatorApprovalHandler(string correlationId) =>
+        async (elicitation, elicitationCancellation) =>
+        {
+            var (_, decision) = _pendingApprovalStore.Create(
+                elicitation?.Message ?? "A remote tool requests operator approval.",
+                correlationId,
+                elicitationCancellation);
+            var approved = await decision;
+
+            return new ElicitResult
+            {
+                Action = "accept",
+                Content = new Dictionary<string, JsonElement>
+                {
+                    ["approved"] = JsonSerializer.SerializeToElement(approved)
+                }
+            };
+        };
 }
 
 internal static partial class OperationsAgentLog

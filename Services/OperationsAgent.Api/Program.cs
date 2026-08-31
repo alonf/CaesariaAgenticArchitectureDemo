@@ -250,7 +250,7 @@ static async Task<IResult> AskAsync(
         return TypedResults.Problem(ProblemDetailsFactory.Create(
             StatusCodes.Status409Conflict,
             "Operations Agent disabled in the current demo stage",
-            $"The Operations Agent requires the First Agent stage; the current stage is {stageGate.GetCurrent().Name}.",
+            $"The Operations Agent requires an agent-enabled stage; the current stage is {stageGate.GetCurrent().Name}.",
             context.GetCorrelationId()));
     }
 
