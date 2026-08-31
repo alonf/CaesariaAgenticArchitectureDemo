@@ -30,8 +30,9 @@ only — it is never the authoritative operational state, which stays in the det
   starting an empty conversation.
 - The demo stage is continuously reconciled with the authoritative Command Center (10-second poll
   with an applied-at ordering guard), so neither a restarted Operations Agent nor a failed stage
-  push can leave the local gate diverged - in particular, a change back to Deterministic takes
-  effect here within one poll interval even if the push was lost.
+  push leaves the local gate diverged for long: while the Command Center is reachable, a change
+  back to Deterministic takes effect here within one poll interval. If the Command Center is
+  unreachable, the gate keeps its last known stage and the synchronizer logs the failure.
 - The Foundry credential warmup runs once, in the background, and only when an agent-enabled stage
   becomes active — the Deterministic stage keeps its promise that no AI credential is used.
 

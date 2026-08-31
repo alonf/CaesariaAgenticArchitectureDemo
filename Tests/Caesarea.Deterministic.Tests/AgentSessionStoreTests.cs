@@ -82,6 +82,27 @@ public sealed class AgentSessionStoreTests
         Assert.Equal(50, store.Count);
     }
 
+    [Fact]
+    public async Task ConcurrentSavesNeverExceedTheCapacityCap()
+    {
+        var store = new AgentSessionStore(new TestTimeProvider());
+
+        var writers = Enumerable.Range(0, 8).Select(writer => Task.Run(() =>
+        {
+            string? knownSessionId = null;
+
+            for (var i = 0; i < 50; i++)
+            {
+                knownSessionId = store.SaveState(i % 3 == 0 ? knownSessionId : null, CreateState($"w{writer}-s{i}"));
+                Assert.True(store.Count <= 50);
+            }
+        }));
+
+        await Task.WhenAll(writers);
+
+        Assert.Equal(50, store.Count);
+    }
+
     private static JsonElement CreateState(string marker)
     {
         using var document = JsonDocument.Parse($"{{\"marker\":\"{marker}\"}}");

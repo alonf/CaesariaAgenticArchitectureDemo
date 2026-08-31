@@ -97,15 +97,17 @@ public sealed partial class DemoStageSynchronizer(
     /// <returns><see langword="true"/> when the authoritative stage was read and applied.</returns>
     public async Task<bool> TrySynchronizeAsync(CancellationToken cancellationToken)
     {
+        var correlationId = CorrelationIds.Create();
+
         try
         {
-            var stage = await stageReader.GetCurrentStageAsync(CorrelationIds.Create(), cancellationToken);
+            var stage = await stageReader.GetCurrentStageAsync(correlationId, cancellationToken);
             var previous = stageGate.GetCurrent();
             var applied = stageGate.SetCurrent(stage);
 
             if (applied.Id != previous.Id)
             {
-                StageSynchronizerLog.Synchronized(logger, applied.Name);
+                StageSynchronizerLog.Synchronized(logger, applied.Name, correlationId);
             }
 
             if (stageGate.IsAgentEnabled)
@@ -121,7 +123,7 @@ public sealed partial class DemoStageSynchronizer(
         }
         catch (Exception exception)
         {
-            StageSynchronizerLog.AttemptFailed(logger, exception);
+            StageSynchronizerLog.AttemptFailed(logger, correlationId, exception);
             return false;
         }
     }
@@ -132,8 +134,8 @@ internal static partial class StageSynchronizerLog
     [LoggerMessage(
         EventId = 2480,
         Level = LogLevel.Information,
-        Message = "Demo stage reconciled from the Command Center: {StageName}.")]
-    internal static partial void Synchronized(ILogger logger, string stageName);
+        Message = "Demo stage reconciled from the Command Center: {StageName}. CorrelationId: {CorrelationId}.")]
+    internal static partial void Synchronized(ILogger logger, string stageName, string correlationId);
 
     [LoggerMessage(
         EventId = 2481,
@@ -144,6 +146,6 @@ internal static partial class StageSynchronizerLog
     [LoggerMessage(
         EventId = 2482,
         Level = LogLevel.Debug,
-        Message = "Demo stage reconciliation attempt failed.")]
-    internal static partial void AttemptFailed(ILogger logger, Exception exception);
+        Message = "Demo stage reconciliation attempt failed. CorrelationId: {CorrelationId}.")]
+    internal static partial void AttemptFailed(ILogger logger, string correlationId, Exception exception);
 }

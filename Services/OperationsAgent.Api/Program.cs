@@ -81,7 +81,8 @@ var operationsAgent = app.MapGroup("/api/operations-agent")
 
 operationsAgent.MapPost("/ask", AskAsync);
 
-// Stage propagation from the presenter switchboard; the gate keeps Stage 0 from ever reaching Foundry.
+// Stage propagation from the presenter switchboard; the gate blocks agent invocation whenever the
+// authoritative stage it holds (pushed or reconciled) is Deterministic.
 var demoStage = app.MapGroup("/api/operations-agent/demo-stage")
     .WithTags("Demo Stage");
 

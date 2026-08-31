@@ -2,7 +2,10 @@ namespace OperationsAgent.Api.Services;
 
 /// <summary>
 /// Tracks the presenter-controlled demo stage propagated to the Operations Agent and gates agent
-/// invocation so the Deterministic stage can never reach Microsoft Foundry.
+/// invocation: requests cannot reach Microsoft Foundry while the gate holds the Deterministic
+/// stage. The gate reflects the authoritative stage once it has been pushed by the switchboard or
+/// successfully reconciled from the Command Center; until then it holds the configured startup
+/// stage or the last known one.
 /// </summary>
 public sealed class DemoStageGate
 {
