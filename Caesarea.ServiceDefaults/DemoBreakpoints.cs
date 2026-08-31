@@ -41,6 +41,16 @@ public static class DemoSnippets
     /// Gets the agent-skills snippet: discovering and loading documented procedures on demand.
     /// </summary>
     public const string Skills = "AGENT_SKILLS";
+
+    /// <summary>
+    /// Gets the MCP server snippet: the Energy Hub serving its streetlight tool over the protocol.
+    /// </summary>
+    public const string McpServer = "MCP_SERVER";
+
+    /// <summary>
+    /// Gets the MCP client snippet: discovering the remote tool instead of compiling it in.
+    /// </summary>
+    public const string McpClient = "MCP_CLIENT";
 }
 
 /// <summary>

@@ -36,7 +36,12 @@ public sealed class StageCatalog
             DemoStage.Skills,
             "Skills",
             "The agent discovers documented procedures and loads them on demand (load_skill), so an investigation follows the organization's expert-authored, auditable procedure - including the mandated incident-brief format.",
-            ["Deterministic scenarios", "Manual operator actions", "Caesarea Operations Agent", "get_streetlight_state tool", "AgentSession follow-ups", "search_work_knowledge retrieval", "Retrieved-evidence trace with citation badges", "Case-memory recall (hypotheses)", "Skill discovery and load_skill procedure"])
+            ["Deterministic scenarios", "Manual operator actions", "Caesarea Operations Agent", "get_streetlight_state tool", "AgentSession follow-ups", "search_work_knowledge retrieval", "Retrieved-evidence trace with citation badges", "Case-memory recall (hypotheses)", "Skill discovery and load_skill procedure"]),
+        new(
+            DemoStage.McpTools,
+            "McpTools",
+            "The streetlight tool can be served over the Model Context Protocol from the Energy Hub's own boundary. Flip Tools: LOCAL to MCP and re-ask: same capability, same behavior, new boundary.",
+            ["Deterministic scenarios", "Manual operator actions", "Caesarea Operations Agent", "get_streetlight_state tool", "AgentSession follow-ups", "search_work_knowledge retrieval", "Retrieved-evidence trace with citation badges", "Case-memory recall (hypotheses)", "Skill discovery and load_skill procedure", "Tools: LOCAL / MCP toggle (runtime tool discovery)"])
     ];
 
     /// <summary>

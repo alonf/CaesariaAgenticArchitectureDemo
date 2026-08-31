@@ -11,7 +11,7 @@ public sealed class DemoBreakpointsTests
         var snippetValues = GetDemoSnippetValues();
 
         Assert.Equal(
-            ["AGENT_CREATION", "AGENT_SESSION", "AGENT_SKILLS", "CASE_MEMORY", "FUNCTION_TOOL", "KNOWLEDGE_RETRIEVAL"],
+            ["AGENT_CREATION", "AGENT_SESSION", "AGENT_SKILLS", "CASE_MEMORY", "FUNCTION_TOOL", "KNOWLEDGE_RETRIEVAL", "MCP_CLIENT", "MCP_SERVER"],
             snippetValues.OrderBy(value => value, StringComparer.Ordinal));
 
         foreach (var value in snippetValues)
@@ -49,14 +49,19 @@ public sealed class DemoBreakpointsTests
     [Fact]
     public void RegisteredBreakpointsCoverEveryDemoSnippet()
     {
-        var programPath = Path.Combine(
-            FindRepositoryRoot(), "Services", "OperationsAgent.Api", "Program.cs");
-        var registration = Regex.Match(File.ReadAllText(programPath), @"MapDemoBreakpoints\(([^;]*)\);");
+        // Snippet regions now span services (MCP_SERVER lives in the Energy Hub), so runtime
+        // registration is validated as the union of every service's MapDemoBreakpoints call: each
+        // DemoSnippets constant must be registered by the service that hosts its region.
+        var registeredArguments = string.Join(
+            Environment.NewLine,
+            Directory.GetFiles(Path.Combine(FindRepositoryRoot(), "Services"), "Program.cs", SearchOption.AllDirectories)
+                .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+                .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+                .Select(File.ReadAllText)
+                .SelectMany(text => Regex.Matches(text, @"MapDemoBreakpoints\(([^;]*)\);").Select(match => match.Groups[1].Value)));
 
-        Assert.True(registration.Success, "Program.cs no longer calls MapDemoBreakpoints.");
+        Assert.False(string.IsNullOrWhiteSpace(registeredArguments), "No service calls MapDemoBreakpoints.");
 
-        // Runtime registration must name every DemoSnippets constant: a snippet that exists in the
-        // registry and its source region but is missing here could never be armed from DemoControl.
         var snippetFieldNames = typeof(DemoSnippets)
             .GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)
             .Where(field => field.IsLiteral && field.FieldType == typeof(string))
@@ -64,7 +69,7 @@ public sealed class DemoBreakpointsTests
 
         foreach (var fieldName in snippetFieldNames)
         {
-            Assert.Contains($"{nameof(DemoSnippets)}.{fieldName}", registration.Groups[1].Value, StringComparison.Ordinal);
+            Assert.Contains($"{nameof(DemoSnippets)}.{fieldName}", registeredArguments, StringComparison.Ordinal);
         }
     }
 

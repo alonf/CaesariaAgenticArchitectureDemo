@@ -37,7 +37,14 @@ public enum DemoStage
     /// The Operations Agent discovers documented procedures (skills) and loads them on demand, so
     /// investigations follow the organization's expert-authored, auditable procedure.
     /// </summary>
-    Skills
+    Skills,
+
+    /// <summary>
+    /// The streetlight tool can be served over the Model Context Protocol from the Energy Hub's
+    /// own boundary: the agent discovers it at runtime instead of compiling it in. Same
+    /// capability, new boundary - the presenter toggles between the local function and MCP.
+    /// </summary>
+    McpTools
 }
 
 /// <summary>

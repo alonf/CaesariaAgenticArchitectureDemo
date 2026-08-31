@@ -16,6 +16,10 @@ The demo runs as one cumulative application with a presenter-controlled `DemoSta
   loads one on demand (`load_skill`), and the investigation follows the expert-authored triage
   guide and the mandated Caesarea Incident Brief format. Edit the markdown, re-run, and the
   behavior changes — skills are auditable configuration, not code.
+- `DemoStage=McpTools` — the Energy Hub serves `get_streetlight_state` over the Model Context
+  Protocol at its own boundary, and a presenter toggle (`Tools: LOCAL / MCP`) switches the agent
+  between the compiled-in function and runtime discovery. Same capability, same behavior, new
+  boundary.
 
 `CommandCenter.Api` owns the selected stage. `DemoScenario.Api` reads and changes it through that authoritative
 boundary, so switching stages does not restart the application.

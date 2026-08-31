@@ -18,6 +18,12 @@ builder.Services.AddHttpClient<ISmartPoleGateway, HttpSmartPoleGateway>((service
 });
 builder.Services.AddSingleton<EnergyHubService>();
 
+// The Energy Hub owns and serves its streetlight tool over the Model Context Protocol: any
+// MCP-capable client can discover and invoke it at this boundary.
+builder.Services.AddMcpServer()
+    .WithHttpTransport()
+    .WithTools<EnergyMcpTools>();
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -29,6 +35,8 @@ app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.UseHttpsRedirection();
 app.MapDefaultEndpoints();
+app.MapMcp("/mcp");
+app.MapDemoBreakpoints(DemoSnippets.McpServer);
 
 var energy = app.MapGroup("/api/energy")
     .WithTags("Energy Hub");

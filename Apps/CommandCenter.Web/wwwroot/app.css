@@ -1323,6 +1323,19 @@ svg {
     color: var(--cp-text-muted);
 }
 
+.tool-source-badge {
+    margin-left: 8px;
+    padding: 2px 8px;
+    border: 1px solid var(--cp-link);
+    border-radius: 999px;
+    color: var(--cp-link);
+    font-size: 0.66rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+}
+
 .evidence-detail {
     padding: 0 10px 10px;
     border-top: 1px dashed var(--cp-border);

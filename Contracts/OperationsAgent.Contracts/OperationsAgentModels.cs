@@ -28,6 +28,24 @@ public static class OperationsAgentToolNames
 }
 
 /// <summary>
+/// Identifies where the agent's streetlight tool comes from for a run.
+/// </summary>
+public enum OperationsAgentToolSource
+{
+    /// <summary>The tool is a local function compiled into the agent service.</summary>
+    Local,
+
+    /// <summary>The tool is discovered at runtime from the Energy Hub's MCP server.</summary>
+    Mcp
+}
+
+/// <summary>
+/// Reports the presenter-selected tool source.
+/// </summary>
+/// <param name="Source">The tool source used for subsequent agent runs.</param>
+public sealed record OperationsAgentToolSourceStatus(OperationsAgentToolSource Source);
+
+/// <summary>
 /// One skill the agent could discover during a run. Skills are documented procedures - versioned,
 /// expert-authored, auditable text - that the agent loads on demand; the trace shows which were
 /// advertised and which the model actually loaded.
@@ -99,6 +117,7 @@ public sealed record OperationsAgentCaseMemoryStatus(IReadOnlyList<OperationsAge
 /// <param name="Evidence">The work evidence the knowledge search returned during the run, deduplicated by identifier.</param>
 /// <param name="RecalledCases">The closed cases the agent's memory recalled during the run.</param>
 /// <param name="Skills">The skills advertised to the agent during the run and whether each was loaded.</param>
+/// <param name="ToolSource">Where the streetlight tool came from for this run.</param>
 /// <param name="ModelRoundTrips">The number of model round trips the run required.</param>
 /// <param name="CorrelationId">The correlation identifier spanning the request and tool call.</param>
 public sealed record OperationsAgentResponse(
@@ -109,5 +128,6 @@ public sealed record OperationsAgentResponse(
     IReadOnlyList<OperationsAgentEvidence> Evidence,
     IReadOnlyList<OperationsAgentRecalledCase> RecalledCases,
     IReadOnlyList<OperationsAgentSkill> Skills,
+    OperationsAgentToolSource ToolSource,
     int ModelRoundTrips,
     string CorrelationId);

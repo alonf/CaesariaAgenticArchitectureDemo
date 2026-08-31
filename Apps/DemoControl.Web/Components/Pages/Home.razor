@@ -5,6 +5,7 @@
 @inject DemoBreakpointsApiClient BreakpointsClient
 @inject WorkKnowledgeApiClient WorkKnowledgeClient
 @inject CaseMemoryApiClient CaseMemoryClient
+@inject ToolSourceApiClient ToolSourceClient
 @inject VsCodeAttachService AttachService
 @inject IConfiguration Configuration
 @inject IOptions<DemoControlWebOptions> WebOptions
@@ -198,6 +199,33 @@
 
     <section class="panel switchboard-panel">
         <div class="panel-heading">
+            <h2>Tool Source</h2>
+            <span class="stamp">@ToolSourceStamp</span>
+        </div>
+        @if (_toolSource is null)
+        {
+            <p>@(_toolSourceMessage ?? "Loading tool source...")</p>
+        }
+        else
+        {
+            <p class="switchboard-note">Where the agent's streetlight tool comes from. The flip is the lecture beat: same capability, new boundary.</p>
+            <div class="stage-switch-actions">
+                <button class="button @(_toolSource.Source == "Local" ? "primary" : "secondary")" @onclick='() => SetToolSourceAsync("Local")' disabled="@_toolSourceBusy">
+                    LOCAL function
+                </button>
+                <button class="button @(_toolSource.Source == "Mcp" ? "primary" : "secondary")" @onclick='() => SetToolSourceAsync("Mcp")' disabled="@_toolSourceBusy">
+                    MCP remote
+                </button>
+            </div>
+            @if (!string.IsNullOrWhiteSpace(_toolSourceMessage))
+            {
+                <p class="status-error">@_toolSourceMessage</p>
+            }
+        }
+    </section>
+
+    <section class="panel switchboard-panel">
+        <div class="panel-heading">
             <h2>Simulator Behavior</h2>
             <span class="stamp">@(_behavior is null ? "Unavailable" : $"{_behaviorDelayMs} ms delay")</span>
         </div>
@@ -286,6 +314,9 @@
     private CaseMemoryState? _caseMemory;
     private bool _caseMemoryBusy;
     private string? _caseMemoryMessage;
+    private ToolSourceState? _toolSource;
+    private bool _toolSourceBusy;
+    private string? _toolSourceMessage;
     private SimulatorBehaviorSettings? _behavior;
     private int _behaviorDelayMs;
     private bool _behaviorTimeout;
@@ -315,6 +346,12 @@
         { Cases.Count: 0 } => "Empty",
         { Cases.Count: var count } => $"{count} case(s)"
     };
+    private string ToolSourceStamp => _toolSource switch
+    {
+        null => "Unavailable",
+        { Source: "Mcp" } => "MCP remote",
+        _ => "Local function"
+    };
     private string BreakpointStamp => _breakpoints switch
     {
         null => "Unavailable",
@@ -333,6 +370,7 @@
         await LoadBehaviorAsync(CancellationToken.None);
         await LoadWorkKnowledgeAsync(CancellationToken.None);
         await LoadCaseMemoryAsync(CancellationToken.None);
+        await LoadToolSourceAsync(CancellationToken.None);
 
         _pollingTokenSource = new CancellationTokenSource();
         _pollingTask = PollCatalogAsync(_pollingTokenSource.Token);
@@ -517,6 +555,39 @@
         {
             _caseMemory = null;
             _caseMemoryMessage = $"Case memory unavailable: {exception.Message}";
+        }
+    }
+
+    private async Task LoadToolSourceAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            _toolSource = await ToolSourceClient.GetStatusAsync(cancellationToken);
+            _toolSourceMessage = null;
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            _toolSource = null;
+            _toolSourceMessage = $"Tool source unavailable: {exception.Message}";
+        }
+    }
+
+    private async Task SetToolSourceAsync(string source)
+    {
+        _toolSourceBusy = true;
+
+        try
+        {
+            _toolSource = await ToolSourceClient.SetSourceAsync(source, CancellationToken.None);
+            _toolSourceMessage = null;
+        }
+        catch (Exception exception)
+        {
+            _toolSourceMessage = $"Tool source change failed: {exception.Message}";
+        }
+        finally
+        {
+            _toolSourceBusy = false;
         }
     }
 

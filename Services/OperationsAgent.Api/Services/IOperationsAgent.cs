@@ -24,6 +24,7 @@ public interface IOperationsAgent
 /// <param name="Evidence">The work evidence the knowledge search returned during the run, deduplicated by identifier.</param>
 /// <param name="RecalledCases">The closed cases the agent's memory recalled during the run.</param>
 /// <param name="Skills">The skills advertised to the agent during the run and whether each was loaded.</param>
+/// <param name="ToolSource">Where the streetlight tool came from for this run.</param>
 /// <param name="ModelRoundTrips">The number of model round trips the run required.</param>
 public sealed record OperationsAgentAnswer(
     string Answer,
@@ -32,4 +33,5 @@ public sealed record OperationsAgentAnswer(
     IReadOnlyList<OperationsAgentEvidence> Evidence,
     IReadOnlyList<OperationsAgentRecalledCase> RecalledCases,
     IReadOnlyList<OperationsAgentSkill> Skills,
+    OperationsAgentToolSource ToolSource,
     int ModelRoundTrips);

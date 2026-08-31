@@ -65,6 +65,7 @@ public sealed class StageCoordinatorTests
         Assert.Contains(stages, descriptor => descriptor.Id == DemoStage.Knowledge);
         Assert.Contains(stages, descriptor => descriptor.Id == DemoStage.Memory);
         Assert.Contains(stages, descriptor => descriptor.Id == DemoStage.Skills);
+        Assert.Contains(stages, descriptor => descriptor.Id == DemoStage.McpTools);
         Assert.All(stages, descriptor => Assert.NotEmpty(descriptor.Capabilities));
     }
 

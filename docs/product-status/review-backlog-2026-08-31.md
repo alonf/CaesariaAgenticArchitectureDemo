@@ -117,4 +117,11 @@ All findings from the full working-tree review are now resolved.
   `Services/` — then either widen the scan to every source root (generated directories excluded)
   or introduce an explicit snippet catalog shared by registration and validation. The companion
   gap (a `DemoSnippets` constant missing from runtime `MapDemoBreakpoints` registration) is
-  closed by `RegisteredBreakpointsCoverEveryDemoSnippet`.
+  closed by `RegisteredBreakpointsCoverEveryDemoSnippet`, which since the McpTools stage
+  validates the union of every service's registration (MCP_SERVER registers in EnergyHub.Api).
+- **Multi-service breakpoint arming in DemoControl** (from the McpTools stage): the DemoControl
+  breakpoints panel arms and attaches only the Operations Agent process; the Energy Hub's
+  MCP_SERVER snippet pauses when a debugger is attached to EnergyHub.Api (compound launch) and
+  can be armed via its loopback breakpoints endpoint. Trigger: if a lecture beat needs one-click
+  arming of an Energy Hub snippet, extend the panel to enumerate breakpoint sources per service
+  and route attach requests by process name.

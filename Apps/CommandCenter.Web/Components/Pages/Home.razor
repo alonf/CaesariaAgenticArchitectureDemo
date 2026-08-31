@@ -358,8 +358,18 @@
                             @if (response.ToolCalls.Count > 0)
                             {
                                 <div class="agent-summary">
-                                    <small>Capability trace</small>
+                                    <small>
+                                        Capability trace
+                                        @if (response.ToolSource == OperationsAgentToolSource.Mcp)
+                                        {
+                                            <span class="tool-source-badge">MCP remote</span>
+                                        }
+                                    </small>
                                     <p>model &rarr; @string.Join(" → ", response.ToolCalls.Select(call => $"{call.ToolName}({call.Arguments})")) &rarr; model</p>
+                                    @if (response.ToolSource == OperationsAgentToolSource.Mcp)
+                                    {
+                                        <p class="agent-footnote">The streetlight tool was discovered at runtime from the Energy Hub's MCP server - same capability, new boundary.</p>
+                                    }
                                 </div>
                                 <p class="agent-footnote">
                                     Tool invoked @(response.ToolCalls.Count)&times; over @(response.ModelRoundTrips) model round trip(s) · CorrelationId @ShortCorrelation(response.CorrelationId)

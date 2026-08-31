@@ -51,6 +51,14 @@ builder.Services.AddSingleton<AgentSessionStore>();
 builder.Services.AddSingleton<SimulatedWorkKnowledgeSearch>();
 builder.Services.AddSingleton<IWorkKnowledgeSearch>(serviceProvider => serviceProvider.GetRequiredService<SimulatedWorkKnowledgeSearch>());
 builder.Services.AddSingleton<ICaseMemoryStore, InMemoryCaseMemoryStore>();
+builder.Services.AddSingleton<ToolSourceSwitch>();
+// The HTTP client the MCP transport rides on; service discovery and the standard resilience
+// pipeline apply like any other outbound client.
+builder.Services.AddHttpClient("energyhub-mcp", (serviceProvider, client) =>
+{
+    var options = serviceProvider.GetRequiredService<IOptions<OperationsAgentApiOptions>>().Value;
+    client.BaseAddress = new Uri(options.EnergyHubBaseUri, UriKind.Absolute);
+});
 builder.Services.AddSingleton<IOperationsAgent>(serviceProvider =>
 {
     var options = serviceProvider.GetRequiredService<IOptions<OperationsAgentApiOptions>>().Value;
@@ -70,6 +78,9 @@ builder.Services.AddSingleton<IOperationsAgent>(serviceProvider =>
         serviceProvider.GetRequiredService<IWorkKnowledgeSearch>(),
         serviceProvider.GetRequiredService<ICaseMemoryStore>(),
         serviceProvider.GetRequiredService<DemoStageGate>(),
+        serviceProvider.GetRequiredService<ToolSourceSwitch>(),
+        serviceProvider.GetRequiredService<IHttpClientFactory>(),
+        new Uri($"{options.EnergyHubBaseUri.TrimEnd('/')}/mcp", UriKind.Absolute),
         skillsDirectory,
         options.ModelDeploymentName,
         options.AgentName,
@@ -90,7 +101,7 @@ app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.UseHttpsRedirection();
 app.MapDefaultEndpoints();
-app.MapDemoBreakpoints(DemoSnippets.AgentCreation, DemoSnippets.FunctionTool, DemoSnippets.Session, DemoSnippets.Knowledge, DemoSnippets.CaseMemory, DemoSnippets.Skills);
+app.MapDemoBreakpoints(DemoSnippets.AgentCreation, DemoSnippets.FunctionTool, DemoSnippets.Session, DemoSnippets.Knowledge, DemoSnippets.CaseMemory, DemoSnippets.Skills, DemoSnippets.McpClient);
 
 var operationsAgent = app.MapGroup("/api/operations-agent")
     .WithTags("Operations Agent");
@@ -162,6 +173,28 @@ cases.MapPost("/clear", (ICaseMemoryStore store) =>
 {
     store.Clear();
     return TypedResults.Ok(CreateCaseMemoryStatus(store));
+});
+
+// Presenter toggle: where the streetlight tool comes from. Available only once the McpTools
+// stage introduces the mechanism; the flip itself is the lecture beat.
+var toolSource = app.MapGroup("/api/operations-agent/tool-source")
+    .WithTags("Tool Source");
+
+toolSource.MapGet("/", (ToolSourceSwitch toolSourceSwitch) =>
+    TypedResults.Ok(new OperationsAgentToolSourceStatus(toolSourceSwitch.Current)));
+toolSource.MapPost("/", (HttpContext context, OperationsAgentToolSourceStatus status, ToolSourceSwitch toolSourceSwitch, DemoStageGate stageGate) =>
+{
+    if (stageGate.GetCurrent().Id < DemoStage.McpTools)
+    {
+        return Results.Problem(ProblemDetailsFactory.Create(
+            StatusCodes.Status409Conflict,
+            "Tool source toggle disabled in the current demo stage",
+            $"Selecting the tool source requires the McpTools stage; the current stage is {stageGate.GetCurrent().Name}.",
+            context.GetCorrelationId()));
+    }
+
+    toolSourceSwitch.Current = status.Source;
+    return Results.Ok(new OperationsAgentToolSourceStatus(toolSourceSwitch.Current));
 });
 demoStage.MapPost("/", (DemoStageStatus stage, DemoStageGate stageGate, FoundryCredentialWarmup credentialWarmup) =>
 {
@@ -244,6 +277,7 @@ static async Task<IResult> AskAsync(
             reply.Evidence,
             reply.RecalledCases,
             reply.Skills,
+            reply.ToolSource,
             reply.ModelRoundTrips,
             correlationId));
     }

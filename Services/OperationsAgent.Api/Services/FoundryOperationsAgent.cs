@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Azure.AI.Projects;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
+using ModelContextProtocol.Client;
 
 namespace OperationsAgent.Api.Services;
 
@@ -15,6 +16,9 @@ public sealed partial class FoundryOperationsAgent(
     IWorkKnowledgeSearch workKnowledgeSearch,
     ICaseMemoryStore caseMemoryStore,
     DemoStageGate stageGate,
+    ToolSourceSwitch toolSourceSwitch,
+    IHttpClientFactory httpClientFactory,
+    Uri mcpEndpoint,
     string? skillsDirectory,
     string modelDeploymentName,
     string agentName,
@@ -38,6 +42,9 @@ public sealed partial class FoundryOperationsAgent(
     private readonly AgentSessionStore _sessionStore = sessionStore ?? throw new ArgumentNullException(nameof(sessionStore));
     private readonly IWorkKnowledgeSearch _workKnowledgeSearch = workKnowledgeSearch ?? throw new ArgumentNullException(nameof(workKnowledgeSearch));
     private readonly ICaseMemoryStore _caseMemoryStore = caseMemoryStore ?? throw new ArgumentNullException(nameof(caseMemoryStore));
+    private readonly ToolSourceSwitch _toolSourceSwitch = toolSourceSwitch ?? throw new ArgumentNullException(nameof(toolSourceSwitch));
+    private readonly IHttpClientFactory _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
+    private readonly Uri _mcpEndpoint = mcpEndpoint ?? throw new ArgumentNullException(nameof(mcpEndpoint));
     private readonly string? _skillsDirectory = skillsDirectory;
     private readonly DemoStageGate _stageGate = stageGate ?? throw new ArgumentNullException(nameof(stageGate));
     private readonly string _modelDeploymentName = string.IsNullOrWhiteSpace(modelDeploymentName)
@@ -150,6 +157,38 @@ public sealed partial class FoundryOperationsAgent(
         }
         #endregion
 
+        #region MCP_CLIENT
+        DemoBreakpoints.Pause(DemoSnippets.McpClient);
+
+        // Same capability, presenter-selected boundary: the streetlight tool is either the local
+        // function compiled into this service, or discovered at runtime from the Energy Hub's MCP
+        // server - McpClientTool IS an AIFunction, so everything downstream cannot tell them apart.
+        var toolSource = currentStage >= DemoStage.McpTools
+            ? _toolSourceSwitch.Current
+            : OperationsAgentToolSource.Local;
+        McpClient? mcpClient = null;
+        AITool streetlightTool;
+
+        if (toolSource == OperationsAgentToolSource.Mcp)
+        {
+            var mcpHttpClient = _httpClientFactory.CreateClient("energyhub-mcp");
+            mcpHttpClient.DefaultRequestHeaders.Add(CorrelationHeaderNames.XCorrelationId, correlationId);
+            mcpClient = await McpClient.CreateAsync(
+                new HttpClientTransport(new HttpClientTransportOptions { Endpoint = _mcpEndpoint }, mcpHttpClient, _loggerFactory, ownsHttpClient: true),
+                loggerFactory: _loggerFactory,
+                cancellationToken: cancellationToken);
+            var discoveredTools = await mcpClient.ListToolsAsync(cancellationToken: cancellationToken);
+            streetlightTool = discoveredTools.Single(tool => tool.Name == EnergyTools.StreetlightStateToolName);
+        }
+        else
+        {
+            streetlightTool = AIFunctionFactory.Create(
+                energyTools.GetStreetlightStateAsync,
+                EnergyTools.StreetlightStateToolName,
+                "Gets the current authoritative operational state of a streetlight.");
+        }
+        #endregion
+
         List<AIContextProvider> contextProviders = [];
 
         if (workKnowledge is not null)
@@ -178,13 +217,7 @@ public sealed partial class FoundryOperationsAgent(
                 {
                     ModelId = _modelDeploymentName,
                     Instructions = Instructions,
-                    Tools =
-                    [
-                        AIFunctionFactory.Create(
-                            energyTools.GetStreetlightStateAsync,
-                            EnergyTools.StreetlightStateToolName,
-                            "Gets the current authoritative operational state of a streetlight.")
-                    ]
+                    Tools = [streetlightTool]
                 },
                 // Capabilities join as context providers: knowledge retrieval contributes an
                 // on-demand search tool; case memory contributes trusted hypothesis rules plus
@@ -275,7 +308,7 @@ public sealed partial class FoundryOperationsAgent(
                         && modelFlightRecorder.HasResult(call.CallId))))
             ];
 
-            return new OperationsAgentAnswer(response.Text, resolvedSessionId, toolCalls, evidence, recalled, skillTrace, modelFlightRecorder?.Exchanges.Count ?? 0);
+            return new OperationsAgentAnswer(response.Text, resolvedSessionId, toolCalls, evidence, recalled, skillTrace, toolSource, modelFlightRecorder?.Exchanges.Count ?? 0);
         }
         catch (OperationCanceledException exception) when (!cancellationToken.IsCancellationRequested)
         {
@@ -285,9 +318,15 @@ public sealed partial class FoundryOperationsAgent(
         }
         finally
         {
-            // The convenience constructor owns the provider's source pipeline; a per-request
-            // provider is disposed with the request.
+            // Per-request resources are disposed with the request: the skills provider owns its
+            // source pipeline, and the MCP client owns its transport (and, via ownsHttpClient,
+            // the HTTP client the transport used).
             skills?.Dispose();
+
+            if (mcpClient is not null)
+            {
+                await mcpClient.DisposeAsync();
+            }
         }
     }
 }
