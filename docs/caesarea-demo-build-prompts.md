@@ -37,6 +37,7 @@ Lecture-ready prompts are maintained as standalone files under `docs/prompts`. I
 
 - [Stage 0 — Deterministic Foundation](prompts/00-deterministic-foundation.md)
 - [Stage 1 — Investigation Agent](prompts/01-investigation-agent.md)
+- [Stage 2 — Session](prompts/02-session.md)
 
 As further stages are implemented, add one independently presentable prompt file per stage and link it here. Do not duplicate full prompt bodies in this overview after extraction.
 

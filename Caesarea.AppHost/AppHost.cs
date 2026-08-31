@@ -12,6 +12,7 @@ var commandCenterApi = builder.AddProject<Projects.CommandCenter_Api>("commandce
 
 var operationsAgentApi = builder.AddProject<Projects.OperationsAgent_Api>("operationsagent-api")
     .WithReference(energyHub)
+    .WithReference(commandCenterApi)
     .WaitFor(energyHub);
 
 // DemoScenario references the Operations Agent (to propagate stage changes) but does not wait for

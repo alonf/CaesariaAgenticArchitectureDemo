@@ -139,12 +139,14 @@ static async Task<IResult> UpdateSimulatorBehaviorAsync(
     ISmartPoleScenarioClient smartPoleClient,
     CancellationToken cancellationToken)
 {
-    if (settings.CommandDelayMs is < 0 or > 30000)
+    // The presenter delay is capped below the command clients' 10-second attempt timeout: a longer
+    // delay would surface as client-side aborts, which is what the Simulate timeout toggle is for.
+    if (settings.CommandDelayMs is < 0 or > 8000)
     {
         return TypedResults.BadRequest(ProblemDetailsFactory.Create(
             StatusCodes.Status400BadRequest,
             "Invalid simulator behavior",
-            "CommandDelayMs must be between 0 and 30000 milliseconds.",
+            "CommandDelayMs must be between 0 and 8000 milliseconds; use Simulate timeout for timeout behavior.",
             context.GetCorrelationId()));
     }
 

@@ -355,17 +355,6 @@
                                 <p>@response.Answer</p>
                             </div>
 
-                            @if (IsSessionStage)
-                            {
-                                <button class="action-button investigate-button" @onclick="AskFollowUpAsync" disabled="@_agentBusy">
-                                    <span>@(_agentBusy ? "Asking..." : "Ask \"Why?\" (same session)")</span>
-                                    <svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9h-2a7 7 0 1 1-7-7v3l5-4-5-4Z" /></svg>
-                                </button>
-                                <p class="agent-footnote">
-                                    Session @ShortCorrelation(response.SessionId) keeps conversational context only - it is never the authoritative city state.
-                                </p>
-                            }
-
                             @if (response.ToolCalls.Count > 0)
                             {
                                 <div class="agent-summary">
@@ -386,6 +375,17 @@
                         else if (!_agentBusy && string.IsNullOrWhiteSpace(_agentMessage))
                         {
                             <p class="agent-empty">Ask the general agent whether L-417 is currently on.</p>
+                        }
+
+                        @if (IsSessionStage && _agentSessionId is not null)
+                        {
+                            <button class="action-button investigate-button" @onclick="AskFollowUpAsync" disabled="@_agentBusy">
+                                <span>@(_agentBusy ? "Asking..." : "Ask \"Why?\" (same session)")</span>
+                                <svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9h-2a7 7 0 1 1-7-7v3l5-4-5-4Z" /></svg>
+                            </button>
+                            <p class="agent-footnote">
+                                Session @ShortCorrelation(_agentSessionId) keeps conversational context only - it is never the authoritative city state.
+                            </p>
                         }
                     </section>
                 </aside>

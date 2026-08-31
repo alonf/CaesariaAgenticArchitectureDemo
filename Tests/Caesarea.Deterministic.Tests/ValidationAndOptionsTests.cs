@@ -84,6 +84,7 @@ public sealed class ValidationAndOptionsTests
         var options = new OperationsAgentApiOptions
         {
             EnergyHubBaseUri = "https+http://energyhub-api",
+            CommandCenterBaseUri = "https+http://commandcenter-api",
             FoundryProjectEndpoint = "https://alonlecturedemo-resource.services.ai.azure.com/api/projects/alonlecturedemo",
             ModelDeploymentName = "gpt-5.5",
             AgentName = "Caesarea Operations Agent"
@@ -119,6 +120,7 @@ public sealed class ValidationAndOptionsTests
         var options = new OperationsAgentApiOptions
         {
             EnergyHubBaseUri = "https+http://energyhub-api",
+            CommandCenterBaseUri = "https+http://commandcenter-api",
             FoundryProjectEndpoint = "http://insecure-endpoint.example.com/api/projects/demo",
             ModelDeploymentName = "gpt-5.5",
             AgentName = "Caesarea Operations Agent"
@@ -135,6 +137,7 @@ public sealed class ValidationAndOptionsTests
         var options = new OperationsAgentApiOptions
         {
             EnergyHubBaseUri = "not-a-uri",
+            CommandCenterBaseUri = "https+http://commandcenter-api",
             FoundryProjectEndpoint = "https://alonlecturedemo-resource.services.ai.azure.com/api/projects/alonlecturedemo",
             ModelDeploymentName = "gpt-5.5",
             AgentName = "Caesarea Operations Agent"

@@ -146,8 +146,8 @@
         {
             <div class="stage-switch-actions">
                 <label>
-                    Command delay (ms)
-                    <input type="number" min="0" max="30000" step="250" @bind="_behaviorDelayMs" disabled="@_behaviorBusy" />
+                    Command delay (ms, up to 8000)
+                    <input type="number" min="0" max="8000" step="250" @bind="_behaviorDelayMs" disabled="@_behaviorBusy" />
                 </label>
                 <label>
                     <input type="checkbox" @bind="_behaviorTimeout" disabled="@_behaviorBusy" />

@@ -20,6 +20,11 @@ builder.Services.AddHttpClient<IEnergyReadGateway, HttpEnergyReadGateway>((servi
     var options = serviceProvider.GetRequiredService<IOptions<OperationsAgentApiOptions>>().Value;
     client.BaseAddress = new Uri(options.EnergyHubBaseUri, UriKind.Absolute);
 });
+builder.Services.AddHttpClient<CommandCenterStageReader>((serviceProvider, client) =>
+{
+    var options = serviceProvider.GetRequiredService<IOptions<OperationsAgentApiOptions>>().Value;
+    client.BaseAddress = new Uri(options.CommandCenterBaseUri, UriKind.Absolute);
+});
 
 // AIProjectClient and DefaultAzureCredential construction is lazy: neither performs network or authentication
 // calls until a token is requested, so the service still starts cleanly in Deterministic mode even when no
@@ -33,7 +38,8 @@ builder.Services.AddSingleton(serviceProvider =>
         new Uri(options.FoundryProjectEndpoint, UriKind.Absolute),
         serviceProvider.GetRequiredService<TokenCredential>());
 });
-builder.Services.AddHostedService<FoundryCredentialWarmup>();
+builder.Services.AddSingleton<FoundryCredentialWarmup>();
+builder.Services.AddHostedService<DemoStageSynchronizer>();
 builder.Services.AddSingleton(serviceProvider =>
 {
     var initialStage = Enum.TryParse<DemoStage>(builder.Configuration["DemoStage"], out var configuredStage)
@@ -80,7 +86,19 @@ var demoStage = app.MapGroup("/api/operations-agent/demo-stage")
     .WithTags("Demo Stage");
 
 demoStage.MapGet("/", (DemoStageGate stageGate) => TypedResults.Ok(stageGate.GetCurrent()));
-demoStage.MapPost("/", (DemoStageStatus stage, DemoStageGate stageGate) => TypedResults.Ok(stageGate.SetCurrent(stage)));
+demoStage.MapPost("/", (DemoStageStatus stage, DemoStageGate stageGate, FoundryCredentialWarmup credentialWarmup) =>
+{
+    var applied = stageGate.SetCurrent(stage);
+
+    // Entering an agent-enabled stage triggers the one-time credential warmup, so the Deterministic
+    // stage keeps its promise that no AI credential is used.
+    if (stageGate.IsAgentEnabled)
+    {
+        credentialWarmup.EnsureStarted();
+    }
+
+    return TypedResults.Ok(applied);
+});
 
 await app.RunAsync();
 
@@ -89,6 +107,7 @@ static async Task<IResult> AskAsync(
     OperationsAgentRequest request,
     IOperationsAgent agent,
     DemoStageGate stageGate,
+    FoundryCredentialWarmup credentialWarmup,
     IOptions<OperationsAgentApiOptions> options,
     ILoggerFactory loggerFactory,
     CancellationToken cancellationToken)
@@ -103,6 +122,9 @@ static async Task<IResult> AskAsync(
             $"The Operations Agent requires the First Agent stage; the current stage is {stageGate.GetCurrent().Name}.",
             context.GetCorrelationId()));
     }
+
+    // Safety net in case no stage propagation started the warmup; a no-op after the first call.
+    credentialWarmup.EnsureStarted();
     try
     {
         const int maxQuestionLength = 1000;
@@ -147,6 +169,14 @@ static async Task<IResult> AskAsync(
             StatusCodes.Status400BadRequest,
             "Invalid request",
             exception.Message,
+            context.GetCorrelationId()));
+    }
+    catch (OperationsAgentSessionExpiredException exception)
+    {
+        return TypedResults.Problem(ProblemDetailsFactory.Create(
+            StatusCodes.Status410Gone,
+            "Conversational session expired",
+            $"{exception.Message} Ask the question again to start a new session.",
             context.GetCorrelationId()));
     }
     catch (HttpRequestException exception)

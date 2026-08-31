@@ -17,6 +17,12 @@ internal sealed class OperationsAgentApiOptions : IValidatableObject
     public string EnergyHubBaseUri { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets the base address of the Command Center that owns the authoritative demo stage.
+    /// </summary>
+    [Required]
+    public string CommandCenterBaseUri { get; set; } = string.Empty;
+
+    /// <summary>
     /// Gets or sets the Microsoft Foundry project endpoint used to run the Operations Agent.
     /// This value is a non-secret development default and does not require any key or secret.
     /// </summary>
@@ -55,6 +61,13 @@ internal sealed class OperationsAgentApiOptions : IValidatableObject
             yield return new ValidationResult(
                 "OperationsAgentApi:EnergyHubBaseUri must be a valid absolute or Aspire service-discovery URI.",
                 [nameof(EnergyHubBaseUri)]);
+        }
+
+        if (!ServiceUriValidator.TryValidateAbsoluteOrServiceDiscoveryUri(CommandCenterBaseUri, out _))
+        {
+            yield return new ValidationResult(
+                "OperationsAgentApi:CommandCenterBaseUri must be a valid absolute or Aspire service-discovery URI.",
+                [nameof(CommandCenterBaseUri)]);
         }
 
         if (!Uri.TryCreate(FoundryProjectEndpoint, UriKind.Absolute, out var foundryUri) || foundryUri.Scheme != Uri.UriSchemeHttps)

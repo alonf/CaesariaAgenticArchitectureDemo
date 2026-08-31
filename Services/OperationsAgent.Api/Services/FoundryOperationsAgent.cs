@@ -102,13 +102,28 @@ public sealed partial class FoundryOperationsAgent(
             #region H08_S18_SESSION
             DemoBreakpoints.Pause(DemoSnippets.Session);
 
-            AgentSession session = (sessionId is null ? null : _sessionStore.TryGet(sessionId))
-                ?? await agent.CreateSessionAsync(timeoutSource.Token);
+            AgentSession session;
+
+            if (sessionId is null)
+            {
+                session = await agent.CreateSessionAsync(timeoutSource.Token);
+            }
+            else if (_sessionStore.TryGetState(sessionId, out var storedState))
+            {
+                // Each request restores its own private session instance from serialized state, so a
+                // live session object is never shared across requests or agent instances.
+                session = await agent.DeserializeSessionAsync(storedState, cancellationToken: timeoutSource.Token);
+            }
+            else
+            {
+                throw new OperationsAgentSessionExpiredException(sessionId);
+            }
 
             var response = await agent.RunAsync(question, session, cancellationToken: timeoutSource.Token);
             #endregion
 
-            var resolvedSessionId = _sessionStore.Save(sessionId, session);
+            var serializedSession = await agent.SerializeSessionAsync(session, cancellationToken: timeoutSource.Token);
+            var resolvedSessionId = _sessionStore.SaveState(sessionId, serializedSession);
             OperationsAgentLog.RequestCompleted(_logger, correlationId);
 
             IReadOnlyList<OperationsAgentToolCall> toolCalls = modelFlightRecorder is null

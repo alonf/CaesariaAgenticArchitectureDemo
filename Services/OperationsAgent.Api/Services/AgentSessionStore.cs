@@ -1,54 +1,68 @@
 using System.Collections.Concurrent;
-using Microsoft.Agents.AI;
+using System.Text.Json;
 
 namespace OperationsAgent.Api.Services;
 
 /// <summary>
-/// Keeps conversational <see cref="AgentSession"/> state across independent HTTP requests so a
-/// follow-up question can continue the previous turn. Session state is conversational context only;
-/// it is never the authoritative operational state, which stays in the deterministic Hubs.
+/// Keeps serialized conversational session state across independent HTTP requests so a follow-up
+/// question can continue the previous turn. Each request deserializes its own private
+/// <c>AgentSession</c> instance from this state, so no live session object is ever shared between
+/// requests or agent instances. Session state is conversational context only; it is never the
+/// authoritative operational state, which stays in the deterministic Hubs.
 /// </summary>
 public sealed class AgentSessionStore(TimeProvider timeProvider)
 {
     private static readonly TimeSpan SessionLifetime = TimeSpan.FromMinutes(30);
+    private const int MaxSessions = 50;
+
     private readonly ConcurrentDictionary<string, StoredSession> _sessions = new(StringComparer.Ordinal);
     private readonly TimeProvider _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
 
     /// <summary>
-    /// Gets the live session for the supplied identifier, or <see langword="null"/> when it is
-    /// unknown or expired.
+    /// Gets the serialized session state for the supplied identifier.
     /// </summary>
     /// <param name="sessionId">The session identifier returned by an earlier request.</param>
-    /// <returns>The stored session, or <see langword="null"/>.</returns>
-    public AgentSession? TryGet(string sessionId)
+    /// <param name="state">The serialized session state, when the identifier is known and current.</param>
+    /// <returns><see langword="false"/> when the identifier is unknown or expired.</returns>
+    public bool TryGetState(string sessionId, out JsonElement state)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
         Prune();
 
-        return _sessions.TryGetValue(sessionId, out var stored) ? stored.Session : null;
+        if (_sessions.TryGetValue(sessionId, out var stored))
+        {
+            state = stored.State;
+            return true;
+        }
+
+        state = default;
+        return false;
     }
 
     /// <summary>
-    /// Stores the supplied session and returns its identifier: the existing identifier when the
-    /// session was already stored, otherwise a newly created one.
+    /// Stores the serialized session state and returns its identifier: the supplied identifier when
+    /// it is still known, otherwise a newly created one. Concurrent saves for the same identifier
+    /// are last-writer-wins; requests get isolated session instances, so the worst case is a lost
+    /// turn of conversational context, never corrupted state.
     /// </summary>
     /// <param name="sessionId">The identifier the caller supplied, or <see langword="null"/>.</param>
-    /// <param name="session">The session to keep for follow-up questions.</param>
+    /// <param name="state">The serialized session state after the current run.</param>
     /// <returns>The identifier a follow-up question should send.</returns>
-    public string Save(string? sessionId, AgentSession session)
+    public string SaveState(string? sessionId, JsonElement state)
     {
-        ArgumentNullException.ThrowIfNull(session);
+        Prune();
 
         var now = _timeProvider.GetUtcNow();
+        var stored = new StoredSession(state.Clone(), now);
 
         if (sessionId is not null && _sessions.ContainsKey(sessionId))
         {
-            _sessions[sessionId] = new StoredSession(session, now);
+            _sessions[sessionId] = stored;
             return sessionId;
         }
 
         var newSessionId = Guid.NewGuid().ToString("N");
-        _sessions[newSessionId] = new StoredSession(session, now);
+        _sessions[newSessionId] = stored;
         return newSessionId;
     }
 
@@ -63,7 +77,14 @@ public sealed class AgentSessionStore(TimeProvider timeProvider)
                 _sessions.TryRemove(pair.Key, out _);
             }
         }
+
+        // Capacity guard for long-running demos: evict the oldest sessions beyond the cap.
+        while (_sessions.Count > MaxSessions)
+        {
+            var oldest = _sessions.MinBy(pair => pair.Value.LastUsedAt);
+            _sessions.TryRemove(oldest.Key, out _);
+        }
     }
 
-    private sealed record StoredSession(AgentSession Session, DateTimeOffset LastUsedAt);
+    private sealed record StoredSession(JsonElement State, DateTimeOffset LastUsedAt);
 }
