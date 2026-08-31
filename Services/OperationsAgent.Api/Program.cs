@@ -80,7 +80,7 @@ builder.Services.AddSingleton<IOperationsAgent>(serviceProvider =>
         serviceProvider.GetRequiredService<DemoStageGate>(),
         serviceProvider.GetRequiredService<ToolSourceSwitch>(),
         serviceProvider.GetRequiredService<IHttpClientFactory>(),
-        new Uri($"{options.EnergyHubBaseUri.TrimEnd('/')}/mcp", UriKind.Absolute),
+        McpEndpoint.Create(options.EnergyHubBaseUri),
         skillsDirectory,
         options.ModelDeploymentName,
         options.AgentName,
