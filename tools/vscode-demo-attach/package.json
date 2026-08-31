@@ -1,0 +1,21 @@
+{
+    "name": "demo-attach",
+    "displayName": "Caesarea Demo Attach",
+    "description": "Attaches the VS Code .NET debugger to a running Caesarea demo service when the demo control UI requests it.",
+    "version": "0.1.0",
+    "publisher": "caesarea-demo",
+    "license": "MIT",
+    "engines": {
+        "vscode": "^1.90.0"
+    },
+    "categories": [
+        "Debuggers"
+    ],
+    "activationEvents": [
+        "onUri"
+    ],
+    "main": "./extension.js",
+    "extensionDependencies": [
+        "ms-dotnettools.csharp"
+    ]
+}

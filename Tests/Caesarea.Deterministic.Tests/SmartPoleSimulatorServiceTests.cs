@@ -96,7 +96,7 @@ public sealed class SmartPoleSimulatorServiceTests
 
         using var cancellationTokenSource = new CancellationTokenSource();
         var commandTask = simulator.SetLampStateAsync(new SetLampStateCommand(DemoAssets.StreetlightAssetId, true), "cancel-corr", cancellationTokenSource.Token);
-        cancellationTokenSource.Cancel();
+        await cancellationTokenSource.CancelAsync();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => commandTask);
 

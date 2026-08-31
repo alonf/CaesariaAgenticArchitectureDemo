@@ -246,12 +246,20 @@ public sealed class ScenarioContextModule(TimeProvider timeProvider)
 /// <summary>
 /// Tracks the demo stage currently propagated from the presenter switchboard to the Command Center.
 /// </summary>
-/// <param name="timeProvider">The clock used to stamp stage changes.</param>
-public sealed class StageContextModule(TimeProvider timeProvider)
+public sealed class StageContextModule
 {
     private readonly object _gate = new();
-    private readonly TimeProvider _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
-    private DemoStageStatus _currentStage = CreateDeterministicStage(timeProvider.GetUtcNow(), "startup");
+    private DemoStageStatus _currentStage;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="StageContextModule"/> class.
+    /// </summary>
+    /// <param name="timeProvider">The clock used to stamp the startup stage.</param>
+    public StageContextModule(TimeProvider timeProvider)
+    {
+        ArgumentNullException.ThrowIfNull(timeProvider);
+        _currentStage = CreateDeterministicStage(timeProvider.GetUtcNow(), "startup");
+    }
 
     /// <summary>
     /// Gets the current demo stage.

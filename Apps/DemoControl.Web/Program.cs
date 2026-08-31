@@ -20,6 +20,12 @@ builder.Services.AddHttpClient<DemoStageApiClient>((serviceProvider, client) =>
     var options = serviceProvider.GetRequiredService<IOptions<DemoControlWebOptions>>().Value;
     client.BaseAddress = new Uri(options.BaseUri, UriKind.Absolute);
 });
+builder.Services.AddHttpClient<DemoBreakpointsApiClient>((serviceProvider, client) =>
+{
+    var options = serviceProvider.GetRequiredService<IOptions<DemoControlWebOptions>>().Value;
+    client.BaseAddress = new Uri(options.OperationsAgentBaseUri, UriKind.Absolute);
+});
+builder.Services.AddSingleton<VsCodeAttachService>();
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
@@ -39,4 +45,4 @@ app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
-app.Run();
+await app.RunAsync();

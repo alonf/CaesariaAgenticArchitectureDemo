@@ -15,6 +15,9 @@ internal sealed class DemoScenarioApiOptions : IValidatableObject
     [Required]
     public string CommandCenterBaseUri { get; set; } = string.Empty;
 
+    [Required]
+    public string OperationsAgentBaseUri { get; set; } = string.Empty;
+
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         if (!ServiceUriValidator.TryValidateAbsoluteOrServiceDiscoveryUri(SmartPoleBaseUri, out _))
@@ -36,6 +39,13 @@ internal sealed class DemoScenarioApiOptions : IValidatableObject
             yield return new ValidationResult(
                 "DemoScenarioApi:CommandCenterBaseUri must be a valid absolute or Aspire service-discovery URI.",
                 [nameof(CommandCenterBaseUri)]);
+        }
+
+        if (!ServiceUriValidator.TryValidateAbsoluteOrServiceDiscoveryUri(OperationsAgentBaseUri, out _))
+        {
+            yield return new ValidationResult(
+                "DemoScenarioApi:OperationsAgentBaseUri must be a valid absolute or Aspire service-discovery URI.",
+                [nameof(OperationsAgentBaseUri)]);
         }
     }
 }

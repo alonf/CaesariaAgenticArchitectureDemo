@@ -6,10 +6,13 @@ namespace SmartPole.Simulator.Api.Services;
 public sealed partial class SmartPoleSimulatorService
 {
     private const string SetLampStateOperation = "Set lamp state";
+    private const string SupersededSummary =
+        "SmartPole command was superseded by a scenario change or reset; the new state was preserved.";
     private readonly object _gate = new();
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<SmartPoleSimulatorService> _logger;
     private SmartPolePhysicalState _state;
+    private long _revision;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SmartPoleSimulatorService"/> class.
@@ -49,6 +52,7 @@ public sealed partial class SmartPoleSimulatorService
 
         lock (_gate)
         {
+            _revision++;
             _state = CreateBaselineState(_timeProvider.GetUtcNow());
         }
 
@@ -73,6 +77,7 @@ public sealed partial class SmartPoleSimulatorService
 
         lock (_gate)
         {
+            _revision++;
             var now = _timeProvider.GetUtcNow();
             _state = new SmartPolePhysicalState(
                 DemoAssets.StreetlightAssetId,
@@ -138,9 +143,11 @@ public sealed partial class SmartPoleSimulatorService
         var requestedAt = _timeProvider.GetUtcNow();
         SmartPoleBehaviorConfiguration configuration;
         ControllerHealthInfo controllerHealth;
+        long commandRevision;
 
         lock (_gate)
         {
+            commandRevision = _revision;
             configuration = _state.Configuration;
             controllerHealth = _state.ControllerHealth;
             _state = _state with
@@ -169,19 +176,19 @@ public sealed partial class SmartPoleSimulatorService
         {
             var canceledAt = _timeProvider.GetUtcNow();
 
-            lock (_gate)
+            if (!TryCommitCommand(commandRevision, state => state with
             {
-                _state = _state with
-                {
-                    LastCommand = CreateCommand(
-                        SetLampStateOperation,
-                        desiredIsOn,
-                        CommandExecutionStatus.Failed,
-                        correlationId,
-                        requestedAt,
-                        canceledAt,
-                        "SmartPole command was canceled before device acknowledgement.")
-                };
+                LastCommand = CreateCommand(
+                    SetLampStateOperation,
+                    desiredIsOn,
+                    CommandExecutionStatus.Failed,
+                    correlationId,
+                    requestedAt,
+                    canceledAt,
+                    "SmartPole command was canceled before device acknowledgement.")
+            }))
+            {
+                SmartPoleSimulatorServiceLog.CommandSuperseded(_logger, command.AssetId, correlationId);
             }
 
             SmartPoleSimulatorServiceLog.CommandCanceled(_logger, command.AssetId, correlationId, exception);
@@ -192,19 +199,20 @@ public sealed partial class SmartPoleSimulatorService
 
         if (configuration.SimulateTimeout)
         {
-            lock (_gate)
+            if (!TryCommitCommand(commandRevision, state => state with
             {
-                _state = _state with
-                {
-                    LastCommand = CreateCommand(
-                        SetLampStateOperation,
-                        desiredIsOn,
-                        CommandExecutionStatus.TimedOut,
-                        correlationId,
-                        requestedAt,
-                        completedAt,
-                        "SmartPole command timed out before device acknowledgement.")
-                };
+                LastCommand = CreateCommand(
+                    SetLampStateOperation,
+                    desiredIsOn,
+                    CommandExecutionStatus.TimedOut,
+                    correlationId,
+                    requestedAt,
+                    completedAt,
+                    "SmartPole command timed out before device acknowledgement.")
+            }))
+            {
+                SmartPoleSimulatorServiceLog.CommandSuperseded(_logger, command.AssetId, correlationId);
+                return CreateSupersededResult(command.AssetId, correlationId);
             }
 
             SmartPoleSimulatorServiceLog.CommandTimedOut(_logger, command.AssetId, correlationId);
@@ -220,19 +228,20 @@ public sealed partial class SmartPoleSimulatorService
 
         if (controllerHealth.Status == ControllerHealthStatus.Faulted || configuration.SimulateFailure)
         {
-            lock (_gate)
+            if (!TryCommitCommand(commandRevision, state => state with
             {
-                _state = _state with
-                {
-                    LastCommand = CreateCommand(
-                        SetLampStateOperation,
-                        desiredIsOn,
-                        CommandExecutionStatus.Failed,
-                        correlationId,
-                        requestedAt,
-                        completedAt,
-                        "SmartPole controller rejected the command.")
-                };
+                LastCommand = CreateCommand(
+                    SetLampStateOperation,
+                    desiredIsOn,
+                    CommandExecutionStatus.Failed,
+                    correlationId,
+                    requestedAt,
+                    completedAt,
+                    "SmartPole controller rejected the command.")
+            }))
+            {
+                SmartPoleSimulatorServiceLog.CommandSuperseded(_logger, command.AssetId, correlationId);
+                return CreateSupersededResult(command.AssetId, correlationId);
             }
 
             SmartPoleSimulatorServiceLog.CommandFailed(_logger, command.AssetId, correlationId);
@@ -246,22 +255,23 @@ public sealed partial class SmartPoleSimulatorService
                 completedAt);
         }
 
-        lock (_gate)
+        if (!TryCommitCommand(commandRevision, state => state with
         {
-            _state = _state with
-            {
-                IsOn = desiredIsOn,
-                ManualOverride = false,
-                LastReportedAt = completedAt,
-                LastCommand = CreateCommand(
-                    SetLampStateOperation,
-                    desiredIsOn,
-                    CommandExecutionStatus.Succeeded,
-                    correlationId,
-                    requestedAt,
-                    completedAt,
-                    "SmartPole confirmed the requested lamp state.")
-            };
+            IsOn = desiredIsOn,
+            ManualOverride = false,
+            LastReportedAt = completedAt,
+            LastCommand = CreateCommand(
+                SetLampStateOperation,
+                desiredIsOn,
+                CommandExecutionStatus.Succeeded,
+                correlationId,
+                requestedAt,
+                completedAt,
+                "SmartPole confirmed the requested lamp state.")
+        }))
+        {
+            SmartPoleSimulatorServiceLog.CommandSuperseded(_logger, command.AssetId, correlationId);
+            return CreateSupersededResult(command.AssetId, correlationId);
         }
 
         SmartPoleSimulatorServiceLog.CommandSucceeded(_logger, command.AssetId, desiredIsOn, correlationId);
@@ -295,6 +305,29 @@ public sealed partial class SmartPoleSimulatorService
             OperationalContext.None,
             now,
             SmartPoleBehaviorConfiguration.Default);
+
+    private bool TryCommitCommand(long commandRevision, Func<SmartPolePhysicalState, SmartPolePhysicalState> mutation)
+    {
+        lock (_gate)
+        {
+            if (_revision != commandRevision)
+            {
+                return false;
+            }
+
+            _state = mutation(_state);
+            return true;
+        }
+    }
+
+    private SmartPoleCommandResult CreateSupersededResult(string assetId, string correlationId) =>
+        new(
+            assetId,
+            null,
+            CommandExecutionStatus.Failed,
+            correlationId,
+            SupersededSummary,
+            _timeProvider.GetUtcNow());
 
     private static CommandRecord CreateCommand(
         string operation,
@@ -383,4 +416,10 @@ internal static partial class SmartPoleSimulatorServiceLog
         Level = LogLevel.Information,
         Message = "SmartPole Set Lamp State succeeded for asset {AssetId}. DesiredIsOn: {DesiredIsOn}. CorrelationId: {CorrelationId}.")]
     internal static partial void CommandSucceeded(ILogger logger, string assetId, bool desiredIsOn, string correlationId);
+
+    [LoggerMessage(
+        EventId = 2108,
+        Level = LogLevel.Warning,
+        Message = "SmartPole Set Lamp State was superseded by a scenario change or reset for asset {AssetId}. CorrelationId: {CorrelationId}.")]
+    internal static partial void CommandSuperseded(ILogger logger, string assetId, string correlationId);
 }

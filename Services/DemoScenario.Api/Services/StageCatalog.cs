@@ -14,9 +14,9 @@ public sealed class StageCatalog
             ["Deterministic scenarios", "Manual operator actions"]),
         new(
             DemoStage.InvestigationAgent,
-            "Investigation Agent",
-            "The read-only Operations Agent can investigate the current anomaly using authoritative evidence.",
-            ["Deterministic scenarios", "Manual operator actions", "Read-only Operations Agent investigation"])
+            "First Agent",
+            "The general Caesarea Operations Agent can answer a simple question using one authoritative Energy Hub tool.",
+            ["Deterministic scenarios", "Manual operator actions", "Caesarea Operations Agent", "get_streetlight_state tool"])
     ];
 
     /// <summary>

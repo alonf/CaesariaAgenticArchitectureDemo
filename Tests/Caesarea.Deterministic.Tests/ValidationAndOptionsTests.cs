@@ -50,7 +50,8 @@ public sealed class ValidationAndOptionsTests
         {
             SmartPoleBaseUri = "https+http://smartpole-simulator-api",
             EnergyHubBaseUri = "https+http://energyhub-api",
-            CommandCenterBaseUri = "https+http://commandcenter-api"
+            CommandCenterBaseUri = "https+http://commandcenter-api",
+            OperationsAgentBaseUri = "https+http://operationsagent-api"
         };
 
         var results = Validate(options);
@@ -83,10 +84,9 @@ public sealed class ValidationAndOptionsTests
         var options = new OperationsAgentApiOptions
         {
             EnergyHubBaseUri = "https+http://energyhub-api",
-            CommandCenterBaseUri = "https+http://commandcenter-api",
             FoundryProjectEndpoint = "https://alonlecturedemo-resource.services.ai.azure.com/api/projects/alonlecturedemo",
-            ModelDeploymentName = "gpt-5.2-chat",
-            AgentName = "Operations Agent"
+            ModelDeploymentName = "gpt-5.5",
+            AgentName = "Caesarea Operations Agent"
         };
 
         var results = Validate(options);
@@ -95,15 +95,33 @@ public sealed class ValidationAndOptionsTests
     }
 
     [Fact]
+    public void OperationsAgentApiOptionsRejectsUnboundedExecutionSettings()
+    {
+        var options = new OperationsAgentApiOptions
+        {
+            EnergyHubBaseUri = "https+http://energyhub-api",
+            FoundryProjectEndpoint = "https://alonlecturedemo-resource.services.ai.azure.com/api/projects/alonlecturedemo",
+            ModelDeploymentName = "gpt-5.5",
+            AgentName = "Caesarea Operations Agent",
+            MaxFunctionIterations = 40,
+            RequestTimeoutSeconds = 600
+        };
+
+        var results = Validate(options);
+
+        Assert.Contains(results, result => result.MemberNames.Contains(nameof(OperationsAgentApiOptions.MaxFunctionIterations), StringComparer.Ordinal));
+        Assert.Contains(results, result => result.MemberNames.Contains(nameof(OperationsAgentApiOptions.RequestTimeoutSeconds), StringComparer.Ordinal));
+    }
+
+    [Fact]
     public void OperationsAgentApiOptionsRejectNonHttpsFoundryEndpoint()
     {
         var options = new OperationsAgentApiOptions
         {
             EnergyHubBaseUri = "https+http://energyhub-api",
-            CommandCenterBaseUri = "https+http://commandcenter-api",
             FoundryProjectEndpoint = "http://insecure-endpoint.example.com/api/projects/demo",
-            ModelDeploymentName = "gpt-5.2-chat",
-            AgentName = "Operations Agent"
+            ModelDeploymentName = "gpt-5.5",
+            AgentName = "Caesarea Operations Agent"
         };
 
         var results = Validate(options);
@@ -117,16 +135,14 @@ public sealed class ValidationAndOptionsTests
         var options = new OperationsAgentApiOptions
         {
             EnergyHubBaseUri = "not-a-uri",
-            CommandCenterBaseUri = "also-not-a-uri",
             FoundryProjectEndpoint = "https://alonlecturedemo-resource.services.ai.azure.com/api/projects/alonlecturedemo",
-            ModelDeploymentName = "gpt-5.2-chat",
-            AgentName = "Operations Agent"
+            ModelDeploymentName = "gpt-5.5",
+            AgentName = "Caesarea Operations Agent"
         };
 
         var results = Validate(options);
 
         Assert.Contains(results, result => result.MemberNames.Contains(nameof(OperationsAgentApiOptions.EnergyHubBaseUri), StringComparer.Ordinal));
-        Assert.Contains(results, result => result.MemberNames.Contains(nameof(OperationsAgentApiOptions.CommandCenterBaseUri), StringComparer.Ordinal));
     }
 
     private static List<ValidationResult> Validate(object instance)

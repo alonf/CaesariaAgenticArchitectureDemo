@@ -145,6 +145,17 @@ internal sealed class FakeSmartPoleScenarioClient : ISmartPoleScenarioClient
 
         return Task.CompletedTask;
     }
+
+    public SmartPoleBehaviorConfiguration Behavior { get; set; } = SmartPoleBehaviorConfiguration.Default;
+
+    public Task<SmartPoleBehaviorConfiguration> GetBehaviorAsync(string correlationId, CancellationToken cancellationToken) =>
+        Task.FromResult(Behavior);
+
+    public Task<SmartPoleBehaviorConfiguration> UpdateBehaviorAsync(SmartPoleBehaviorConfiguration configuration, string correlationId, CancellationToken cancellationToken)
+    {
+        Behavior = configuration;
+        return Task.FromResult(Behavior);
+    }
 }
 
 internal sealed class FakeEnergyScenarioClient : IEnergyScenarioClient
@@ -223,19 +234,32 @@ internal sealed class FakeCommandCenterStageClient : ICommandCenterStageClient
 
     public DemoStageStatus? LastStage { get; private set; }
 
-    public Func<DemoStageStatus, string, CancellationToken, Task>? OnApplyStageAsync { get; set; }
+    public DemoStageStatus CurrentStage { get; set; } = new(
+        DemoStage.Deterministic,
+        "Deterministic",
+        "Deterministic stage",
+        ["Deterministic"],
+        DateTimeOffset.UtcNow,
+        "startup");
 
-    public Task ApplyStageAsync(DemoStageStatus stage, string correlationId, CancellationToken cancellationToken)
+    public Func<DemoStageStatus, string, CancellationToken, Task<DemoStageStatus>>? OnApplyStageAsync { get; set; }
+
+    public Task<DemoStageStatus> GetCurrentStageAsync(string correlationId, CancellationToken cancellationToken) =>
+        Task.FromResult(CurrentStage);
+
+    public async Task<DemoStageStatus> ApplyStageAsync(DemoStageStatus stage, string correlationId, CancellationToken cancellationToken)
     {
         ApplyCalls++;
         LastStage = stage;
 
         if (OnApplyStageAsync is not null)
         {
-            return OnApplyStageAsync(stage, correlationId, cancellationToken);
+            CurrentStage = await OnApplyStageAsync(stage, correlationId, cancellationToken);
+            return CurrentStage;
         }
 
-        return Task.CompletedTask;
+        CurrentStage = stage;
+        return stage;
     }
 }
 
@@ -260,51 +284,22 @@ internal sealed class FakeEnergyReadGateway : IEnergyReadGateway
             : Task.FromResult(Activity);
 }
 
-internal sealed class FakeCommandCenterReadGateway : ICommandCenterReadGateway
+internal sealed class FakeOperationsAgentStageClient : IOperationsAgentStageClient
 {
-    public CustomerReportContext? CustomerReportContext { get; set; }
+    public int ApplyCalls { get; private set; }
 
-    public IncidentContext? IncidentContext { get; set; }
+    public DemoStageStatus? LastStage { get; private set; }
 
-    public Func<string, string, CancellationToken, Task<CustomerReportContext>>? OnGetCustomerReportContextAsync { get; set; }
+    public Func<DemoStageStatus, string, CancellationToken, Task>? OnApplyStageAsync { get; set; }
 
-    public Func<string, string, CancellationToken, Task<IncidentContext>>? OnGetIncidentContextAsync { get; set; }
-
-    public Task<CustomerReportContext> GetCustomerReportContextAsync(string assetId, string correlationId, CancellationToken cancellationToken) =>
-        OnGetCustomerReportContextAsync is not null
-            ? OnGetCustomerReportContextAsync(assetId, correlationId, cancellationToken)
-            : Task.FromResult(CustomerReportContext ?? new CustomerReportContext(assetId, null));
-
-    public Task<IncidentContext> GetIncidentContextAsync(string assetId, string correlationId, CancellationToken cancellationToken) =>
-        OnGetIncidentContextAsync is not null
-            ? OnGetIncidentContextAsync(assetId, correlationId, cancellationToken)
-            : Task.FromResult(IncidentContext ?? new IncidentContext(assetId, null));
-}
-
-internal sealed class FakeInvestigationAgentRunner : IInvestigationAgentRunner
-{
-    public required ModelInvestigationResponse Response { get; init; }
-
-    public Func<OperationsToolset, CancellationToken, Task>? OnBeforeReturn { get; set; }
-
-    public string? LastAssetId { get; private set; }
-
-    public string? LastQuestion { get; private set; }
-
-    public async Task<ModelInvestigationResponse> InvestigateAsync(
-        OperationsToolset toolset,
-        string assetId,
-        string question,
-        CancellationToken cancellationToken)
+    public async Task ApplyStageAsync(DemoStageStatus stage, string correlationId, CancellationToken cancellationToken)
     {
-        LastAssetId = assetId;
-        LastQuestion = question;
+        ApplyCalls++;
+        LastStage = stage;
 
-        if (OnBeforeReturn is not null)
+        if (OnApplyStageAsync is not null)
         {
-            await OnBeforeReturn(toolset, cancellationToken);
+            await OnApplyStageAsync(stage, correlationId, cancellationToken);
         }
-
-        return Response;
     }
 }

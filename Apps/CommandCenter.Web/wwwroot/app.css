@@ -252,12 +252,14 @@ svg {
     height: calc(100vh - 120px);
     min-height: 680px;
     display: grid;
-    grid-template-columns: 290px minmax(560px, 1fr) 390px;
-    overflow: hidden;
+    grid-template-columns: auto minmax(560px, 1fr) auto;
+    /* When the browser is zoomed in, scroll horizontally instead of clipping the rails. */
+    overflow-x: auto;
+    overflow-y: hidden;
 }
 
 .operations-grid.with-investigation {
-    grid-template-columns: 290px minmax(480px, 1fr) 390px 360px;
+    grid-template-columns: auto minmax(480px, 1fr) auto auto;
 }
 
 .left-rail,
@@ -265,13 +267,21 @@ svg {
 .investigation-rail {
     overflow: auto;
     background: var(--cp-bg-elevated);
+    /* Presenter-adjustable rail width: drag the handle in the rail's bottom-right corner. */
+    resize: horizontal;
 }
 
 .left-rail {
+    width: 290px;
+    min-width: 230px;
+    max-width: 520px;
     border-right: 1px solid var(--cp-border);
 }
 
 .right-rail {
+    width: 390px;
+    min-width: 300px;
+    max-width: 640px;
     border-left: 1px solid var(--cp-border);
 }
 
@@ -466,6 +476,10 @@ svg {
     min-width: 0;
     display: grid;
     grid-template-rows: auto minmax(400px, 1fr) auto;
+    /* Cap the implicit column at the workspace width: without this the map SVG's intrinsic
+       aspect ratio (viewBox 900x610) sizes the track wider than the column and the map paints
+       over the neighboring rail when the column is narrow (browser zoom, resized rails). */
+    grid-template-columns: minmax(0, 1fr);
     background: var(--cp-bg);
 }
 
@@ -518,9 +532,14 @@ svg {
 
 .city-map {
     position: relative;
+    /* Inline-size containment (from container-type) would otherwise let the SVG's intrinsic
+       aspect ratio widen the map beyond its column, painting over the neighboring rail. */
+    width: 100%;
     min-height: 0;
     overflow: hidden;
     background: var(--cp-surface-soft);
+    /* Lets the overlay cards below adapt to the map's width (browser zoom, resized rails). */
+    container-type: inline-size;
 }
 
 .map-drawing {
@@ -670,6 +689,7 @@ svg {
     position: absolute;
     z-index: 5;
     width: 370px;
+    max-width: calc(100% - 24px);
     min-height: 192px;
     padding: 10px;
     display: grid;
@@ -699,6 +719,19 @@ svg {
     color: var(--cp-accent);
     overflow: visible;
     stroke-width: 5;
+}
+
+/* On a narrow map (browser zoom or widened rails) the anchored card would clip at the map edge and
+   cover the asset callout, so it docks as a banner along the bottom of the map instead. */
+@container (max-width: 780px) {
+    .customer-report-pin {
+        inset: auto 12px 52px 12px !important;
+        width: auto;
+    }
+
+    .report-arrow {
+        display: none;
+    }
 }
 
 .report-copy {
@@ -1003,6 +1036,9 @@ svg {
 }
 
 .investigation-rail {
+    width: 360px;
+    min-width: 300px;
+    max-width: 640px;
     border-left: 1px solid var(--cp-border);
 }
 

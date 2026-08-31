@@ -5,7 +5,6 @@ namespace CommandCenter.Api.Services;
 /// </summary>
 public sealed partial class CommandCenterService
 {
-    private const string RestoreScheduledModeOperation = "Restore scheduled mode";
     private readonly IEnergyHubGateway _energyHubGateway;
     private readonly IncidentModule _incidentModule;
     private readonly ActivityTimelineModule _activityTimelineModule;
@@ -78,28 +77,6 @@ public sealed partial class CommandCenterService
             incident,
             activity,
             _stageContextModule.GetCurrent());
-    }
-
-    /// <summary>
-    /// Gets the current customer-report evidence context for the supplied asset.
-    /// </summary>
-    /// <param name="assetId">The asset identifier to project.</param>
-    /// <returns>The current customer-report context.</returns>
-    public CustomerReportContext GetCustomerReportContext(string assetId)
-    {
-        _spatialContextModule.EnsureAsset(assetId);
-        return new CustomerReportContext(assetId, _customerReportModule.GetCurrent());
-    }
-
-    /// <summary>
-    /// Gets the current open-incident evidence context for the supplied asset.
-    /// </summary>
-    /// <param name="assetId">The asset identifier to project.</param>
-    /// <returns>The current incident context.</returns>
-    public IncidentContext GetIncidentContext(string assetId)
-    {
-        _spatialContextModule.EnsureAsset(assetId);
-        return new IncidentContext(assetId, _incidentModule.GetOpenIncidentForAsset(assetId));
     }
 
     /// <summary>

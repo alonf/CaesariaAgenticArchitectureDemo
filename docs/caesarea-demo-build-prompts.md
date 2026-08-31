@@ -1,5 +1,7 @@
 # VSLive San Diego — Caesarea Agentic Systems Demo Build Prompts
 
+<!-- markdownlint-configure-file { "MD024": { "siblings_only": true } } -->
+
 > Working implementation plan for the **Developing Agentic Systems in .NET: From Concept to Code** session.
 >
 > The demo is one evolving Caesarea Command & Control application. Each prompt introduces a **new business requirement** that creates a reason for the next architectural capability.
@@ -10,7 +12,7 @@
 
 ---
 
-# 0. How to use these prompts
+## 0. How to use these prompts
 
 Use **one repository, one solution, one maintained `main` branch**.
 
@@ -64,14 +66,14 @@ C:\VSLive\Caesarea          # stable, known-good solution
 C:\VSLive\Caesarea-Live     # disposable live-coding workspace
 ```
 
-## 0.1 Agreed conference-demo baseline
+### 0.1 Agreed conference-demo baseline
 
 The session is 75 minutes. The complete running demo should consume approximately 30 minutes, including explanation while it runs.
 
 Use one continuous L-417 story rather than presenting every implementation stage as an equal standalone demo:
 
 | Time | Demonstration |
-|---:|---|
+| ---: | --- |
 | 0-4 minutes | Deterministic city operation and the Forgotten Override scenario |
 | 4-9 minutes | Operations Agent reads authoritative state using its Entra Agent Identity |
 | 9-15 minutes | Follow-up investigation using controlled organizational evidence |
@@ -80,7 +82,7 @@ Use one continuous L-417 story rather than presenting every implementation stage
 
 Event-driven activation, multi-agent specialization, and production hosting remain implemented or explainable architectural capabilities, but they must not displace the core 30-minute narrative.
 
-### Initial deterministic topology
+#### Initial deterministic topology
 
 Start as a small distributed application with a modular-monolith core:
 
@@ -111,13 +113,13 @@ Architectural decisions:
 - Do not add a message broker initially. Add Azure Service Bus when event-driven activation is introduced.
 - Do not introduce generic Hub infrastructure until a second real Hub demonstrates reusable behavior.
 
-### Browser application boundary
+#### Browser application boundary
 
 `CommandCenter.Web` is the stable, polished application projected during the session. It shows operational state, incidents, activity, agent conversation, evidence, workflow progress, identity decisions, and evaluation results.
 
 `DemoControl.Web` is a presenter-only application. It selects scenarios, resets state, injects failures, controls telemetry delay, and triggers synthetic events. Normal C&C users and future agents must not call the simulator directly.
 
-### Identity and authority baseline
+#### Identity and authority baseline
 
 Use a distinct Microsoft Entra identity for each security principal:
 
@@ -139,7 +141,7 @@ Workflow Identity -> Energy Hub -> SmartPole Simulator
 
 Use an Entra Agent Identity Blueprint for the Operations Agent, a conference-demo Agent Identity instance, and an accountable human sponsor. Show the agent identity, sponsor, granted access, denial, sign-in/audit evidence, and correlation with the application trace.
 
-### Evaluation baseline
+#### Evaluation baseline
 
 End the running demo with ASSERT. Compare a baseline behavior with the governed behavior using the same deterministic scenarios and trace evidence.
 
@@ -158,7 +160,7 @@ Keep deterministic unit/integration tests responsible for token claims, authoriz
 
 ---
 
-# 1. Common coding-agent instructions
+## 1. Common coding-agent instructions
 
 Prepend this block to every implementation prompt, or place equivalent guidance in repository instructions.
 
@@ -197,15 +199,15 @@ After coding:
 
 ---
 
-# 2. Prompt 0 — Deterministic Foundation
+## 2. Prompt 0 — Deterministic Foundation
 
-## Purpose
+### Purpose
 
 Build the Smart City application that exists **before any agentic capability is added**.
 
 The system must already be useful and visually understandable without an LLM, MAF, MCP, Foundry, Work IQ, or AI credentials.
 
-## Business story
+### Business story
 
 The Caesarea Command & Control system operates city infrastructure deterministically.
 
@@ -220,9 +222,9 @@ Area: North Promenade
 
 The system should allow the operator to inspect and manipulate the simulated operational state.
 
-## Prompt
+### Prompt
 
-```text
+````text
 Create the deterministic foundation for the Caesarea Smart City conference demo.
 
 This stage must contain NO LLM, NO Microsoft Agent Framework, NO MCP, NO AI agent, NO AI credentials, and NO cloud dependency.
@@ -390,9 +392,9 @@ Add tests for:
 - deterministic policy/rule behavior that exists in this stage.
 
 The application must run entirely locally.
-```
+````
 
-## Demo outcome
+### Demo outcome
 
 The audience sees a system that already operates correctly without AI.
 
@@ -402,9 +404,9 @@ Key line:
 
 ---
 
-# 3. Prompt 1 — First MAF Agent + One Local Tool
+## 3. Prompt 1 — First MAF Agent + One Local Tool
 
-## New requirement
+### New requirement
 
 A citizen tells the C&C operator:
 
@@ -416,7 +418,7 @@ The human operator asks the chat agent:
 
 At this stage the agent only needs access to one deterministic capability.
 
-## Prompt
+### Prompt
 
 ```text
 Extend the existing deterministic Caesarea application with the smallest useful Microsoft Agent Framework vertical slice.
@@ -482,7 +484,7 @@ Add tests for:
 Enable this through the AgentTool demo stage.
 ```
 
-## Teaching point
+### Teaching point
 
 > **A tool gives the agent deterministic hands. The model chooses when to call it; the Hub still owns the truth.**
 
@@ -492,9 +494,9 @@ Also say explicitly:
 
 ---
 
-# 4. Prompt 2 — Session + Organizational Knowledge
+## 4. Prompt 2 — Session + Organizational Knowledge
 
-## New requirement
+### New requirement
 
 The operator follows up:
 
@@ -511,7 +513,7 @@ For the demo, introduce supporting work/organizational evidence such as:
 
 This stage creates the first genuine reason for agentic investigation.
 
-## Prompt
+### Prompt
 
 ```text
 Extend the Operations Agent so an operator can ask follow-up questions such as:
@@ -578,19 +580,19 @@ Add tests for:
 - correct separation between authoritative state and supporting knowledge.
 ```
 
-## Teaching points
+### Teaching points
 
 > **The system knows what happened. The agent investigates why.**
-
+>
 > **Memory remembers the conversation. It does not replace operational state.**
-
+>
 > **Organizational knowledge is useful precisely because we did not model all of it into the C&C.**
 
 ---
 
-# 5. Prompt 3 — Add MCP to the Energy Hub + Interactive Elicitation
+## 5. Prompt 3 — Add MCP to the Energy Hub + Interactive Elicitation
 
-## New requirement
+### New requirement
 
 The local tool works, but Energy Hub capabilities should now be:
 
@@ -601,7 +603,7 @@ The local tool works, but Energy Hub capabilities should now be:
 
 We also want the operator to be able to request a corrective action interactively.
 
-## Prompt
+### Prompt
 
 ```text
 The Operations Agent currently reaches the Energy Hub through a local tool that wraps the existing REST API.
@@ -664,7 +666,7 @@ Add tests for:
 - no duplicated domain/business logic.
 ```
 
-## Teaching points
+### Teaching points
 
 > **A tool is a capability. MCP is a standardized boundary through which capabilities can be exposed and discovered.**
 
@@ -684,9 +686,9 @@ This creates the reason for Workflow.
 
 ---
 
-# 6. Prompt 4 — Controlled Corrective Workflow
+## 6. Prompt 4 — Controlled Corrective Workflow
 
-## New requirement
+### New requirement
 
 Operations management now says:
 
@@ -694,7 +696,7 @@ Operations management now says:
 
 Now Workflow is justified.
 
-## Prompt
+### Prompt
 
 ```text
 The current MCP stage can perform one explicitly confirmed corrective action.
@@ -770,25 +772,25 @@ Add tests for:
 - resume/checkpoint behavior if implemented.
 ```
 
-## Teaching points
+### Teaching points
 
 > **Agents control reasoning. Workflows control process.**
-
+>
 > **The agent decides what should happen. The workflow controls how it happens.**
-
+>
 > **An elicitation solved a single interaction. A workflow solves a process.**
 
 ---
 
-# 7. Prompt 5 — Event-Driven Agent
+## 7. Prompt 5 — Event-Driven Agent
 
-## New requirement
+### New requirement
 
 Why wait for a citizen?
 
 The Energy Hub already knows when operational state changes and can publish events.
 
-## Prompt
+### Prompt
 
 ```text
 The system currently starts agent investigation from an operator chat.
@@ -830,15 +832,15 @@ Add tests for:
 - event-triggered and user-triggered investigations use the same core logic.
 ```
 
-## Teaching point
+### Teaching point
 
 > **An agent is not a chatbot. It can be triggered by the system.**
 
 ---
 
-# 8. Prompt 6 — Justified Multi-Agent / Security Boundary
+## 8. Prompt 6 — Justified Multi-Agent / Security Boundary
 
-## New requirement
+### New requirement
 
 A new scenario reveals that Energy evidence alone may be misleading.
 
@@ -846,7 +848,7 @@ L-417 is on during daylight, but a Security operation in the North Promenade may
 
 Security context has a legitimate separate boundary.
 
-## Prompt
+### Prompt
 
 ```text
 Introduce the first requirement that may justify a second agent.
@@ -901,25 +903,25 @@ Add tests/evals for:
 - Operations Agent retains final responsibility in Agent-as-Tool mode.
 ```
 
-## Teaching points
+### Teaching points
 
 > **Do not create multiple agents because you have multiple domains.**
-
+>
 > **Introduce another agent only when the boundary buys you something real.**
-
+>
 > **Agent as Tool means consultation. Handoff means responsibility moves.**
 
 ---
 
-# 9. Prompt 7 — Middleware / Deterministic Runtime Governance
+## 9. Prompt 7 — Middleware / Deterministic Runtime Governance
 
-## New requirement
+### New requirement
 
 The system now contains probabilistic reasoning and state-changing processes.
 
 We need deterministic control and observability around agent/tool activity.
 
-## Prompt
+### Prompt
 
 ```text
 Add deterministic runtime governance around the existing agentic system using current MAF middleware/interceptor/hook mechanisms where appropriate.
@@ -990,21 +992,21 @@ Add tests for:
 - identity and correlation metadata propagate through the operation.
 ```
 
-## Teaching point
+### Teaching point
 
 > **Probabilistic intelligence operates inside deterministic boundaries.**
 
 ---
 
-# 10. Prompt 8 — Behavioral Evaluation with ASSERT
+## 10. Prompt 8 — Behavioral Evaluation with ASSERT
 
-## New requirement
+### New requirement
 
 Unit tests prove deterministic code works.
 
 Now prove the **agent behaves correctly** across scenarios.
 
-## Prompt
+### Prompt
 
 ```text
 Add behavioral evaluation for the Operations Agent using ASSERT and the current recommended integration approach.
@@ -1080,21 +1082,21 @@ Do not auto-deploy generated governance policy.
 Enable this through the Evaluation demo stage.
 ```
 
-## Teaching point
+### Teaching point
 
 > **Unit testing proves `RestoreScheduledMode()` works. ASSERT tests whether the agent should have requested it.**
 
 ---
 
-# 11. Prompt 9 — Hosting, Identity, Observability, Productionization
+## 11. Prompt 9 — Hosting, Identity, Observability, Productionization
 
-## New requirement
+### New requirement
 
 The local system now demonstrates the complete architecture.
 
 Show how it moves toward production Microsoft hosting/governance without changing its logical responsibility boundaries.
 
-## Prompt
+### Prompt
 
 ```text
 Prepare the Caesarea agentic demo for production-oriented hosting using the current Microsoft Foundry / Agent Service / Agent 365 capabilities that are appropriate at implementation time.
@@ -1135,25 +1137,25 @@ Keep a fully local mode for conference reliability.
 Enable this through the Hosted demo stage or document the production profile if the full cloud deployment is intentionally not part of the live demo.
 ```
 
-## Teaching point
+### Teaching point
 
 > **Hosting changes where the components run; it should not change who owns reasoning, process, state, and authority.**
 
 ---
 
-# 12. Recommended lecture/demo cadence
+## 12. Recommended lecture/demo cadence
 
 The session is 75 minutes, with approximately 30 minutes allocated to explaining and running the demo.
 
-## Main running demo
+### Main running demo
 
-### Act 1 — Deterministic city operation (0-4 minutes)
+#### Act 1 — Deterministic city operation (0-4 minutes)
 
 - Select Forgotten Override in the presenter console.
 - Show L-417 state, authoritative ownership, events, and the absence of an incident.
 - Establish that the city already operates without AI.
 
-### Act 2 — Identity-aware investigation (4-15 minutes)
+#### Act 2 — Identity-aware investigation (4-15 minutes)
 
 - Ask whether L-417 is on.
 - Show the Operations Agent calling an Energy Hub capability using its Agent Identity.
@@ -1161,7 +1163,7 @@ The session is 75 minutes, with approximately 30 minutes allocated to explaining
 - Show adaptive investigation across authoritative state and controlled organizational evidence.
 - Briefly show the Entra identity, sponsor, and granted permissions.
 
-### Act 3 — Governed corrective execution (15-24 minutes)
+#### Act 3 — Governed corrective execution (15-24 minutes)
 
 - Show MCP as the reusable Hub capability boundary.
 - Demonstrate that capability discovery does not imply authorization.
@@ -1169,14 +1171,14 @@ The session is 75 minutes, with approximately 30 minutes allocated to explaining
 - Let the agent request the corrective workflow.
 - Show workflow validation, policy/approval, execution by its separate identity, and telemetry verification.
 
-### Act 4 — Behavioral proof with ASSERT (24-30 minutes)
+#### Act 4 — Behavioral proof with ASSERT (24-30 minutes)
 
 - Run the compact scenario suite.
 - Show one baseline failure and its trace.
 - Run or display the governed behavior passing the same specification.
 - End by distinguishing unit tests, identity/authorization, and behavioral evaluation.
 
-## Short prepared walkthroughs
+### Short prepared walkthroughs
 
 - Event-driven activation.
 - Multi-agent consultation only if Security has a genuine permission/context-isolation boundary.
@@ -1187,11 +1189,11 @@ The coding agent may remain visible as the implementation assistant, but the lec
 
 ---
 
-# 13. Stable UI progression
+## 13. Stable UI progression
 
 Use the same UI throughout.
 
-## Deterministic
+### Deterministic
 
 ```text
 Map
@@ -1203,49 +1205,49 @@ Current Demo Scenario
 
 The separate presenter-only `DemoControl.Web` contains simulator and scenario controls.
 
-## Agent Tool
+### Agent Tool
 
 ```text
 + Agent Chat
 ```
 
-## Knowledge
+### Knowledge
 
 ```text
 + Evidence / Investigation Trace
 ```
 
-## MCP
+### MCP
 
 ```text
 + MCP Capability / Elicitation Activity
 ```
 
-## Workflow
+### Workflow
 
 ```text
 + Workflow Progress / Approval
 ```
 
-## Event Driven
+### Event Driven
 
 ```text
 + Agent activity initiated by event
 ```
 
-## Multi-Agent
+### Multi-Agent
 
 ```text
 + Specialist-agent consultation trace
 ```
 
-## Governance
+### Governance
 
 ```text
 + Allow / Deny / Approval / Audit indicator
 ```
 
-## Evaluation
+### Evaluation
 
 ```text
 + Compact scenario evaluation result
@@ -1255,7 +1257,7 @@ Do not redesign the UI between stages.
 
 ---
 
-# 14. Stable architecture rule for the entire demo
+## 14. Stable architecture rule for the entire demo
 
 At every stage, preserve this conceptual model:
 

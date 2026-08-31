@@ -41,7 +41,7 @@ public sealed class ArchitectureBoundaryTests
     public void OperationsAgentExposesOnlyReadOnlyTools()
     {
         var repositoryRoot = FindRepositoryRoot();
-        var toolsetPath = Path.Combine(repositoryRoot, "Services", "OperationsAgent.Api", "Services", "OperationsToolset.cs");
+        var toolsetPath = Path.Combine(repositoryRoot, "Services", "OperationsAgent.Api", "Services", "EnergyTools.cs");
         var toolsetText = File.ReadAllText(toolsetPath);
 
         string[] forbiddenTokens =
@@ -61,15 +61,15 @@ public sealed class ArchitectureBoundaryTests
             Assert.DoesNotContain(token, toolsetText, StringComparison.Ordinal);
         }
 
-        var toolMethodNames = new[]
-        {
-            OperationsToolset.CustomerReportToolName,
-            OperationsToolset.EnergyAssetStateToolName,
-            OperationsToolset.EnergyRecentActivityToolName,
-            OperationsToolset.IncidentContextToolName
-        };
+        Assert.Equal("get_streetlight_state", EnergyTools.StreetlightStateToolName);
+        Assert.StartsWith("get_", EnergyTools.StreetlightStateToolName, StringComparison.Ordinal);
+        Assert.DoesNotContain("Diagnosis", toolsetText, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Incident", toolsetText, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Activity", toolsetText, StringComparison.OrdinalIgnoreCase);
 
-        Assert.All(toolMethodNames, name => Assert.StartsWith("get_", name, StringComparison.Ordinal));
+        var agentPath = Path.Combine(repositoryRoot, "Services", "OperationsAgent.Api", "Services", "FoundryOperationsAgent.cs");
+        var agentText = File.ReadAllText(agentPath);
+        Assert.Equal(1, CountOccurrences(agentText, "AIFunctionFactory.Create("));
     }
 
     [Fact]
@@ -140,4 +140,7 @@ public sealed class ArchitectureBoundaryTests
 
         return directory?.FullName ?? throw new InvalidOperationException("Repository root could not be located from the test output directory.");
     }
+
+    private static int CountOccurrences(string value, string searchText) =>
+        (value.Length - value.Replace(searchText, string.Empty, StringComparison.Ordinal).Length) / searchText.Length;
 }

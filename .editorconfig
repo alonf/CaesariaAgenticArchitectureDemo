@@ -25,6 +25,8 @@ csharp_style_var_when_type_is_apparent = true:suggestion
 csharp_style_var_elsewhere = true:suggestion
 
 [*.cs]
+# S2325 (make method static) conflicts with the DI-registered module/catalog pattern used across the demo.
+dotnet_diagnostic.S2325.severity = suggestion
 dotnet_diagnostic.IDE0005.severity = warning
 dotnet_diagnostic.IDE0065.severity = warning
 dotnet_diagnostic.IDE0161.severity = warning

@@ -1,50 +1,52 @@
 # Caesarea Agentic Architecture Demo
 
-The demo runs as **one cumulative application** with a runtime `DemoStage` that presenters switch through
-`DemoControl.Web` without restarting any service:
+The demo runs as one cumulative application with a presenter-controlled `DemoStage`:
 
-- `DemoStage=Deterministic` — the conference-ready Stage 0 smart-city demo. No LLM, agent, MCP, or AI credential.
-- `DemoStage=InvestigationAgent` — adds the read-only Operations Agent investigation capability on top of Stage 0.
+- `DemoStage=Deterministic` — the Stage 0 smart-city system with no model or agent.
+- `DemoStage=InvestigationAgent` — adds the first, intentionally minimal Caesarea Operations Agent.
 
-The selected stage is coordinated by `DemoScenario.Api` and propagated live to `CommandCenter.Api`/`CommandCenter.Web`;
-switching stages never requires restarting `dotnet run --project .\Caesarea.AppHost`.
+`CommandCenter.Api` owns the selected stage. `DemoScenario.Api` reads and changes it through that authoritative
+boundary, so switching stages does not restart the application.
 
 ## Architecture boundaries
 
-- `Services\EnergyHub.Api` is the authoritative lighting boundary.
-- `Services\SmartPole.Simulator.Api` simulates the vendor/device system behind Energy Hub.
-- `Services\CommandCenter.Api` aggregates snapshots, incidents, and activity without calling SmartPole directly.
-- `Services\DemoScenario.Api` coordinates repeatable presenter scenarios and the current `DemoStage` across the deterministic services.
-- `Services\OperationsAgent.Api` is the read-only Operations Agent boundary. It reads the current customer report and incident context from `CommandCenter.Api` and the authoritative asset state/activity from `EnergyHub.Api`; it never calls SmartPole and has no write/command tool.
-- `Shared\CanonicalModel` contains only canonical operational concepts.
-- API DTO ownership stays focused in `Contracts\SmartPole.Contracts`, `Contracts\Energy.Contracts`, `Contracts\CommandCenter.Contracts`, `Contracts\DemoScenario.Contracts`, and `Contracts\OperationsAgent.Contracts`.
-- `Caesarea.ServiceDefaults` stays independent of domain and transport contract projects.
+- `EnergyHub.Api` owns authoritative lighting state.
+- `SmartPole.Simulator.Api` simulates the physical/vendor system behind Energy Hub.
+- `CommandCenter.Api` aggregates the deterministic operational view without calling SmartPole directly.
+- `DemoScenario.Api` applies synthetic presenter scenarios.
+- `OperationsAgent.Api` hosts one general, read-only **Caesarea Operations Agent**.
+- Stage 1 gives that agent exactly one ordinary C# function tool: `get_streetlight_state`.
 
-## Stage 1 — Investigation Agent configuration
+The agent reads Energy Hub through its existing REST API. It has no write tool, no direct SmartPole access, no
+capability registry, no domain-specific investigation logic, no strict evidence schema, and no runtime Skill yet.
 
-`Services\OperationsAgent.Api` reads its Microsoft Foundry configuration from `OperationsAgentApi` in
-`appsettings.json` (or environment/user-secrets overrides):
+## Stage 1 configuration
 
 ```json
 {
   "OperationsAgentApi": {
     "EnergyHubBaseUri": "https+http://energyhub-api",
-    "CommandCenterBaseUri": "https+http://commandcenter-api",
     "FoundryProjectEndpoint": "https://alonlecturedemo-resource.services.ai.azure.com/api/projects/alonlecturedemo",
-    "ModelDeploymentName": "gpt-5.2-chat",
-    "AgentName": "Operations Agent"
+    "ModelDeploymentName": "gpt-5.5",
+    "AgentName": "Caesarea Operations Agent"
   }
 }
 ```
 
-`FoundryProjectEndpoint` and `ModelDeploymentName` are non-secret development defaults; authentication uses
-`DefaultAzureCredential` (for example, an `az login` session), so no key or secret is stored anywhere. Both
-`AIProjectClient` construction and `DefaultAzureCredential` are lazy: the API still starts cleanly in
-`Deterministic` mode even when no Azure credential is available. An `Investigate` request only fails, with a
-clear `ProblemDetails` error, if authentication or model invocation cannot succeed at request time.
+Authentication uses `DefaultAzureCredential`; no key is stored. The agent is created in code with
+`AIProjectClient.AsAIAgent(...)` and an `AIFunctionFactory` tool. The API can start without an Azure credential;
+authentication is required only when the operator asks the agent a question.
 
-See [docs/prompts/01-investigation-agent.md](docs/prompts/01-investigation-agent.md) for the full lecture-ready
-walkthrough of this stage.
+See [docs/prompts/01-investigation-agent.md](docs/prompts/01-investigation-agent.md) for the lecture flow.
+
+## Run locally
+
+```powershell
+dotnet run --project .\Caesarea.AppHost
+```
+
+Use `DemoControl.Web` to select **First Agent**, then open `CommandCenter.Web` and ask:
+**“Is streetlight L-417 on?”**
 
 ## Quality commands
 
@@ -53,26 +55,5 @@ dotnet restore
 dotnet format
 dotnet build
 dotnet test
-dotnet test --settings .\coverage.runsettings --collect:"XPlat Code Coverage" --results-directory .\TestResults
 git diff --check
 ```
-
-## Run locally
-
-```powershell
-dotnet run --project .\Caesarea.AppHost
-```
-
-Open `DemoControl.Web` to select deterministic scenarios and switch the presenter switchboard between
-`Deterministic` and `Investigation Agent`. Open `CommandCenter.Web` to see the operational view; the Investigation
-panel only appears while `Investigation Agent` is the active stage.
-
-## Coverage artifact
-
-After the coverage command finishes, inspect the generated Cobertura file under:
-
-```text
-.\TestResults\<run-id>\coverage.cobertura.xml
-```
-
-The coverage profile measures executable deterministic API code. It excludes DTO-only contract assemblies, generated OpenAPI code, and composition-root `Program.cs` files; those surfaces are protected by clean builds, analyzers, and architecture tests.

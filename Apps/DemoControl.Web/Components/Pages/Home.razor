@@ -2,6 +2,8 @@
 @implements IAsyncDisposable
 @inject DemoScenarioApiClient ApiClient
 @inject DemoStageApiClient StageClient
+@inject DemoBreakpointsApiClient BreakpointsClient
+@inject VsCodeAttachService AttachService
 @inject IConfiguration Configuration
 @inject IOptions<DemoControlWebOptions> WebOptions
 
@@ -62,12 +64,108 @@
                     <button
                         class="button @(stage.Id == _stageCatalog.CurrentStage.Id ? "primary" : "secondary")"
                         @onclick="() => ApplyStageAsync(stage.Id)"
-                        disabled="@(_stageBusy || stage.Id == _stageCatalog.CurrentStage.Id)">
+                        disabled="@_stageBusy">
                         @stage.Name
                     </button>
                 }
             </div>
             <p class="switchboard-note">Resetting to Normal Operation preserves the currently selected stage.</p>
+        }
+    </section>
+
+    <section class="panel switchboard-panel">
+        <div class="panel-heading">
+            <h2>Demo Breakpoints</h2>
+            <span class="stamp">@BreakpointStamp</span>
+        </div>
+        @if (_breakpoints is null)
+        {
+            <p>@(_breakpointsMessage ?? "Loading demo breakpoints...")</p>
+        }
+        else
+        {
+            <p>Arm a snippet to pause the Operations Agent service at that code on its next run, then single-step it in the editor.</p>
+            <ul class="capability-list">
+                @foreach (var snippet in _breakpoints.Snippets)
+                {
+                    <li>
+                        <label>
+                            <input
+                                type="checkbox"
+                                checked="@snippet.IsArmed"
+                                disabled="@ArmDisabled"
+                                @onchange="e => SetBreakpointAsync(snippet.SnippetName, e.Value is true)" />
+                            @snippet.SnippetName - break on next run
+                        </label>
+                    </li>
+                }
+            </ul>
+            <div class="stage-switch-actions">
+                @if (_attachStatus is { VsCodeAvailable: true, ExtensionInstalled: false })
+                {
+                    <button class="button primary" @onclick="InstallExtensionAsync" disabled="@_attachBusy">
+                        @(_attachBusy ? "Installing..." : "Install VS Code extension")
+                    </button>
+                }
+                else if (_attachStatus is { ExtensionInstalled: true } && !_breakpoints.DebuggerAttached)
+                {
+                    <button class="button primary" @onclick="RequestAttachAsync" disabled="@_attachBusy">
+                        @(_attachBusy ? "Requesting..." : "Attach debugger")
+                    </button>
+                }
+            </div>
+            @if (_attachStatus is { VsCodeAvailable: false })
+            {
+                <p class="switchboard-note">The VS Code CLI was not found on this machine; breakpoint arming is unavailable.</p>
+            }
+            else if (_attachStatus is { ExtensionInstalled: false })
+            {
+                <p class="switchboard-note">Breakpoint arming is disabled until the demo-attach VS Code extension is installed.</p>
+            }
+            else if (!_breakpoints.DebuggerAttached)
+            {
+                <p class="switchboard-note">Armed snippets stay armed until a debugged run consumes them.</p>
+            }
+        }
+        @if (!string.IsNullOrWhiteSpace(_attachMessage))
+        {
+            <p class="@(_attachMessageIsError ? "status-error" : string.Empty)">@_attachMessage</p>
+        }
+    </section>
+
+    <section class="panel switchboard-panel">
+        <div class="panel-heading">
+            <h2>Simulator Behavior</h2>
+            <span class="stamp">@(_behavior is null ? "Unavailable" : $"{_behaviorDelayMs} ms delay")</span>
+        </div>
+        @if (_behavior is null)
+        {
+            <p>@(_behaviorMessage ?? "Loading simulator behavior...")</p>
+        }
+        else
+        {
+            <div class="stage-switch-actions">
+                <label>
+                    Command delay (ms)
+                    <input type="number" min="0" max="30000" step="250" @bind="_behaviorDelayMs" disabled="@_behaviorBusy" />
+                </label>
+                <label>
+                    <input type="checkbox" @bind="_behaviorTimeout" disabled="@_behaviorBusy" />
+                    Simulate timeout
+                </label>
+                <label>
+                    <input type="checkbox" @bind="_behaviorFailure" disabled="@_behaviorBusy" />
+                    Simulate failure
+                </label>
+                <button class="button primary" @onclick="ApplyBehaviorAsync" disabled="@_behaviorBusy">
+                    @(_behaviorBusy ? "Applying..." : "Apply behavior")
+                </button>
+            </div>
+            <p class="switchboard-note">These settings reset to defaults whenever a scenario is applied or reset.</p>
+            @if (!string.IsNullOrWhiteSpace(_behaviorMessage))
+            {
+                <p class="@(_behaviorMessageIsError ? "status-error" : string.Empty)">@_behaviorMessage</p>
+            }
         }
     </section>
 
@@ -112,6 +210,20 @@
 @code {
     private ScenarioCatalogResponse? _catalog;
     private DemoStageCatalogResponse? _stageCatalog;
+    private DemoBreakpointsResponse? _breakpoints;
+    private bool _breakpointsBusy;
+    private string? _breakpointsMessage;
+    private VsCodeAttachStatus? _attachStatus;
+    private bool _attachBusy;
+    private string? _attachMessage;
+    private bool _attachMessageIsError;
+    private SimulatorBehaviorSettings? _behavior;
+    private int _behaviorDelayMs;
+    private bool _behaviorTimeout;
+    private bool _behaviorFailure;
+    private bool _behaviorBusy;
+    private string? _behaviorMessage;
+    private bool _behaviorMessageIsError;
     private string? _message;
     private bool _messageIsError;
     private bool _busy;
@@ -122,12 +234,22 @@
     private Task? _pollingTask;
 
     private string StageName => _stageCatalog?.CurrentStage.Name ?? Configuration["DemoStage"] ?? "Deterministic";
+    private string BreakpointStamp => _breakpoints switch
+    {
+        null => "Unavailable",
+        { DebuggerAttached: true } => "Debugger attached",
+        _ => "Debugger not attached"
+    };
+    private bool ArmDisabled => _breakpointsBusy || _attachStatus is not { ExtensionInstalled: true };
     private TimeSpan PollingInterval => TimeSpan.FromSeconds(WebOptions.Value.PollingIntervalSeconds);
 
     protected override async Task OnInitializedAsync()
     {
         await LoadCatalogAsync(CancellationToken.None, showErrors: true);
         await LoadStageCatalogAsync(CancellationToken.None, showErrors: true);
+        await LoadBreakpointsAsync(CancellationToken.None);
+        await LoadAttachStatusAsync(CancellationToken.None);
+        await LoadBehaviorAsync(CancellationToken.None);
 
         _pollingTokenSource = new CancellationTokenSource();
         _pollingTask = PollCatalogAsync(_pollingTokenSource.Token);
@@ -145,12 +267,14 @@
                 {
                     await LoadCatalogAsync(cancellationToken, showErrors: _catalog is null);
                     await LoadStageCatalogAsync(cancellationToken, showErrors: _stageCatalog is null);
+                    await LoadBreakpointsAsync(cancellationToken);
                     StateHasChanged();
                 });
             }
         }
         catch (OperationCanceledException)
         {
+            // Normal shutdown path: the polling loop is cancelled when the page is disposed.
         }
     }
 
@@ -178,6 +302,7 @@
         {
             _busy = false;
             await LoadCatalogAsync(CancellationToken.None, showErrors: true);
+            await LoadBehaviorAsync(CancellationToken.None);
         }
     }
 
@@ -200,6 +325,7 @@
         {
             _busy = false;
             await LoadCatalogAsync(CancellationToken.None, showErrors: true);
+            await LoadBehaviorAsync(CancellationToken.None);
         }
     }
 
@@ -267,6 +393,128 @@
         }
     }
 
+    private async Task LoadBreakpointsAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            _breakpoints = await BreakpointsClient.GetStatusAsync(cancellationToken);
+            _breakpointsMessage = null;
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            _breakpoints = null;
+            _breakpointsMessage = $"Demo breakpoints unavailable: {exception.Message}";
+        }
+    }
+
+    private async Task LoadBehaviorAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            _behavior = await ApiClient.GetSimulatorBehaviorAsync(cancellationToken);
+            _behaviorDelayMs = _behavior.CommandDelayMs;
+            _behaviorTimeout = _behavior.SimulateTimeout;
+            _behaviorFailure = _behavior.SimulateFailure;
+
+            if (!_behaviorMessageIsError)
+            {
+                _behaviorMessage = null;
+            }
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            _behavior = null;
+            _behaviorMessage = $"Simulator behavior unavailable: {exception.Message}";
+            _behaviorMessageIsError = true;
+        }
+    }
+
+    private async Task ApplyBehaviorAsync()
+    {
+        _behaviorBusy = true;
+
+        try
+        {
+            var result = await ApiClient.UpdateSimulatorBehaviorAsync(
+                new SimulatorBehaviorSettings(_behaviorDelayMs, _behaviorTimeout, _behaviorFailure),
+                CancellationToken.None);
+            _behaviorMessage = result.Message;
+            _behaviorMessageIsError = !result.Succeeded;
+        }
+        finally
+        {
+            _behaviorBusy = false;
+            await LoadBehaviorAsync(CancellationToken.None);
+        }
+    }
+
+    private async Task LoadAttachStatusAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            _attachStatus = await AttachService.GetStatusAsync(cancellationToken);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            _attachStatus = new VsCodeAttachStatus(VsCodeAvailable: false, ExtensionInstalled: false);
+            _attachMessage = $"VS Code status check failed: {exception.Message}";
+            _attachMessageIsError = true;
+        }
+    }
+
+    private async Task InstallExtensionAsync()
+    {
+        _attachBusy = true;
+
+        try
+        {
+            var result = await AttachService.InstallExtensionAsync(CancellationToken.None);
+            _attachMessage = result.Message;
+            _attachMessageIsError = !result.Succeeded;
+        }
+        finally
+        {
+            _attachBusy = false;
+            await LoadAttachStatusAsync(CancellationToken.None);
+        }
+    }
+
+    private async Task RequestAttachAsync()
+    {
+        _attachBusy = true;
+
+        try
+        {
+            var result = await AttachService.RequestAttachAsync(CancellationToken.None);
+            _attachMessage = result.Message;
+            _attachMessageIsError = !result.Succeeded;
+        }
+        finally
+        {
+            _attachBusy = false;
+            await LoadBreakpointsAsync(CancellationToken.None);
+        }
+    }
+
+    private async Task SetBreakpointAsync(string snippetName, bool armed)
+    {
+        _breakpointsBusy = true;
+
+        try
+        {
+            _breakpoints = await BreakpointsClient.SetArmedAsync(snippetName, armed, CancellationToken.None);
+            _breakpointsMessage = null;
+        }
+        catch (Exception exception)
+        {
+            _breakpointsMessage = $"Breakpoint change failed: {exception.Message}";
+        }
+        finally
+        {
+            _breakpointsBusy = false;
+        }
+    }
+
     public async ValueTask DisposeAsync()
     {
         if (_pollingTokenSource is null)
@@ -284,6 +532,7 @@
             }
             catch (OperationCanceledException)
             {
+                // Normal shutdown path: the polling task ends by cancellation during dispose.
             }
         }
 

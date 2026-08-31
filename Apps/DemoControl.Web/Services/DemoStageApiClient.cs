@@ -32,8 +32,19 @@ internal sealed class DemoStageApiClient(HttpClient httpClient)
             return new StageApiCommandResult(true, result?.Summary ?? "Stage applied.", effectiveCorrelationId);
         }
 
-        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>(SerializerOptions, cancellationToken);
-        return new StageApiCommandResult(false, problem?.Detail ?? "Stage change failed.", effectiveCorrelationId);
+        string? problemDetail;
+
+        try
+        {
+            var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>(SerializerOptions, cancellationToken);
+            problemDetail = problem?.Detail;
+        }
+        catch (JsonException)
+        {
+            problemDetail = $"HTTP {(int)response.StatusCode} {response.ReasonPhrase}".TrimEnd();
+        }
+
+        return new StageApiCommandResult(false, problemDetail ?? "Stage change failed.", effectiveCorrelationId);
     }
 
     private static HttpRequestMessage CreateRequest(HttpMethod method, string relativeUri, string correlationId)

@@ -32,8 +32,8 @@ internal sealed class DemoScenarioApiClient(HttpClient httpClient)
             return new ScenarioApiCommandResult(true, result?.Summary ?? "Scenario applied.", effectiveCorrelationId);
         }
 
-        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>(SerializerOptions, cancellationToken);
-        return new ScenarioApiCommandResult(false, problem?.Detail ?? "Scenario apply failed.", effectiveCorrelationId);
+        var problem = await TryReadProblemDetailAsync(response, cancellationToken);
+        return new ScenarioApiCommandResult(false, problem ?? "Scenario apply failed.", effectiveCorrelationId);
     }
 
     public async Task<ScenarioApiCommandResult> ResetAsync(CancellationToken cancellationToken)
@@ -49,8 +49,52 @@ internal sealed class DemoScenarioApiClient(HttpClient httpClient)
             return new ScenarioApiCommandResult(true, result?.Summary ?? "Scenario reset completed.", effectiveCorrelationId);
         }
 
-        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>(SerializerOptions, cancellationToken);
-        return new ScenarioApiCommandResult(false, problem?.Detail ?? "Scenario reset failed.", effectiveCorrelationId);
+        var problem = await TryReadProblemDetailAsync(response, cancellationToken);
+        return new ScenarioApiCommandResult(false, problem ?? "Scenario reset failed.", effectiveCorrelationId);
+    }
+
+    public async Task<SimulatorBehaviorSettings> GetSimulatorBehaviorAsync(CancellationToken cancellationToken)
+    {
+        var correlationId = CorrelationIds.Create();
+        using var request = CreateRequest(HttpMethod.Get, "/api/simulator-behavior", correlationId);
+        using var response = await httpClient.SendAsync(request, cancellationToken);
+
+        response.EnsureSuccessStatusCode();
+
+        return await response.Content.ReadFromJsonAsync<SimulatorBehaviorSettings>(SerializerOptions, cancellationToken)
+            ?? throw new InvalidOperationException("Simulator behavior response was empty.");
+    }
+
+    public async Task<ScenarioApiCommandResult> UpdateSimulatorBehaviorAsync(SimulatorBehaviorSettings settings, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+
+        var correlationId = CorrelationIds.Create();
+        using var request = CreateRequest(HttpMethod.Post, "/api/simulator-behavior", correlationId);
+        request.Content = JsonContent.Create(settings, options: SerializerOptions);
+        using var response = await httpClient.SendAsync(request, cancellationToken);
+        var effectiveCorrelationId = TryGetCorrelationId(response) ?? correlationId;
+
+        if (response.IsSuccessStatusCode)
+        {
+            return new ScenarioApiCommandResult(true, "Simulator behavior updated.", effectiveCorrelationId);
+        }
+
+        var problem = await TryReadProblemDetailAsync(response, cancellationToken);
+        return new ScenarioApiCommandResult(false, problem ?? "Simulator behavior update failed.", effectiveCorrelationId);
+    }
+
+    private static async Task<string?> TryReadProblemDetailAsync(HttpResponseMessage response, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>(SerializerOptions, cancellationToken);
+            return problem?.Detail;
+        }
+        catch (JsonException)
+        {
+            return $"HTTP {(int)response.StatusCode} {response.ReasonPhrase}".TrimEnd();
+        }
     }
 
     private static HttpRequestMessage CreateRequest(HttpMethod method, string relativeUri, string correlationId)

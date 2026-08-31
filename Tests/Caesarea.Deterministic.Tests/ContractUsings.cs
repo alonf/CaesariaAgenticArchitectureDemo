@@ -4,5 +4,4 @@ global using CommandCenter.Contracts;
 global using DemoScenario.Contracts;
 global using Energy.Contracts;
 global using Microsoft.Extensions.Logging.Abstractions;
-global using OperationsAgent.Contracts;
 global using SmartPole.Contracts;

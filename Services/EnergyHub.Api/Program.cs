@@ -25,6 +25,8 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+app.UseExceptionHandler();
+app.UseStatusCodePages();
 app.UseHttpsRedirection();
 app.MapDefaultEndpoints();
 
@@ -40,7 +42,7 @@ admin.MapPost("/reset", ResetAsync);
 admin.MapPost("/scenario", ApplyScenarioAsync)
     .ValidateBody<EnergyScenarioSyncRequest>();
 
-app.Run();
+await app.RunAsync();
 
 static IResult GetState(HttpContext context, string assetId, EnergyHubService hub)
 {

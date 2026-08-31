@@ -13,6 +13,8 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+app.UseExceptionHandler();
+app.UseStatusCodePages();
 app.UseHttpsRedirection();
 app.MapDefaultEndpoints();
 
@@ -28,7 +30,7 @@ smartpole.MapPost("/configuration", UpdateConfiguration)
 smartpole.MapPost("/commands/lamp-state", SetLampStateAsync)
     .ValidateBody<SetLampStateCommand>();
 
-app.Run();
+await app.RunAsync();
 
 static IResult GetState(HttpContext context, string assetId, SmartPoleSimulatorService simulator)
 {

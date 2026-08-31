@@ -11,7 +11,7 @@ public enum DemoStage
     Deterministic,
 
     /// <summary>
-    /// The read-only Operations Agent investigation capability is enabled in addition to the deterministic capabilities.
+    /// The general Caesarea Operations Agent and its first read-only Energy Hub tool are enabled.
     /// </summary>
     InvestigationAgent
 }

@@ -1,0 +1,23 @@
+{
+    // Presenter attach configurations for the demo-breakpoint feature (Section 39.6 of the
+    // requirements). Attach before the lecture; DemoControl's "Demo Breakpoints" panel shows
+    // whether the debugger is attached. Requires the services to be running (dotnet run
+    // --project Caesarea.AppHost) with Debug builds.
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Attach: OperationsAgent.Api",
+            "type": "coreclr",
+            "request": "attach",
+            "processName": "OperationsAgent.Api.exe"
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Attach: Demo services",
+            "configurations": [
+                "Attach: OperationsAgent.Api"
+            ]
+        }
+    ]
+}

@@ -31,7 +31,7 @@ public sealed class CommandCenterServiceTests
         var resolved = service.GetIncident("INC-L417-001");
 
         Assert.NotNull(resolved);
-        Assert.Equal("Daylight anomaly", resolved!.Title);
+        Assert.Equal("Daylight anomaly", resolved.Title);
     }
 
     [Fact]

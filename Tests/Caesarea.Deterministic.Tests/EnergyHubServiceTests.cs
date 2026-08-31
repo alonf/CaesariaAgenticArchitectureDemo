@@ -210,11 +210,14 @@ public sealed class EnergyHubServiceTests
         Assert.Equal(CommandExecutionStatus.Failed, result.Status);
         Assert.Null(result.DesiredIsOn);
         Assert.Null(result.ReportedIsOn);
+        Assert.Contains("superseded", result.Summary, StringComparison.OrdinalIgnoreCase);
         Assert.True(state.DesiredIsOn);
         Assert.True(state.ReportedIsOn);
         Assert.True(state.ManualOverride);
         Assert.Equal("INC-CONCURRENT", state.OpenIncidentId);
-        Assert.Equal("restore-corr", state.LastCommand?.CorrelationId);
+
+        // The superseded restore must leave no trace in the scenario's twin, not even a failure record.
+        Assert.Null(state.LastCommand);
     }
 
     private static SmartPolePhysicalState CreatePhysicalState(

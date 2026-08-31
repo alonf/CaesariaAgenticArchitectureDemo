@@ -121,17 +121,3 @@ public sealed record CommandCenterSnapshot(
     IncidentRecord? OpenIncident,
     IReadOnlyList<ActivityRecord> RecentActivity,
     DemoStageStatus CurrentStage);
-
-/// <summary>
-/// Represents the current customer-report evidence context for a single asset.
-/// </summary>
-/// <param name="AssetId">The asset identifier the context describes.</param>
-/// <param name="Report">The current customer report, or <see langword="null"/> when none has been received.</param>
-public sealed record CustomerReportContext(string AssetId, CustomerReportRecord? Report);
-
-/// <summary>
-/// Represents the current open-incident evidence context for a single asset.
-/// </summary>
-/// <param name="AssetId">The asset identifier the context describes.</param>
-/// <param name="Incident">The current open incident, or <see langword="null"/> when none is tracked.</param>
-public sealed record IncidentContext(string AssetId, IncidentRecord? Incident);

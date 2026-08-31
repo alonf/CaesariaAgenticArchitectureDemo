@@ -5,11 +5,11 @@ namespace Caesarea.Deterministic.Tests;
 public sealed class StageCoordinatorTests
 {
     [Fact]
-    public void CoordinatorStartsInDeterministicStage()
+    public async Task CoordinatorReadsAuthoritativeDeterministicStage()
     {
-        var coordinator = CreateCoordinator(new TestTimeProvider(), out _);
+        var coordinator = CreateCoordinator(new TestTimeProvider(), out _, out _);
 
-        var current = coordinator.GetCurrentStage();
+        var current = await coordinator.GetCurrentStageAsync("read-corr", CancellationToken.None);
 
         Assert.Equal(DemoStage.Deterministic, current.Id);
     }
@@ -17,16 +17,18 @@ public sealed class StageCoordinatorTests
     [Fact]
     public async Task ApplyAsyncPropagatesStageToCommandCenterAndUpdatesCurrent()
     {
-        var coordinator = CreateCoordinator(new TestTimeProvider(), out var commandCenterStageClient);
+        var coordinator = CreateCoordinator(new TestTimeProvider(), out var commandCenterStageClient, out var operationsAgentStageClient);
 
         var result = await coordinator.ApplyAsync(DemoStage.InvestigationAgent, "stage-corr", CancellationToken.None);
 
         Assert.Equal(DemoStage.InvestigationAgent, result.CurrentStage.Id);
-        Assert.Equal(DemoStage.InvestigationAgent, coordinator.GetCurrentStage().Id);
-        Assert.Equal("stage-corr", coordinator.GetCurrentStage().CorrelationId);
+        Assert.Equal(DemoStage.InvestigationAgent, (await coordinator.GetCurrentStageAsync("read-corr", CancellationToken.None)).Id);
+        Assert.Equal("stage-corr", (await coordinator.GetCurrentStageAsync("read-corr", CancellationToken.None)).CorrelationId);
         Assert.Equal(1, commandCenterStageClient.ApplyCalls);
         Assert.Equal(DemoStage.InvestigationAgent, commandCenterStageClient.LastStage?.Id);
-        Assert.NotEmpty(coordinator.GetCurrentStage().Capabilities);
+        Assert.Equal(1, operationsAgentStageClient.ApplyCalls);
+        Assert.Equal(DemoStage.InvestigationAgent, operationsAgentStageClient.LastStage?.Id);
+        Assert.NotEmpty((await coordinator.GetCurrentStageAsync("read-corr", CancellationToken.None)).Capabilities);
     }
 
     [Fact]
@@ -38,6 +40,7 @@ public sealed class StageCoordinatorTests
         };
         var coordinator = new StageCoordinator(
             commandCenterStageClient,
+            new FakeOperationsAgentStageClient(),
             new StageCatalog(),
             new TestTimeProvider(),
             NullLogger<StageCoordinator>.Instance);
@@ -45,7 +48,7 @@ public sealed class StageCoordinatorTests
         await Assert.ThrowsAsync<HttpRequestException>(() =>
             coordinator.ApplyAsync(DemoStage.InvestigationAgent, "failure-corr", CancellationToken.None));
 
-        Assert.Equal(DemoStage.Deterministic, coordinator.GetCurrentStage().Id);
+        Assert.Equal(DemoStage.Deterministic, (await coordinator.GetCurrentStageAsync("read-corr", CancellationToken.None)).Id);
     }
 
     [Fact]
@@ -74,10 +77,13 @@ public sealed class StageCoordinatorTests
                     firstStarted.SetResult();
                     await releaseFirst.Task.WaitAsync(cancellationToken);
                 }
+
+                return stage;
             }
         };
         using var coordinator = new StageCoordinator(
             client,
+            new FakeOperationsAgentStageClient(),
             new StageCatalog(),
             new TestTimeProvider(),
             NullLogger<StageCoordinator>.Instance);
@@ -90,13 +96,43 @@ public sealed class StageCoordinatorTests
         releaseFirst.SetResult();
         await Task.WhenAll(first, second);
 
-        Assert.Equal(DemoStage.Deterministic, coordinator.GetCurrentStage().Id);
-        Assert.Equal("second-corr", coordinator.GetCurrentStage().CorrelationId);
+        Assert.Equal(DemoStage.Deterministic, (await coordinator.GetCurrentStageAsync("read-corr", CancellationToken.None)).Id);
+        Assert.Equal("second-corr", (await coordinator.GetCurrentStageAsync("read-corr", CancellationToken.None)).CorrelationId);
     }
 
-    private static StageCoordinator CreateCoordinator(TestTimeProvider clock, out FakeCommandCenterStageClient commandCenterStageClient)
+    [Fact]
+    public async Task ApplyAsyncToleratesOperationsAgentPropagationFailure()
+    {
+        var commandCenterStageClient = new FakeCommandCenterStageClient();
+        var operationsAgentStageClient = new FakeOperationsAgentStageClient
+        {
+            OnApplyStageAsync = static (_, _, _) => throw new HttpRequestException("Operations Agent unavailable.")
+        };
+        using var coordinator = new StageCoordinator(
+            commandCenterStageClient,
+            operationsAgentStageClient,
+            new StageCatalog(),
+            new TestTimeProvider(),
+            NullLogger<StageCoordinator>.Instance);
+
+        var result = await coordinator.ApplyAsync(DemoStage.InvestigationAgent, "agent-fail-corr", CancellationToken.None);
+
+        Assert.Equal(DemoStage.InvestigationAgent, result.CurrentStage.Id);
+        Assert.Contains("Warning", result.Summary, StringComparison.Ordinal);
+    }
+
+    private static StageCoordinator CreateCoordinator(
+        TestTimeProvider clock,
+        out FakeCommandCenterStageClient commandCenterStageClient,
+        out FakeOperationsAgentStageClient operationsAgentStageClient)
     {
         commandCenterStageClient = new FakeCommandCenterStageClient();
-        return new StageCoordinator(commandCenterStageClient, new StageCatalog(), clock, NullLogger<StageCoordinator>.Instance);
+        operationsAgentStageClient = new FakeOperationsAgentStageClient();
+        return new StageCoordinator(
+            commandCenterStageClient,
+            operationsAgentStageClient,
+            new StageCatalog(),
+            clock,
+            NullLogger<StageCoordinator>.Instance);
     }
 }

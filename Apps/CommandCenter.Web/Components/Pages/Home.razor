@@ -226,7 +226,7 @@
                 <section class="event-strip">
                     <div class="event-summary">
                         <span class="section-eyebrow">Current operational question</span>
-                        <strong>@OperationalQuestion</strong>
+                        <strong>@CurrentOperationalQuestion</strong>
                     </div>
                     <div class="event-facts">
                         <div><span>Observed</span><strong>@OnOff(_snapshot.OperationalState.ReportedIsOn)</strong></div>
@@ -319,8 +319,8 @@
                 <aside class="investigation-rail">
                     <section class="investigation-panel">
                         <div class="section-title">
-                            <span>Operations Agent</span>
-                            <span class="agent-status-badge @InvestigationStatusClass">@InvestigationStatusText</span>
+                            <span>Caesarea Operations Agent</span>
+                            <span class="agent-status-badge @AgentStatusClass">@AgentStatusText</span>
                         </div>
 
                         <div class="agent-identity">
@@ -328,106 +328,53 @@
                                 <svg viewBox="0 0 24 24"><path d="M12 2a5 5 0 0 1 5 5v1a5 5 0 0 1-10 0V7a5 5 0 0 1 5-5Zm-7 19a7 7 0 0 1 14 0Z" /></svg>
                             </span>
                             <div>
-                                <strong>@(_investigation?.AgentName ?? "Operations Agent")</strong>
-                                <small>Read-only investigator · L-417</small>
+                                <strong>@(_agentResponse?.AgentName ?? "Caesarea Operations Agent")</strong>
+                                <small>General operations assistant · one Energy Hub tool</small>
                             </div>
                         </div>
 
-                        <button class="action-button investigate-button" @onclick="InvestigateAsync" disabled="@_investigationBusy">
-                            <span>@(_investigationBusy ? "Investigating..." : "Investigate")</span>
+                        <div class="agent-summary">
+                            <small>Operator question</small>
+                            <p>@AgentQuestion</p>
+                        </div>
+
+                        <button class="action-button investigate-button" @onclick="AskAgentAsync" disabled="@_agentBusy">
+                            <span>@(_agentBusy ? "Asking..." : "Ask agent")</span>
                             <svg viewBox="0 0 24 24"><path d="M11 4a7 7 0 1 0 4.9 12.1l4.5 4.5 1.4-1.4-4.5-4.5A7 7 0 0 0 11 4Zm0 2a5 5 0 1 1 0 10 5 5 0 0 1 0-10Z" /></svg>
                         </button>
 
-                        @if (!string.IsNullOrWhiteSpace(_investigationMessage))
+                        @if (!string.IsNullOrWhiteSpace(_agentMessage))
                         {
-                            <p class="agent-message @(_investigationMessageIsError ? "status-error" : string.Empty)">@_investigationMessage</p>
+                            <p class="agent-message @(_agentMessageIsError ? "status-error" : string.Empty)">@_agentMessage</p>
                         }
 
-                        @if (_investigation is { } investigation)
+                        @if (_agentResponse is { } response)
                         {
                             <div class="agent-summary">
-                                <p>@investigation.Summary</p>
+                                <small>Agent answer</small>
+                                <p>@response.Answer</p>
                             </div>
 
-                            <div class="agent-subsection">
-                                <div class="subsection-title">Verified facts <span class="tab-count">@investigation.VerifiedFacts.Count</span></div>
-                                @if (investigation.VerifiedFacts.Count == 0)
-                                {
-                                    <p class="agent-empty">No facts were verified.</p>
-                                }
-                                else
-                                {
-                                    <ul class="agent-fact-list">
-                                        @foreach (var fact in investigation.VerifiedFacts)
-                                        {
-                                            <li><p>@fact.Statement</p><small>@fact.Source</small></li>
-                                        }
-                                    </ul>
-                                }
-                            </div>
-
-                            <div class="agent-subsection">
-                                <div class="subsection-title">Hypotheses <span class="tab-count">@investigation.Hypotheses.Count</span></div>
-                                @if (investigation.Hypotheses.Count == 0)
-                                {
-                                    <p class="agent-empty">No hypotheses were formed.</p>
-                                }
-                                else
-                                {
-                                    <ul class="agent-hypothesis-list">
-                                        @foreach (var hypothesis in investigation.Hypotheses)
-                                        {
-                                            <li>
-                                                <div class="hypothesis-heading">
-                                                    <p>@hypothesis.Statement</p>
-                                                    <span class="confidence-badge">@FormatConfidence(hypothesis.Confidence)</span>
-                                                </div>
-                                                <small>@hypothesis.Reason</small>
-                                            </li>
-                                        }
-                                    </ul>
-                                }
-                            </div>
-
-                            <div class="agent-subsection">
-                                <div class="subsection-title">Missing evidence <span class="tab-count">@investigation.MissingEvidence.Count</span></div>
-                                @if (investigation.MissingEvidence.Count == 0)
-                                {
-                                    <p class="agent-empty">No missing evidence was reported.</p>
-                                }
-                                else
-                                {
-                                    <ul class="agent-missing-list">
-                                        @foreach (var missing in investigation.MissingEvidence)
-                                        {
-                                            <li>@missing</li>
-                                        }
-                                    </ul>
-                                }
-                            </div>
-
-                            <div class="agent-subsection">
-                                <div class="subsection-title">Evidence trace <span class="tab-count">@investigation.EvidenceTrace.Count</span></div>
-                                <ol class="agent-trace-list">
-                                    @foreach (var entry in investigation.EvidenceTrace)
-                                    {
-                                        <li class="@(entry.Succeeded ? string.Empty : "trace-failed")">
-                                            <span class="trace-sequence">@entry.Sequence</span>
-                                            <div>
-                                                <strong>@entry.ToolName</strong>
-                                                <p>@entry.OutputSummary</p>
-                                                <small>@FormatTimestamp(entry.InvokedAt)</small>
-                                            </div>
-                                        </li>
-                                    }
-                                </ol>
-                            </div>
-
-                            <p class="agent-footnote">CorrelationId @ShortCorrelation(investigation.CorrelationId) · @FormatTimestamp(investigation.StartedAt) → @FormatTimestamp(investigation.CompletedAt)</p>
+                            @if (response.ToolCalls.Count > 0)
+                            {
+                                <div class="agent-summary">
+                                    <small>Capability trace</small>
+                                    <p>model &rarr; @string.Join(" → ", response.ToolCalls.Select(call => $"{call.ToolName}({call.Arguments})")) &rarr; model</p>
+                                </div>
+                                <p class="agent-footnote">
+                                    Tool invoked @(response.ToolCalls.Count)&times; over @(response.ModelRoundTrips) model round trip(s) · CorrelationId @ShortCorrelation(response.CorrelationId)
+                                </p>
+                            }
+                            else
+                            {
+                                <p class="agent-footnote">
+                                    No tool was invoked (@(response.ModelRoundTrips) model round trip(s)) · CorrelationId @ShortCorrelation(response.CorrelationId)
+                                </p>
+                            }
                         }
-                        else if (!_investigationBusy && string.IsNullOrWhiteSpace(_investigationMessage))
+                        else if (!_agentBusy && string.IsNullOrWhiteSpace(_agentMessage))
                         {
-                            <p class="agent-empty">Press Investigate to run a read-only evidence review of L-417.</p>
+                            <p class="agent-empty">Ask the general agent whether L-417 is currently on.</p>
                         }
                     </section>
                 </aside>
@@ -444,24 +391,26 @@
     private DateTimeOffset? _lastRefreshed;
     private CancellationTokenSource? _pollingTokenSource;
     private Task? _pollingTask;
-    private InvestigationResult? _investigation;
-    private bool _investigationBusy;
-    private string? _investigationMessage;
-    private bool _investigationMessageIsError;
-    private string? _investigationEvidenceVersion;
+    private OperationsAgentResponse? _agentResponse;
+    private bool _agentBusy;
+    private string? _agentMessage;
+    private bool _agentMessageIsError;
+    private string? _agentEvidenceVersion;
 
     private string StageName => _snapshot?.CurrentStage.Name ?? Configuration["DemoStage"] ?? "Deterministic";
     private bool IsInvestigationStage => _snapshot?.CurrentStage.Id == DemoStage.InvestigationAgent;
-    private string InvestigationStatusText => _investigationBusy
-        ? "Investigating"
-        : _investigation is not null
-            ? _investigation.Status.ToString()
-            : "Idle";
-    private string InvestigationStatusClass => _investigationBusy
-        ? "busy"
-        : _investigation is not null
-            ? "success"
-            : "idle";
+    private string AgentStatusText => (_agentBusy, _agentResponse) switch
+    {
+        (true, _) => "Working",
+        (false, not null) => "Answered",
+        _ => "Idle"
+    };
+    private string AgentStatusClass => (_agentBusy, _agentResponse) switch
+    {
+        (true, _) => "busy",
+        (false, not null) => "success",
+        _ => "idle"
+    };
     private TimeSpan PollingInterval => TimeSpan.FromSeconds(WebOptions.Value.PollingIntervalSeconds);
     private string LampClass => _snapshot?.OperationalState.ReportedIsOn == true ? "success-text" : "neutral-text";
     private string HealthClass => _snapshot?.OperationalState.ControllerHealth.Status == ControllerHealthStatus.Healthy ? "success-text" : "warning-text";
@@ -476,11 +425,14 @@
     private int CustomerReportCount => _snapshot?.CustomerReport is null ? 0 : 1;
     private string IncidentSeverityText => _snapshot?.OpenIncident?.Severity.ToString() ?? "None";
     private string AssetCondition => IsAnomaly ? "Schedule mismatch" : "Normal";
-    private string OperationalQuestion => _snapshot?.CustomerReport is not null
-        ? $"Customer reports {_snapshot.AssetId} on during daylight. The Energy Hub confirms it; why is it happening?"
-        : IsAnomaly
-        ? $"Why is streetlight {_snapshot!.AssetId} {OnOff(_snapshot.OperationalState.ReportedIsOn).ToLowerInvariant()} against its schedule?"
-        : $"Streetlight {_snapshot!.AssetId} matches its expected schedule.";
+    private string CurrentOperationalQuestion => _snapshot switch
+    {
+        { CustomerReport: not null } snapshot => $"Customer reports {snapshot.AssetId} on during daylight. Why is it happening?",
+        { } snapshot when IsAnomaly => $"Why is streetlight {snapshot.AssetId} {OnOff(snapshot.OperationalState.ReportedIsOn).ToLowerInvariant()} against its schedule?",
+        { } snapshot => $"Streetlight {snapshot.AssetId} matches its expected schedule.",
+        null => string.Empty
+    };
+    private string AgentQuestion => $"Is streetlight {_snapshot?.AssetId ?? WebOptions.Value.AssetId} on?";
 
     protected override async Task OnInitializedAsync()
     {
@@ -507,6 +459,7 @@
         }
         catch (OperationCanceledException)
         {
+            // Normal shutdown path: the polling loop is cancelled when the page is disposed.
         }
     }
 
@@ -535,48 +488,50 @@
         }
     }
 
-    private async Task InvestigateAsync()
+    private async Task AskAgentAsync()
     {
         var requestedEvidenceVersion = GetEvidenceVersion(_snapshot);
-        _investigationBusy = true;
-        _investigation = null;
-        _investigationEvidenceVersion = null;
-        _investigationMessage = null;
-        _investigationMessageIsError = false;
+        _agentBusy = true;
+        _agentResponse = null;
+        _agentEvidenceVersion = null;
+        _agentMessage = null;
+        _agentMessageIsError = false;
 
         try
         {
-            var outcome = await OperationsAgentClient.InvestigateAsync(CancellationToken.None);
+            var outcome = await OperationsAgentClient.AskAsync(
+                AgentQuestion,
+                CancellationToken.None);
 
             if (outcome.Succeeded)
             {
                 if (string.Equals(requestedEvidenceVersion, GetEvidenceVersion(_snapshot), StringComparison.Ordinal))
                 {
-                    _investigation = outcome.Result;
-                    _investigationEvidenceVersion = requestedEvidenceVersion;
+                    _agentResponse = outcome.Result;
+                    _agentEvidenceVersion = requestedEvidenceVersion;
                 }
                 else
                 {
-                    _investigationMessage = "Operational evidence changed during the investigation. Run Investigate again.";
-                    _investigationMessageIsError = true;
+                    _agentMessage = "Operational state changed while the agent was answering. Ask again.";
+                    _agentMessageIsError = true;
                 }
             }
             else
             {
-                _investigation = null;
-                _investigationMessage = outcome.FailureMessage;
-                _investigationMessageIsError = true;
+                _agentResponse = null;
+                _agentMessage = outcome.FailureMessage;
+                _agentMessageIsError = true;
             }
         }
         catch (Exception exception)
         {
-            _investigation = null;
-            _investigationMessage = $"Investigation could not be completed: {exception.Message}";
-            _investigationMessageIsError = true;
+            _agentResponse = null;
+            _agentMessage = $"The Operations Agent could not answer: {exception.Message}";
+            _agentMessageIsError = true;
         }
         finally
         {
-            _investigationBusy = false;
+            _agentBusy = false;
         }
     }
 
@@ -588,13 +543,13 @@
             _snapshot = snapshot;
             _lastRefreshed = DateTimeOffset.Now;
 
-            if (_investigation is not null
-                && !string.Equals(_investigationEvidenceVersion, GetEvidenceVersion(snapshot), StringComparison.Ordinal))
+            if (_agentResponse is not null
+                && !string.Equals(_agentEvidenceVersion, GetEvidenceVersion(snapshot), StringComparison.Ordinal))
             {
-                _investigation = null;
-                _investigationEvidenceVersion = null;
-                _investigationMessage = "Operational evidence changed. Run a new investigation.";
-                _investigationMessageIsError = false;
+                _agentResponse = null;
+                _agentEvidenceVersion = null;
+                _agentMessage = "Operational state changed. Ask the agent again.";
+                _agentMessageIsError = false;
             }
 
             if (!_messageIsError)
@@ -613,8 +568,6 @@
     }
 
     private static string OnOff(bool value) => value ? "On" : "Off";
-
-    private static string FormatConfidence(double confidence) => $"{confidence:P0}";
 
     private static string YesNo(bool value) => value ? "Yes" : "No";
 
@@ -653,6 +606,7 @@
             }
             catch (OperationCanceledException)
             {
+                // Normal shutdown path: the polling task ends by cancellation during dispose.
             }
         }
 

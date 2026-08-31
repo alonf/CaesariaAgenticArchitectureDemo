@@ -6,12 +6,15 @@ namespace EnergyHub.Api.Services;
 public sealed partial class EnergyHubService
 {
     private const string RestoreScheduledModeOperation = "Restore scheduled mode";
+    private const string SupersededSummary =
+        "Restore Scheduled Mode was superseded by a scenario change or reset; the new state was preserved.";
     private readonly object _gate = new();
     private readonly ISmartPoleGateway _smartpoleGateway;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<EnergyHubService> _logger;
     private readonly List<ActivityRecord> _activity = [];
     private EnergyOperationalTwin _twin;
+    private long _revision;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EnergyHubService"/> class.
@@ -80,6 +83,7 @@ public sealed partial class EnergyHubService
 
             lock (_gate)
             {
+                _revision++;
                 _activity.Clear();
                 _twin = CreateTwinFromPhysical(physicalState, desiredIsOn, null, null);
                 AddActivity("Energy Hub reset to the current deterministic SmartPole state.", correlationId, ActivityKind.Synchronization, true, null);
@@ -130,6 +134,7 @@ public sealed partial class EnergyHubService
 
             lock (_gate)
             {
+                _revision++;
                 _activity.Clear();
                 _twin = CreateTwinFromPhysical(physicalState, request.DesiredIsOn, request.OpenIncidentId, null);
                 AddActivity(request.Summary, correlationId, ActivityKind.Scenario, true, null);
@@ -172,6 +177,12 @@ public sealed partial class EnergyHubService
         ArgumentException.ThrowIfNullOrWhiteSpace(correlationId);
 
         var requestedAt = _timeProvider.GetUtcNow();
+        long commandRevision;
+
+        lock (_gate)
+        {
+            commandRevision = _revision;
+        }
 
         EnergyHubServiceLog.RestoreRequested(_logger, assetId, correlationId);
 
@@ -190,6 +201,7 @@ public sealed partial class EnergyHubService
         {
             EnergyHubServiceLog.RestoreReadTimedOut(_logger, assetId, correlationId, exception);
             return CompleteReadFailure(
+                commandRevision,
                 correlationId,
                 requestedAt,
                 CommandExecutionStatus.TimedOut,
@@ -199,6 +211,7 @@ public sealed partial class EnergyHubService
         {
             EnergyHubServiceLog.RestoreReadFailed(_logger, assetId, correlationId, exception);
             return CompleteReadFailure(
+                commandRevision,
                 correlationId,
                 requestedAt,
                 CommandExecutionStatus.Failed,
@@ -208,6 +221,7 @@ public sealed partial class EnergyHubService
         {
             EnergyHubServiceLog.RestoreReadInvalid(_logger, assetId, correlationId, exception);
             return CompleteReadFailure(
+                commandRevision,
                 correlationId,
                 requestedAt,
                 CommandExecutionStatus.Failed,
@@ -218,6 +232,12 @@ public sealed partial class EnergyHubService
 
         lock (_gate)
         {
+            if (_revision != commandRevision)
+            {
+                EnergyHubServiceLog.RestoreSuperseded(_logger, assetId, correlationId);
+                return CreateSupersededResult(assetId, scheduledTarget, correlationId);
+            }
+
             _twin = CreateTwinFromPhysical(
                 physicalState,
                 scheduledTarget,
@@ -245,14 +265,20 @@ public sealed partial class EnergyHubService
         {
             var commandResult = await _smartpoleGateway.SetLampStateAsync(new SetLampStateCommand(assetId, scheduledTarget), correlationId, cancellationToken);
 
-            if (commandResult.Status == CommandExecutionStatus.Succeeded)
+            if (commandResult is { Status: CommandExecutionStatus.Succeeded, ActualIsOn: { } confirmedIsOn })
             {
                 lock (_gate)
                 {
+                    if (_revision != commandRevision)
+                    {
+                        EnergyHubServiceLog.RestoreSuperseded(_logger, assetId, correlationId);
+                        return CreateSupersededResult(assetId, scheduledTarget, correlationId);
+                    }
+
                     _twin = _twin with
                     {
                         DesiredIsOn = scheduledTarget,
-                        ReportedIsOn = commandResult.ActualIsOn ?? scheduledTarget,
+                        ReportedIsOn = confirmedIsOn,
                         ManualOverride = false,
                         LastReportedAt = commandResult.CompletedAt,
                         LastCommand = new CommandRecord(
@@ -266,7 +292,7 @@ public sealed partial class EnergyHubService
                     };
 
                     AddActivity(
-                        $"SmartPole confirmed the reported state as {(commandResult.ActualIsOn ?? scheduledTarget ? "On" : "Off")}.",
+                        $"SmartPole confirmed the reported state as {(confirmedIsOn ? "On" : "Off")}.",
                         correlationId,
                         ActivityKind.Command,
                         true,
@@ -285,8 +311,25 @@ public sealed partial class EnergyHubService
                     commandResult.CompletedAt);
             }
 
+            if (commandResult.Status == CommandExecutionStatus.Succeeded)
+            {
+                // A success without a confirmed physical state violates the SmartPole contract: the
+                // reported state may only change after physical confirmation, so keep the previous state.
+                EnergyHubServiceLog.RestoreReturnedFailure(_logger, assetId, commandResult.Status, correlationId, commandResult.Summary);
+                return CompleteCommandFailure(
+                    commandRevision,
+                    physicalState,
+                    scheduledTarget,
+                    correlationId,
+                    requestedAt,
+                    CommandExecutionStatus.Failed,
+                    "SmartPole reported success without a confirmed physical state; the reported state is unchanged.",
+                    commandResult.CompletedAt);
+            }
+
             EnergyHubServiceLog.RestoreReturnedFailure(_logger, assetId, commandResult.Status, correlationId, commandResult.Summary);
             return CompleteCommandFailure(
+                commandRevision,
                 physicalState,
                 scheduledTarget,
                 correlationId,
@@ -299,6 +342,7 @@ public sealed partial class EnergyHubService
         {
             EnergyHubServiceLog.RestoreCanceledAfterSend(_logger, assetId, correlationId, exception);
             CompleteCommandFailure(
+                commandRevision,
                 physicalState,
                 scheduledTarget,
                 correlationId,
@@ -311,6 +355,7 @@ public sealed partial class EnergyHubService
         {
             EnergyHubServiceLog.RestoreCommandTimedOut(_logger, assetId, correlationId, exception);
             return CompleteCommandFailure(
+                commandRevision,
                 physicalState,
                 scheduledTarget,
                 correlationId,
@@ -322,6 +367,7 @@ public sealed partial class EnergyHubService
         {
             EnergyHubServiceLog.RestoreCommandFailed(_logger, assetId, correlationId, exception);
             return CompleteCommandFailure(
+                commandRevision,
                 physicalState,
                 scheduledTarget,
                 correlationId,
@@ -333,6 +379,7 @@ public sealed partial class EnergyHubService
         {
             EnergyHubServiceLog.RestoreCommandInvalid(_logger, assetId, correlationId, exception);
             return CompleteCommandFailure(
+                commandRevision,
                 physicalState,
                 scheduledTarget,
                 correlationId,
@@ -376,6 +423,7 @@ public sealed partial class EnergyHubService
             OperationalContext.None);
 
     private RestoreScheduledModeResult CompleteReadFailure(
+        long commandRevision,
         string correlationId,
         DateTimeOffset requestedAt,
         CommandExecutionStatus status,
@@ -385,6 +433,12 @@ public sealed partial class EnergyHubService
 
         lock (_gate)
         {
+            if (_revision != commandRevision)
+            {
+                EnergyHubServiceLog.RestoreSuperseded(_logger, _twin.AssetId, correlationId);
+                return CreateSupersededResult(_twin.AssetId, null, correlationId);
+            }
+
             _twin = _twin with
             {
                 LastCommand = new CommandRecord(
@@ -411,6 +465,7 @@ public sealed partial class EnergyHubService
     }
 
     private RestoreScheduledModeResult CompleteCommandFailure(
+        long commandRevision,
         SmartPolePhysicalState physicalState,
         bool scheduledTarget,
         string correlationId,
@@ -427,6 +482,12 @@ public sealed partial class EnergyHubService
 
         lock (_gate)
         {
+            if (_revision != commandRevision)
+            {
+                EnergyHubServiceLog.RestoreSuperseded(_logger, physicalState.AssetId, correlationId);
+                return CreateSupersededResult(physicalState.AssetId, scheduledTarget, correlationId);
+            }
+
             _twin = _twin with
             {
                 DesiredIsOn = scheduledTarget,
@@ -456,6 +517,16 @@ public sealed partial class EnergyHubService
                 effectiveCompletedAt);
         }
     }
+
+    private RestoreScheduledModeResult CreateSupersededResult(string assetId, bool? scheduledTarget, string correlationId) =>
+        new(
+            assetId,
+            scheduledTarget,
+            null,
+            CommandExecutionStatus.Failed,
+            correlationId,
+            SupersededSummary,
+            _timeProvider.GetUtcNow());
 
     private static EnergyOperationalTwin CreateTwinFromPhysical(
         SmartPolePhysicalState physicalState,
@@ -660,4 +731,10 @@ internal static partial class EnergyHubServiceLog
         Level = LogLevel.Error,
         Message = "Restore Scheduled Mode received an invalid SmartPole command response for asset {AssetId}. CorrelationId: {CorrelationId}.")]
     internal static partial void RestoreCommandInvalid(ILogger logger, string assetId, string correlationId, Exception exception);
+
+    [LoggerMessage(
+        EventId = 1524,
+        Level = LogLevel.Warning,
+        Message = "Restore Scheduled Mode was superseded by a scenario change or reset for asset {AssetId}. CorrelationId: {CorrelationId}.")]
+    internal static partial void RestoreSuperseded(ILogger logger, string assetId, string correlationId);
 }

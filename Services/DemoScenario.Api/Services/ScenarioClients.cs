@@ -22,6 +22,21 @@ public interface ISmartPoleScenarioClient
     /// <param name="correlationId">The correlation identifier spanning the scenario orchestration request.</param>
     /// <param name="cancellationToken">The token used to cancel the operation.</param>
     public Task ApplyScenarioAsync(SmartPoleScenarioState scenarioState, string correlationId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Reads the current simulator behavior configuration.
+    /// </summary>
+    /// <param name="correlationId">The correlation identifier spanning the presenter request.</param>
+    /// <param name="cancellationToken">The token used to cancel the operation.</param>
+    public Task<SmartPoleBehaviorConfiguration> GetBehaviorAsync(string correlationId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Updates the simulator behavior configuration used for subsequent commands.
+    /// </summary>
+    /// <param name="configuration">The behavior configuration to apply.</param>
+    /// <param name="correlationId">The correlation identifier spanning the presenter request.</param>
+    /// <param name="cancellationToken">The token used to cancel the operation.</param>
+    public Task<SmartPoleBehaviorConfiguration> UpdateBehaviorAsync(SmartPoleBehaviorConfiguration configuration, string correlationId, CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -83,6 +98,44 @@ public sealed partial class HttpSmartPoleScenarioClient(HttpClient httpClient, I
         ArgumentException.ThrowIfNullOrWhiteSpace(correlationId);
         return ScenarioHttpRequestSender.SendAsync(httpClient, logger, "SmartPole", "apply scenario", ScenarioHttpRequestFactory.CreateRequest(HttpMethod.Post, "/api/smartpole/scenario", correlationId, scenarioState), correlationId, cancellationToken);
     }
+
+    /// <inheritdoc />
+    public async Task<SmartPoleBehaviorConfiguration> GetBehaviorAsync(string correlationId, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(correlationId);
+
+        using var request = ScenarioHttpRequestFactory.CreateRequest(
+            HttpMethod.Get,
+            $"/api/smartpole/state/{DemoAssets.StreetlightAssetId}",
+            correlationId);
+        using var response = await httpClient.SendAsync(request, cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        var state = await response.Content.ReadFromJsonAsync<SmartPolePhysicalState>(BehaviorSerializerOptions, cancellationToken)
+            ?? throw new InvalidOperationException("SmartPole returned an empty state response.");
+        return state.Configuration;
+    }
+
+    /// <inheritdoc />
+    public async Task<SmartPoleBehaviorConfiguration> UpdateBehaviorAsync(SmartPoleBehaviorConfiguration configuration, string correlationId, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(configuration);
+        ArgumentException.ThrowIfNullOrWhiteSpace(correlationId);
+
+        using var request = ScenarioHttpRequestFactory.CreateRequest(
+            HttpMethod.Post,
+            "/api/smartpole/configuration",
+            correlationId,
+            configuration);
+        using var response = await httpClient.SendAsync(request, cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        var state = await response.Content.ReadFromJsonAsync<SmartPolePhysicalState>(BehaviorSerializerOptions, cancellationToken)
+            ?? throw new InvalidOperationException("SmartPole returned an empty configuration response.");
+        return state.Configuration;
+    }
+
+    private static readonly JsonSerializerOptions BehaviorSerializerOptions = CaesareaJsonDefaults.CreateSerializerOptions();
 }
 
 /// <inheritdoc cref="IEnergyScenarioClient"/>

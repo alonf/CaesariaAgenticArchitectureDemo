@@ -480,3 +480,7 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Internal reference material - never publish
+docs/Caesarea-Smart-City-Architecture-and-Requirements-EN.md
+.playwright-mcp/

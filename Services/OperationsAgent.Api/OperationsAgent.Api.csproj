@@ -23,7 +23,7 @@
     <ProjectReference Include="..\..\Shared\CanonicalModel\Caesarea.CanonicalModel.csproj" />
     <ProjectReference Include="..\..\Contracts\OperationsAgent.Contracts\OperationsAgent.Contracts.csproj" />
     <ProjectReference Include="..\..\Contracts\Energy.Contracts\Energy.Contracts.csproj" />
-    <ProjectReference Include="..\..\Contracts\CommandCenter.Contracts\CommandCenter.Contracts.csproj" />
+    <ProjectReference Include="..\..\Contracts\DemoScenario.Contracts\DemoScenario.Contracts.csproj" />
   </ItemGroup>
 
 </Project>
