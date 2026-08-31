@@ -28,12 +28,7 @@ public enum ScenarioId
     /// <summary>
     /// Seeds the normal daytime deterministic baseline.
     /// </summary>
-    NormalOperation,
-
-    /// <summary>
-    /// Seeds the normal night-time deterministic baseline.
-    /// </summary>
-    NightOperation
+    NormalOperation
 }
 
 /// <summary>

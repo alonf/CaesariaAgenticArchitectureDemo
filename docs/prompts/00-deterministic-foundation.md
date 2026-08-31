@@ -165,7 +165,8 @@ Implement these scenario presets:
 
 5. Normal Operation
 
-6. Night Operation
+6. Night Operation *(removed later: no lecture beat ever used it - Normal Operation is the reset
+   baseline, and the remaining presets each carry a scripted or planned beat)*
 
 Implement a narrow deterministic operation:
 

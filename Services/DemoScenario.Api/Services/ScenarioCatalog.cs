@@ -31,8 +31,7 @@ public sealed class ScenarioCatalog(TimeProvider timeProvider)
         new(ScenarioId.SecurityOperation, "Security Operation", "North Promenade requires lighting during a daytime security operation."),
         new(ScenarioId.ControllerFault, "Controller Fault", "The controller is faulted and rejects attempts to return L-417 to schedule."),
         new(ScenarioId.ExistingIncident, "Existing Incident", "An anomaly is already known and an incident exists before the operator acts."),
-        new(ScenarioId.NormalOperation, "Normal Operation", "The deterministic daytime baseline with no active issues."),
-        new(ScenarioId.NightOperation, "Night Operation", "The nightly lighting schedule is active and L-417 is operating normally.")
+        new(ScenarioId.NormalOperation, "Normal Operation", "The deterministic daytime baseline with no active issues.")
     ];
 
     private readonly TimeProvider _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
@@ -167,25 +166,6 @@ public sealed class ScenarioCatalog(TimeProvider timeProvider)
                     CreateScenarioActivity("The deterministic baseline is active.", now)
                 ],
                 "Normal Operation restored deterministically."),
-            ScenarioId.NightOperation => new ScenarioRecipe(
-                descriptor,
-                new SmartPoleScenarioState(
-                    true,
-                    false,
-                    true,
-                    false,
-                    ControllerHealthInfo.Healthy,
-                    null,
-                    false,
-                    OperationalContext.None,
-                    SmartPoleBehaviorConfiguration.Default),
-                new EnergyScenarioSyncRequest(true, null, "Energy Hub synchronized to normal night operation."),
-                null,
-                null,
-                [
-                    CreateScenarioActivity("Night schedule is active and L-417 is operating normally.", now)
-                ],
-                "Night Operation applied deterministically."),
             _ => throw new ArgumentOutOfRangeException(nameof(scenarioId), scenarioId, "The requested scenario is not defined for Stage 0.")
         };
     }
