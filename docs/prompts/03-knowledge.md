@@ -20,6 +20,13 @@ happening; knowledge may explain *why*.
 - A presenter toggle (DemoControl "Work Knowledge" panel) withholds the seeded evidence to show the
   agent reporting missing evidence instead of inventing a work order.
 - New `H08_S20_KNOWLEDGE` snippet region, registered with the demo breakpoints.
+- **Retrieved-evidence trace in Command Center**: the search lambda records the `WorkEvidence` the
+  provider returned, the API carries it as `OperationsAgentResponse.Evidence`, and the UI renders
+  compact cards under the answer. A card is marked **"Cited in answer"** when the answer text
+  contains its identifier (an exact check against IDs we own, never prose parsing); clicking a card
+  expands the full summary and, when a `SourceUri` is present, a link to the original item. If the
+  search ran and returned nothing, the panel says so. Retrieval and citation are different claims:
+  the cards show what the search returned, the badge shows what the agent grounded its answer in.
 
 ## API drift note
 
@@ -34,10 +41,32 @@ slide 20 concepts are otherwise implemented with the current installed APIs.
 2. Ask **"Is L-417 on?"** — on, with the schedule anomaly and override noted.
 3. Click **"Why?"** — the capability trace now shows both `get_streetlight_state` *and*
    `search_work_knowledge`: the agent re-verifies live state, retrieves WO-8732 and the technician
-   note, and explains the override - citing the evidence identifiers.
-4. Optional forbidden-behavior beat: withhold the evidence in DemoControl, ask again in a new
+   note, and explains the override - citing the evidence identifiers. Evidence cards appear under
+   the answer with "Cited in answer" badges; click WO-8732/NOTE-1 to reveal the punchline note
+   *"Left the light ON for post-maintenance verification."*
+4. Optional teaching point at the evidence panel: retrieval ≠ citation - the cards show what the
+   search returned; the badge shows what the agent actually relied on. Honest agent UIs keep those
+   claims separate.
+5. Optional forbidden-behavior beat: withhold the evidence in DemoControl, ask again in a new
    session - the agent reports that the search found nothing and sticks to operational facts; it
-   never invents a ticket.
+   never invents a ticket. The evidence panel shows "search ran and returned no evidence".
+
+## Future Work IQ connector notes
+
+The evidence cards and citation badges sit on the `IWorkKnowledgeSearch` seam, so a live Work IQ
+provider slots in with a DI registration change - but its normalization layer carries three rules:
+
+- **Manufacture citable IDs.** The badge matches evidence IDs inside the answer text, and the
+  agent's instructions require citing identifiers. A raw Outlook message ID is a 70-character
+  opaque string the model will never reproduce - the connector must synthesize short,
+  human-citable IDs (for example `EMAIL-0831-1`, `TASK-142`) when the source lacks one.
+- **Tame content.** Truncate long bodies into `Summary`; demo against a curated account - card
+  content lands on a projector.
+- **Fill `SourceUri`** with a link to the original email/task/document so the expanded card offers
+  "Open source item". The simulator leaves it null.
+
+The DemoControl withhold toggle is a simulator concept; with a live provider, evidence presence is
+whatever the mailbox actually contains.
 
 ## Verification
 

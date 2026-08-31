@@ -1126,6 +1126,95 @@ svg {
     line-height: 1.45;
 }
 
+.agent-evidence-list {
+    margin: 6px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 6px;
+    list-style: none;
+}
+
+.agent-evidence-card {
+    border: 1px solid var(--cp-border);
+    border-radius: 0.5rem;
+    background: var(--cp-bg);
+    overflow: hidden;
+}
+
+.evidence-toggle {
+    width: 100%;
+    padding: 8px 10px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 4px 8px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    font: inherit;
+}
+
+.evidence-toggle:hover {
+    background: var(--cp-accent-soft);
+}
+
+.evidence-id {
+    grid-column: 1;
+    grid-row: 1;
+    font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--cp-accent);
+    white-space: nowrap;
+}
+
+.evidence-title {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    color: var(--cp-text);
+    font-size: 0.72rem;
+}
+
+.evidence-cited {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+    padding: 2px 8px;
+    border: 1px solid var(--cp-success);
+    border-radius: 999px;
+    color: var(--cp-success);
+    font-size: 0.6rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+}
+
+.evidence-detail {
+    padding: 0 10px 10px;
+    border-top: 1px dashed var(--cp-border);
+    display: grid;
+    gap: 6px;
+}
+
+.evidence-detail p {
+    margin: 8px 0 0;
+    color: var(--cp-text);
+    font-size: 0.72rem;
+    line-height: 1.5;
+}
+
+.evidence-detail small {
+    color: var(--cp-text-muted);
+    font-size: 0.63rem;
+}
+
+.evidence-detail a {
+    color: var(--cp-accent);
+    font-size: 0.68rem;
+}
+
 .agent-subsection {
     margin-top: 16px;
 }

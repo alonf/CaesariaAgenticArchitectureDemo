@@ -74,12 +74,17 @@ public sealed partial class FoundryOperationsAgent(
 
         TextSearchProvider? workKnowledge = null;
 
+        // Retrieval trace for the UI: what the search returned, which is not the same claim as
+        // what the agent cited. Tool invocations run sequentially, so a plain list is safe.
+        List<WorkEvidence> retrievedEvidence = [];
+
         if (_stageGate.GetCurrent().Id >= DemoStage.Knowledge)
         {
             workKnowledge = new TextSearchProvider(
                 async (query, searchCancellationToken) =>
                 {
                     var evidence = await _workKnowledgeSearch.SearchAsync(query, correlationId, searchCancellationToken);
+                    retrievedEvidence.AddRange(evidence);
                     return evidence.Select(item => new TextSearchProvider.TextSearchResult
                     {
                         SourceName = $"{item.SourceType} {item.Id} ({item.SourceLabel})",
@@ -89,7 +94,7 @@ public sealed partial class FoundryOperationsAgent(
                 new TextSearchProviderOptions
                 {
                     SearchTime = TextSearchProviderOptions.TextSearchBehavior.OnDemandFunctionCalling,
-                    FunctionToolName = "search_work_knowledge",
+                    FunctionToolName = OperationsAgentToolNames.SearchWorkKnowledge,
                     FunctionToolDescription =
                         "Searches organizational work knowledge such as work orders, technician notes, and maintenance records."
                 },
@@ -174,7 +179,15 @@ public sealed partial class FoundryOperationsAgent(
                 ? []
                 : [.. modelFlightRecorder.ToolCalls.Select(call => new OperationsAgentToolCall(call.ToolName, call.Arguments))];
 
-            return new OperationsAgentAnswer(response.Text, resolvedSessionId, toolCalls, modelFlightRecorder?.Exchanges.Count ?? 0);
+            IReadOnlyList<OperationsAgentEvidence> evidence =
+            [
+                .. retrievedEvidence
+                    .DistinctBy(item => item.Id, StringComparer.OrdinalIgnoreCase)
+                    .Select(item => new OperationsAgentEvidence(
+                        item.Id, item.SourceType, item.Title, item.Summary, item.OccurredAt, item.SourceLabel, item.SourceUri))
+            ];
+
+            return new OperationsAgentAnswer(response.Text, resolvedSessionId, toolCalls, evidence, modelFlightRecorder?.Exchanges.Count ?? 0);
         }
         catch (OperationCanceledException exception) when (!cancellationToken.IsCancellationRequested)
         {

@@ -371,6 +371,49 @@
                                     No tool was invoked (@(response.ModelRoundTrips) model round trip(s)) · CorrelationId @ShortCorrelation(response.CorrelationId)
                                 </p>
                             }
+
+                            @if (response.Evidence.Count > 0)
+                            {
+                                <div class="agent-summary">
+                                    <small>Retrieved evidence</small>
+                                    <ul class="agent-evidence-list">
+                                        @foreach (var item in response.Evidence)
+                                        {
+                                            <li class="agent-evidence-card">
+                                                <button type="button" class="evidence-toggle" @onclick="() => ToggleEvidence(item.Id)">
+                                                    <span class="evidence-id">@item.Id</span>
+                                                    <span class="evidence-title">@item.Title</span>
+                                                    @if (IsCited(response.Answer, item.Id))
+                                                    {
+                                                        <span class="evidence-cited">Cited in answer</span>
+                                                    }
+                                                </button>
+                                                @if (string.Equals(_expandedEvidenceId, item.Id, StringComparison.Ordinal))
+                                                {
+                                                    <div class="evidence-detail">
+                                                        <p>@item.Summary</p>
+                                                        <small>@item.SourceType · recorded @item.OccurredAt.ToLocalTime().ToString("g") · @item.SourceLabel</small>
+                                                        @if (!string.IsNullOrWhiteSpace(item.SourceUri))
+                                                        {
+                                                            <a href="@item.SourceUri" target="_blank" rel="noopener">Open source item</a>
+                                                        }
+                                                    </div>
+                                                }
+                                            </li>
+                                        }
+                                    </ul>
+                                    <p class="agent-footnote">
+                                        Retrieval trace: what the search returned. "Cited in answer" marks the evidence the agent grounded its answer in - retrieval and citation are different claims.
+                                    </p>
+                                </div>
+                            }
+                            else if (response.ToolCalls.Any(call => call.ToolName == OperationsAgentToolNames.SearchWorkKnowledge))
+                            {
+                                <div class="agent-summary">
+                                    <small>Retrieved evidence</small>
+                                    <p class="agent-empty">The work-knowledge search ran and returned no evidence.</p>
+                                </div>
+                            }
                         }
                         else if (!_agentBusy && string.IsNullOrWhiteSpace(_agentMessage))
                         {
@@ -409,6 +452,7 @@
     private string? _agentMessage;
     private bool _agentMessageIsError;
     private string? _agentEvidenceVersion;
+    private string? _expandedEvidenceId;
 
     private string StageName => _snapshot?.CurrentStage.Name ?? Configuration["DemoStage"] ?? "Deterministic";
     private bool IsAgentStage => _snapshot?.CurrentStage.Id >= DemoStage.InvestigationAgent;
@@ -512,6 +556,7 @@
         _agentBusy = true;
         _agentResponse = null;
         _agentEvidenceVersion = null;
+        _expandedEvidenceId = null;
         _agentMessage = null;
         _agentMessageIsError = false;
         _lastAgentQuestion = question;
@@ -597,6 +642,17 @@
 
     private static string ShortCorrelation(string value) =>
         value.Length <= 12 ? value : value[..12];
+
+    private void ToggleEvidence(string evidenceId) =>
+        _expandedEvidenceId = string.Equals(_expandedEvidenceId, evidenceId, StringComparison.Ordinal)
+            ? null
+            : evidenceId;
+
+    // Exact containment of an identifier we own - deliberately not prose parsing. The agent's
+    // instructions require citing the identifiers it used, so this marks retrieved-and-cited
+    // evidence apart from retrieved-but-discarded evidence.
+    private static bool IsCited(string answer, string evidenceId) =>
+        answer.Contains(evidenceId, StringComparison.OrdinalIgnoreCase);
 
     private static string? GetEvidenceVersion(CommandCenterSnapshot? snapshot) =>
         snapshot is null

@@ -26,7 +26,7 @@ public sealed class StageCatalog
             DemoStage.Knowledge,
             "Knowledge",
             "The agent retrieves organizational work knowledge on demand - work orders and technician notes - so \"Why?\" gets an evidence-grounded explanation instead of a guess.",
-            ["Deterministic scenarios", "Manual operator actions", "Caesarea Operations Agent", "get_streetlight_state tool", "AgentSession follow-ups", "search_work_knowledge retrieval"])
+            ["Deterministic scenarios", "Manual operator actions", "Caesarea Operations Agent", "get_streetlight_state tool", "AgentSession follow-ups", "search_work_knowledge retrieval", "Retrieved-evidence trace with citation badges"])
     ];
 
     /// <summary>

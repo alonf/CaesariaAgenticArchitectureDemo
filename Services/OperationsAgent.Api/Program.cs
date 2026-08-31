@@ -178,6 +178,7 @@ static async Task<IResult> AskAsync(
             reply.Answer,
             reply.SessionId,
             reply.ToolCalls,
+            reply.Evidence,
             reply.ModelRoundTrips,
             correlationId));
     }

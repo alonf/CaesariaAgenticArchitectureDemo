@@ -11,13 +11,16 @@ namespace OperationsAgent.Api.Services;
 /// <param name="Summary">The evidence content relevant to operational reasoning.</param>
 /// <param name="OccurredAt">When the evidence was produced.</param>
 /// <param name="SourceLabel">The provenance label, for example "Simulated work knowledge".</param>
+/// <param name="SourceUri">A link to the original item (email, task, document) when the provider
+/// has one; the simulator leaves it <see langword="null"/>.</param>
 public sealed record WorkEvidence(
     string Id,
     string SourceType,
     string Title,
     string Summary,
     DateTimeOffset OccurredAt,
-    string SourceLabel);
+    string SourceLabel,
+    string? SourceUri = null);
 
 /// <summary>
 /// Searches organizational work knowledge for evidence relevant to an operational question.
