@@ -16,4 +16,12 @@
     <ProjectReference Include="..\..\Contracts\OperationsAgent.Contracts\OperationsAgent.Contracts.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Markdig" Version="1.3.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Caesarea.Deterministic.Tests" />
+  </ItemGroup>
+
 </Project>

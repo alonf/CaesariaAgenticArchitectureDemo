@@ -352,7 +352,7 @@
                         {
                             <div class="agent-summary">
                                 <small>Agent answer</small>
-                                <p>@response.Answer</p>
+                                <div class="agent-answer">@((MarkupString)RenderedAnswerHtml)</div>
                             </div>
 
                             @if (response.ToolCalls.Count > 0)
@@ -506,6 +506,8 @@
     private string? _caseMessage;
     private bool _caseBusy;
     private bool _caseClosed;
+    private string? _answerHtmlSource;
+    private string _answerHtml = string.Empty;
 
     private string StageName => _snapshot?.CurrentStage.Name ?? Configuration["DemoStage"] ?? "Deterministic";
     private bool IsAgentStage => _snapshot?.CurrentStage.Id >= DemoStage.InvestigationAgent;
@@ -517,6 +519,27 @@
         (false, true) => "Case recorded",
         _ => "Close case (record to memory)"
     };
+
+    // The answer is model-produced markdown; it is rendered through the sanitizing pipeline once
+    // per answer (polling re-renders the component every few seconds, so the result is memoized).
+    private string RenderedAnswerHtml
+    {
+        get
+        {
+            if (_agentResponse is not { } response)
+            {
+                return string.Empty;
+            }
+
+            if (!ReferenceEquals(_answerHtmlSource, response.Answer))
+            {
+                _answerHtmlSource = response.Answer;
+                _answerHtml = AnswerHtml.ToSafeHtml(response.Answer);
+            }
+
+            return _answerHtml;
+        }
+    }
     private string AgentStatusText => (_agentBusy, _agentResponse) switch
     {
         (true, _) => "Working",
