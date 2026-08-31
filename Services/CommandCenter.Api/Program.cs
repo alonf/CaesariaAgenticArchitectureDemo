@@ -44,6 +44,7 @@ commandCenter.MapGet("/activity/{assetId}", GetActivityAsync);
 commandCenter.MapGet("/incidents/{incidentId}", GetIncident);
 commandCenter.MapGet("/stage", GetStage);
 commandCenter.MapPost("/assets/{assetId}/restore-scheduled-mode", RestoreScheduledModeAsync);
+commandCenter.MapPost("/customer-reports/{reportId}/resolve", ResolveCustomerReport);
 
 var admin = commandCenter.MapGroup("/admin");
 admin.MapPost("/reset", Reset);
@@ -135,6 +136,26 @@ static async Task<IResult> GetActivityAsync(
             exception.Message,
             context.GetCorrelationId()));
     }
+}
+
+static IResult ResolveCustomerReport(HttpContext context, string reportId, CommandCenterService service)
+{
+    if (string.IsNullOrWhiteSpace(reportId))
+    {
+        return TypedResults.BadRequest(ProblemDetailsFactory.Create(
+            StatusCodes.Status400BadRequest,
+            "Invalid request",
+            "A customer report identifier is required.",
+            context.GetCorrelationId()));
+    }
+
+    return service.ResolveCustomerReport(reportId, context.GetCorrelationId())
+        ? TypedResults.Ok()
+        : TypedResults.NotFound(ProblemDetailsFactory.Create(
+            StatusCodes.Status404NotFound,
+            "Customer report not found",
+            $"No open customer report {reportId} exists.",
+            context.GetCorrelationId()));
 }
 
 static IResult GetIncident(HttpContext context, string incidentId, CommandCenterService service)

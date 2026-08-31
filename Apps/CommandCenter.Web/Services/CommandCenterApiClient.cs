@@ -54,6 +54,17 @@ internal sealed class CommandCenterApiClient
         return new CommandInvocationResult(false, problem?.Detail ?? "Restore Scheduled Mode failed.", effectiveCorrelationId);
     }
 
+    public async Task<bool> ResolveCustomerReportAsync(string reportId, CancellationToken cancellationToken)
+    {
+        var correlationId = CorrelationIds.Create();
+        using var request = CreateRequest(
+            HttpMethod.Post,
+            $"/api/command-center/customer-reports/{Uri.EscapeDataString(reportId)}/resolve",
+            correlationId);
+        using var response = await _httpClient.SendAsync(request, cancellationToken);
+        return response.IsSuccessStatusCode;
+    }
+
     private static HttpRequestMessage CreateRequest(HttpMethod method, string relativeUri, string correlationId)
     {
         var request = new HttpRequestMessage(method, relativeUri);

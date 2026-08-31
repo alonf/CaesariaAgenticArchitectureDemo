@@ -137,6 +137,37 @@ public sealed partial class CommandCenterService
     }
 
     /// <summary>
+    /// Marks the current customer report resolved: the operator closes the loop after the reported
+    /// condition has been handled, and the resolution lands in the activity timeline.
+    /// </summary>
+    /// <param name="reportId">The customer report identifier to resolve.</param>
+    /// <param name="correlationId">The correlation identifier spanning the request.</param>
+    /// <returns><see langword="false"/> when no matching report is currently open.</returns>
+    public bool ResolveCustomerReport(string reportId, string correlationId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(reportId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(correlationId);
+
+        var report = _customerReportModule.GetCurrent();
+
+        if (report is null || !string.Equals(report.Id, reportId, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        _customerReportModule.Reset();
+        _activityTimelineModule.Add(CreateActivity(
+            report.AssetId,
+            correlationId,
+            ActivityKind.Incident,
+            $"Customer report {report.Id} marked resolved by the operator.",
+            true,
+            null));
+        CommandCenterServiceLog.CustomerReportResolved(_logger, report.Id, correlationId);
+        return true;
+    }
+
+    /// <summary>
     /// Requests the narrow deterministic Energy Hub operation that restores the asset to scheduled mode.
     /// </summary>
     /// <param name="assetId">The asset identifier to command.</param>
@@ -313,6 +344,12 @@ internal static partial class CommandCenterServiceLog
         Level = LogLevel.Information,
         Message = "Restore Scheduled Mode requested from the Command Center for asset {AssetId}. CorrelationId: {CorrelationId}.")]
     internal static partial void RestoreRequested(ILogger logger, string assetId, string correlationId);
+
+    [LoggerMessage(
+        EventId = 1811,
+        Level = LogLevel.Information,
+        Message = "Customer report {ReportId} marked resolved by the operator. CorrelationId: {CorrelationId}.")]
+    internal static partial void CustomerReportResolved(ILogger logger, string reportId, string correlationId);
 
     [LoggerMessage(
         EventId = 1801,

@@ -208,6 +208,9 @@
                                 <span class="report-label"><i></i> Incoming customer report</span>
                                 <blockquote>“@customerReport.Message”</blockquote>
                                 <small>@customerReport.Source · @FormatTimestamp(customerReport.ReceivedAt)</small>
+                                <button class="report-resolve" @onclick="() => ResolveReportAsync(customerReport.Id)" disabled="@_busy">
+                                    Mark resolved
+                                </button>
                             </div>
                         </article>
                     }
@@ -717,6 +720,30 @@
     private Task InvestigateAsync() => AskAgentCoreAsync(
         $"Investigate streetlight {_snapshot?.AssetId ?? WebOptions.Value.AssetId}.",
         sessionId: null);
+
+    private async Task ResolveReportAsync(string reportId)
+    {
+        _busy = true;
+
+        try
+        {
+            var resolved = await ApiClient.ResolveCustomerReportAsync(reportId, CancellationToken.None);
+            _message = resolved
+                ? $"Customer report {reportId} marked resolved."
+                : $"Customer report {reportId} was no longer open.";
+            _messageIsError = false;
+        }
+        catch (Exception exception)
+        {
+            _message = $"The customer report could not be resolved: {exception.Message}";
+            _messageIsError = true;
+        }
+        finally
+        {
+            _busy = false;
+            await LoadSnapshotAsync(CancellationToken.None, showErrorIfMissing: true);
+        }
+    }
 
     private Task RestoreViaAgentAsync() => AskAgentCoreAsync(
         $"Restore streetlight {_snapshot?.AssetId ?? WebOptions.Value.AssetId} to scheduled mode.",

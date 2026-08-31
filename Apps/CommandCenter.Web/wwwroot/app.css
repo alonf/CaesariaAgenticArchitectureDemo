@@ -1327,6 +1327,24 @@ svg {
     border-color: var(--cp-warning);
 }
 
+.report-resolve {
+    margin-top: 6px;
+    padding: 4px 10px;
+    align-self: flex-start;
+    color: var(--cp-success);
+    background: var(--cp-surface);
+    border: 1px solid var(--cp-success);
+    border-radius: 0.5rem;
+    cursor: pointer;
+    font-size: 0.72rem;
+    font-weight: 600;
+}
+
+.report-resolve:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
 .approval-message {
     margin: 6px 0;
     color: var(--cp-text);

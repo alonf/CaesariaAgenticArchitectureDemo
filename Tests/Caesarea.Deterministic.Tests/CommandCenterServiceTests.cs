@@ -69,6 +69,39 @@ public sealed class CommandCenterServiceTests
     }
 
     [Fact]
+    public async Task ResolveCustomerReportClosesTheLoopAndRecordsActivity()
+    {
+        var clock = new TestTimeProvider();
+        var service = CreateService(clock);
+        service.ApplyScenarioContext(
+            new CommandCenterScenarioContext(
+                new ScenarioStatus(ScenarioId.ForgottenOverride, "Forgotten Override", "Report received", clock.GetUtcNow(), "scenario-corr"),
+                new CustomerReportRecord(
+                    "REPORT-L417-001",
+                    DemoAssets.StreetlightAssetId,
+                    DemoAssets.NorthPromenadeArea,
+                    "This light is ON during the day.",
+                    "/images/customer-report-l417.png",
+                    "Resident mobile report",
+                    clock.GetUtcNow(),
+                    "report-corr"),
+                null,
+                []),
+            "scenario-corr");
+
+        Assert.False(service.ResolveCustomerReport("REPORT-UNKNOWN", "resolve-corr"));
+        Assert.True(service.ResolveCustomerReport("REPORT-L417-001", "resolve-corr"));
+        // Already resolved: a second attempt reports that nothing was open.
+        Assert.False(service.ResolveCustomerReport("REPORT-L417-001", "resolve-corr"));
+
+        var snapshot = await service.GetSnapshotAsync(DemoAssets.StreetlightAssetId, 10, "query-corr", CancellationToken.None);
+        Assert.Null(snapshot.CustomerReport);
+        Assert.Contains(snapshot.RecentActivity, activity =>
+            activity.Message.Contains("REPORT-L417-001", StringComparison.Ordinal)
+            && activity.Message.Contains("resolved", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public async Task RestoreScheduledModeReturnsFailureWhenEnergyHubGatewayThrows()
     {
         var clock = new TestTimeProvider();
