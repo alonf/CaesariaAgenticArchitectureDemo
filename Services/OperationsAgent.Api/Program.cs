@@ -1,5 +1,6 @@
 using Azure;
 using Azure.AI.Projects;
+using Azure.Core;
 using Azure.Identity;
 using Microsoft.Extensions.Options;
 using OperationsAgent.Api.Configuration;
@@ -21,13 +22,18 @@ builder.Services.AddHttpClient<IEnergyReadGateway, HttpEnergyReadGateway>((servi
 });
 
 // AIProjectClient and DefaultAzureCredential construction is lazy: neither performs network or authentication
-// calls until the agent actually runs, so the service still starts cleanly in Deterministic mode even when no
-// Azure credential is available in the current environment.
+// calls until a token is requested, so the service still starts cleanly in Deterministic mode even when no
+// Azure credential is available. The credential is a shared singleton because its chain-selection cache is
+// per instance; the background warmup below runs the expensive discovery off the request path.
+builder.Services.AddSingleton<TokenCredential>(new DefaultAzureCredential());
 builder.Services.AddSingleton(serviceProvider =>
 {
     var options = serviceProvider.GetRequiredService<IOptions<OperationsAgentApiOptions>>().Value;
-    return new AIProjectClient(new Uri(options.FoundryProjectEndpoint, UriKind.Absolute), new DefaultAzureCredential());
+    return new AIProjectClient(
+        new Uri(options.FoundryProjectEndpoint, UriKind.Absolute),
+        serviceProvider.GetRequiredService<TokenCredential>());
 });
+builder.Services.AddHostedService<FoundryCredentialWarmup>();
 builder.Services.AddSingleton(serviceProvider =>
 {
     var initialStage = Enum.TryParse<DemoStage>(builder.Configuration["DemoStage"], out var configuredStage)
