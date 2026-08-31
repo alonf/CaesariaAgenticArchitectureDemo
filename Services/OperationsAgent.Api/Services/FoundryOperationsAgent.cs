@@ -12,6 +12,8 @@ public sealed partial class FoundryOperationsAgent(
     AIProjectClient projectClient,
     IEnergyReadGateway energyReadGateway,
     AgentSessionStore sessionStore,
+    IWorkKnowledgeSearch workKnowledgeSearch,
+    DemoStageGate stageGate,
     string modelDeploymentName,
     string agentName,
     int maxFunctionIterations,
@@ -23,12 +25,17 @@ public sealed partial class FoundryOperationsAgent(
         You are the Caesarea Operations Agent for the city Command & Control center.
         Answer operator questions using the tools available to you.
         Use the authoritative Energy Hub tool whenever current streetlight state is needed.
-        Do not invent operational facts. If the available tool cannot answer the question, say so clearly.
+        When asked why an operational state exists and a work-knowledge search capability is
+        available, search it for maintenance or override evidence and cite the evidence identifiers
+        you used. If no evidence exists, say so; never invent work orders or notes.
+        Do not invent operational facts. If the available tools cannot answer the question, say so clearly.
         """;
 
     private readonly AIProjectClient _projectClient = projectClient ?? throw new ArgumentNullException(nameof(projectClient));
     private readonly IEnergyReadGateway _energyReadGateway = energyReadGateway ?? throw new ArgumentNullException(nameof(energyReadGateway));
     private readonly AgentSessionStore _sessionStore = sessionStore ?? throw new ArgumentNullException(nameof(sessionStore));
+    private readonly IWorkKnowledgeSearch _workKnowledgeSearch = workKnowledgeSearch ?? throw new ArgumentNullException(nameof(workKnowledgeSearch));
+    private readonly DemoStageGate _stageGate = stageGate ?? throw new ArgumentNullException(nameof(stageGate));
     private readonly string _modelDeploymentName = string.IsNullOrWhiteSpace(modelDeploymentName)
         ? throw new ArgumentException("A model deployment name is required.", nameof(modelDeploymentName))
         : modelDeploymentName;
@@ -62,20 +69,57 @@ public sealed partial class FoundryOperationsAgent(
         // Inspect modelFlightRecorder.Exchanges in the debugger to see every model round trip.
         ModelExchangeRecorder? modelFlightRecorder = null;
 
+        #region H08_S20_KNOWLEDGE
+        DemoBreakpoints.Pause(DemoSnippets.Knowledge);
+
+        TextSearchProvider? workKnowledge = null;
+
+        if (_stageGate.GetCurrent().Id >= DemoStage.Knowledge)
+        {
+            workKnowledge = new TextSearchProvider(
+                async (query, searchCancellationToken) =>
+                {
+                    var evidence = await _workKnowledgeSearch.SearchAsync(query, correlationId, searchCancellationToken);
+                    return evidence.Select(item => new TextSearchProvider.TextSearchResult
+                    {
+                        SourceName = $"{item.SourceType} {item.Id} ({item.SourceLabel})",
+                        Text = $"{item.Title} - {item.Summary} (recorded {item.OccurredAt:u})"
+                    });
+                },
+                new TextSearchProviderOptions
+                {
+                    SearchTime = TextSearchProviderOptions.TextSearchBehavior.OnDemandFunctionCalling,
+                    FunctionToolName = "search_work_knowledge",
+                    FunctionToolDescription =
+                        "Searches organizational work knowledge such as work orders, technician notes, and maintenance records."
+                },
+                _loggerFactory);
+        }
+        #endregion
+
         #region H08_S13_AGENT
         DemoBreakpoints.Pause(DemoSnippets.AgentCreation);
 
         AIAgent agent = _projectClient.AsAIAgent(
-            model: _modelDeploymentName,
-            name: _agentName,
-            instructions: Instructions,
-            tools:
-            [
-                AIFunctionFactory.Create(
-                    energyTools.GetStreetlightStateAsync,
-                    EnergyTools.StreetlightStateToolName,
-                    "Gets the current authoritative operational state of a streetlight.")
-            ],
+            options: new ChatClientAgentOptions
+            {
+                Name = _agentName,
+                ChatOptions = new()
+                {
+                    ModelId = _modelDeploymentName,
+                    Instructions = Instructions,
+                    Tools =
+                    [
+                        AIFunctionFactory.Create(
+                            energyTools.GetStreetlightStateAsync,
+                            EnergyTools.StreetlightStateToolName,
+                            "Gets the current authoritative operational state of a streetlight.")
+                    ]
+                },
+                // Knowledge retrieval joins as a context provider: it contributes the on-demand
+                // search tool that the function-invoking pipeline can then execute.
+                AIContextProviders = workKnowledge is null ? null : [workKnowledge]
+            },
             clientFactory: client =>
             {
                 modelFlightRecorder = new ModelExchangeRecorder(client);

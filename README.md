@@ -6,6 +6,9 @@ The demo runs as one cumulative application with a presenter-controlled `DemoSta
 - `DemoStage=InvestigationAgent` — adds the first, intentionally minimal Caesarea Operations Agent.
 - `DemoStage=Session` — adds conversational context (`AgentSession`), so a follow-up like
   **"Why?"** refers to the previous question. Session state is never the authoritative city state.
+- `DemoStage=Knowledge` — adds on-demand organizational knowledge retrieval
+  (`search_work_knowledge`), so **"Why?"** gets an evidence-grounded explanation citing the
+  seeded work order WO-8732 and its technician note.
 
 `CommandCenter.Api` owns the selected stage. `DemoScenario.Api` reads and changes it through that authoritative
 boundary, so switching stages does not restart the application.

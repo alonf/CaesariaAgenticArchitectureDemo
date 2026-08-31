@@ -61,6 +61,7 @@ public sealed class StageCoordinatorTests
         Assert.Contains(stages, descriptor => descriptor.Id == DemoStage.Deterministic);
         Assert.Contains(stages, descriptor => descriptor.Id == DemoStage.InvestigationAgent);
         Assert.Contains(stages, descriptor => descriptor.Id == DemoStage.Session);
+        Assert.Contains(stages, descriptor => descriptor.Id == DemoStage.Knowledge);
         Assert.All(stages, descriptor => Assert.NotEmpty(descriptor.Capabilities));
     }
 

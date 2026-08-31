@@ -48,6 +48,8 @@ builder.Services.AddSingleton(_ =>
     return new DemoStageGate(initialStage);
 });
 builder.Services.AddSingleton<AgentSessionStore>();
+builder.Services.AddSingleton<SimulatedWorkKnowledgeSearch>();
+builder.Services.AddSingleton<IWorkKnowledgeSearch>(serviceProvider => serviceProvider.GetRequiredService<SimulatedWorkKnowledgeSearch>());
 builder.Services.AddSingleton<IOperationsAgent>(serviceProvider =>
 {
     var options = serviceProvider.GetRequiredService<IOptions<OperationsAgentApiOptions>>().Value;
@@ -55,6 +57,8 @@ builder.Services.AddSingleton<IOperationsAgent>(serviceProvider =>
         serviceProvider.GetRequiredService<AIProjectClient>(),
         serviceProvider.GetRequiredService<IEnergyReadGateway>(),
         serviceProvider.GetRequiredService<AgentSessionStore>(),
+        serviceProvider.GetRequiredService<IWorkKnowledgeSearch>(),
+        serviceProvider.GetRequiredService<DemoStageGate>(),
         options.ModelDeploymentName,
         options.AgentName,
         options.MaxFunctionIterations,
@@ -74,7 +78,7 @@ app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.UseHttpsRedirection();
 app.MapDefaultEndpoints();
-app.MapDemoBreakpoints(DemoSnippets.AgentCreation, DemoSnippets.FunctionTool, DemoSnippets.Session);
+app.MapDemoBreakpoints(DemoSnippets.AgentCreation, DemoSnippets.FunctionTool, DemoSnippets.Session, DemoSnippets.Knowledge);
 
 var operationsAgent = app.MapGroup("/api/operations-agent")
     .WithTags("Operations Agent");
@@ -87,6 +91,19 @@ var demoStage = app.MapGroup("/api/operations-agent/demo-stage")
     .WithTags("Demo Stage");
 
 demoStage.MapGet("/", (DemoStageGate stageGate) => TypedResults.Ok(stageGate.GetCurrent()));
+
+// Presenter control over the simulated work-knowledge fixture: withholding the evidence shows the
+// agent reporting missing evidence instead of inventing a work order.
+var workKnowledge = app.MapGroup("/api/operations-agent/work-knowledge")
+    .WithTags("Work Knowledge");
+
+workKnowledge.MapGet("/", (SimulatedWorkKnowledgeSearch search) =>
+    TypedResults.Ok(new WorkKnowledgeStatus(search.EvidencePresent)));
+workKnowledge.MapPost("/", (WorkKnowledgeStatus status, SimulatedWorkKnowledgeSearch search) =>
+{
+    search.EvidencePresent = status.EvidencePresent;
+    return TypedResults.Ok(new WorkKnowledgeStatus(search.EvidencePresent));
+});
 demoStage.MapPost("/", (DemoStageStatus stage, DemoStageGate stageGate, FoundryCredentialWarmup credentialWarmup) =>
 {
     var applied = stageGate.SetCurrent(stage);

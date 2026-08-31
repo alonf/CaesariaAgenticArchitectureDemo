@@ -21,7 +21,12 @@ public sealed class StageCatalog
             DemoStage.Session,
             "Session",
             "The agent keeps conversational context, so a follow-up like \"Why?\" refers to the previous question. Session state is not authoritative operational state.",
-            ["Deterministic scenarios", "Manual operator actions", "Caesarea Operations Agent", "get_streetlight_state tool", "AgentSession follow-ups"])
+            ["Deterministic scenarios", "Manual operator actions", "Caesarea Operations Agent", "get_streetlight_state tool", "AgentSession follow-ups"]),
+        new(
+            DemoStage.Knowledge,
+            "Knowledge",
+            "The agent retrieves organizational work knowledge on demand - work orders and technician notes - so \"Why?\" gets an evidence-grounded explanation instead of a guess.",
+            ["Deterministic scenarios", "Manual operator actions", "Caesarea Operations Agent", "get_streetlight_state tool", "AgentSession follow-ups", "search_work_knowledge retrieval"])
     ];
 
     /// <summary>

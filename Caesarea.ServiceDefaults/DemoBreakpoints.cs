@@ -23,6 +23,11 @@ public static class DemoSnippets
     /// Gets the H08 slide 18/19 snippet: continuing the conversation through an agent session.
     /// </summary>
     public const string Session = "H08_S18_SESSION";
+
+    /// <summary>
+    /// Gets the H08 slide 20/21 snippet: on-demand organizational knowledge retrieval.
+    /// </summary>
+    public const string Knowledge = "H08_S20_KNOWLEDGE";
 }
 
 /// <summary>

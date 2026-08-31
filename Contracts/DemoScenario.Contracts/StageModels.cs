@@ -19,7 +19,13 @@ public enum DemoStage
     /// The Operations Agent keeps conversational context across runs, so a follow-up question can
     /// refer to the previous turn. Session state is not authoritative operational state.
     /// </summary>
-    Session
+    Session,
+
+    /// <summary>
+    /// The Operations Agent can retrieve organizational work knowledge (work orders, technician
+    /// notes) on demand to explain why an operational state exists.
+    /// </summary>
+    Knowledge
 }
 
 /// <summary>

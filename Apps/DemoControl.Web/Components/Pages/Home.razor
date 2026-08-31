@@ -3,6 +3,7 @@
 @inject DemoScenarioApiClient ApiClient
 @inject DemoStageApiClient StageClient
 @inject DemoBreakpointsApiClient BreakpointsClient
+@inject WorkKnowledgeApiClient WorkKnowledgeClient
 @inject VsCodeAttachService AttachService
 @inject IConfiguration Configuration
 @inject IOptions<DemoControlWebOptions> WebOptions
@@ -135,6 +136,33 @@
 
     <section class="panel switchboard-panel">
         <div class="panel-heading">
+            <h2>Work Knowledge</h2>
+            <span class="stamp">@WorkKnowledgeStamp</span>
+        </div>
+        @if (_workKnowledge is null)
+        {
+            <p>@(_workKnowledgeMessage ?? "Loading work knowledge state...")</p>
+        }
+        else
+        {
+            <label>
+                <input
+                    type="checkbox"
+                    checked="@_workKnowledge.EvidencePresent"
+                    disabled="@_workKnowledgeBusy"
+                    @onchange="e => SetWorkEvidenceAsync(e.Value is true)" />
+                Seeded evidence (WO-8732 and the technician note) is available to the agent
+            </label>
+            <p class="switchboard-note">Uncheck to show the agent reporting missing evidence instead of inventing a work order.</p>
+            @if (!string.IsNullOrWhiteSpace(_workKnowledgeMessage))
+            {
+                <p class="status-error">@_workKnowledgeMessage</p>
+            }
+        }
+    </section>
+
+    <section class="panel switchboard-panel">
+        <div class="panel-heading">
             <h2>Simulator Behavior</h2>
             <span class="stamp">@(_behavior is null ? "Unavailable" : $"{_behaviorDelayMs} ms delay")</span>
         </div>
@@ -217,6 +245,9 @@
     private bool _attachBusy;
     private string? _attachMessage;
     private bool _attachMessageIsError;
+    private WorkKnowledgeState? _workKnowledge;
+    private bool _workKnowledgeBusy;
+    private string? _workKnowledgeMessage;
     private SimulatorBehaviorSettings? _behavior;
     private int _behaviorDelayMs;
     private bool _behaviorTimeout;
@@ -234,6 +265,12 @@
     private Task? _pollingTask;
 
     private string StageName => _stageCatalog?.CurrentStage.Name ?? Configuration["DemoStage"] ?? "Deterministic";
+    private string WorkKnowledgeStamp => _workKnowledge switch
+    {
+        null => "Unavailable",
+        { EvidencePresent: true } => "Evidence present",
+        _ => "No evidence"
+    };
     private string BreakpointStamp => _breakpoints switch
     {
         null => "Unavailable",
@@ -250,6 +287,7 @@
         await LoadBreakpointsAsync(CancellationToken.None);
         await LoadAttachStatusAsync(CancellationToken.None);
         await LoadBehaviorAsync(CancellationToken.None);
+        await LoadWorkKnowledgeAsync(CancellationToken.None);
 
         _pollingTokenSource = new CancellationTokenSource();
         _pollingTask = PollCatalogAsync(_pollingTokenSource.Token);
@@ -404,6 +442,39 @@
         {
             _breakpoints = null;
             _breakpointsMessage = $"Demo breakpoints unavailable: {exception.Message}";
+        }
+    }
+
+    private async Task LoadWorkKnowledgeAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            _workKnowledge = await WorkKnowledgeClient.GetStatusAsync(cancellationToken);
+            _workKnowledgeMessage = null;
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            _workKnowledge = null;
+            _workKnowledgeMessage = $"Work knowledge state unavailable: {exception.Message}";
+        }
+    }
+
+    private async Task SetWorkEvidenceAsync(bool evidencePresent)
+    {
+        _workKnowledgeBusy = true;
+
+        try
+        {
+            _workKnowledge = await WorkKnowledgeClient.SetEvidencePresentAsync(evidencePresent, CancellationToken.None);
+            _workKnowledgeMessage = null;
+        }
+        catch (Exception exception)
+        {
+            _workKnowledgeMessage = $"Work knowledge change failed: {exception.Message}";
+        }
+        finally
+        {
+            _workKnowledgeBusy = false;
         }
     }
 
