@@ -527,7 +527,21 @@ svg {
 .icon-button:disabled,
 .action-button:disabled {
     opacity: 0.55;
+    cursor: not-allowed;
+}
+
+/* Only an in-flight operation shows the wait cursor; a merely unavailable button must not. */
+.action-button.busy:disabled {
     cursor: wait;
+}
+
+/* A completed one-shot action (for example a recorded case) reads as done, not as working. */
+.action-button.action-done:disabled {
+    opacity: 1;
+    color: var(--cp-success);
+    background: var(--cp-surface);
+    border-color: var(--cp-success);
+    cursor: default;
 }
 
 .city-map {

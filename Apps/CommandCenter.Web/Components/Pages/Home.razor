@@ -279,7 +279,7 @@
                         <div class="workflow-step current"><i>2</i><span><strong>Assess anomaly</strong><small>Compare reported state with schedule</small></span></div>
                         <div class="workflow-step"><i>3</i><span><strong>Execute action</strong><small>Restore the scheduled mode</small></span></div>
                     </div>
-                    <button class="action-button" @onclick="RestoreScheduledModeAsync" disabled="@_busy">
+                    <button class="action-button @(_busy ? "busy" : string.Empty)" @onclick="RestoreScheduledModeAsync" disabled="@_busy">
                         <span>@(_busy ? "Executing workflow..." : "Restore Scheduled Mode")</span>
                         <svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7" /></svg>
                     </button>
@@ -338,7 +338,7 @@
                             <p>@(_lastAgentQuestion ?? AgentQuestion)</p>
                         </div>
 
-                        <button class="action-button investigate-button" @onclick="AskAgentAsync" disabled="@_agentBusy">
+                        <button class="action-button investigate-button @(_agentBusy ? "busy" : string.Empty)" @onclick="AskAgentAsync" disabled="@_agentBusy">
                             <span>@(_agentBusy ? "Asking..." : "Ask agent")</span>
                             <svg viewBox="0 0 24 24"><path d="M11 4a7 7 0 1 0 4.9 12.1l4.5 4.5 1.4-1.4-4.5-4.5A7 7 0 0 0 11 4Zm0 2a5 5 0 1 1 0 10 5 5 0 0 1 0-10Z" /></svg>
                         </button>
@@ -451,7 +451,7 @@
 
                         @if (IsSessionStage && _agentSessionId is not null)
                         {
-                            <button class="action-button investigate-button" @onclick="AskFollowUpAsync" disabled="@_agentBusy">
+                            <button class="action-button investigate-button @(_agentBusy ? "busy" : string.Empty)" @onclick="AskFollowUpAsync" disabled="@_agentBusy">
                                 <span>@(_agentBusy ? "Asking..." : "Ask \"Why?\" (same session)")</span>
                                 <svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9h-2a7 7 0 1 1-7-7v3l5-4-5-4Z" /></svg>
                             </button>
@@ -464,13 +464,13 @@
                         {
                             @if (_agentResponse is not null)
                             {
-                                <button class="action-button investigate-button" @onclick="CloseCaseAsync" disabled="@(_agentBusy || _caseBusy || _caseClosed)">
+                                <button class="action-button investigate-button @CloseCaseStateClass" @onclick="CloseCaseAsync" disabled="@(_agentBusy || _caseBusy || _caseClosed)">
                                     <span>@CloseCaseLabel</span>
                                     <svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4Z" /></svg>
                                 </button>
                             }
 
-                            <button class="action-button investigate-button" @onclick="AskSecondAssetAsync" disabled="@_agentBusy">
+                            <button class="action-button investigate-button @(_agentBusy ? "busy" : string.Empty)" @onclick="AskSecondAssetAsync" disabled="@_agentBusy">
                                 <span>@(_agentBusy ? "Asking..." : $"Ask about {DemoAssets.SecondStreetlightAssetId} (new session)")</span>
                                 <svg viewBox="0 0 24 24"><path d="M11 4a7 7 0 1 0 4.9 12.1l4.5 4.5 1.4-1.4-4.5-4.5A7 7 0 0 0 11 4Zm0 2a5 5 0 1 1 0 10 5 5 0 0 1 0-10Z" /></svg>
                             </button>
@@ -518,6 +518,12 @@
         (true, _) => "Recording...",
         (false, true) => "Case recorded",
         _ => "Close case (record to memory)"
+    };
+    private string CloseCaseStateClass => (_caseBusy, _caseClosed) switch
+    {
+        (true, _) => "busy",
+        (false, true) => "action-done",
+        _ => string.Empty
     };
 
     // The answer is model-produced markdown; it is rendered through the sanitizing pipeline once
