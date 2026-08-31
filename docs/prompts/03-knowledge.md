@@ -1,6 +1,6 @@
 # Stage 3 — Knowledge
 
-Deck anchor: `H08_KNOWLEDGE_RETRIEVAL` (knowledge-retrieval demo).
+Deck anchor: `KNOWLEDGE_RETRIEVAL` (knowledge-retrieval demo).
 
 ## Goal
 
@@ -21,7 +21,7 @@ happening; knowledge may explain *why*.
   their exact prior behavior.
 - A presenter toggle (DemoControl "Work Knowledge" panel) withholds the seeded evidence to show the
   agent reporting missing evidence instead of inventing a work order.
-- New `H08_KNOWLEDGE_RETRIEVAL` snippet region, registered with the demo breakpoints.
+- New `KNOWLEDGE_RETRIEVAL` snippet region, registered with the demo breakpoints.
 - **Retrieved-evidence trace in Command Center**: the search lambda records the `WorkEvidence` the
   provider returned, the API carries it as `OperationsAgentResponse.Evidence`, and the UI renders
   compact cards under the answer. A card is marked **"Cited in answer"** when the answer text

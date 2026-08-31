@@ -69,7 +69,7 @@ public sealed partial class FoundryOperationsAgent(
         // Inspect modelFlightRecorder.Exchanges in the debugger to see every model round trip.
         ModelExchangeRecorder? modelFlightRecorder = null;
 
-        #region H08_KNOWLEDGE_RETRIEVAL
+        #region KNOWLEDGE_RETRIEVAL
         DemoBreakpoints.Pause(DemoSnippets.Knowledge);
 
         TextSearchProvider? workKnowledge = null;
@@ -102,7 +102,7 @@ public sealed partial class FoundryOperationsAgent(
         }
         #endregion
 
-        #region H08_AGENT_CREATION
+        #region AGENT_CREATION
         DemoBreakpoints.Pause(DemoSnippets.AgentCreation);
 
         AIAgent agent = _projectClient.AsAIAgent(
@@ -148,7 +148,7 @@ public sealed partial class FoundryOperationsAgent(
 
         try
         {
-            #region H08_AGENT_SESSION
+            #region AGENT_SESSION
             DemoBreakpoints.Pause(DemoSnippets.Session);
 
             AgentSession session;

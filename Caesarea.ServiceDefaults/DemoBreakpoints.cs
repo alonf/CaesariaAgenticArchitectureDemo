@@ -4,32 +4,33 @@ using System.Diagnostics;
 namespace Caesarea.ServiceDefaults;
 
 /// <summary>
-/// Names the lecture code snippets that can be paused through <see cref="DemoBreakpoints"/>. The values
-/// match the <c>#region</c> markers used to export lecture snippets. Identifiers are semantic and
-/// stable: they name the concept being demonstrated, never a slide position - slide numbers are
-/// presentation metadata and shift whenever the deck is edited.
+/// Names the demo code snippets that can be paused through <see cref="DemoBreakpoints"/>. The values
+/// match the <c>#region</c> markers used to export demo snippets. Identifiers are semantic, stable,
+/// and lecture-neutral: they name the concept being demonstrated, never a lecture code or slide
+/// position - which deck presents a concept, and where, is presentation metadata that lives in the
+/// deck's speaker notes, not in the identifier.
 /// </summary>
 public static class DemoSnippets
 {
     /// <summary>
     /// Gets the agent-creation snippet: constructing the Operations Agent.
     /// </summary>
-    public const string AgentCreation = "H08_AGENT_CREATION";
+    public const string AgentCreation = "AGENT_CREATION";
 
     /// <summary>
     /// Gets the function-tool snippet: the deterministic streetlight state tool.
     /// </summary>
-    public const string FunctionTool = "H08_FUNCTION_TOOL";
+    public const string FunctionTool = "FUNCTION_TOOL";
 
     /// <summary>
     /// Gets the session-context snippet: continuing the conversation through an agent session.
     /// </summary>
-    public const string Session = "H08_AGENT_SESSION";
+    public const string Session = "AGENT_SESSION";
 
     /// <summary>
     /// Gets the knowledge-retrieval snippet: on-demand organizational knowledge retrieval.
     /// </summary>
-    public const string Knowledge = "H08_KNOWLEDGE_RETRIEVAL";
+    public const string Knowledge = "KNOWLEDGE_RETRIEVAL";
 }
 
 /// <summary>

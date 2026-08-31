@@ -11,30 +11,36 @@ public sealed class DemoBreakpointsTests
         var snippetValues = GetDemoSnippetValues();
 
         Assert.Equal(
-            ["H08_AGENT_CREATION", "H08_AGENT_SESSION", "H08_FUNCTION_TOOL", "H08_KNOWLEDGE_RETRIEVAL"],
+            ["AGENT_CREATION", "AGENT_SESSION", "FUNCTION_TOOL", "KNOWLEDGE_RETRIEVAL"],
             snippetValues.OrderBy(value => value, StringComparer.Ordinal));
 
-        // Slide position is presentation metadata, not identity: no snippet identifier may embed a
-        // physical slide number (the retired H08_S13_AGENT style).
         foreach (var value in snippetValues)
         {
-            Assert.DoesNotMatch(@"_S\d+(_|$)", value);
+            // Which deck presents a concept is presentation metadata, not identity: identifiers
+            // may not embed a lecture code (the retired H08_/W20_ prefixes) ...
+            Assert.DoesNotMatch(@"^[A-Z]{1,4}\d+_", value);
+            // ... nor a physical slide position (the retired _S13_ and SLIDE_13 styles).
+            Assert.DoesNotMatch(@"(^|_)S\d+(_|$)", value);
+            Assert.DoesNotMatch(@"SLIDE_?\d+", value);
         }
     }
 
     [Fact]
     public void SnippetIdentifiersMatchTheirSourceRegions()
     {
+        // Demo snippet regions are the ALL_CAPS #region markers; ordinary organizational regions
+        // use normal casing and are ignored here.
         var repositoryRoot = FindRepositoryRoot();
         var regionNames = Directory
             .GetFiles(Path.Combine(repositoryRoot, "Services"), "*.cs", SearchOption.AllDirectories)
             .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
             .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
-            .SelectMany(path => Regex.Matches(File.ReadAllText(path), @"#region\s+(H08_\w+)").Select(match => match.Groups[1].Value))
+            .SelectMany(path => Regex.Matches(File.ReadAllText(path), @"#region\s+([A-Z][A-Z0-9_]{2,})\s*$", RegexOptions.Multiline)
+                .Select(match => match.Groups[1].Value.TrimEnd('\r')))
             .ToList();
 
         // Every snippet the registry names has exactly one exported source region, and every
-        // exported region is registered - the two lists cannot drift apart.
+        // exported region is registered - duplicates, orphans, and drift all fail here.
         Assert.Equal(
             GetDemoSnippetValues().OrderBy(value => value, StringComparer.Ordinal),
             regionNames.OrderBy(value => value, StringComparer.Ordinal));
