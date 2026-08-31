@@ -1302,6 +1302,27 @@ svg {
     color: var(--cp-warning);
 }
 
+.skill-loaded,
+.skill-available {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+    padding: 2px 8px;
+    border: 1px solid var(--cp-accent);
+    border-radius: 999px;
+    color: var(--cp-accent);
+    font-size: 0.66rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+}
+
+.skill-available {
+    border-color: var(--cp-border-strong);
+    color: var(--cp-text-muted);
+}
+
 .evidence-detail {
     padding: 0 10px 10px;
     border-top: 1px dashed var(--cp-border);

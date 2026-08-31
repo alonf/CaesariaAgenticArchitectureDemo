@@ -12,6 +12,10 @@ The demo runs as one cumulative application with a presenter-controlled `DemoSta
 - `DemoStage=Memory` — adds case memory: closed investigations are recalled in later sessions as
   explicitly framed **hypotheses** (asking about the L-528 fixture recalls the closed L-417 case).
   Memory is never evidence: live state is still verified and real evidence still searched.
+- `DemoStage=Skills` — adds documented procedures: the agent discovers `skills/*/SKILL.md`,
+  loads one on demand (`load_skill`), and the investigation follows the expert-authored triage
+  guide and the mandated Caesarea Incident Brief format. Edit the markdown, re-run, and the
+  behavior changes — skills are auditable configuration, not code.
 
 `CommandCenter.Api` owns the selected stage. `DemoScenario.Api` reads and changes it through that authoritative
 boundary, so switching stages does not restart the application.

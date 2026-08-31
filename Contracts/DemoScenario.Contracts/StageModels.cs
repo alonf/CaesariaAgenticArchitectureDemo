@@ -31,7 +31,13 @@ public enum DemoStage
     /// The Operations Agent recalls its own closed cases across sessions as hypotheses. Recalled
     /// memory is never evidence: live state must still be verified and real evidence searched.
     /// </summary>
-    Memory
+    Memory,
+
+    /// <summary>
+    /// The Operations Agent discovers documented procedures (skills) and loads them on demand, so
+    /// investigations follow the organization's expert-authored, auditable procedure.
+    /// </summary>
+    Skills
 }
 
 /// <summary>

@@ -36,6 +36,11 @@ public static class DemoSnippets
     /// Gets the case-memory snippet: recalling the agent's own closed cases as hypotheses.
     /// </summary>
     public const string CaseMemory = "CASE_MEMORY";
+
+    /// <summary>
+    /// Gets the agent-skills snippet: discovering and loading documented procedures on demand.
+    /// </summary>
+    public const string Skills = "AGENT_SKILLS";
 }
 
 /// <summary>

@@ -54,6 +54,15 @@ builder.Services.AddSingleton<ICaseMemoryStore, InMemoryCaseMemoryStore>();
 builder.Services.AddSingleton<IOperationsAgent>(serviceProvider =>
 {
     var options = serviceProvider.GetRequiredService<IOptions<OperationsAgentApiOptions>>().Value;
+    var skillsDirectory = SkillCatalog.ResolveDirectory(options.SkillsDirectory);
+
+    if (skillsDirectory is null)
+    {
+        OperationsAgentEndpointLog.SkillsDirectoryMissing(
+            serviceProvider.GetRequiredService<ILogger<FoundryOperationsAgent>>(),
+            options.SkillsDirectory);
+    }
+
     return new FoundryOperationsAgent(
         serviceProvider.GetRequiredService<AIProjectClient>(),
         serviceProvider.GetRequiredService<IEnergyReadGateway>(),
@@ -61,6 +70,7 @@ builder.Services.AddSingleton<IOperationsAgent>(serviceProvider =>
         serviceProvider.GetRequiredService<IWorkKnowledgeSearch>(),
         serviceProvider.GetRequiredService<ICaseMemoryStore>(),
         serviceProvider.GetRequiredService<DemoStageGate>(),
+        skillsDirectory,
         options.ModelDeploymentName,
         options.AgentName,
         options.MaxFunctionIterations,
@@ -80,7 +90,7 @@ app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.UseHttpsRedirection();
 app.MapDefaultEndpoints();
-app.MapDemoBreakpoints(DemoSnippets.AgentCreation, DemoSnippets.FunctionTool, DemoSnippets.Session, DemoSnippets.Knowledge, DemoSnippets.CaseMemory);
+app.MapDemoBreakpoints(DemoSnippets.AgentCreation, DemoSnippets.FunctionTool, DemoSnippets.Session, DemoSnippets.Knowledge, DemoSnippets.CaseMemory, DemoSnippets.Skills);
 
 var operationsAgent = app.MapGroup("/api/operations-agent")
     .WithTags("Operations Agent");
@@ -233,6 +243,7 @@ static async Task<IResult> AskAsync(
             reply.ToolCalls,
             reply.Evidence,
             reply.RecalledCases,
+            reply.Skills,
             reply.ModelRoundTrips,
             correlationId));
     }

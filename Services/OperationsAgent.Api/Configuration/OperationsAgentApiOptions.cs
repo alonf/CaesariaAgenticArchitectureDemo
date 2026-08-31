@@ -53,6 +53,14 @@ internal sealed class OperationsAgentApiOptions : IValidatableObject
     [Range(10, 180)]
     public int RequestTimeoutSeconds { get; set; } = 90;
 
+    /// <summary>
+    /// Gets or sets the directory holding the agent's skills (SKILL.md folders). A relative value
+    /// is resolved against the repository root so the presenter can live-edit the source files;
+    /// when the directory cannot be located the Skills stage runs without skills.
+    /// </summary>
+    [Required]
+    public string SkillsDirectory { get; set; } = "skills";
+
     /// <inheritdoc />
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {

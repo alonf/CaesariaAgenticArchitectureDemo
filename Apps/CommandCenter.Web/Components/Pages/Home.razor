@@ -415,6 +415,31 @@
                                 </div>
                             }
 
+                            @if (response.Skills.Count > 0)
+                            {
+                                <div class="agent-summary">
+                                    <small>Procedure</small>
+                                    <ul class="agent-evidence-list">
+                                        @foreach (var skill in response.Skills)
+                                        {
+                                            <li class="agent-evidence-card">
+                                                <button type="button" class="evidence-toggle" @onclick="() => ToggleEvidence(skill.Name)">
+                                                    <span class="evidence-id">@skill.Name</span>
+                                                    <span class="@(skill.Loaded ? "skill-loaded" : "skill-available")">@(skill.Loaded ? "Loaded" : "Available")</span>
+                                                    @if (string.Equals(_expandedEvidenceId, skill.Name, StringComparison.Ordinal))
+                                                    {
+                                                        <span class="evidence-title">@skill.Description</span>
+                                                    }
+                                                </button>
+                                            </li>
+                                        }
+                                    </ul>
+                                    <p class="agent-footnote">
+                                        Documented procedures the agent discovers and loads on demand. Versioned, expert-authored, auditable.
+                                    </p>
+                                </div>
+                            }
+
                             @if (response.RecalledCases.Count > 0)
                             {
                                 <div class="agent-summary">
@@ -458,6 +483,14 @@
                             <p class="agent-footnote">
                                 Session @ShortCorrelation(_agentSessionId) - conversational context, never authoritative state.
                             </p>
+                        }
+
+                        @if (IsSkillsStage)
+                        {
+                            <button class="action-button investigate-button @(_agentBusy ? "busy" : string.Empty)" @onclick="InvestigateAsync" disabled="@_agentBusy">
+                                <span>@(_agentBusy ? "Investigating..." : $"Investigate {_snapshot.AssetId} (new session)")</span>
+                                <svg viewBox="0 0 24 24"><path d="M9 3h6l1 4h4l-2 6h-4l-1 8h-2l-1-8H6L4 7h4l1-4Z" /></svg>
+                            </button>
                         }
 
                         @if (IsMemoryStage)
@@ -513,6 +546,7 @@
     private bool IsAgentStage => _snapshot?.CurrentStage.Id >= DemoStage.InvestigationAgent;
     private bool IsSessionStage => _snapshot?.CurrentStage.Id >= DemoStage.Session;
     private bool IsMemoryStage => _snapshot?.CurrentStage.Id >= DemoStage.Memory;
+    private bool IsSkillsStage => _snapshot?.CurrentStage.Id >= DemoStage.Skills;
     private string CloseCaseLabel => (_caseBusy, _caseClosed) switch
     {
         (true, _) => "Recording...",
@@ -641,6 +675,10 @@
 
     private Task AskSecondAssetAsync() => AskAgentCoreAsync(
         $"Why is streetlight {DemoAssets.SecondStreetlightAssetId} on during daylight?",
+        sessionId: null);
+
+    private Task InvestigateAsync() => AskAgentCoreAsync(
+        $"Investigate streetlight {_snapshot?.AssetId ?? WebOptions.Value.AssetId}.",
         sessionId: null);
 
     private async Task CloseCaseAsync()

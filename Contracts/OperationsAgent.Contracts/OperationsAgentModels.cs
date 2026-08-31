@@ -22,7 +22,20 @@ public static class OperationsAgentToolNames
 {
     /// <summary>The on-demand organizational work-knowledge search tool.</summary>
     public const string SearchWorkKnowledge = "search_work_knowledge";
+
+    /// <summary>The skill-loading tool contributed by the agent skills provider.</summary>
+    public const string LoadSkill = "load_skill";
 }
+
+/// <summary>
+/// One skill the agent could discover during a run. Skills are documented procedures - versioned,
+/// expert-authored, auditable text - that the agent loads on demand; the trace shows which were
+/// advertised and which the model actually loaded.
+/// </summary>
+/// <param name="Name">The stable skill name, for example streetlight-investigation.</param>
+/// <param name="Description">The advertised skill description.</param>
+/// <param name="Loaded">Whether the model loaded the full skill body during the run.</param>
+public sealed record OperationsAgentSkill(string Name, string Description, bool Loaded);
 
 /// <summary>
 /// One piece of work evidence the knowledge search returned during an agent run. This is a
@@ -85,6 +98,7 @@ public sealed record OperationsAgentCaseMemoryStatus(IReadOnlyList<OperationsAge
 /// <param name="ToolCalls">The tools the model invoked during the run, in order.</param>
 /// <param name="Evidence">The work evidence the knowledge search returned during the run, deduplicated by identifier.</param>
 /// <param name="RecalledCases">The closed cases the agent's memory recalled during the run.</param>
+/// <param name="Skills">The skills advertised to the agent during the run and whether each was loaded.</param>
 /// <param name="ModelRoundTrips">The number of model round trips the run required.</param>
 /// <param name="CorrelationId">The correlation identifier spanning the request and tool call.</param>
 public sealed record OperationsAgentResponse(
@@ -94,5 +108,6 @@ public sealed record OperationsAgentResponse(
     IReadOnlyList<OperationsAgentToolCall> ToolCalls,
     IReadOnlyList<OperationsAgentEvidence> Evidence,
     IReadOnlyList<OperationsAgentRecalledCase> RecalledCases,
+    IReadOnlyList<OperationsAgentSkill> Skills,
     int ModelRoundTrips,
     string CorrelationId);

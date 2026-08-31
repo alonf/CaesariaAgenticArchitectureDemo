@@ -31,7 +31,12 @@ public sealed class StageCatalog
             DemoStage.Memory,
             "Memory",
             "The agent recalls its own closed cases across sessions as hypotheses. Memory is never evidence: live state is still verified and real evidence still searched.",
-            ["Deterministic scenarios", "Manual operator actions", "Caesarea Operations Agent", "get_streetlight_state tool", "AgentSession follow-ups", "search_work_knowledge retrieval", "Retrieved-evidence trace with citation badges", "Case-memory recall (hypotheses)"])
+            ["Deterministic scenarios", "Manual operator actions", "Caesarea Operations Agent", "get_streetlight_state tool", "AgentSession follow-ups", "search_work_knowledge retrieval", "Retrieved-evidence trace with citation badges", "Case-memory recall (hypotheses)"]),
+        new(
+            DemoStage.Skills,
+            "Skills",
+            "The agent discovers documented procedures and loads them on demand (load_skill), so an investigation follows the organization's expert-authored, auditable procedure - including the mandated incident-brief format.",
+            ["Deterministic scenarios", "Manual operator actions", "Caesarea Operations Agent", "get_streetlight_state tool", "AgentSession follow-ups", "search_work_knowledge retrieval", "Retrieved-evidence trace with citation badges", "Case-memory recall (hypotheses)", "Skill discovery and load_skill procedure"])
     ];
 
     /// <summary>

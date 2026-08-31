@@ -12,6 +12,12 @@ internal static partial class OperationsAgentEndpointLog
     internal static partial void AuthenticationFailed(ILogger logger, string correlationId, Exception exception);
 
     [LoggerMessage(
+        EventId = 2610,
+        Level = LogLevel.Warning,
+        Message = "Skills directory '{SkillsDirectory}' could not be located; the Skills stage will run without skills.")]
+    internal static partial void SkillsDirectoryMissing(ILogger logger, string skillsDirectory);
+
+    [LoggerMessage(
         EventId = 2451,
         Level = LogLevel.Warning,
         Message = "Operations Agent request exceeded its execution budget. CorrelationId: {CorrelationId}.")]

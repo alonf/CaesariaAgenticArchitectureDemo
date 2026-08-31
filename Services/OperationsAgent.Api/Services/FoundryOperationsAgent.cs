@@ -15,6 +15,7 @@ public sealed partial class FoundryOperationsAgent(
     IWorkKnowledgeSearch workKnowledgeSearch,
     ICaseMemoryStore caseMemoryStore,
     DemoStageGate stageGate,
+    string? skillsDirectory,
     string modelDeploymentName,
     string agentName,
     int maxFunctionIterations,
@@ -37,6 +38,7 @@ public sealed partial class FoundryOperationsAgent(
     private readonly AgentSessionStore _sessionStore = sessionStore ?? throw new ArgumentNullException(nameof(sessionStore));
     private readonly IWorkKnowledgeSearch _workKnowledgeSearch = workKnowledgeSearch ?? throw new ArgumentNullException(nameof(workKnowledgeSearch));
     private readonly ICaseMemoryStore _caseMemoryStore = caseMemoryStore ?? throw new ArgumentNullException(nameof(caseMemoryStore));
+    private readonly string? _skillsDirectory = skillsDirectory;
     private readonly DemoStageGate _stageGate = stageGate ?? throw new ArgumentNullException(nameof(stageGate));
     private readonly string _modelDeploymentName = string.IsNullOrWhiteSpace(modelDeploymentName)
         ? throw new ArgumentException("A model deployment name is required.", nameof(modelDeploymentName))
@@ -122,6 +124,23 @@ public sealed partial class FoundryOperationsAgent(
         }
         #endregion
 
+        #region AGENT_SKILLS
+        DemoBreakpoints.Pause(DemoSnippets.Skills);
+
+        AgentSkillsProvider? skills = null;
+
+        if (_stageGate.GetCurrent().Id >= DemoStage.Skills && _skillsDirectory is not null)
+        {
+            // Progressive disclosure: skill names/descriptions are advertised in the system
+            // prompt; the model loads a full procedure on demand through the load_skill tool.
+            // Approval for load_skill is disabled here and returns in the ToolApproval stage.
+            skills = new AgentSkillsProvider(
+                _skillsDirectory,
+                options: new AgentSkillsProviderOptions { DisableLoadSkillApproval = true },
+                loggerFactory: _loggerFactory);
+        }
+        #endregion
+
         List<AIContextProvider> contextProviders = [];
 
         if (workKnowledge is not null)
@@ -132,6 +151,11 @@ public sealed partial class FoundryOperationsAgent(
         if (caseMemory is not null)
         {
             contextProviders.Add(caseMemory);
+        }
+
+        if (skills is not null)
+        {
+            contextProviders.Add(skills);
         }
 
         #region AGENT_CREATION
@@ -228,7 +252,17 @@ public sealed partial class FoundryOperationsAgent(
                         item.CaseId, item.AssetId, item.Symptom, item.Resolution, item.ClosedAt))
             ];
 
-            return new OperationsAgentAnswer(response.Text, resolvedSessionId, toolCalls, evidence, recalled, modelFlightRecorder?.Exchanges.Count ?? 0);
+            // Skills trace: which procedures were advertised this run, and which the model loaded
+            // (a load_skill invocation naming the skill appears in the recorded tool calls).
+            IReadOnlyList<OperationsAgentSkill> advertisedSkills = skills is null
+                ? []
+                : [.. SkillCatalog.Describe(_skillsDirectory).Select(skill => new OperationsAgentSkill(
+                    skill.Name,
+                    skill.Description,
+                    toolCalls.Any(call => call.ToolName == OperationsAgentToolNames.LoadSkill
+                        && call.Arguments.Contains(skill.Name, StringComparison.OrdinalIgnoreCase))))];
+
+            return new OperationsAgentAnswer(response.Text, resolvedSessionId, toolCalls, evidence, recalled, advertisedSkills, modelFlightRecorder?.Exchanges.Count ?? 0);
         }
         catch (OperationCanceledException exception) when (!cancellationToken.IsCancellationRequested)
         {

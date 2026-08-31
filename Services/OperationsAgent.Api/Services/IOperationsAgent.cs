@@ -23,6 +23,7 @@ public interface IOperationsAgent
 /// <param name="ToolCalls">The tools the model invoked during the run, in order.</param>
 /// <param name="Evidence">The work evidence the knowledge search returned during the run, deduplicated by identifier.</param>
 /// <param name="RecalledCases">The closed cases the agent's memory recalled during the run.</param>
+/// <param name="Skills">The skills advertised to the agent during the run and whether each was loaded.</param>
 /// <param name="ModelRoundTrips">The number of model round trips the run required.</param>
 public sealed record OperationsAgentAnswer(
     string Answer,
@@ -30,4 +31,5 @@ public sealed record OperationsAgentAnswer(
     IReadOnlyList<OperationsAgentToolCall> ToolCalls,
     IReadOnlyList<OperationsAgentEvidence> Evidence,
     IReadOnlyList<OperationsAgentRecalledCase> RecalledCases,
+    IReadOnlyList<OperationsAgentSkill> Skills,
     int ModelRoundTrips);
