@@ -44,7 +44,14 @@ public enum DemoStage
     /// own boundary: the agent discovers it at runtime instead of compiling it in. Same
     /// capability, new boundary - the presenter toggles between the local function and MCP.
     /// </summary>
-    McpTools
+    McpTools,
+
+    /// <summary>
+    /// The first write-capable tool arrives: restore_scheduled_mode over MCP, using Multi
+    /// Round-Trip Requests (MRTR). The tool pauses input-required for explicit operator approval
+    /// and produces no side effect before the input arrives.
+    /// </summary>
+    InteractiveInput
 }
 
 /// <summary>

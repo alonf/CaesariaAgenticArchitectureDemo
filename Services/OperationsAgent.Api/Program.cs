@@ -52,6 +52,7 @@ builder.Services.AddSingleton<SimulatedWorkKnowledgeSearch>();
 builder.Services.AddSingleton<IWorkKnowledgeSearch>(serviceProvider => serviceProvider.GetRequiredService<SimulatedWorkKnowledgeSearch>());
 builder.Services.AddSingleton<ICaseMemoryStore, InMemoryCaseMemoryStore>();
 builder.Services.AddSingleton<ToolSourceSwitch>();
+builder.Services.AddSingleton<PendingApprovalStore>();
 // The HTTP client the MCP transport rides on; service discovery and the standard resilience
 // pipeline apply like any other outbound client.
 builder.Services.AddHttpClient("energyhub-mcp", (serviceProvider, client) =>
@@ -79,6 +80,7 @@ builder.Services.AddSingleton<IOperationsAgent>(serviceProvider =>
         serviceProvider.GetRequiredService<ICaseMemoryStore>(),
         serviceProvider.GetRequiredService<DemoStageGate>(),
         serviceProvider.GetRequiredService<ToolSourceSwitch>(),
+        serviceProvider.GetRequiredService<PendingApprovalStore>(),
         serviceProvider.GetRequiredService<IHttpClientFactory>(),
         McpEndpoint.Create(options.EnergyHubBaseUri),
         skillsDirectory,
@@ -174,6 +176,21 @@ cases.MapPost("/clear", (ICaseMemoryStore store) =>
     store.Clear();
     return TypedResults.Ok(CreateCaseMemoryStatus(store));
 });
+
+// Interactive-input bridge: questions a paused MCP tool asked the operator (MRTR). The Command
+// Center lists them and posts the decision, which releases the paused tool call.
+var approvals = app.MapGroup("/api/operations-agent/approvals")
+    .WithTags("Interactive Input");
+
+approvals.MapGet("/", (PendingApprovalStore store) => TypedResults.Ok(store.GetAll()));
+approvals.MapPost("/{id}", (HttpContext context, string id, OperationsAgentApprovalDecision decision, PendingApprovalStore store) =>
+    store.TryRespond(id, decision.Approved)
+        ? Results.Ok()
+        : Results.NotFound(ProblemDetailsFactory.Create(
+            StatusCodes.Status404NotFound,
+            "Pending approval not found",
+            $"No interactive-input request with id {id} is awaiting a decision.",
+            context.GetCorrelationId())));
 
 // Presenter toggle: where the streetlight tool comes from. Available only once the McpTools
 // stage introduces the mechanism; the flip itself is the lecture beat.

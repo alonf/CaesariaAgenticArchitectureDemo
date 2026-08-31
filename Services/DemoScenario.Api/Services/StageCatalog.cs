@@ -41,7 +41,12 @@ public sealed class StageCatalog
             DemoStage.McpTools,
             "McpTools",
             "The streetlight tool can be served over the Model Context Protocol from the Energy Hub's own boundary. Flip Tools: LOCAL to MCP and re-ask: same capability, same behavior, new boundary.",
-            ["Deterministic scenarios", "Manual operator actions", "Caesarea Operations Agent", "get_streetlight_state tool", "AgentSession follow-ups", "search_work_knowledge retrieval", "Retrieved-evidence trace with citation badges", "Case-memory recall (hypotheses)", "Skill discovery and load_skill procedure", "Tools: LOCAL / MCP toggle (runtime tool discovery)"])
+            ["Deterministic scenarios", "Manual operator actions", "Caesarea Operations Agent", "get_streetlight_state tool", "AgentSession follow-ups", "search_work_knowledge retrieval", "Retrieved-evidence trace with citation badges", "Case-memory recall (hypotheses)", "Skill discovery and load_skill procedure", "Tools: LOCAL / MCP toggle (runtime tool discovery)"]),
+        new(
+            DemoStage.InteractiveInput,
+            "InteractiveInput",
+            "The first write-capable tool: restore_scheduled_mode over MCP with Multi Round-Trip Requests. The tool pauses input-required for explicit operator approval - no side effect before the input arrives. Requires Tools: MCP.",
+            ["Deterministic scenarios", "Manual operator actions", "Caesarea Operations Agent", "get_streetlight_state tool", "AgentSession follow-ups", "search_work_knowledge retrieval", "Retrieved-evidence trace with citation badges", "Case-memory recall (hypotheses)", "Skill discovery and load_skill procedure", "Tools: LOCAL / MCP toggle (runtime tool discovery)", "restore_scheduled_mode with MRTR operator approval"])
     ];
 
     /// <summary>

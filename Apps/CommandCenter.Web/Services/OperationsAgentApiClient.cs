@@ -49,6 +49,32 @@ internal sealed class OperationsAgentApiClient
         return new OperationsAgentOutcome(false, null, problemDetail ?? "The Operations Agent request could not be completed.");
     }
 
+    public async Task<IReadOnlyList<OperationsAgentPendingApproval>> GetPendingApprovalsAsync(CancellationToken cancellationToken)
+    {
+        var correlationId = CorrelationIds.Create();
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/operations-agent/approvals/");
+        request.Headers.Add(CorrelationHeaderNames.XCorrelationId, correlationId);
+        using var response = await _httpClient.SendAsync(request, cancellationToken);
+
+        response.EnsureSuccessStatusCode();
+
+        return await response.Content.ReadFromJsonAsync<IReadOnlyList<OperationsAgentPendingApproval>>(SerializerOptions, cancellationToken)
+            ?? [];
+    }
+
+    public async Task RespondToApprovalAsync(string approvalId, bool approved, CancellationToken cancellationToken)
+    {
+        var correlationId = CorrelationIds.Create();
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"/api/operations-agent/approvals/{Uri.EscapeDataString(approvalId)}")
+        {
+            Content = JsonContent.Create(new OperationsAgentApprovalDecision(approved), options: SerializerOptions)
+        };
+        request.Headers.Add(CorrelationHeaderNames.XCorrelationId, correlationId);
+        using var response = await _httpClient.SendAsync(request, cancellationToken);
+
+        response.EnsureSuccessStatusCode();
+    }
+
     public async Task<OperationsAgentRecalledCase> CloseCaseAsync(
         string assetId,
         string symptom,

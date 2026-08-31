@@ -51,6 +51,12 @@ public static class DemoSnippets
     /// Gets the MCP client snippet: discovering the remote tool instead of compiling it in.
     /// </summary>
     public const string McpClient = "MCP_CLIENT";
+
+    /// <summary>
+    /// Gets the multi-round-trip-request snippet: a tool pausing input-required for operator
+    /// approval before any side effect.
+    /// </summary>
+    public const string InteractiveInput = "MULTI_ROUND_TRIP_REQUEST";
 }
 
 /// <summary>

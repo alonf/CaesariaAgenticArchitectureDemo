@@ -25,7 +25,30 @@ public static class OperationsAgentToolNames
 
     /// <summary>The skill-loading tool contributed by the agent skills provider.</summary>
     public const string LoadSkill = "load_skill";
+
+    /// <summary>The MCP write tool that restores a streetlight to scheduled mode after approval.</summary>
+    public const string RestoreScheduledMode = "restore_scheduled_mode";
 }
+
+/// <summary>
+/// One interactive-input request awaiting the operator: a tool paused mid-execution (MCP MRTR)
+/// and will not produce any side effect until the operator answers.
+/// </summary>
+/// <param name="Id">The pending approval identifier.</param>
+/// <param name="Message">The question the tool asked the operator.</param>
+/// <param name="RequestedAt">When the tool paused for input.</param>
+/// <param name="CorrelationId">The correlation identifier of the agent run that paused.</param>
+public sealed record OperationsAgentPendingApproval(
+    string Id,
+    string Message,
+    DateTimeOffset RequestedAt,
+    string CorrelationId);
+
+/// <summary>
+/// The operator's answer to a pending interactive-input request.
+/// </summary>
+/// <param name="Approved"><see langword="true"/> to let the paused tool proceed; <see langword="false"/> to cancel it.</param>
+public sealed record OperationsAgentApprovalDecision(bool Approved);
 
 /// <summary>
 /// Identifies where the agent's streetlight tool comes from for a run.

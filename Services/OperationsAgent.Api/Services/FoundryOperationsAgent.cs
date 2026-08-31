@@ -1,8 +1,10 @@
 using System.Diagnostics;
+using System.Text.Json;
 using Azure.AI.Projects;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using ModelContextProtocol.Client;
+using ModelContextProtocol.Protocol;
 
 namespace OperationsAgent.Api.Services;
 
@@ -17,6 +19,7 @@ public sealed partial class FoundryOperationsAgent(
     ICaseMemoryStore caseMemoryStore,
     DemoStageGate stageGate,
     ToolSourceSwitch toolSourceSwitch,
+    PendingApprovalStore pendingApprovalStore,
     IHttpClientFactory httpClientFactory,
     Uri mcpEndpoint,
     string? skillsDirectory,
@@ -43,6 +46,7 @@ public sealed partial class FoundryOperationsAgent(
     private readonly IWorkKnowledgeSearch _workKnowledgeSearch = workKnowledgeSearch ?? throw new ArgumentNullException(nameof(workKnowledgeSearch));
     private readonly ICaseMemoryStore _caseMemoryStore = caseMemoryStore ?? throw new ArgumentNullException(nameof(caseMemoryStore));
     private readonly ToolSourceSwitch _toolSourceSwitch = toolSourceSwitch ?? throw new ArgumentNullException(nameof(toolSourceSwitch));
+    private readonly PendingApprovalStore _pendingApprovalStore = pendingApprovalStore ?? throw new ArgumentNullException(nameof(pendingApprovalStore));
     private readonly IHttpClientFactory _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
     private readonly Uri _mcpEndpoint = mcpEndpoint ?? throw new ArgumentNullException(nameof(mcpEndpoint));
     private readonly string? _skillsDirectory = skillsDirectory;
@@ -163,25 +167,60 @@ public sealed partial class FoundryOperationsAgent(
             ? _toolSourceSwitch.Current
             : OperationsAgentToolSource.Local;
         McpClient? mcpClient = null;
-        AITool streetlightTool;
+        List<AITool> agentTools = [];
 
         if (toolSource == OperationsAgentToolSource.Mcp)
         {
             var mcpHttpClient = _httpClientFactory.CreateClient("energyhub-mcp");
             mcpHttpClient.DefaultRequestHeaders.Add(CorrelationHeaderNames.XCorrelationId, correlationId);
+
+            // When a remote tool pauses input-required (MRTR), this handler carries the question
+            // to the operator and the paused call resumes with the answer - the tool produces no
+            // side effect until then.
+            var mcpOptions = new McpClientOptions
+            {
+                Handlers = new McpClientHandlers
+                {
+                    ElicitationHandler = async (elicitation, elicitationCancellation) =>
+                    {
+                        var (_, decision) = _pendingApprovalStore.Create(
+                            elicitation?.Message ?? "A remote tool requests operator approval.",
+                            correlationId,
+                            elicitationCancellation);
+                        var approved = await decision;
+                        return new ElicitResult
+                        {
+                            Action = "accept",
+                            Content = new Dictionary<string, JsonElement>
+                            {
+                                ["approved"] = JsonSerializer.SerializeToElement(approved)
+                            }
+                        };
+                    }
+                }
+            };
+
             mcpClient = await McpClient.CreateAsync(
                 new HttpClientTransport(new HttpClientTransportOptions { Endpoint = _mcpEndpoint }, mcpHttpClient, _loggerFactory, ownsHttpClient: true),
+                mcpOptions,
                 loggerFactory: _loggerFactory,
                 cancellationToken: cancellationToken);
             var discoveredTools = await mcpClient.ListToolsAsync(cancellationToken: cancellationToken);
-            streetlightTool = discoveredTools.Single(tool => tool.Name == EnergyTools.StreetlightStateToolName);
+            agentTools.Add(discoveredTools.Single(tool => tool.Name == EnergyTools.StreetlightStateToolName));
+
+            // The write tool joins only at the InteractiveInput stage - and only over MCP, where
+            // the MRTR approval pause guards it.
+            if (currentStage >= DemoStage.InteractiveInput)
+            {
+                agentTools.Add(discoveredTools.Single(tool => tool.Name == OperationsAgentToolNames.RestoreScheduledMode));
+            }
         }
         else
         {
-            streetlightTool = AIFunctionFactory.Create(
+            agentTools.Add(AIFunctionFactory.Create(
                 energyTools.GetStreetlightStateAsync,
                 EnergyTools.StreetlightStateToolName,
-                "Gets the current authoritative operational state of a streetlight.");
+                "Gets the current authoritative operational state of a streetlight."));
         }
         #endregion
 
@@ -213,7 +252,7 @@ public sealed partial class FoundryOperationsAgent(
                 {
                     ModelId = _modelDeploymentName,
                     Instructions = Instructions,
-                    Tools = [streetlightTool]
+                    Tools = [.. agentTools]
                 },
                 // Capabilities join as context providers: knowledge retrieval contributes an
                 // on-demand search tool; case memory contributes trusted hypothesis rules plus

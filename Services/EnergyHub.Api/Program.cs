@@ -22,7 +22,8 @@ builder.Services.AddSingleton<EnergyHubService>();
 // MCP-capable client can discover and invoke it at this boundary.
 builder.Services.AddMcpServer()
     .WithHttpTransport()
-    .WithTools<EnergyMcpTools>();
+    .WithTools<EnergyMcpTools>()
+    .WithTools<EnergyRestoreMcpTool>();
 
 var app = builder.Build();
 
@@ -36,7 +37,7 @@ app.UseStatusCodePages();
 app.UseHttpsRedirection();
 app.MapDefaultEndpoints();
 app.MapMcp("/mcp");
-app.MapDemoBreakpoints(DemoSnippets.McpServer);
+app.MapDemoBreakpoints(DemoSnippets.McpServer, DemoSnippets.InteractiveInput);
 
 var energy = app.MapGroup("/api/energy")
     .WithTags("Energy Hub");

@@ -77,6 +77,7 @@ grows one capability at a time, and each stage maps to a concrete MAF concept:
 | Memory | A hand-written `AIContextProvider` — recalled cases as explicitly framed hypotheses |
 | Skills | `AgentSkillsProvider` — progressive disclosure of documented, auditable procedures |
 | McpTools | MCP server (`ModelContextProtocol.AspNetCore`) + runtime tool discovery (`McpClient`) |
+| InteractiveInput | MCP Multi Round-Trip Requests — `InputRequiredException` + elicitation handler |
 
 Each stage has a build-and-design document under [docs/prompts/](docs/prompts/), the exact
 lecture-slide code lives in named `#region` blocks (see the deck anchors in the docs), and
@@ -104,6 +105,10 @@ The demo runs as one application with a presenter-controlled `DemoStage`:
   Protocol at its own boundary, and a presenter toggle (`Tools: LOCAL / MCP`) switches the agent
   between the compiled-in function and runtime discovery. Same capability, same behavior, new
   boundary.
+- `DemoStage=InteractiveInput` — the first write-capable tool: `restore_scheduled_mode` over MCP
+  with **Multi Round-Trip Requests (MRTR)**. The tool pauses input-required for explicit operator
+  approval and produces no side effect before the input arrives; deny and the state provably
+  does not change.
 
 `CommandCenter.Api` owns the selected stage. `DemoScenario.Api` reads and changes it through that authoritative
 boundary, so switching stages does not restart the application.
@@ -116,9 +121,12 @@ boundary, so switching stages does not restart the application.
 - `DemoScenario.Api` applies synthetic presenter scenarios.
 - `OperationsAgent.Api` hosts one general, read-only **Caesarea Operations Agent**.
 
-The agent has no write tool and no direct SmartPole access. Deterministic Hubs keep operational
-authority at every stage: sessions are context, memory is hypothesis, knowledge is evidence, and
-skills are procedure — the agent's answers cite which is which.
+The agent has no direct SmartPole access, and no write capability below the InteractiveInput
+stage; from that stage on, the single write tool (`restore_scheduled_mode`) exists only over MCP
+and only behind an interactive operator approval — the tool pauses before any side effect.
+Deterministic Hubs keep operational authority at every stage: sessions are context, memory is
+hypothesis, knowledge is evidence, and skills are procedure — the agent's answers cite which is
+which.
 
 ## Configuration
 

@@ -1323,6 +1323,38 @@ svg {
     color: var(--cp-text-muted);
 }
 
+.approval-panel {
+    border-color: var(--cp-warning);
+}
+
+.approval-message {
+    margin: 6px 0;
+    color: var(--cp-text);
+    font-size: 0.88rem;
+    font-weight: 600;
+}
+
+.approval-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.approval-actions .action-button {
+    margin-top: 4px;
+    justify-content: center;
+}
+
+.approval-approve {
+    background: var(--cp-success);
+    border-color: var(--cp-success);
+}
+
+.approval-deny {
+    color: var(--cp-danger);
+    background: var(--cp-surface);
+    border-color: var(--cp-danger);
+}
+
 .tool-source-badge {
     margin-left: 8px;
     padding: 2px 8px;

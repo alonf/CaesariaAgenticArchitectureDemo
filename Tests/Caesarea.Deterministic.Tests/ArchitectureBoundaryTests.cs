@@ -129,6 +129,40 @@ public sealed class ArchitectureBoundaryTests
         Assert.DoesNotContain("Shared.Contracts", sourceText, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void RestoreToolPausesForApprovalBeforeAnySideEffect()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var toolText = File.ReadAllText(Path.Combine(repositoryRoot, "Services", "EnergyHub.Api", "Services", "EnergyMcpTools.cs"));
+
+        // The write tool's no-side-effect-before-input guard: the approval check comes before the
+        // restore call, MRTR support is verified, and the pause is a protocol-level
+        // InputRequiredException - not UI convention.
+        var approvalCheckIndex = toolText.IndexOf("TryGetApproval(context", StringComparison.Ordinal);
+        var restoreCallIndex = toolText.IndexOf("RestoreScheduledModeAsync(assetId", StringComparison.Ordinal);
+
+        Assert.True(approvalCheckIndex >= 0, "The restore tool no longer checks for operator approval.");
+        Assert.True(restoreCallIndex > approvalCheckIndex, "The restore call must be reachable only after the approval check.");
+        Assert.Contains("IsMrtrSupported", toolText, StringComparison.Ordinal);
+        Assert.Contains("InputRequiredException", toolText, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void WriteCapabilityIsStageGatedInTheAgent()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var agentText = File.ReadAllText(Path.Combine(repositoryRoot, "Services", "OperationsAgent.Api", "Services", "FoundryOperationsAgent.cs"));
+
+        // The agent exposes the restore tool only at the InteractiveInput stage and only via MCP
+        // discovery; every earlier stage keeps its read-only truth.
+        var stageGateIndex = agentText.IndexOf("currentStage >= DemoStage.InteractiveInput", StringComparison.Ordinal);
+        var restoreToolIndex = agentText.IndexOf("OperationsAgentToolNames.RestoreScheduledMode", StringComparison.Ordinal);
+
+        Assert.True(stageGateIndex >= 0, "The InteractiveInput stage gate is missing.");
+        Assert.True(restoreToolIndex > stageGateIndex, "The restore tool must be exposed only behind the InteractiveInput stage gate.");
+        Assert.Equal(1, CountOccurrences(agentText, "RestoreScheduledMode"));
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

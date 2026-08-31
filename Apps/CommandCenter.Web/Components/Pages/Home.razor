@@ -503,6 +503,30 @@
                             </button>
                         }
 
+                        @if (IsInteractiveStage)
+                        {
+                            <button class="action-button investigate-button @(_agentBusy ? "busy" : string.Empty)" @onclick="RestoreViaAgentAsync" disabled="@_agentBusy">
+                                <span>@(_agentBusy ? "Working..." : $"Restore {_snapshot.AssetId} to scheduled mode (agent)")</span>
+                                <svg viewBox="0 0 24 24"><path d="M12 5V2L8 6l4 4V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7Z" /></svg>
+                            </button>
+                        }
+
+                        @if (_pendingApprovals.Count > 0)
+                        {
+                            <div class="agent-summary approval-panel">
+                                <small>Operator input required</small>
+                                @foreach (var approval in _pendingApprovals)
+                                {
+                                    <p class="approval-message">@approval.Message</p>
+                                    <div class="approval-actions">
+                                        <button class="action-button approval-approve" @onclick="() => RespondToApprovalAsync(approval.Id, true)">Approve</button>
+                                        <button class="action-button approval-deny" @onclick="() => RespondToApprovalAsync(approval.Id, false)">Deny</button>
+                                    </div>
+                                }
+                                <p class="agent-footnote">The remote tool is paused input-required (MCP MRTR). Nothing changes until you answer.</p>
+                            </div>
+                        }
+
                         @if (IsMemoryStage)
                         {
                             @if (_agentResponse is not null)
@@ -552,12 +576,14 @@
     private string? _answerHtmlSource;
     private string _answerHtml = string.Empty;
     private DemoStage? _lastObservedStage;
+    private IReadOnlyList<OperationsAgentPendingApproval> _pendingApprovals = [];
 
     private string StageName => _snapshot?.CurrentStage.Name ?? Configuration["DemoStage"] ?? "Deterministic";
     private bool IsAgentStage => _snapshot?.CurrentStage.Id >= DemoStage.InvestigationAgent;
     private bool IsSessionStage => _snapshot?.CurrentStage.Id >= DemoStage.Session;
     private bool IsMemoryStage => _snapshot?.CurrentStage.Id >= DemoStage.Memory;
     private bool IsSkillsStage => _snapshot?.CurrentStage.Id >= DemoStage.Skills;
+    private bool IsInteractiveStage => _snapshot?.CurrentStage.Id >= DemoStage.InteractiveInput;
     private string CloseCaseLabel => (_caseBusy, _caseClosed) switch
     {
         (true, _) => "Recording...",
@@ -692,6 +718,53 @@
         $"Investigate streetlight {_snapshot?.AssetId ?? WebOptions.Value.AssetId}.",
         sessionId: null);
 
+    private Task RestoreViaAgentAsync() => AskAgentCoreAsync(
+        $"Restore streetlight {_snapshot?.AssetId ?? WebOptions.Value.AssetId} to scheduled mode.",
+        sessionId: null);
+
+    private async Task RespondToApprovalAsync(string approvalId, bool approved)
+    {
+        try
+        {
+            await OperationsAgentClient.RespondToApprovalAsync(approvalId, approved, CancellationToken.None);
+        }
+        catch (Exception exception)
+        {
+            _agentMessage = $"The approval could not be delivered: {exception.Message}";
+            _agentMessageIsError = true;
+        }
+
+        _pendingApprovals = [.. _pendingApprovals.Where(approval => approval.Id != approvalId)];
+    }
+
+    // While an agent run is in flight, a paused MCP tool may be waiting for the operator; poll the
+    // pending-approvals endpoint so the prompt appears without a page action.
+    private async Task PollApprovalsAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1.5));
+
+            while (await timer.WaitForNextTickAsync(cancellationToken))
+            {
+                var approvals = await OperationsAgentClient.GetPendingApprovalsAsync(cancellationToken);
+                await InvokeAsync(() =>
+                {
+                    _pendingApprovals = approvals;
+                    StateHasChanged();
+                });
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // The agent run finished; the prompt panel is cleared below.
+        }
+        catch (Exception)
+        {
+            // Polling is best-effort UI support; the agent run itself surfaces real failures.
+        }
+    }
+
     private async Task CloseCaseAsync()
     {
         if (_caseBusy || _caseClosed || _agentResponse is not { } response || _snapshot is not { } snapshot)
@@ -750,6 +823,8 @@
         _agentMessage = null;
         _agentMessageIsError = false;
         _lastAgentQuestion = question;
+        using var approvalPolling = new CancellationTokenSource();
+        var approvalPollingTask = PollApprovalsAsync(approvalPolling.Token);
 
         try
         {
@@ -788,6 +863,9 @@
         finally
         {
             _agentBusy = false;
+            await approvalPolling.CancelAsync();
+            await approvalPollingTask;
+            _pendingApprovals = [];
         }
     }
 
