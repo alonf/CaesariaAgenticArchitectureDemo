@@ -203,7 +203,10 @@ public sealed partial class EnergyHubService
 
         lock (_gate)
         {
-            commandRevision = _revision;
+            // Accepting a restore claims a fresh revision, so of two concurrent restores only the
+            // most recently accepted one can commit; the older one reports superseded even when it
+            // completes last.
+            commandRevision = ++_revision;
         }
 
         EnergyHubServiceLog.RestoreRequested(_logger, assetId, correlationId);

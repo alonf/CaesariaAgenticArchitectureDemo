@@ -7,7 +7,7 @@
     --cp-border: #dedede;
     --cp-border-strong: #919191;
     --cp-text: #242424;
-    --cp-text-muted: #5c5c5c;
+    --cp-text-muted: #454545;
     --cp-text-soft: #6f6f6f;
     --cp-accent: #b11f4b;
     --cp-accent-hover: #9a1a41;
@@ -34,7 +34,7 @@ html[data-theme="dark"] {
     --cp-border: #474747;
     --cp-border-strong: #5f5f5f;
     --cp-text: #dedede;
-    --cp-text-muted: #919191;
+    --cp-text-muted: #a6a6a6;
     --cp-text-soft: #b0b0b0;
     --cp-accent: #fd8ea1;
     --cp-accent-hover: #fb7b91;
@@ -126,7 +126,7 @@ svg {
 .section-eyebrow {
     display: block;
     color: var(--cp-text-muted);
-    font-size: 0.7rem;
+    font-size: 0.8rem;
     font-weight: 700;
     letter-spacing: 0.12em;
     text-transform: uppercase;
@@ -151,7 +151,7 @@ svg {
 .status-clock span {
     display: block;
     color: var(--cp-text-muted);
-    font-size: 0.72rem;
+    font-size: 0.82rem;
 }
 
 .status-clock strong {
@@ -167,7 +167,7 @@ svg {
     align-items: center;
     gap: 7px;
     border-radius: 999px;
-    font-size: 0.75rem;
+    font-size: 0.85rem;
     font-weight: 650;
 }
 
@@ -200,7 +200,7 @@ svg {
     color: var(--cp-accent-fg);
     background: var(--cp-accent);
     border-radius: 50%;
-    font-size: 0.75rem;
+    font-size: 0.85rem;
     font-weight: 750;
 }
 
@@ -221,7 +221,7 @@ svg {
     border: 0;
     border-bottom: 3px solid transparent;
     cursor: default;
-    font-size: 0.82rem;
+    font-size: 0.9rem;
 }
 
 .workspace-tab.active {
@@ -300,7 +300,7 @@ svg {
     justify-content: space-between;
     gap: 12px;
     color: var(--cp-text);
-    font-size: 0.8rem;
+    font-size: 0.88rem;
     font-weight: 700;
     letter-spacing: 0.04em;
     text-transform: uppercase;
@@ -308,7 +308,7 @@ svg {
 
 .section-title small {
     color: var(--cp-text-muted);
-    font-size: 0.68rem;
+    font-size: 0.78rem;
     font-weight: 500;
     letter-spacing: normal;
     text-transform: none;
@@ -352,13 +352,13 @@ svg {
 }
 
 .hub-copy strong {
-    font-size: 0.82rem;
+    font-size: 0.9rem;
 }
 
 .hub-copy small {
     margin-top: 2px;
     color: var(--cp-text-muted);
-    font-size: 0.68rem;
+    font-size: 0.78rem;
 }
 
 .hub-state {
@@ -393,7 +393,7 @@ svg {
     justify-content: space-between;
     gap: 12px;
     background: var(--cp-surface);
-    font-size: 0.75rem;
+    font-size: 0.85rem;
 }
 
 .metric-row span {
@@ -430,7 +430,7 @@ svg {
 .asset-identity span {
     margin-top: 2px;
     color: var(--cp-text-muted);
-    font-size: 0.72rem;
+    font-size: 0.82rem;
 }
 
 .compact-facts,
@@ -450,13 +450,13 @@ svg {
 .compact-facts dt,
 .incident-facts dt {
     color: var(--cp-text-muted);
-    font-size: 0.72rem;
+    font-size: 0.82rem;
 }
 
 .compact-facts dd,
 .incident-facts dd {
     margin: 0;
-    font-size: 0.72rem;
+    font-size: 0.82rem;
     font-weight: 650;
 }
 
@@ -505,7 +505,7 @@ svg {
 
 .updated-label {
     color: var(--cp-text-muted);
-    font-size: 0.72rem;
+    font-size: 0.82rem;
 }
 
 .icon-button {
@@ -585,7 +585,7 @@ svg {
 .map-label {
     position: absolute;
     color: var(--cp-text-muted);
-    font-size: 0.72rem;
+    font-size: 0.82rem;
     font-weight: 650;
     letter-spacing: 0.06em;
     text-transform: uppercase;
@@ -665,13 +665,13 @@ svg {
 
 .marker-card strong {
     font-family: Consolas, "Courier New", Courier, monospace;
-    font-size: 0.85rem;
+    font-size: 0.92rem;
 }
 
 .marker-card small {
     margin-top: 2px;
     color: var(--cp-text-muted);
-    font-size: 0.65rem;
+    font-size: 0.74rem;
 }
 
 .context-marker {
@@ -743,7 +743,7 @@ svg {
     align-items: center;
     gap: 6px;
     color: var(--cp-accent);
-    font-size: 0.72rem;
+    font-size: 0.82rem;
     font-weight: 750;
     letter-spacing: 0.04em;
     text-transform: uppercase;
@@ -769,7 +769,7 @@ svg {
 .customer-report-pin small {
     display: block;
     color: var(--cp-text-muted);
-    font-size: 0.7rem;
+    font-size: 0.8rem;
 }
 
 .map-legend {
@@ -827,13 +827,13 @@ svg {
 
 .event-facts span {
     color: var(--cp-text-muted);
-    font-size: 0.65rem;
+    font-size: 0.74rem;
     text-transform: uppercase;
 }
 
 .event-facts strong {
     margin-top: 2px;
-    font-size: 0.85rem;
+    font-size: 0.92rem;
 }
 
 .severity-badge {
@@ -868,7 +868,7 @@ svg {
 }
 
 .incident-empty strong {
-    font-size: 0.82rem;
+    font-size: 0.9rem;
 }
 
 .incident-empty p,
@@ -876,7 +876,7 @@ svg {
 .workflow-note {
     margin: 6px 0 0;
     color: var(--cp-text-muted);
-    font-size: 0.72rem;
+    font-size: 0.82rem;
     line-height: 1.45;
 }
 
@@ -890,7 +890,7 @@ svg {
 .incident-id {
     color: var(--cp-warning);
     font-family: Consolas, "Courier New", Courier, monospace;
-    font-size: 0.7rem;
+    font-size: 0.8rem;
     font-weight: 700;
 }
 
@@ -930,7 +930,7 @@ svg {
     background: var(--cp-surface);
     border: 1px solid var(--cp-border);
     border-radius: 50%;
-    font-size: 0.7rem;
+    font-size: 0.8rem;
     font-style: normal;
     font-weight: 700;
 }
@@ -953,7 +953,7 @@ svg {
 }
 
 .workflow-step strong {
-    font-size: 0.78rem;
+    font-size: 0.86rem;
 }
 
 .workflow-step small {
@@ -975,7 +975,7 @@ svg {
     border: 1px solid var(--cp-accent);
     border-radius: 0.625rem;
     cursor: pointer;
-    font-size: 0.78rem;
+    font-size: 0.86rem;
     font-weight: 700;
 }
 
@@ -1014,7 +1014,7 @@ svg {
 }
 
 .timeline-heading strong {
-    font-size: 0.73rem;
+    font-size: 0.82rem;
 }
 
 .timeline-heading time,
@@ -1032,7 +1032,7 @@ svg {
 
 .timeline-empty {
     color: var(--cp-text-muted);
-    font-size: 0.72rem;
+    font-size: 0.82rem;
 }
 
 .investigation-rail {
@@ -1052,7 +1052,7 @@ svg {
     background: var(--cp-surface-soft);
     border: 1px solid var(--cp-border);
     border-radius: 999px;
-    font-size: 0.65rem;
+    font-size: 0.74rem;
     font-weight: 700;
     text-transform: uppercase;
 }
@@ -1092,12 +1092,12 @@ svg {
 
 .agent-identity strong {
     display: block;
-    font-size: 0.82rem;
+    font-size: 0.9rem;
 }
 
 .agent-identity small {
     color: var(--cp-text-muted);
-    font-size: 0.68rem;
+    font-size: 0.78rem;
 }
 
 .investigate-button {
@@ -1107,7 +1107,7 @@ svg {
 
 .agent-message {
     margin: 10px 0 0;
-    font-size: 0.72rem;
+    font-size: 0.82rem;
     color: var(--cp-text-muted);
 }
 
@@ -1122,7 +1122,7 @@ svg {
 .agent-summary p {
     margin: 0;
     color: var(--cp-text);
-    font-size: 0.75rem;
+    font-size: 0.85rem;
     line-height: 1.45;
 }
 
@@ -1163,7 +1163,7 @@ svg {
     grid-column: 1;
     grid-row: 1;
     font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
-    font-size: 0.72rem;
+    font-size: 0.82rem;
     font-weight: 700;
     color: var(--cp-accent);
     white-space: nowrap;
@@ -1173,7 +1173,7 @@ svg {
     grid-column: 1 / -1;
     grid-row: 2;
     color: var(--cp-text);
-    font-size: 0.72rem;
+    font-size: 0.82rem;
 }
 
 .evidence-cited,
@@ -1185,7 +1185,7 @@ svg {
     border: 1px solid var(--cp-success);
     border-radius: 999px;
     color: var(--cp-success);
-    font-size: 0.6rem;
+    font-size: 0.7rem;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -1207,18 +1207,18 @@ svg {
 .evidence-detail p {
     margin: 8px 0 0;
     color: var(--cp-text);
-    font-size: 0.72rem;
+    font-size: 0.82rem;
     line-height: 1.5;
 }
 
 .evidence-detail small {
     color: var(--cp-text-muted);
-    font-size: 0.63rem;
+    font-size: 0.72rem;
 }
 
 .evidence-detail a {
     color: var(--cp-accent);
-    font-size: 0.68rem;
+    font-size: 0.78rem;
 }
 
 .agent-subsection {
@@ -1231,7 +1231,7 @@ svg {
     align-items: center;
     gap: 8px;
     color: var(--cp-text-muted);
-    font-size: 0.68rem;
+    font-size: 0.78rem;
     font-weight: 700;
     letter-spacing: 0.03em;
     text-transform: uppercase;
@@ -1240,7 +1240,7 @@ svg {
 .agent-empty {
     margin: 0;
     color: var(--cp-text-muted);
-    font-size: 0.72rem;
+    font-size: 0.82rem;
 }
 
 .agent-fact-list,
@@ -1266,7 +1266,7 @@ svg {
 .agent-hypothesis-list p {
     margin: 0;
     color: var(--cp-text);
-    font-size: 0.73rem;
+    font-size: 0.82rem;
     line-height: 1.4;
 }
 
@@ -1275,7 +1275,7 @@ svg {
     display: block;
     margin-top: 4px;
     color: var(--cp-text-muted);
-    font-size: 0.65rem;
+    font-size: 0.74rem;
 }
 
 .hypothesis-heading {
@@ -1291,7 +1291,7 @@ svg {
     color: var(--cp-accent);
     background: var(--cp-accent-soft);
     border-radius: 999px;
-    font-size: 0.63rem;
+    font-size: 0.72rem;
     font-weight: 700;
 }
 
@@ -1301,7 +1301,7 @@ svg {
     background: var(--cp-surface);
     border: 1px solid var(--cp-warning);
     border-radius: 0.5rem;
-    font-size: 0.72rem;
+    font-size: 0.82rem;
 }
 
 .agent-trace-list li {
@@ -1323,31 +1323,31 @@ svg {
     align-items: center;
     justify-content: center;
     color: var(--cp-text-muted);
-    font-size: 0.68rem;
+    font-size: 0.78rem;
     font-weight: 700;
 }
 
 .agent-trace-list strong {
     display: block;
-    font-size: 0.7rem;
+    font-size: 0.8rem;
 }
 
 .agent-trace-list p {
     margin: 3px 0 0;
     color: var(--cp-text-soft);
-    font-size: 0.68rem;
+    font-size: 0.78rem;
     line-height: 1.35;
 }
 
 .agent-trace-list small {
     color: var(--cp-text-muted);
-    font-size: 0.6rem;
+    font-size: 0.7rem;
 }
 
 .agent-footnote {
     margin: 16px 0 0;
     color: var(--cp-text-muted);
-    font-size: 0.63rem;
+    font-size: 0.72rem;
 }
 
 .message-banner,
@@ -1360,7 +1360,7 @@ svg {
     background: var(--cp-surface);
     border: 1px solid var(--cp-border);
     border-radius: 0.625rem;
-    font-size: 0.78rem;
+    font-size: 0.86rem;
 }
 
 .message-banner.success {
@@ -1393,7 +1393,7 @@ svg {
 .loading-state span {
     margin-top: 3px;
     color: var(--cp-text-muted);
-    font-size: 0.72rem;
+    font-size: 0.82rem;
 }
 
 #blazor-error-ui {

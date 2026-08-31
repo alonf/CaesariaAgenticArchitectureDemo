@@ -403,7 +403,7 @@
                                         }
                                     </ul>
                                     <p class="agent-footnote">
-                                        Retrieval trace: what the search returned. "Cited in answer" marks the evidence the agent grounded its answer in - retrieval and citation are different claims.
+                                        What the search returned; the badge marks what the answer cited. Retrieval &ne; citation.
                                     </p>
                                 </div>
                             }
@@ -439,7 +439,7 @@
                                         }
                                     </ul>
                                     <p class="agent-footnote">
-                                        Memory trace: the agent's own past conclusions, recalled as hypotheses. Memory is never evidence - live state is still verified and real evidence still searched.
+                                        The agent's own past conclusions, recalled as hypotheses. Memory &ne; evidence.
                                     </p>
                                 </div>
                             }
@@ -456,7 +456,7 @@
                                 <svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9h-2a7 7 0 1 1-7-7v3l5-4-5-4Z" /></svg>
                             </button>
                             <p class="agent-footnote">
-                                Session @ShortCorrelation(_agentSessionId) keeps conversational context only - it is never the authoritative city state.
+                                Session @ShortCorrelation(_agentSessionId) - conversational context, never authoritative state.
                             </p>
                         }
 
@@ -464,8 +464,8 @@
                         {
                             @if (_agentResponse is not null)
                             {
-                                <button class="action-button investigate-button" @onclick="CloseCaseAsync" disabled="@_agentBusy">
-                                    <span>Close case (record to memory)</span>
+                                <button class="action-button investigate-button" @onclick="CloseCaseAsync" disabled="@(_agentBusy || _caseBusy || _caseClosed)">
+                                    <span>@CloseCaseLabel</span>
                                     <svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4Z" /></svg>
                                 </button>
                             }
@@ -504,11 +504,19 @@
     private string? _agentEvidenceVersion;
     private string? _expandedEvidenceId;
     private string? _caseMessage;
+    private bool _caseBusy;
+    private bool _caseClosed;
 
     private string StageName => _snapshot?.CurrentStage.Name ?? Configuration["DemoStage"] ?? "Deterministic";
     private bool IsAgentStage => _snapshot?.CurrentStage.Id >= DemoStage.InvestigationAgent;
     private bool IsSessionStage => _snapshot?.CurrentStage.Id >= DemoStage.Session;
     private bool IsMemoryStage => _snapshot?.CurrentStage.Id >= DemoStage.Memory;
+    private string CloseCaseLabel => (_caseBusy, _caseClosed) switch
+    {
+        (true, _) => "Recording...",
+        (false, true) => "Case recorded",
+        _ => "Close case (record to memory)"
+    };
     private string AgentStatusText => (_agentBusy, _agentResponse) switch
     {
         (true, _) => "Working",
@@ -608,10 +616,12 @@
 
     private async Task CloseCaseAsync()
     {
-        if (_agentResponse is not { } response || _snapshot is not { } snapshot)
+        if (_caseBusy || _caseClosed || _agentResponse is not { } response || _snapshot is not { } snapshot)
         {
             return;
         }
+
+        _caseBusy = true;
 
         try
         {
@@ -619,14 +629,19 @@
             var resolution = response.Answer.Length <= 500 ? response.Answer : $"{response.Answer[..500]}…";
             var closedCase = await OperationsAgentClient.CloseCaseAsync(
                 assetId,
-                $"Streetlight {assetId} reported on during daylight against its schedule.",
+                $"Streetlight {assetId} on during daylight against its schedule.",
                 resolution,
                 CancellationToken.None);
             _caseMessage = $"Case {closedCase.CaseId} recorded to the agent's memory for {closedCase.AssetId}.";
+            _caseClosed = true;
         }
         catch (Exception exception)
         {
             _caseMessage = $"The case could not be recorded: {exception.Message}";
+        }
+        finally
+        {
+            _caseBusy = false;
         }
     }
 
@@ -653,6 +668,7 @@
         _agentEvidenceVersion = null;
         _expandedEvidenceId = null;
         _caseMessage = null;
+        _caseClosed = false;
         _agentMessage = null;
         _agentMessageIsError = false;
         _lastAgentQuestion = question;

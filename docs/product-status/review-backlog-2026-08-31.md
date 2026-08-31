@@ -35,6 +35,33 @@ All findings from the full working-tree review are now resolved.
 7. **Package refresh** — Microsoft.Extensions.* 10.9.0 and OpenTelemetry 1.18.0 across
    ServiceDefaults.
 
+## Fixed in the Memory-stage review pass
+
+1. **Prompt-injection hardening (high)** — recalled case text (operator input / earlier model
+   output) no longer reaches `AIContext.Instructions`. Behavioral rules are static trusted
+   instructions; case content travels as a JSON data message the rules mark as reference-only.
+   The close-case API validates the asset format and caps symptom/resolution lengths, the store
+   truncates as defense in depth, and recall returns at most three cases. An adversarial-content
+   test proves stored text stays out of the instruction channel.
+2. **Agent-propagation degradation** — the stage push to the Operations Agent now also tolerates
+   `TimeoutRejectedException` (the resilience attempt timeout) and internal cancellation while the
+   caller's token is not cancelled; real caller cancellation still propagates. Tests cover each
+   path separately.
+3. **Presenter reset restores CASE-1** — `Clear()` resets the case counter inside the lock; the
+   clear test asserts the next case is CASE-1.
+4. **Command generation ordering** — accepting a command claims a fresh revision in both the
+   SmartPole simulator and the Energy Hub restore workflow, so an older concurrent command can
+   never overwrite a newer one; deterministic tests cover both boundaries.
+5. **Recall precision** — word-boundary tokenization with stop words, at least two shared
+   meaningful terms required, top-3 results; negative tests cover controller/consumption
+   questions.
+6. **Presenter flow polish** — close-case has busy/completed states (no duplicate cases);
+   DemoControl reloads case memory during polling and manual refresh.
+7. **Test infrastructure** — migrated to xUnit v3 (4.0.0) on Microsoft.Testing.Platform:
+   `global.json` opts `dotnet test` into MTP mode, the test project is an executable, the legacy
+   Test SDK and the VSTest-only coverlet collector were removed (MTP coverage would use
+   `Microsoft.Testing.Extensions.CodeCoverage` when needed).
+
 ## Deferred (with trigger)
 
 - **Snippet region scan scope** (low, from the demo-anchor review): the region synchronization

@@ -124,6 +124,17 @@ cases.MapPost("/", (HttpContext context, OperationsAgentCloseCaseRequest request
             context.GetCorrelationId()));
     }
 
+    // Stored case text later reaches the model as recalled context, so the boundary is strict:
+    // a canonical asset identifier and hard length caps on the free-text fields.
+    if (ValidateCloseCaseRequest(request) is { } validationError)
+    {
+        return Results.BadRequest(ProblemDetailsFactory.Create(
+            StatusCodes.Status400BadRequest,
+            "Invalid request",
+            validationError,
+            context.GetCorrelationId()));
+    }
+
     try
     {
         var closedCase = store.Record(request.AssetId, request.Symptom, request.Resolution);
@@ -159,6 +170,30 @@ demoStage.MapPost("/", (DemoStageStatus stage, DemoStageGate stageGate, FoundryC
 });
 
 await app.RunAsync();
+
+static string? ValidateCloseCaseRequest(OperationsAgentCloseCaseRequest request)
+{
+    const int maxSymptomLength = 200;
+    const int maxResolutionLength = 1000;
+
+    if (string.IsNullOrWhiteSpace(request.AssetId)
+        || !System.Text.RegularExpressions.Regex.IsMatch(request.AssetId, @"^[A-Za-z]{1,4}-\d{1,6}$", System.Text.RegularExpressions.RegexOptions.None, TimeSpan.FromSeconds(1)))
+    {
+        return "The asset identifier must match the canonical form, for example L-417.";
+    }
+
+    if (string.IsNullOrWhiteSpace(request.Symptom) || request.Symptom.Length > maxSymptomLength)
+    {
+        return $"The symptom is required and must be at most {maxSymptomLength} characters.";
+    }
+
+    if (string.IsNullOrWhiteSpace(request.Resolution) || request.Resolution.Length > maxResolutionLength)
+    {
+        return $"The resolution is required and must be at most {maxResolutionLength} characters.";
+    }
+
+    return null;
+}
 
 static OperationsAgentCaseMemoryStatus CreateCaseMemoryStatus(ICaseMemoryStore store) =>
     new([.. store.GetAll().Select(closedCase => new OperationsAgentRecalledCase(

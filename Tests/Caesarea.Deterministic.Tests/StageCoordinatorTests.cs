@@ -1,4 +1,5 @@
 using DemoScenario.Api.Services;
+using Polly.Timeout;
 
 namespace Caesarea.Deterministic.Tests;
 
@@ -121,6 +122,73 @@ public sealed class StageCoordinatorTests
 
         Assert.Equal(DemoStage.InvestigationAgent, result.CurrentStage.Id);
         Assert.Contains("Warning", result.Summary, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ApplyAsyncToleratesOperationsAgentResilienceTimeout()
+    {
+        // The resilience pipeline surfaces its attempt timeout as TimeoutRejectedException, not
+        // HttpRequestException - it must degrade to the same visible warning.
+        var operationsAgentStageClient = new FakeOperationsAgentStageClient
+        {
+            OnApplyStageAsync = static (_, _, _) => throw new TimeoutRejectedException("The resilience attempt timed out.")
+        };
+        using var coordinator = new StageCoordinator(
+            new FakeCommandCenterStageClient(),
+            operationsAgentStageClient,
+            new StageCatalog(),
+            new TestTimeProvider(),
+            NullLogger<StageCoordinator>.Instance);
+
+        var result = await coordinator.ApplyAsync(DemoStage.InvestigationAgent, "agent-timeout-corr", CancellationToken.None);
+
+        Assert.Equal(DemoStage.InvestigationAgent, result.CurrentStage.Id);
+        Assert.Contains("Warning", result.Summary, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ApplyAsyncToleratesOperationsAgentInternalCancellation()
+    {
+        // A cancellation raised inside the pipeline while the caller's token is NOT cancelled is a
+        // dependency failure, not a caller intent - it degrades to the warning.
+        var operationsAgentStageClient = new FakeOperationsAgentStageClient
+        {
+            OnApplyStageAsync = static (_, _, _) => throw new TaskCanceledException("The pipeline cancelled internally.")
+        };
+        using var coordinator = new StageCoordinator(
+            new FakeCommandCenterStageClient(),
+            operationsAgentStageClient,
+            new StageCatalog(),
+            new TestTimeProvider(),
+            NullLogger<StageCoordinator>.Instance);
+
+        var result = await coordinator.ApplyAsync(DemoStage.InvestigationAgent, "agent-cancel-corr", CancellationToken.None);
+
+        Assert.Equal(DemoStage.InvestigationAgent, result.CurrentStage.Id);
+        Assert.Contains("Warning", result.Summary, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ApplyAsyncPropagatesCallerCancellationFromAgentPush()
+    {
+        using var callerCancellation = new CancellationTokenSource();
+        var operationsAgentStageClient = new FakeOperationsAgentStageClient
+        {
+            OnApplyStageAsync = (_, _, _) =>
+            {
+                callerCancellation.Cancel();
+                throw new OperationCanceledException(callerCancellation.Token);
+            }
+        };
+        using var coordinator = new StageCoordinator(
+            new FakeCommandCenterStageClient(),
+            operationsAgentStageClient,
+            new StageCatalog(),
+            new TestTimeProvider(),
+            NullLogger<StageCoordinator>.Instance);
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            coordinator.ApplyAsync(DemoStage.InvestigationAgent, "caller-cancel-corr", callerCancellation.Token));
     }
 
     private static StageCoordinator CreateCoordinator(

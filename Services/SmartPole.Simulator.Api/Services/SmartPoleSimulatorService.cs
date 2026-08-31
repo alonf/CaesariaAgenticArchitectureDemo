@@ -147,7 +147,10 @@ public sealed partial class SmartPoleSimulatorService
 
         lock (_gate)
         {
-            commandRevision = _revision;
+            // Accepting a command claims a fresh revision, so of two concurrent commands only the
+            // most recently accepted one can commit - an older command can never finish last and
+            // overwrite a newer one; it reports superseded instead.
+            commandRevision = ++_revision;
             configuration = _state.Configuration;
             controllerHealth = _state.ControllerHealth;
             _state = _state with

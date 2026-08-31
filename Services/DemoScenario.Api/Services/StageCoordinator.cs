@@ -1,3 +1,5 @@
+using Polly.Timeout;
+
 namespace DemoScenario.Api.Services;
 
 /// <summary>
@@ -72,12 +74,16 @@ public sealed partial class StageCoordinator : IDisposable
 
             // The Operations Agent may legitimately be unavailable during the deterministic lecture
             // path, so a failed agent propagation degrades to a visible warning instead of failing
-            // the stage change; the agent's own stage gate keeps it safe until it catches up.
+            // the stage change; the agent's own stage gate keeps it safe until it catches up. The
+            // resilience pipeline surfaces its attempt timeout as TimeoutRejectedException, and its
+            // internal cancellation as OperationCanceledException without the caller's token being
+            // cancelled - both degrade the same way. Real caller cancellation still propagates.
             try
             {
                 await _operationsAgentStageClient.ApplyStageAsync(status, correlationId, cancellationToken);
             }
-            catch (HttpRequestException exception)
+            catch (Exception exception) when (exception is HttpRequestException or TimeoutRejectedException
+                || (exception is OperationCanceledException && !cancellationToken.IsCancellationRequested))
             {
                 StageCoordinatorLog.AgentPropagationFailed(_logger, descriptor.Name, correlationId, exception);
                 summary += " Warning: the Operations Agent did not receive the stage change.";

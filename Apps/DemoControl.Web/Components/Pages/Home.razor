@@ -351,6 +351,7 @@
                     await LoadCatalogAsync(cancellationToken, showErrors: _catalog is null);
                     await LoadStageCatalogAsync(cancellationToken, showErrors: _stageCatalog is null);
                     await LoadBreakpointsAsync(cancellationToken);
+                    await LoadCaseMemoryAsync(cancellationToken);
                     StateHasChanged();
                 });
             }
@@ -364,6 +365,7 @@
     private async Task RefreshAsync()
     {
         await LoadCatalogAsync(CancellationToken.None, showErrors: true);
+        await LoadCaseMemoryAsync(CancellationToken.None);
     }
 
     private async Task ApplyScenarioAsync(ScenarioId scenarioId)
