@@ -24,6 +24,49 @@ public sealed class EnergyHubServiceTests
     }
 
     [Fact]
+    public void SecondStreetlightFixtureIsReadOnlyAnomalyWithoutMaintenanceHistory()
+    {
+        var clock = new TestTimeProvider();
+        var gateway = new FakeSmartPoleGateway
+        {
+            PhysicalState = CreatePhysicalState(isOn: false, manualOverride: false, controllerHealth: ControllerHealthInfo.Healthy, requiresLighting: false, now: clock.GetUtcNow())
+        };
+
+        var service = new EnergyHubService(gateway, clock, NullLogger<EnergyHubService>.Instance);
+
+        var fixture = service.GetState(DemoAssets.SecondStreetlightAssetId);
+
+        // Similar anomaly to the primary asset, but with no maintenance history: the case-memory
+        // demo needs a look-alike case that has no evidence anywhere.
+        Assert.True(fixture.ReportedIsOn);
+        Assert.True(fixture.IsDaylight);
+        Assert.False(fixture.ExpectedScheduledState);
+        Assert.True(fixture.ManualOverride);
+        Assert.False(fixture.HasRecentMaintenance);
+        Assert.Null(fixture.LastMaintenanceTime);
+        Assert.Empty(service.GetRecentActivity(DemoAssets.SecondStreetlightAssetId, 10));
+    }
+
+    [Fact]
+    public async Task SecondStreetlightFixtureRejectsCommands()
+    {
+        var clock = new TestTimeProvider();
+        var gateway = new FakeSmartPoleGateway
+        {
+            PhysicalState = CreatePhysicalState(isOn: true, manualOverride: true, controllerHealth: ControllerHealthInfo.Healthy, requiresLighting: false, now: clock.GetUtcNow())
+        };
+
+        var service = new EnergyHubService(gateway, clock, NullLogger<EnergyHubService>.Instance);
+
+        var result = await service.RestoreScheduledModeAsync(DemoAssets.SecondStreetlightAssetId, "fixture-corr", CancellationToken.None);
+
+        Assert.Equal(CommandExecutionStatus.Failed, result.Status);
+        Assert.Contains("read-only", result.Summary, StringComparison.OrdinalIgnoreCase);
+        // The primary twin is untouched by the rejected fixture command.
+        Assert.Equal(DemoAssets.StreetlightAssetId, service.GetState(DemoAssets.StreetlightAssetId).AssetId);
+    }
+
+    [Fact]
     public async Task RestoreScheduledModeUpdatesDesiredBeforeReportedOnSuccess()
     {
         var clock = new TestTimeProvider();

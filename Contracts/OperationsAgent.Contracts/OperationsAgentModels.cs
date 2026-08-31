@@ -46,6 +46,37 @@ public sealed record OperationsAgentEvidence(
     string? SourceUri);
 
 /// <summary>
+/// One closed case the agent's memory recalled during a run. Recall is a hypothesis trace: it
+/// records what past experience the agent was reminded of, which is never evidence about the
+/// current asset.
+/// </summary>
+/// <param name="CaseId">The stable case identifier, for example CASE-1.</param>
+/// <param name="AssetId">The asset the recalled case concerned.</param>
+/// <param name="Symptom">The observed symptom that opened the recalled case.</param>
+/// <param name="Resolution">The conclusion the recalled case closed with.</param>
+/// <param name="ClosedAt">When the recalled case was closed.</param>
+public sealed record OperationsAgentRecalledCase(
+    string CaseId,
+    string AssetId,
+    string Symptom,
+    string Resolution,
+    DateTimeOffset ClosedAt);
+
+/// <summary>
+/// Asks the agent service to record a closed case in its memory.
+/// </summary>
+/// <param name="AssetId">The asset the case concerned.</param>
+/// <param name="Symptom">The observed symptom that opened the case.</param>
+/// <param name="Resolution">The closing conclusion, typically assembled from the agent's answer.</param>
+public sealed record OperationsAgentCloseCaseRequest(string AssetId, string Symptom, string Resolution);
+
+/// <summary>
+/// Reports the current state of the agent's case memory.
+/// </summary>
+/// <param name="Cases">The closed cases the memory holds, newest first.</param>
+public sealed record OperationsAgentCaseMemoryStatus(IReadOnlyList<OperationsAgentRecalledCase> Cases);
+
+/// <summary>
 /// Returns the general agent's answer, safe execution metadata, and request correlation metadata.
 /// </summary>
 /// <param name="AgentName">The stable name of the general operations agent.</param>
@@ -53,6 +84,7 @@ public sealed record OperationsAgentEvidence(
 /// <param name="SessionId">The conversational session a follow-up question can continue.</param>
 /// <param name="ToolCalls">The tools the model invoked during the run, in order.</param>
 /// <param name="Evidence">The work evidence the knowledge search returned during the run, deduplicated by identifier.</param>
+/// <param name="RecalledCases">The closed cases the agent's memory recalled during the run.</param>
 /// <param name="ModelRoundTrips">The number of model round trips the run required.</param>
 /// <param name="CorrelationId">The correlation identifier spanning the request and tool call.</param>
 public sealed record OperationsAgentResponse(
@@ -61,5 +93,6 @@ public sealed record OperationsAgentResponse(
     string SessionId,
     IReadOnlyList<OperationsAgentToolCall> ToolCalls,
     IReadOnlyList<OperationsAgentEvidence> Evidence,
+    IReadOnlyList<OperationsAgentRecalledCase> RecalledCases,
     int ModelRoundTrips,
     string CorrelationId);

@@ -9,6 +9,9 @@ The demo runs as one cumulative application with a presenter-controlled `DemoSta
 - `DemoStage=Knowledge` — adds on-demand organizational knowledge retrieval
   (`search_work_knowledge`), so **"Why?"** gets an evidence-grounded explanation citing the
   seeded work order WO-8732 and its technician note.
+- `DemoStage=Memory` — adds case memory: closed investigations are recalled in later sessions as
+  explicitly framed **hypotheses** (asking about the L-528 fixture recalls the closed L-417 case).
+  Memory is never evidence: live state is still verified and real evidence still searched.
 
 `CommandCenter.Api` owns the selected stage. `DemoScenario.Api` reads and changes it through that authoritative
 boundary, so switching stages does not restart the application.

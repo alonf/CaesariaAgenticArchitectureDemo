@@ -4,6 +4,7 @@
 @inject DemoStageApiClient StageClient
 @inject DemoBreakpointsApiClient BreakpointsClient
 @inject WorkKnowledgeApiClient WorkKnowledgeClient
+@inject CaseMemoryApiClient CaseMemoryClient
 @inject VsCodeAttachService AttachService
 @inject IConfiguration Configuration
 @inject IOptions<DemoControlWebOptions> WebOptions
@@ -163,6 +164,40 @@
 
     <section class="panel switchboard-panel">
         <div class="panel-heading">
+            <h2>Case Memory</h2>
+            <span class="stamp">@CaseMemoryStamp</span>
+        </div>
+        @if (_caseMemory is null)
+        {
+            <p>@(_caseMemoryMessage ?? "Loading case memory...")</p>
+        }
+        else
+        {
+            @if (_caseMemory.Cases.Count == 0)
+            {
+                <p class="switchboard-note">No closed cases yet. Close a case from the Command Center at the Memory stage.</p>
+            }
+            else
+            {
+                <ul class="switchboard-note">
+                    @foreach (var closedCase in _caseMemory.Cases)
+                    {
+                        <li>@closedCase.CaseId (@closedCase.AssetId) - @closedCase.Symptom</li>
+                    }
+                </ul>
+            }
+            <button class="secondary-button" @onclick="ClearCaseMemoryAsync" disabled="@(_caseMemoryBusy || _caseMemory.Cases.Count == 0)">
+                Clear case memory
+            </button>
+            @if (!string.IsNullOrWhiteSpace(_caseMemoryMessage))
+            {
+                <p class="status-error">@_caseMemoryMessage</p>
+            }
+        }
+    </section>
+
+    <section class="panel switchboard-panel">
+        <div class="panel-heading">
             <h2>Simulator Behavior</h2>
             <span class="stamp">@(_behavior is null ? "Unavailable" : $"{_behaviorDelayMs} ms delay")</span>
         </div>
@@ -248,6 +283,9 @@
     private WorkKnowledgeState? _workKnowledge;
     private bool _workKnowledgeBusy;
     private string? _workKnowledgeMessage;
+    private CaseMemoryState? _caseMemory;
+    private bool _caseMemoryBusy;
+    private string? _caseMemoryMessage;
     private SimulatorBehaviorSettings? _behavior;
     private int _behaviorDelayMs;
     private bool _behaviorTimeout;
@@ -271,6 +309,12 @@
         { EvidencePresent: true } => "Evidence present",
         _ => "No evidence"
     };
+    private string CaseMemoryStamp => _caseMemory switch
+    {
+        null => "Unavailable",
+        { Cases.Count: 0 } => "Empty",
+        { Cases.Count: var count } => $"{count} case(s)"
+    };
     private string BreakpointStamp => _breakpoints switch
     {
         null => "Unavailable",
@@ -288,6 +332,7 @@
         await LoadAttachStatusAsync(CancellationToken.None);
         await LoadBehaviorAsync(CancellationToken.None);
         await LoadWorkKnowledgeAsync(CancellationToken.None);
+        await LoadCaseMemoryAsync(CancellationToken.None);
 
         _pollingTokenSource = new CancellationTokenSource();
         _pollingTask = PollCatalogAsync(_pollingTokenSource.Token);
@@ -456,6 +501,39 @@
         {
             _workKnowledge = null;
             _workKnowledgeMessage = $"Work knowledge state unavailable: {exception.Message}";
+        }
+    }
+
+    private async Task LoadCaseMemoryAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            _caseMemory = await CaseMemoryClient.GetStatusAsync(cancellationToken);
+            _caseMemoryMessage = null;
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            _caseMemory = null;
+            _caseMemoryMessage = $"Case memory unavailable: {exception.Message}";
+        }
+    }
+
+    private async Task ClearCaseMemoryAsync()
+    {
+        _caseMemoryBusy = true;
+
+        try
+        {
+            _caseMemory = await CaseMemoryClient.ClearAsync(CancellationToken.None);
+            _caseMemoryMessage = null;
+        }
+        catch (Exception exception)
+        {
+            _caseMemoryMessage = $"Case memory clear failed: {exception.Message}";
+        }
+        finally
+        {
+            _caseMemoryBusy = false;
         }
     }
 

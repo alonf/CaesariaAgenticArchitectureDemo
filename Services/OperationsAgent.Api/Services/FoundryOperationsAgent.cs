@@ -13,6 +13,7 @@ public sealed partial class FoundryOperationsAgent(
     IEnergyReadGateway energyReadGateway,
     AgentSessionStore sessionStore,
     IWorkKnowledgeSearch workKnowledgeSearch,
+    ICaseMemoryStore caseMemoryStore,
     DemoStageGate stageGate,
     string modelDeploymentName,
     string agentName,
@@ -35,6 +36,7 @@ public sealed partial class FoundryOperationsAgent(
     private readonly IEnergyReadGateway _energyReadGateway = energyReadGateway ?? throw new ArgumentNullException(nameof(energyReadGateway));
     private readonly AgentSessionStore _sessionStore = sessionStore ?? throw new ArgumentNullException(nameof(sessionStore));
     private readonly IWorkKnowledgeSearch _workKnowledgeSearch = workKnowledgeSearch ?? throw new ArgumentNullException(nameof(workKnowledgeSearch));
+    private readonly ICaseMemoryStore _caseMemoryStore = caseMemoryStore ?? throw new ArgumentNullException(nameof(caseMemoryStore));
     private readonly DemoStageGate _stageGate = stageGate ?? throw new ArgumentNullException(nameof(stageGate));
     private readonly string _modelDeploymentName = string.IsNullOrWhiteSpace(modelDeploymentName)
         ? throw new ArgumentException("A model deployment name is required.", nameof(modelDeploymentName))
@@ -102,6 +104,36 @@ public sealed partial class FoundryOperationsAgent(
         }
         #endregion
 
+        #region CASE_MEMORY
+        DemoBreakpoints.Pause(DemoSnippets.CaseMemory);
+
+        CaseMemoryProvider? caseMemory = null;
+
+        // Hypothesis trace for the UI: which closed cases the provider recalled this run.
+        List<ClosedCase> recalledCases = [];
+
+        if (_stageGate.GetCurrent().Id >= DemoStage.Memory)
+        {
+            caseMemory = new CaseMemoryProvider(
+                _caseMemoryStore,
+                recalled => recalledCases.AddRange(recalled),
+                correlationId,
+                _loggerFactory.CreateLogger<CaseMemoryProvider>());
+        }
+        #endregion
+
+        List<AIContextProvider> contextProviders = [];
+
+        if (workKnowledge is not null)
+        {
+            contextProviders.Add(workKnowledge);
+        }
+
+        if (caseMemory is not null)
+        {
+            contextProviders.Add(caseMemory);
+        }
+
         #region AGENT_CREATION
         DemoBreakpoints.Pause(DemoSnippets.AgentCreation);
 
@@ -121,9 +153,9 @@ public sealed partial class FoundryOperationsAgent(
                             "Gets the current authoritative operational state of a streetlight.")
                     ]
                 },
-                // Knowledge retrieval joins as a context provider: it contributes the on-demand
-                // search tool that the function-invoking pipeline can then execute.
-                AIContextProviders = workKnowledge is null ? null : [workKnowledge]
+                // Capabilities join as context providers: knowledge retrieval contributes an
+                // on-demand search tool, case memory contributes hypothesis instructions.
+                AIContextProviders = contextProviders.Count > 0 ? contextProviders : null
             },
             clientFactory: client =>
             {
@@ -187,7 +219,15 @@ public sealed partial class FoundryOperationsAgent(
                         item.Id, item.SourceType, item.Title, item.Summary, item.OccurredAt, item.SourceLabel, item.SourceUri))
             ];
 
-            return new OperationsAgentAnswer(response.Text, resolvedSessionId, toolCalls, evidence, modelFlightRecorder?.Exchanges.Count ?? 0);
+            IReadOnlyList<OperationsAgentRecalledCase> recalled =
+            [
+                .. recalledCases
+                    .DistinctBy(item => item.CaseId, StringComparer.OrdinalIgnoreCase)
+                    .Select(item => new OperationsAgentRecalledCase(
+                        item.CaseId, item.AssetId, item.Symptom, item.Resolution, item.ClosedAt))
+            ];
+
+            return new OperationsAgentAnswer(response.Text, resolvedSessionId, toolCalls, evidence, recalled, modelFlightRecorder?.Exchanges.Count ?? 0);
         }
         catch (OperationCanceledException exception) when (!cancellationToken.IsCancellationRequested)
         {

@@ -14,6 +14,17 @@ public static class DemoAssets
     /// Gets the canonical operational area used throughout the deterministic demo.
     /// </summary>
     public const string NorthPromenadeArea = "North Promenade";
+
+    /// <summary>
+    /// Gets the second streetlight asset identifier: a read-only fixture in a similar
+    /// on-during-daylight state with no work evidence, supporting the case-memory demo.
+    /// </summary>
+    public const string SecondStreetlightAssetId = "L-528";
+
+    /// <summary>
+    /// Gets the operational area containing the second streetlight fixture.
+    /// </summary>
+    public const string SouthPromenadeArea = "South Promenade";
 }
 
 /// <summary>

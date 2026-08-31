@@ -31,6 +31,11 @@ public static class DemoSnippets
     /// Gets the knowledge-retrieval snippet: on-demand organizational knowledge retrieval.
     /// </summary>
     public const string Knowledge = "KNOWLEDGE_RETRIEVAL";
+
+    /// <summary>
+    /// Gets the case-memory snippet: recalling the agent's own closed cases as hypotheses.
+    /// </summary>
+    public const string CaseMemory = "CASE_MEMORY";
 }
 
 /// <summary>

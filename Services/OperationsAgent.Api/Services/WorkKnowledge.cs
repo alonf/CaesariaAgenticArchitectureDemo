@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+
 namespace OperationsAgent.Api.Services;
 
 /// <summary>
@@ -69,13 +71,28 @@ public sealed partial class SimulatedWorkKnowledgeSearch(
         ArgumentException.ThrowIfNullOrWhiteSpace(query);
         ArgumentException.ThrowIfNullOrWhiteSpace(correlationId);
 
-        var matches = _evidencePresent && MatchTerms.Any(term => query.Contains(term, StringComparison.OrdinalIgnoreCase))
+        var matches = _evidencePresent
+            && QueryTargetsEvidenceAsset(query)
+            && MatchTerms.Any(term => query.Contains(term, StringComparison.OrdinalIgnoreCase))
             ? CreateSeededEvidence()
             : [];
 
         WorkKnowledgeLog.Searched(logger, query, matches.Count, correlationId);
         return Task.FromResult(matches);
     }
+
+    // The seeded evidence is about one asset. A query naming a different asset (for example the
+    // L-528 fixture) must return nothing - otherwise the store would hand the agent another
+    // asset's work order as if it explained the queried one. Queries naming no asset stay broad.
+    private static bool QueryTargetsEvidenceAsset(string query)
+    {
+        var referencedAssets = AssetReferenceRegex().Matches(query);
+        return referencedAssets.Count == 0
+            || referencedAssets.Any(match => match.Groups[1].Value == "417");
+    }
+
+    [GeneratedRegex(@"\bL-?(\d{3})\b", RegexOptions.IgnoreCase)]
+    private static partial Regex AssetReferenceRegex();
 
     private IReadOnlyList<WorkEvidence> CreateSeededEvidence()
     {

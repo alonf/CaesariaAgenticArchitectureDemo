@@ -28,6 +28,18 @@ public sealed class SimulatedWorkKnowledgeSearchTests
     }
 
     [Fact]
+    public async Task QueryNamingAnotherAssetReturnsNoEvidence()
+    {
+        var search = CreateSearch();
+
+        // The seeded evidence is about L-417; handing it out for L-528 would let the agent cite
+        // another asset's work order as if it explained this one.
+        var evidence = await search.SearchAsync("Why is streetlight L-528 on during daylight?", "wk-corr", CancellationToken.None);
+
+        Assert.Empty(evidence);
+    }
+
+    [Fact]
     public async Task WithheldEvidenceReturnsNothingForMatchingQueries()
     {
         var search = CreateSearch();

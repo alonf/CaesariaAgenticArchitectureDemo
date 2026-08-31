@@ -1176,7 +1176,8 @@ svg {
     font-size: 0.72rem;
 }
 
-.evidence-cited {
+.evidence-cited,
+.memory-badge {
     grid-column: 2;
     grid-row: 1;
     justify-self: end;
@@ -1189,6 +1190,11 @@ svg {
     text-transform: uppercase;
     letter-spacing: 0.04em;
     white-space: nowrap;
+}
+
+.memory-badge {
+    border-color: var(--cp-warning);
+    color: var(--cp-warning);
 }
 
 .evidence-detail {

@@ -50,6 +50,7 @@ builder.Services.AddSingleton(_ =>
 builder.Services.AddSingleton<AgentSessionStore>();
 builder.Services.AddSingleton<SimulatedWorkKnowledgeSearch>();
 builder.Services.AddSingleton<IWorkKnowledgeSearch>(serviceProvider => serviceProvider.GetRequiredService<SimulatedWorkKnowledgeSearch>());
+builder.Services.AddSingleton<ICaseMemoryStore, InMemoryCaseMemoryStore>();
 builder.Services.AddSingleton<IOperationsAgent>(serviceProvider =>
 {
     var options = serviceProvider.GetRequiredService<IOptions<OperationsAgentApiOptions>>().Value;
@@ -58,6 +59,7 @@ builder.Services.AddSingleton<IOperationsAgent>(serviceProvider =>
         serviceProvider.GetRequiredService<IEnergyReadGateway>(),
         serviceProvider.GetRequiredService<AgentSessionStore>(),
         serviceProvider.GetRequiredService<IWorkKnowledgeSearch>(),
+        serviceProvider.GetRequiredService<ICaseMemoryStore>(),
         serviceProvider.GetRequiredService<DemoStageGate>(),
         options.ModelDeploymentName,
         options.AgentName,
@@ -78,7 +80,7 @@ app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.UseHttpsRedirection();
 app.MapDefaultEndpoints();
-app.MapDemoBreakpoints(DemoSnippets.AgentCreation, DemoSnippets.FunctionTool, DemoSnippets.Session, DemoSnippets.Knowledge);
+app.MapDemoBreakpoints(DemoSnippets.AgentCreation, DemoSnippets.FunctionTool, DemoSnippets.Session, DemoSnippets.Knowledge, DemoSnippets.CaseMemory);
 
 var operationsAgent = app.MapGroup("/api/operations-agent")
     .WithTags("Operations Agent");
@@ -104,6 +106,44 @@ workKnowledge.MapPost("/", (WorkKnowledgeStatus status, SimulatedWorkKnowledgeSe
     search.EvidencePresent = status.EvidencePresent;
     return TypedResults.Ok(new WorkKnowledgeStatus(search.EvidencePresent));
 });
+
+// The agent's case memory: closed investigations recorded by the operator, recalled later as
+// hypotheses. Closing a case requires the Memory stage; clearing is a presenter reset.
+var cases = app.MapGroup("/api/operations-agent/cases")
+    .WithTags("Case Memory");
+
+cases.MapGet("/", (ICaseMemoryStore store) => TypedResults.Ok(CreateCaseMemoryStatus(store)));
+cases.MapPost("/", (HttpContext context, OperationsAgentCloseCaseRequest request, ICaseMemoryStore store, DemoStageGate stageGate) =>
+{
+    if (stageGate.GetCurrent().Id < DemoStage.Memory)
+    {
+        return Results.Problem(ProblemDetailsFactory.Create(
+            StatusCodes.Status409Conflict,
+            "Case memory disabled in the current demo stage",
+            $"Closing a case requires the Memory stage; the current stage is {stageGate.GetCurrent().Name}.",
+            context.GetCorrelationId()));
+    }
+
+    try
+    {
+        var closedCase = store.Record(request.AssetId, request.Symptom, request.Resolution);
+        return Results.Ok(new OperationsAgentRecalledCase(
+            closedCase.CaseId, closedCase.AssetId, closedCase.Symptom, closedCase.Resolution, closedCase.ClosedAt));
+    }
+    catch (ArgumentException exception)
+    {
+        return Results.BadRequest(ProblemDetailsFactory.Create(
+            StatusCodes.Status400BadRequest,
+            "Invalid request",
+            exception.Message,
+            context.GetCorrelationId()));
+    }
+});
+cases.MapPost("/clear", (ICaseMemoryStore store) =>
+{
+    store.Clear();
+    return TypedResults.Ok(CreateCaseMemoryStatus(store));
+});
 demoStage.MapPost("/", (DemoStageStatus stage, DemoStageGate stageGate, FoundryCredentialWarmup credentialWarmup) =>
 {
     var applied = stageGate.SetCurrent(stage);
@@ -119,6 +159,10 @@ demoStage.MapPost("/", (DemoStageStatus stage, DemoStageGate stageGate, FoundryC
 });
 
 await app.RunAsync();
+
+static OperationsAgentCaseMemoryStatus CreateCaseMemoryStatus(ICaseMemoryStore store) =>
+    new([.. store.GetAll().Select(closedCase => new OperationsAgentRecalledCase(
+        closedCase.CaseId, closedCase.AssetId, closedCase.Symptom, closedCase.Resolution, closedCase.ClosedAt))]);
 
 static async Task<IResult> AskAsync(
     HttpContext context,
@@ -179,6 +223,7 @@ static async Task<IResult> AskAsync(
             reply.SessionId,
             reply.ToolCalls,
             reply.Evidence,
+            reply.RecalledCases,
             reply.ModelRoundTrips,
             correlationId));
     }

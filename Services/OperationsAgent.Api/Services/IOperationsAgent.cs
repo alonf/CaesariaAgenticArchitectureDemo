@@ -22,10 +22,12 @@ public interface IOperationsAgent
 /// <param name="SessionId">The conversational session a follow-up question can continue.</param>
 /// <param name="ToolCalls">The tools the model invoked during the run, in order.</param>
 /// <param name="Evidence">The work evidence the knowledge search returned during the run, deduplicated by identifier.</param>
+/// <param name="RecalledCases">The closed cases the agent's memory recalled during the run.</param>
 /// <param name="ModelRoundTrips">The number of model round trips the run required.</param>
 public sealed record OperationsAgentAnswer(
     string Answer,
     string SessionId,
     IReadOnlyList<OperationsAgentToolCall> ToolCalls,
     IReadOnlyList<OperationsAgentEvidence> Evidence,
+    IReadOnlyList<OperationsAgentRecalledCase> RecalledCases,
     int ModelRoundTrips);

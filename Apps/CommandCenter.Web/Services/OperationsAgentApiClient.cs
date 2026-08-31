@@ -48,6 +48,26 @@ internal sealed class OperationsAgentApiClient
 
         return new OperationsAgentOutcome(false, null, problemDetail ?? "The Operations Agent request could not be completed.");
     }
+
+    public async Task<OperationsAgentRecalledCase> CloseCaseAsync(
+        string assetId,
+        string symptom,
+        string resolution,
+        CancellationToken cancellationToken)
+    {
+        var correlationId = CorrelationIds.Create();
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/operations-agent/cases/")
+        {
+            Content = JsonContent.Create(new OperationsAgentCloseCaseRequest(assetId, symptom, resolution), options: SerializerOptions)
+        };
+        request.Headers.Add(CorrelationHeaderNames.XCorrelationId, correlationId);
+        using var response = await _httpClient.SendAsync(request, cancellationToken);
+
+        response.EnsureSuccessStatusCode();
+
+        return await response.Content.ReadFromJsonAsync<OperationsAgentRecalledCase>(SerializerOptions, cancellationToken)
+            ?? throw new InvalidOperationException("Close-case response was empty.");
+    }
 }
 
 internal sealed record OperationsAgentOutcome(bool Succeeded, OperationsAgentResponse? Result, string? FailureMessage);

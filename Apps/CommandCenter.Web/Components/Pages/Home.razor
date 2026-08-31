@@ -414,6 +414,35 @@
                                     <p class="agent-empty">The work-knowledge search ran and returned no evidence.</p>
                                 </div>
                             }
+
+                            @if (response.RecalledCases.Count > 0)
+                            {
+                                <div class="agent-summary">
+                                    <small>Recalled cases</small>
+                                    <ul class="agent-evidence-list">
+                                        @foreach (var recalledCase in response.RecalledCases)
+                                        {
+                                            <li class="agent-evidence-card">
+                                                <button type="button" class="evidence-toggle" @onclick="() => ToggleEvidence(recalledCase.CaseId)">
+                                                    <span class="evidence-id">@recalledCase.CaseId</span>
+                                                    <span class="memory-badge">Hypothesis</span>
+                                                    <span class="evidence-title">@recalledCase.Symptom (@recalledCase.AssetId)</span>
+                                                </button>
+                                                @if (string.Equals(_expandedEvidenceId, recalledCase.CaseId, StringComparison.Ordinal))
+                                                {
+                                                    <div class="evidence-detail">
+                                                        <p>@recalledCase.Resolution</p>
+                                                        <small>Closed @recalledCase.ClosedAt.ToLocalTime().ToString("g") · agent case memory</small>
+                                                    </div>
+                                                }
+                                            </li>
+                                        }
+                                    </ul>
+                                    <p class="agent-footnote">
+                                        Memory trace: the agent's own past conclusions, recalled as hypotheses. Memory is never evidence - live state is still verified and real evidence still searched.
+                                    </p>
+                                </div>
+                            }
                         }
                         else if (!_agentBusy && string.IsNullOrWhiteSpace(_agentMessage))
                         {
@@ -429,6 +458,27 @@
                             <p class="agent-footnote">
                                 Session @ShortCorrelation(_agentSessionId) keeps conversational context only - it is never the authoritative city state.
                             </p>
+                        }
+
+                        @if (IsMemoryStage)
+                        {
+                            @if (_agentResponse is not null)
+                            {
+                                <button class="action-button investigate-button" @onclick="CloseCaseAsync" disabled="@_agentBusy">
+                                    <span>Close case (record to memory)</span>
+                                    <svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4Z" /></svg>
+                                </button>
+                            }
+
+                            <button class="action-button investigate-button" @onclick="AskSecondAssetAsync" disabled="@_agentBusy">
+                                <span>@(_agentBusy ? "Asking..." : $"Ask about {DemoAssets.SecondStreetlightAssetId} (new session)")</span>
+                                <svg viewBox="0 0 24 24"><path d="M11 4a7 7 0 1 0 4.9 12.1l4.5 4.5 1.4-1.4-4.5-4.5A7 7 0 0 0 11 4Zm0 2a5 5 0 1 1 0 10 5 5 0 0 1 0-10Z" /></svg>
+                            </button>
+
+                            @if (!string.IsNullOrWhiteSpace(_caseMessage))
+                            {
+                                <p class="agent-footnote">@_caseMessage</p>
+                            }
                         }
                     </section>
                 </aside>
@@ -453,10 +503,12 @@
     private bool _agentMessageIsError;
     private string? _agentEvidenceVersion;
     private string? _expandedEvidenceId;
+    private string? _caseMessage;
 
     private string StageName => _snapshot?.CurrentStage.Name ?? Configuration["DemoStage"] ?? "Deterministic";
     private bool IsAgentStage => _snapshot?.CurrentStage.Id >= DemoStage.InvestigationAgent;
     private bool IsSessionStage => _snapshot?.CurrentStage.Id >= DemoStage.Session;
+    private bool IsMemoryStage => _snapshot?.CurrentStage.Id >= DemoStage.Memory;
     private string AgentStatusText => (_agentBusy, _agentResponse) switch
     {
         (true, _) => "Working",
@@ -550,6 +602,49 @@
 
     private Task AskFollowUpAsync() => AskAgentCoreAsync("Why?", _agentSessionId);
 
+    private Task AskSecondAssetAsync() => AskAgentCoreAsync(
+        $"Why is streetlight {DemoAssets.SecondStreetlightAssetId} on during daylight?",
+        sessionId: null);
+
+    private async Task CloseCaseAsync()
+    {
+        if (_agentResponse is not { } response || _snapshot is not { } snapshot)
+        {
+            return;
+        }
+
+        try
+        {
+            var assetId = ExtractAssetId(_lastAgentQuestion) ?? snapshot.AssetId;
+            var resolution = response.Answer.Length <= 500 ? response.Answer : $"{response.Answer[..500]}…";
+            var closedCase = await OperationsAgentClient.CloseCaseAsync(
+                assetId,
+                $"Streetlight {assetId} reported on during daylight against its schedule.",
+                resolution,
+                CancellationToken.None);
+            _caseMessage = $"Case {closedCase.CaseId} recorded to the agent's memory for {closedCase.AssetId}.";
+        }
+        catch (Exception exception)
+        {
+            _caseMessage = $"The case could not be recorded: {exception.Message}";
+        }
+    }
+
+    private static string? ExtractAssetId(string? question)
+    {
+        if (string.IsNullOrWhiteSpace(question))
+        {
+            return null;
+        }
+
+        var match = System.Text.RegularExpressions.Regex.Match(
+            question,
+            @"\bL-\d{3}\b",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase,
+            TimeSpan.FromSeconds(1));
+        return match.Success ? match.Value.ToUpperInvariant() : null;
+    }
+
     private async Task AskAgentCoreAsync(string question, string? sessionId)
     {
         var requestedEvidenceVersion = GetEvidenceVersion(_snapshot);
@@ -557,6 +652,7 @@
         _agentResponse = null;
         _agentEvidenceVersion = null;
         _expandedEvidenceId = null;
+        _caseMessage = null;
         _agentMessage = null;
         _agentMessageIsError = false;
         _lastAgentQuestion = question;

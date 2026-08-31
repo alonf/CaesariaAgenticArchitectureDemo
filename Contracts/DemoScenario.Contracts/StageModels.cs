@@ -25,7 +25,13 @@ public enum DemoStage
     /// The Operations Agent can retrieve organizational work knowledge (work orders, technician
     /// notes) on demand to explain why an operational state exists.
     /// </summary>
-    Knowledge
+    Knowledge,
+
+    /// <summary>
+    /// The Operations Agent recalls its own closed cases across sessions as hypotheses. Recalled
+    /// memory is never evidence: live state must still be verified and real evidence searched.
+    /// </summary>
+    Memory
 }
 
 /// <summary>

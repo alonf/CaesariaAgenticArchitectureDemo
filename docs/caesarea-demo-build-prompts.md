@@ -39,6 +39,7 @@ Lecture-ready prompts are maintained as standalone files under `docs/prompts`. I
 - [Stage 1 — Investigation Agent](prompts/01-investigation-agent.md)
 - [Stage 2 — Session](prompts/02-session.md)
 - [Stage 3 — Knowledge](prompts/03-knowledge.md)
+- [Stage 4 — Memory](prompts/04-memory.md)
 
 As further stages are implemented, add one independently presentable prompt file per stage and link it here. Do not duplicate full prompt bodies in this overview after extraction.
 
@@ -327,7 +328,7 @@ Provide deterministic scenario presets:
 
 5. Normal Operation
 
-6. Night Operation
+6. Night Operation (removed later: no lecture beat ever used it)
 
 UI requirements:
 

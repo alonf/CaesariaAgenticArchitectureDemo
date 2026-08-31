@@ -39,6 +39,11 @@ public sealed partial class EnergyHubService
     {
         EnsureAsset(assetId);
 
+        if (IsFixtureAsset(assetId))
+        {
+            return CreateSecondStreetlightFixtureTwin(_timeProvider.GetUtcNow());
+        }
+
         lock (_gate)
         {
             return _twin;
@@ -55,6 +60,11 @@ public sealed partial class EnergyHubService
     {
         EnsureAsset(assetId);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(limit);
+
+        if (IsFixtureAsset(assetId))
+        {
+            return [];
+        }
 
         lock (_gate)
         {
@@ -175,6 +185,18 @@ public sealed partial class EnergyHubService
     {
         EnsureAsset(assetId);
         ArgumentException.ThrowIfNullOrWhiteSpace(correlationId);
+
+        if (IsFixtureAsset(assetId))
+        {
+            return new RestoreScheduledModeResult(
+                assetId,
+                null,
+                null,
+                CommandExecutionStatus.Failed,
+                correlationId,
+                $"Asset {assetId} is a read-only demo fixture; commands target {DemoAssets.StreetlightAssetId}.",
+                _timeProvider.GetUtcNow());
+        }
 
         var requestedAt = _timeProvider.GetUtcNow();
         long commandRevision;
@@ -579,11 +601,41 @@ public sealed partial class EnergyHubService
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(assetId);
 
-        if (!string.Equals(assetId, DemoAssets.StreetlightAssetId, StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(assetId, DemoAssets.StreetlightAssetId, StringComparison.OrdinalIgnoreCase)
+            && !IsFixtureAsset(assetId))
         {
-            throw new ArgumentException($"The Energy Hub only exposes asset {DemoAssets.StreetlightAssetId}.", nameof(assetId));
+            throw new ArgumentException(
+                $"The Energy Hub only exposes assets {DemoAssets.StreetlightAssetId} and {DemoAssets.SecondStreetlightAssetId}.",
+                nameof(assetId));
         }
     }
+
+    private static bool IsFixtureAsset(string assetId) =>
+        string.Equals(assetId, DemoAssets.SecondStreetlightAssetId, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Creates the deterministic read-only twin for the second streetlight fixture: on during
+    /// daylight under a manual override, mirroring the primary asset's anomaly - but with no
+    /// maintenance history and no work evidence anywhere, which is what the case-memory demo needs.
+    /// </summary>
+    /// <param name="now">The timestamp to stamp onto the fixture twin.</param>
+    /// <returns>The fixture operational twin.</returns>
+    public static EnergyOperationalTwin CreateSecondStreetlightFixtureTwin(DateTimeOffset now) =>
+        new(
+            DemoAssets.SecondStreetlightAssetId,
+            DemoAssets.SouthPromenadeArea,
+            ReportedIsOn: true,
+            DesiredIsOn: true,
+            IsDaylight: true,
+            ExpectedScheduledState: false,
+            ManualOverride: true,
+            ControllerHealthInfo.Healthy,
+            LastCommand: null,
+            LastMaintenanceTime: null,
+            HasRecentMaintenance: false,
+            OpenIncidentId: null,
+            now,
+            OperationalContext.None);
 }
 
 internal static partial class EnergyHubServiceLog

@@ -11,7 +11,7 @@ public sealed class DemoBreakpointsTests
         var snippetValues = GetDemoSnippetValues();
 
         Assert.Equal(
-            ["AGENT_CREATION", "AGENT_SESSION", "FUNCTION_TOOL", "KNOWLEDGE_RETRIEVAL"],
+            ["AGENT_CREATION", "AGENT_SESSION", "CASE_MEMORY", "FUNCTION_TOOL", "KNOWLEDGE_RETRIEVAL"],
             snippetValues.OrderBy(value => value, StringComparer.Ordinal));
 
         foreach (var value in snippetValues)
