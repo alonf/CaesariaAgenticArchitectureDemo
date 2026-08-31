@@ -87,6 +87,28 @@ All findings from the full working-tree review are now resolved.
    JSON reference data, and call the separation a risk reduction, not a guarantee.
 7. **Table containment** — `.agent-answer` scrolls wide content locally and wraps long tokens.
 
+## Fixed in the Skills-stage review pass
+
+1. **Session stage floor** — sessions record the highest stage they ran at; continuation at a
+   lower stage is rejected (410) so a downgrade fully restores the earlier composition, and the
+   Command Center resets its session id when it observes a stage moving backward.
+2. **Loaded-badge accuracy** — a skill counts as loaded only when a `load_skill` call named it
+   with an exact JSON `skillName` match (the SDK does exact lookup) and the pipeline recorded a
+   result for that call id; the recorder now correlates `FunctionResultContent` back to calls.
+3. **Catalog snapshot and robustness** — the skills catalog is snapshotted before the model run
+   (a mid-run presenter edit cannot fail a successful answer), parses only the `---` frontmatter
+   block, applies the SDK's `AgentSkillFrontmatter` validation, matches the SDK's discovery
+   depth, and skips unreadable/invalid files with a warning.
+4. **Single stage snapshot per request** — one `DemoStage` read drives every capability
+   decision, so a mid-composition stage change cannot produce a mixed set.
+5. **Provider disposal** — the per-request `AgentSkillsProvider` is disposed in a `finally`.
+6. **Real SDK discovery test** — the actual `AgentSkillsProvider` over the repository skill,
+   driven through a deterministic capturing chat client, proves advertisement and `load_skill`
+   exposure; the shipped skill's procedure sections, brief format, and footer are pinned, and the
+   skills directory is scanned for credential-like content.
+7. **Trust boundary documented** — skill content is injected as instructions without
+   sanitization; only reviewed, trusted skill sources may be configured.
+
 ## Deferred (with trigger)
 
 - **Snippet region scan scope** (low, from the demo-anchor review): the region synchronization

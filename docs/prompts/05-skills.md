@@ -27,6 +27,15 @@ own experience - Skills gives it documented procedure: how the organization says
   edits to the markdown take effect on the next ask - the live-edit encore.
 - `load_skill` requires approval by default in the SDK; `DisableLoadSkillApproval = true` here,
   and approval returns as its own beat in the ToolApproval stage.
+- **Trust boundary (lecture note)**: loaded skill content is injected into the model's
+  instructions without sanitization - that is the point of a skill, and it is why only reviewed,
+  trusted skill sources may be configured. Disabling load approval does not validate or sanitize
+  the procedure; the skills directory carries the same trust as the source code, and the tests
+  scan it for credential-like content.
+- Session stage floor: a conversation records the highest stage it ran at; continuing it at a
+  lower stage is rejected (410) and the UI resets the session on a downgrade, so going backward
+  fully restores the earlier composition - history cannot smuggle a loaded procedure into a
+  stage that does not offer skills.
 - The response carries a `Skills` trace (advertised skills + whether each was loaded); Command
   Center renders a Procedure panel and an **Investigate L-417 (new session)** action. A missing
   skills directory degrades gracefully: warning logged, stage runs without skills.

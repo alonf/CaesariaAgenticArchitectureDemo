@@ -541,6 +541,7 @@
     private bool _caseClosed;
     private string? _answerHtmlSource;
     private string _answerHtml = string.Empty;
+    private DemoStage? _lastObservedStage;
 
     private string StageName => _snapshot?.CurrentStage.Name ?? Configuration["DemoStage"] ?? "Deterministic";
     private bool IsAgentStage => _snapshot?.CurrentStage.Id >= DemoStage.InvestigationAgent;
@@ -787,6 +788,17 @@
             var snapshot = await ApiClient.GetSnapshotAsync(cancellationToken);
             _snapshot = snapshot;
             _lastRefreshed = DateTimeOffset.Now;
+
+            // A stage downgrade invalidates the conversational session: its history may carry
+            // capabilities (loaded skills, retrieved evidence) the earlier stage must not expose.
+            if (_lastObservedStage is { } previousStage && snapshot.CurrentStage.Id < previousStage && _agentSessionId is not null)
+            {
+                _agentSessionId = null;
+                _agentMessage = "Demo stage moved back; the conversational session was reset.";
+                _agentMessageIsError = false;
+            }
+
+            _lastObservedStage = snapshot.CurrentStage.Id;
 
             if (_agentResponse is not null
                 && !string.Equals(_agentEvidenceVersion, GetEvidenceVersion(snapshot), StringComparison.Ordinal))

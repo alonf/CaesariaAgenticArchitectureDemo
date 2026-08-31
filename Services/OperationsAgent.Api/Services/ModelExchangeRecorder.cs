@@ -24,6 +24,14 @@ public sealed class ModelExchangeRecorder(IChatClient innerClient) : DelegatingC
 
     private readonly List<ModelExchange> _exchanges = [];
     private readonly List<RecordedToolCall> _toolCalls = [];
+    private readonly HashSet<string> _completedCallIds = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// Gets a value indicating whether a tool result was observed for the supplied call: the
+    /// invocation pipeline executed the tool and fed its result back to the model.
+    /// </summary>
+    /// <param name="callId">The tool call identifier from a recorded call.</param>
+    public bool HasResult(string callId) => _completedCallIds.Contains(callId);
 
     /// <inheritdoc />
     public override async Task<ChatResponse> GetResponseAsync(
@@ -34,11 +42,18 @@ public sealed class ModelExchangeRecorder(IChatClient innerClient) : DelegatingC
         var messageList = messages as IReadOnlyList<ChatMessage> ?? [.. messages];
         var sent = messageList.Select(Describe).ToList();
 
+        // Tool results appear in the NEXT round trip's request messages; correlate them back to
+        // the recorded calls so callers can distinguish requested from executed.
+        foreach (var result in messageList.SelectMany(message => message.Contents).OfType<FunctionResultContent>())
+        {
+            _completedCallIds.Add(result.CallId);
+        }
+
         var response = await base.GetResponseAsync(messageList, options, cancellationToken);
 
         foreach (var call in response.Messages.SelectMany(message => message.Contents).OfType<FunctionCallContent>())
         {
-            _toolCalls.Add(new RecordedToolCall(call.Name, DescribeArguments(call.Arguments)));
+            _toolCalls.Add(new RecordedToolCall(call.Name, DescribeArguments(call.Arguments), call.CallId));
         }
 
         _exchanges.Add(new ModelExchange(_exchanges.Count + 1, sent, [.. response.Messages.Select(Describe)]));
@@ -67,8 +82,9 @@ public sealed class ModelExchangeRecorder(IChatClient innerClient) : DelegatingC
 /// </summary>
 /// <param name="ToolName">The stable tool name the model invoked.</param>
 /// <param name="Arguments">The tool arguments as compact JSON.</param>
+/// <param name="CallId">The tool call identifier used to correlate the eventual result.</param>
 [DebuggerDisplay("{ToolName,nq}({Arguments,nq})")]
-public sealed record RecordedToolCall(string ToolName, string Arguments);
+public sealed record RecordedToolCall(string ToolName, string Arguments, string CallId);
 
 /// <summary>
 /// Represents one recorded model round trip: what was sent and what the model returned.

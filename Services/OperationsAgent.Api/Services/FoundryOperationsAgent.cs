@@ -73,6 +73,10 @@ public sealed partial class FoundryOperationsAgent(
         // Inspect modelFlightRecorder.Exchanges in the debugger to see every model round trip.
         ModelExchangeRecorder? modelFlightRecorder = null;
 
+        // One stage snapshot drives every capability decision in this request, so a stage change
+        // mid-composition can never produce a mixed capability set.
+        var currentStage = _stageGate.GetCurrent().Id;
+
         #region KNOWLEDGE_RETRIEVAL
         DemoBreakpoints.Pause(DemoSnippets.Knowledge);
 
@@ -82,7 +86,7 @@ public sealed partial class FoundryOperationsAgent(
         // what the agent cited. Tool invocations run sequentially, so a plain list is safe.
         List<WorkEvidence> retrievedEvidence = [];
 
-        if (_stageGate.GetCurrent().Id >= DemoStage.Knowledge)
+        if (currentStage >= DemoStage.Knowledge)
         {
             workKnowledge = new TextSearchProvider(
                 async (query, searchCancellationToken) =>
@@ -114,7 +118,7 @@ public sealed partial class FoundryOperationsAgent(
         // Hypothesis trace for the UI: which closed cases the provider recalled this run.
         List<ClosedCase> recalledCases = [];
 
-        if (_stageGate.GetCurrent().Id >= DemoStage.Memory)
+        if (currentStage >= DemoStage.Memory)
         {
             caseMemory = new CaseMemoryProvider(
                 _caseMemoryStore,
@@ -128,8 +132,9 @@ public sealed partial class FoundryOperationsAgent(
         DemoBreakpoints.Pause(DemoSnippets.Skills);
 
         AgentSkillsProvider? skills = null;
+        IReadOnlyList<SkillDescriptor> advertisedSkills = [];
 
-        if (_stageGate.GetCurrent().Id >= DemoStage.Skills && _skillsDirectory is not null)
+        if (currentStage >= DemoStage.Skills && _skillsDirectory is not null)
         {
             // Progressive disclosure: skill names/descriptions are advertised in the system
             // prompt; the model loads a full procedure on demand through the load_skill tool.
@@ -138,6 +143,10 @@ public sealed partial class FoundryOperationsAgent(
                 _skillsDirectory,
                 options: new AgentSkillsProviderOptions { DisableLoadSkillApproval = true },
                 loggerFactory: _loggerFactory);
+
+            // Snapshot the catalog before the run: the response must describe what was advertised
+            // for THIS request even if the presenter edits the files while the model works.
+            advertisedSkills = SkillCatalog.Describe(_skillsDirectory, _logger);
         }
         #endregion
 
@@ -214,7 +223,7 @@ public sealed partial class FoundryOperationsAgent(
             {
                 session = await agent.CreateSessionAsync(timeoutSource.Token);
             }
-            else if (_sessionStore.TryGetState(sessionId, out var storedState))
+            else if (_sessionStore.TryGetState(sessionId, currentStage, out var storedState))
             {
                 // Each request restores its own private session instance from serialized state, so a
                 // live session object is never shared across requests or agent instances.
@@ -229,7 +238,7 @@ public sealed partial class FoundryOperationsAgent(
             #endregion
 
             var serializedSession = await agent.SerializeSessionAsync(session, cancellationToken: timeoutSource.Token);
-            var resolvedSessionId = _sessionStore.SaveState(sessionId, serializedSession);
+            var resolvedSessionId = _sessionStore.SaveState(sessionId, serializedSession, currentStage);
             OperationsAgentLog.RequestCompleted(_logger, correlationId);
 
             IReadOnlyList<OperationsAgentToolCall> toolCalls = modelFlightRecorder is null
@@ -252,23 +261,33 @@ public sealed partial class FoundryOperationsAgent(
                         item.CaseId, item.AssetId, item.Symptom, item.Resolution, item.ClosedAt))
             ];
 
-            // Skills trace: which procedures were advertised this run, and which the model loaded
-            // (a load_skill invocation naming the skill appears in the recorded tool calls).
-            IReadOnlyList<OperationsAgentSkill> advertisedSkills = skills is null
-                ? []
-                : [.. SkillCatalog.Describe(_skillsDirectory).Select(skill => new OperationsAgentSkill(
+            // Skills trace from the pre-run snapshot. A skill counts as loaded only when a
+            // load_skill call named it exactly (the SDK performs an exact lookup) AND the pipeline
+            // executed the call and returned a result to the model.
+            IReadOnlyList<OperationsAgentSkill> skillTrace =
+            [
+                .. advertisedSkills.Select(skill => new OperationsAgentSkill(
                     skill.Name,
                     skill.Description,
-                    toolCalls.Any(call => call.ToolName == OperationsAgentToolNames.LoadSkill
-                        && call.Arguments.Contains(skill.Name, StringComparison.OrdinalIgnoreCase))))];
+                    modelFlightRecorder is not null && modelFlightRecorder.ToolCalls.Any(call =>
+                        call.ToolName == OperationsAgentToolNames.LoadSkill
+                        && SkillCatalog.IsLoadSkillCallFor(call.Arguments, skill.Name)
+                        && modelFlightRecorder.HasResult(call.CallId))))
+            ];
 
-            return new OperationsAgentAnswer(response.Text, resolvedSessionId, toolCalls, evidence, recalled, advertisedSkills, modelFlightRecorder?.Exchanges.Count ?? 0);
+            return new OperationsAgentAnswer(response.Text, resolvedSessionId, toolCalls, evidence, recalled, skillTrace, modelFlightRecorder?.Exchanges.Count ?? 0);
         }
         catch (OperationCanceledException exception) when (!cancellationToken.IsCancellationRequested)
         {
             throw new OperationsAgentTimedOutException(
                 $"The Operations Agent request exceeded its {_requestTimeout.TotalSeconds:0}-second execution budget.",
                 exception);
+        }
+        finally
+        {
+            // The convenience constructor owns the provider's source pipeline; a per-request
+            // provider is disposed with the request.
+            skills?.Dispose();
         }
     }
 }

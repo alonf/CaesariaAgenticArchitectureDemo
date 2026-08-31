@@ -35,12 +35,16 @@ public sealed class AgentSessionStore(TimeProvider timeProvider)
     }
 
     /// <summary>
-    /// Gets the serialized session state for the supplied identifier.
+    /// Gets the serialized session state for the supplied identifier. A session may continue at
+    /// the stage that produced it or a later one (stages are cumulative), but never at an earlier
+    /// stage: its history could carry capabilities - loaded skills, retrieved evidence - that the
+    /// earlier stage must not expose, so a downgrade invalidates the session.
     /// </summary>
     /// <param name="sessionId">The session identifier returned by an earlier request.</param>
+    /// <param name="currentStage">The stage the current request runs at.</param>
     /// <param name="state">The serialized session state, when the identifier is known and current.</param>
-    /// <returns><see langword="false"/> when the identifier is unknown or expired.</returns>
-    public bool TryGetState(string sessionId, out JsonElement state)
+    /// <returns><see langword="false"/> when the identifier is unknown, expired, or from a later stage.</returns>
+    public bool TryGetState(string sessionId, DemoStage currentStage, out JsonElement state)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
 
@@ -48,7 +52,7 @@ public sealed class AgentSessionStore(TimeProvider timeProvider)
         {
             Prune();
 
-            if (_sessions.TryGetValue(sessionId, out var stored))
+            if (_sessions.TryGetValue(sessionId, out var stored) && currentStage >= stored.HighestStage)
             {
                 state = stored.State;
                 return true;
@@ -65,20 +69,24 @@ public sealed class AgentSessionStore(TimeProvider timeProvider)
     /// </summary>
     /// <param name="sessionId">The identifier the caller supplied, or <see langword="null"/>.</param>
     /// <param name="state">The serialized session state after the current run.</param>
+    /// <param name="stage">The stage the current run executed at.</param>
     /// <returns>The identifier a follow-up question should send.</returns>
-    public string SaveState(string? sessionId, JsonElement state)
+    public string SaveState(string? sessionId, JsonElement state, DemoStage stage)
     {
         lock (_gate)
         {
             Prune();
 
-            var stored = new StoredSession(state.Clone(), _timeProvider.GetUtcNow());
-
-            if (sessionId is not null && _sessions.ContainsKey(sessionId))
+            if (sessionId is not null && _sessions.TryGetValue(sessionId, out var existing))
             {
-                _sessions[sessionId] = stored;
+                _sessions[sessionId] = new StoredSession(
+                    state.Clone(),
+                    _timeProvider.GetUtcNow(),
+                    stage > existing.HighestStage ? stage : existing.HighestStage);
                 return sessionId;
             }
+
+            var stored = new StoredSession(state.Clone(), _timeProvider.GetUtcNow(), stage);
 
             var newSessionId = Guid.NewGuid().ToString("N");
             _sessions[newSessionId] = stored;
@@ -110,5 +118,5 @@ public sealed class AgentSessionStore(TimeProvider timeProvider)
         }
     }
 
-    private sealed record StoredSession(JsonElement State, DateTimeOffset LastUsedAt);
+    private sealed record StoredSession(JsonElement State, DateTimeOffset LastUsedAt, DemoStage HighestStage);
 }
