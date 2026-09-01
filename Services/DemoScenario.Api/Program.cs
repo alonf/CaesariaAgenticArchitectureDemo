@@ -20,6 +20,11 @@ builder.Services.AddHttpClient<IEnergyScenarioClient, HttpEnergyScenarioClient>(
     var options = serviceProvider.GetRequiredService<IOptions<DemoScenarioApiOptions>>().Value;
     client.BaseAddress = new Uri(options.EnergyHubBaseUri, UriKind.Absolute);
 });
+builder.Services.AddHttpClient<ISecurityScenarioClient, HttpSecurityScenarioClient>((serviceProvider, client) =>
+{
+    var options = serviceProvider.GetRequiredService<IOptions<DemoScenarioApiOptions>>().Value;
+    client.BaseAddress = new Uri(options.SecurityHubBaseUri, UriKind.Absolute);
+});
 builder.Services.AddHttpClient<ICommandCenterScenarioClient, HttpCommandCenterScenarioClient>((serviceProvider, client) =>
 {
     var options = serviceProvider.GetRequiredService<IOptions<DemoScenarioApiOptions>>().Value;

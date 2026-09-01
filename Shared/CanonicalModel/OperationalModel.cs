@@ -147,15 +147,20 @@ public sealed record ControllerHealthInfo(ControllerHealthStatus Status, string 
 /// <summary>
 /// Captures cross-domain operational context that can affect the scheduled lighting target.
 /// </summary>
-/// <param name="SecurityOperationActive">Indicates whether a security operation is active in the area.</param>
 /// <param name="RequiresLighting">Indicates whether the current operational context requires lighting regardless of schedule.</param>
 /// <param name="Summary">A short description of the contextual lighting requirement.</param>
-public sealed record OperationalContext(bool SecurityOperationActive, bool RequiresLighting, string Summary)
+/// <remarks>
+/// This context deliberately carries the requirement and not its origin. A domain that needs
+/// lighting can compel it - that is what keeps deterministic automation safe - but which domain
+/// asked, and why, is that domain's information to disclose. An asset's operational record is
+/// the wrong place to publish another domain's activity.
+/// </remarks>
+public sealed record OperationalContext(bool RequiresLighting, string Summary)
 {
     /// <summary>
     /// Gets the canonical context indicating that no cross-domain requirement currently affects the schedule.
     /// </summary>
-    public static OperationalContext None { get; } = new(false, false, "No cross-domain lighting requirement.");
+    public static OperationalContext None { get; } = new(false, "No cross-domain lighting requirement.");
 }
 
 /// <summary>

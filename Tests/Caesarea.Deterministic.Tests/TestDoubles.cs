@@ -3,6 +3,7 @@ using DemoScenario.Api.Services;
 using EnergyHub.Api.Services;
 using OperationsAgent.Api.Services;
 using OperationsAgent.Contracts;
+using Security.Contracts;
 
 namespace Caesarea.Deterministic.Tests;
 
@@ -190,6 +191,25 @@ internal sealed class FakeEnergyScenarioClient : IEnergyScenarioClient
             return OnApplyScenarioAsync(request, correlationId, cancellationToken);
         }
 
+        return Task.CompletedTask;
+    }
+}
+
+internal sealed class FakeSecurityScenarioClient : ISecurityScenarioClient
+{
+    public int ResetCalls { get; private set; }
+
+    public SecurityScenarioSyncRequest? LastRequest { get; private set; }
+
+    public Task ResetAsync(string correlationId, CancellationToken cancellationToken)
+    {
+        ResetCalls++;
+        return Task.CompletedTask;
+    }
+
+    public Task ApplyScenarioAsync(SecurityScenarioSyncRequest request, string correlationId, CancellationToken cancellationToken)
+    {
+        LastRequest = request;
         return Task.CompletedTask;
     }
 }

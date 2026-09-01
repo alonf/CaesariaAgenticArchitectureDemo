@@ -10,9 +10,18 @@ var commandCenterApi = builder.AddProject<Projects.CommandCenter_Api>("commandce
     .WithReference(energyHub)
     .WaitFor(energyHub);
 
+// The Security domain: an authoritative hub whose records only its own agent may read, and the
+// agent that reads them. The Operations Agent deliberately has no reference to the hub.
+var securityHub = builder.AddProject<Projects.SecurityHub_Api>("securityhub-api");
+
+var securityAgentApi = builder.AddProject<Projects.SecurityAgent_Api>("securityagent-api")
+    .WithReference(securityHub)
+    .WaitFor(securityHub);
+
 var operationsAgentApi = builder.AddProject<Projects.OperationsAgent_Api>("operationsagent-api")
     .WithReference(energyHub)
     .WithReference(commandCenterApi)
+    .WithReference(securityAgentApi)
     .WaitFor(energyHub);
 
 // DemoScenario references the Operations Agent (to propagate stage changes) but does not wait for
@@ -22,9 +31,11 @@ var demoScenarioApi = builder.AddProject<Projects.DemoScenario_Api>("demoscenari
     .WithReference(energyHub)
     .WithReference(commandCenterApi)
     .WithReference(operationsAgentApi)
+    .WithReference(securityHub)
     .WaitFor(smartpoleSimulator)
     .WaitFor(energyHub)
-    .WaitFor(commandCenterApi);
+    .WaitFor(commandCenterApi)
+    .WaitFor(securityHub);
 
 // The web apps reference the Operations Agent but deliberately do not wait for it: a Foundry/agent
 // startup problem must never block the deterministic Stage 0 lecture path (Section 32 fallbacks).

@@ -281,7 +281,7 @@ public sealed class EnergyHubServiceTests
             now.AddMinutes(-20),
             manualOverride,
             requiresLighting
-                ? new OperationalContext(true, true, "Security operation requires lighting.")
+                ? new OperationalContext(true, "An external operational directive requires lighting.")
                 : OperationalContext.None,
             now,
             SmartPoleBehaviorConfiguration.Default);

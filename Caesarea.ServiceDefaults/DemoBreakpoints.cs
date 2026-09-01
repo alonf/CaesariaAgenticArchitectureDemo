@@ -68,6 +68,12 @@ public static class DemoSnippets
     /// framework intercepts it and a supervisor approves before it runs.
     /// </summary>
     public const string ToolApproval = "TOOL_APPROVAL";
+
+    /// <summary>
+    /// Gets the multi-agent snippet: composing a second agent that owns a separate reasoning and
+    /// permission boundary, consulted as a tool while the caller keeps ownership of the answer.
+    /// </summary>
+    public const string MultiAgent = "MULTI_AGENT";
 }
 
 /// <summary>

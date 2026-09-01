@@ -60,6 +60,14 @@ builder.Services.AddSingleton<ToolSourceSwitch>();
 builder.Services.AddSingleton<PendingApprovalStore>();
 builder.Services.AddSingleton<StageTransitionEffects>();
 builder.Services.AddSingleton<IWorkItemGateway, SimulatedWorkItemGateway>();
+builder.Services.AddSingleton<SecurityConsultSwitch>();
+// The HTTP client the Security Agent's MCP transport rides on. Note what is absent: this service
+// has no client for the Security Hub itself.
+builder.Services.AddHttpClient("securityagent-mcp", (serviceProvider, client) =>
+{
+    var options = serviceProvider.GetRequiredService<IOptions<OperationsAgentApiOptions>>().Value;
+    client.BaseAddress = new Uri(options.SecurityAgentBaseUri, UriKind.Absolute);
+});
 builder.Services.AddSingleton<RemediationWorkflowService>();
 // The HTTP client the MCP transport rides on; service discovery and the standard resilience
 // pipeline apply like any other outbound client.
@@ -91,8 +99,10 @@ builder.Services.AddSingleton<IOperationsAgent>(serviceProvider =>
         serviceProvider.GetRequiredService<PendingApprovalStore>(),
         serviceProvider.GetRequiredService<RemediationWorkflowService>(),
         serviceProvider.GetRequiredService<IWorkItemGateway>(),
+        serviceProvider.GetRequiredService<SecurityConsultSwitch>(),
         serviceProvider.GetRequiredService<IHttpClientFactory>(),
         McpEndpoint.Create(options.EnergyHubBaseUri),
+        McpEndpoint.Create(options.SecurityAgentBaseUri),
         skillsDirectory,
         options.ModelDeploymentName,
         options.AgentName,
@@ -285,6 +295,28 @@ remediation.MapGet("/runs/{runId}", (HttpContext context, string runId, Remediat
             "Workflow run not found",
             $"No remediation workflow run with id {runId} exists.",
             context.GetCorrelationId()));
+});
+
+// Presenter toggle: whether the agent may consult the Security Operations Agent. The same
+// question answered with it off and on is what shows the second agent earning its cost.
+var securityConsult = app.MapGroup("/api/operations-agent/security-consult")
+    .WithTags("Security Consult");
+
+securityConsult.MapGet("/", (SecurityConsultSwitch consult) =>
+    TypedResults.Ok(new OperationsAgentSecurityConsultStatus(consult.Enabled)));
+securityConsult.MapPost("/", (HttpContext context, OperationsAgentSecurityConsultStatus status, SecurityConsultSwitch consult, DemoStageGate stageGate) =>
+{
+    if (stageGate.GetCurrent().Id < DemoStage.MultiAgent)
+    {
+        return Results.Problem(ProblemDetailsFactory.Create(
+            StatusCodes.Status409Conflict,
+            "Security consult disabled in the current demo stage",
+            $"Consulting the Security Operations Agent requires the MultiAgent stage; the current stage is {stageGate.GetCurrent().Name}.",
+            context.GetCorrelationId()));
+    }
+
+    consult.Enabled = status.Enabled;
+    return Results.Ok(new OperationsAgentSecurityConsultStatus(consult.Enabled));
 });
 
 // Presenter toggle: where the streetlight tool comes from. Available only once the McpTools

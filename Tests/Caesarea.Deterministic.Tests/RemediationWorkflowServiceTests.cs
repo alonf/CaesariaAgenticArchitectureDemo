@@ -98,7 +98,7 @@ public sealed class RemediationWorkflowServiceTests
         // operation; the effective target says it is exactly where it should be.
         var world = new WorkflowWorld(CreateTwin(reportedIsOn: true, manualOverride: false) with
         {
-            OperationContext = new OperationalContext(true, true, "Security operation requires lighting in North Promenade.")
+            OperationContext = new OperationalContext(true, "An external operational directive requires lighting in this area.")
         });
 
         var report = world.Service.StartRun("L-417", "wf-security-corr");

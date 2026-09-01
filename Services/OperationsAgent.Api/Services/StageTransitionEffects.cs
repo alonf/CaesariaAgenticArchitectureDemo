@@ -11,6 +11,7 @@ public sealed partial class StageTransitionEffects(
     PendingApprovalStore pendingApprovals,
     ToolSourceSwitch toolSourceSwitch,
     RemediationWorkflowService remediationWorkflow,
+    SecurityConsultSwitch securityConsult,
     ILogger<StageTransitionEffects> logger)
 {
     /// <summary>
@@ -34,6 +35,14 @@ public sealed partial class StageTransitionEffects(
             remediationWorkflow.CancelActiveRuns();
         }
 
+        // Re-entering MultiAgent starts with the consult off, so the contrast beat always begins
+        // from the same place.
+        if (current < DemoStage.MultiAgent && securityConsult.Enabled)
+        {
+            securityConsult.Enabled = false;
+            StageTransitionLog.SecurityConsultDisabled(logger, current);
+        }
+
         if (current < DemoStage.McpTools && toolSourceSwitch.Current != OperationsAgentToolSource.Local)
         {
             toolSourceSwitch.Current = OperationsAgentToolSource.Local;
@@ -49,4 +58,10 @@ internal static partial class StageTransitionLog
         Level = LogLevel.Information,
         Message = "Tool source reset to Local by the stage downgrade to {Stage}.")]
     internal static partial void ToolSourceReset(ILogger logger, DemoStage stage);
+
+    [LoggerMessage(
+        EventId = 2634,
+        Level = LogLevel.Information,
+        Message = "Security consult disabled by the stage downgrade to {Stage}.")]
+    internal static partial void SecurityConsultDisabled(ILogger logger, DemoStage stage);
 }

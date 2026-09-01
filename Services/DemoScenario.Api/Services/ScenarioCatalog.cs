@@ -10,6 +10,10 @@ namespace DemoScenario.Api.Services;
 /// <param name="OpenIncident">The Command Center incident to seed, if any.</param>
 /// <param name="Activity">The Command Center activity to seed.</param>
 /// <param name="ApplicationSummary">The projector-friendly completion summary.</param>
+/// <param name="SecurityState">
+/// The Security Hub synchronization request, for scenarios where another domain is acting. Every
+/// scenario clears the Security Hub first, so only a scenario that asserts an operation needs one.
+/// </param>
 public sealed record ScenarioRecipe(
     ScenarioDescriptor Descriptor,
     SmartPoleScenarioState SmartPoleState,
@@ -17,7 +21,8 @@ public sealed record ScenarioRecipe(
     CustomerReportRecord? CustomerReport,
     IncidentRecord? OpenIncident,
     IReadOnlyList<ActivityRecord> Activity,
-    string ApplicationSummary);
+    string ApplicationSummary,
+    SecurityScenarioSyncRequest? SecurityState = null);
 
 /// <summary>
 /// Stores the deterministic scenario definitions used by the presenter console and scenario coordinator.
@@ -91,7 +96,9 @@ public sealed class ScenarioCatalog(TimeProvider timeProvider)
                     ControllerHealthInfo.Healthy,
                     now.AddHours(-3),
                     false,
-                    new OperationalContext(true, true, "Security operation requires lighting in North Promenade."),
+                    // The lighting domain is told that lighting is required, and nothing more:
+                    // which domain requires it, and why, is disclosed only by that domain's agent.
+                    new OperationalContext(true, "An external operational directive requires lighting in this area; the requesting domain is not disclosed to lighting operations."),
                     SmartPoleBehaviorConfiguration.Default),
                 new EnergyScenarioSyncRequest(true, null, "Energy Hub synchronized to the Security Operation scenario."),
                 null,
@@ -99,7 +106,23 @@ public sealed class ScenarioCatalog(TimeProvider timeProvider)
                 [
                     CreateScenarioActivity("Security operations require lighting even though the daylight schedule is off.", now)
                 ],
-                "Security Operation applied deterministically."),
+                "Security Operation applied deterministically.",
+                // The Security domain's own record of the same fact, carrying the restricted
+                // detail only its agent may read.
+                new SecurityScenarioSyncRequest(
+                    [
+                        new SecurityOperationRecord(
+                            "SEC-OP-2291",
+                            DemoAssets.NorthPromenadeArea,
+                            RequiresLighting: true,
+                            now.AddHours(-1),
+                            now.AddHours(3),
+                            Classification: "RESTRICTED",
+                            AuthorizedBy: "Superintendent R. Bar-On",
+                            UnitCallSign: "NIGHTHAWK-3",
+                            Notes: "Perimeter watch along the promenade; lighting required for camera coverage.")
+                    ],
+                    "Security Hub synchronized to the Security Operation scenario.")),
             ScenarioId.ControllerFault => new ScenarioRecipe(
                 descriptor,
                 new SmartPoleScenarioState(

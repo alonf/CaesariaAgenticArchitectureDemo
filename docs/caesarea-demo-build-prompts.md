@@ -45,6 +45,7 @@ Lecture-ready prompts are maintained as standalone files under `docs/prompts`. I
 - [Stage 7 — InteractiveInput](prompts/07-interactive-input.md)
 - [Stage 8 — Workflow](prompts/08-workflow.md)
 - [Stage 9 — ToolApproval](prompts/09-tool-approval.md)
+- [Stage 10 — MultiAgent](prompts/10-multi-agent.md)
 
 As further stages are implemented, add one independently presentable prompt file per stage and link it here. Do not duplicate full prompt bodies in this overview after extraction.
 

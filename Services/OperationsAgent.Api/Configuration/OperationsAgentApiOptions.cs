@@ -23,6 +23,14 @@ internal sealed class OperationsAgentApiOptions : IValidatableObject
     public string CommandCenterBaseUri { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets the base address of the Security Operations Agent, consulted across the
+    /// domain boundary at the MultiAgent stage. This service never addresses the Security Hub
+    /// itself: the restricted records are reachable only through that agent's reasoning.
+    /// </summary>
+    [Required]
+    public string SecurityAgentBaseUri { get; set; } = string.Empty;
+
+    /// <summary>
     /// Gets or sets the Microsoft Foundry project endpoint used to run the Operations Agent.
     /// This value is a non-secret development default and does not require any key or secret.
     /// </summary>
@@ -76,6 +84,13 @@ internal sealed class OperationsAgentApiOptions : IValidatableObject
             yield return new ValidationResult(
                 "OperationsAgentApi:CommandCenterBaseUri must be a valid absolute or Aspire service-discovery URI.",
                 [nameof(CommandCenterBaseUri)]);
+        }
+
+        if (!ServiceUriValidator.TryValidateAbsoluteOrServiceDiscoveryUri(SecurityAgentBaseUri, out _))
+        {
+            yield return new ValidationResult(
+                "OperationsAgentApi:SecurityAgentBaseUri must be a valid absolute or Aspire service-discovery URI.",
+                [nameof(SecurityAgentBaseUri)]);
         }
 
         if (!Uri.TryCreate(FoundryProjectEndpoint, UriKind.Absolute, out var foundryUri) || foundryUri.Scheme != Uri.UriSchemeHttps)

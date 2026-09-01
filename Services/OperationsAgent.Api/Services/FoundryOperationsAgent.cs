@@ -27,8 +27,10 @@ public sealed partial class FoundryOperationsAgent(
     PendingApprovalStore pendingApprovalStore,
     RemediationWorkflowService remediationWorkflow,
     IWorkItemGateway workItems,
+    SecurityConsultSwitch securityConsult,
     IHttpClientFactory httpClientFactory,
     Uri mcpEndpoint,
+    Uri securityAgentEndpoint,
     string? skillsDirectory,
     string modelDeploymentName,
     string agentName,
@@ -44,6 +46,12 @@ public sealed partial class FoundryOperationsAgent(
         When asked why an operational state exists and a work-knowledge search capability is
         available, search it for maintenance or override evidence and cite the evidence identifiers
         you used. If no evidence exists, say so; never invent work orders or notes.
+        Before concluding that an asset's state is an anomaly, check whether another city domain
+        requires it. If a security assessment capability is available, consult it for the asset's
+        area first: an asset that is deliberately lit for an active operation is correct, not
+        faulty, and must not be reported as an anomaly or corrected. Report the other domain's
+        conclusion and its stated reason; do not ask for or speculate about operational details it
+        withholds.
         When the operator asks you to change an asset's state and a tool for that change is
         available - either one that performs it or one that starts a governed operation - invoke
         that tool immediately. Confirmation is obtained by the tool or by the operation it starts
@@ -63,6 +71,8 @@ public sealed partial class FoundryOperationsAgent(
 
     private readonly RemediationWorkflowService _remediationWorkflow = remediationWorkflow ?? throw new ArgumentNullException(nameof(remediationWorkflow));
     private readonly IWorkItemGateway _workItems = workItems ?? throw new ArgumentNullException(nameof(workItems));
+    private readonly SecurityConsultSwitch _securityConsult = securityConsult ?? throw new ArgumentNullException(nameof(securityConsult));
+    private readonly Uri _securityAgentEndpoint = securityAgentEndpoint ?? throw new ArgumentNullException(nameof(securityAgentEndpoint));
     private readonly IHttpClientFactory _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
     private readonly Uri _mcpEndpoint = mcpEndpoint ?? throw new ArgumentNullException(nameof(mcpEndpoint));
     private readonly string? _skillsDirectory = skillsDirectory;
@@ -118,6 +128,8 @@ public sealed partial class FoundryOperationsAgent(
         AgentSkillsProvider? skills = null;
         McpClient? mcpClient = null;
         HttpClientTransport? mcpTransport = null;
+        McpClient? securityMcpClient = null;
+        HttpClientTransport? securityTransport = null;
 
         try
         {
@@ -265,6 +277,34 @@ public sealed partial class FoundryOperationsAgent(
                     "Starts the governed Restore Lighting Operation workflow for a streetlight."));
             }
             #endregion
+
+            // A second agent, not a second tool: Security owns records this service may not read,
+            // so the question crosses a boundary and comes back as a judgment. The relationship is
+            // delegation - the Operations Agent keeps ownership of the answer it gives the operator.
+            if (currentStage >= DemoStage.MultiAgent && _securityConsult.Enabled)
+            {
+                var securityHttpClient = _httpClientFactory.CreateClient("securityagent-mcp");
+                securityHttpClient.DefaultRequestHeaders.Add(CorrelationHeaderNames.XCorrelationId, correlationId);
+
+                securityTransport = new HttpClientTransport(
+                    new HttpClientTransportOptions { Endpoint = _securityAgentEndpoint },
+                    securityHttpClient,
+                    _loggerFactory,
+                    ownsHttpClient: true);
+
+                try
+                {
+                    securityMcpClient = await McpClient.CreateAsync(
+                        securityTransport, loggerFactory: _loggerFactory, cancellationToken: timeoutSource.Token);
+                    var securityTools = await securityMcpClient.ListToolsAsync(cancellationToken: timeoutSource.Token);
+                    agentTools.Add(FindDiscoveredTool(securityTools, OperationsAgentToolNames.AssessLightingRequirement));
+                }
+                catch (McpException exception)
+                {
+                    throw new OperationsAgentToolUnavailableException(
+                        $"The Security Operations Agent could not be consulted: {exception.Message}", exception);
+                }
+            }
 
             #region TOOL_APPROVAL
             DemoBreakpoints.Pause(DemoSnippets.ToolApproval);
@@ -433,6 +473,16 @@ public sealed partial class FoundryOperationsAgent(
             if (mcpTransport is not null)
             {
                 await mcpTransport.DisposeAsync();
+            }
+
+            if (securityMcpClient is not null)
+            {
+                await securityMcpClient.DisposeAsync();
+            }
+
+            if (securityTransport is not null)
+            {
+                await securityTransport.DisposeAsync();
             }
         }
     }

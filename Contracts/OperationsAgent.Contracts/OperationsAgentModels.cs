@@ -40,7 +40,19 @@ public static class OperationsAgentToolNames
     /// maintenance work item. Wrapped so a supervisor approves before it runs.
     /// </summary>
     public const string CreateMaintenanceWorkItem = "create_maintenance_work_item";
+
+    /// <summary>
+    /// The cross-domain consult: asks the Security Operations Agent whether an active operation
+    /// requires an area to stay lit. The answer is a sanitized judgment, never the records.
+    /// </summary>
+    public const string AssessLightingRequirement = "assess_lighting_requirement";
 }
+
+/// <summary>
+/// Reports whether the agent may consult the Security Operations Agent.
+/// </summary>
+/// <param name="Enabled">Whether the consult is available for subsequent runs.</param>
+public sealed record OperationsAgentSecurityConsultStatus(bool Enabled);
 
 /// <summary>
 /// One interactive-input request awaiting the operator: a tool paused mid-execution (MCP MRTR)

@@ -9,6 +9,7 @@ public sealed partial class ScenarioCoordinator : IDisposable
     private readonly SemaphoreSlim _applicationLock = new(1, 1);
     private readonly ISmartPoleScenarioClient _smartpoleScenarioClient;
     private readonly IEnergyScenarioClient _energyScenarioClient;
+    private readonly ISecurityScenarioClient _securityScenarioClient;
     private readonly ICommandCenterScenarioClient _commandCenterScenarioClient;
     private readonly ScenarioCatalog _scenarioCatalog;
     private readonly TimeProvider _timeProvider;
@@ -23,10 +24,12 @@ public sealed partial class ScenarioCoordinator : IDisposable
     /// <param name="commandCenterScenarioClient">The client used to synchronize the Command Center.</param>
     /// <param name="scenarioCatalog">The catalog of deterministic scenario recipes.</param>
     /// <param name="timeProvider">The clock used to stamp scenario state changes.</param>
+    /// <param name="securityScenarioClient">The Security Hub scenario client.</param>
     /// <param name="logger">The logger used for scenario orchestration events.</param>
     public ScenarioCoordinator(
         ISmartPoleScenarioClient smartpoleScenarioClient,
         IEnergyScenarioClient energyScenarioClient,
+        ISecurityScenarioClient securityScenarioClient,
         ICommandCenterScenarioClient commandCenterScenarioClient,
         ScenarioCatalog scenarioCatalog,
         TimeProvider timeProvider,
@@ -34,6 +37,7 @@ public sealed partial class ScenarioCoordinator : IDisposable
     {
         _smartpoleScenarioClient = smartpoleScenarioClient ?? throw new ArgumentNullException(nameof(smartpoleScenarioClient));
         _energyScenarioClient = energyScenarioClient ?? throw new ArgumentNullException(nameof(energyScenarioClient));
+        _securityScenarioClient = securityScenarioClient ?? throw new ArgumentNullException(nameof(securityScenarioClient));
         _commandCenterScenarioClient = commandCenterScenarioClient ?? throw new ArgumentNullException(nameof(commandCenterScenarioClient));
         _scenarioCatalog = scenarioCatalog ?? throw new ArgumentNullException(nameof(scenarioCatalog));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
@@ -101,6 +105,15 @@ public sealed partial class ScenarioCoordinator : IDisposable
 
             await _energyScenarioClient.ResetAsync(correlationId, cancellationToken);
             await _energyScenarioClient.ApplyScenarioAsync(recipe.EnergyState, correlationId, cancellationToken);
+
+            // The Security domain is synchronized from the same recipe, so the two boundaries
+            // can never disagree about whether an operation is active.
+            await _securityScenarioClient.ResetAsync(correlationId, cancellationToken);
+
+            if (recipe.SecurityState is { } securityState)
+            {
+                await _securityScenarioClient.ApplyScenarioAsync(securityState, correlationId, cancellationToken);
+            }
 
             await _commandCenterScenarioClient.ResetAsync(correlationId, cancellationToken);
 

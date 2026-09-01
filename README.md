@@ -80,6 +80,7 @@ grows one capability at a time, and each stage maps to a concrete MAF concept:
 | InteractiveInput | MCP Multi Round-Trip Requests — `InputRequiredException` + elicitation handler |
 | Workflow | `Microsoft.Agents.AI.Workflows` — code-built graph (`WorkflowBuilder`), approval-gate node, self-rendered diagram |
 | ToolApproval | `ApprovalRequiredAIFunction` — the model selects a protected capability and the framework intercepts it |
+| MultiAgent | A second agent with its own permission boundary, consulted as a remote capability (`AsAIFunction` over MCP) |
 
 Each stage has a build-and-design document under [docs/prompts/](docs/prompts/), the exact
 lecture-slide code lives in named `#region` blocks (see the deck anchors in the docs), and
@@ -111,6 +112,11 @@ The demo runs as one application with a presenter-controlled `DemoStage`:
   with **Multi Round-Trip Requests (MRTR)**. The tool pauses input-required for explicit operator
   approval and produces no side effect before the input arrives; deny and the state provably
   does not change.
+- `DemoStage=MultiAgent` — a **second agent earns its cost**. The Security Hub holds records the
+  Operations Agent may not read (an architecture test pins that it has no route to them at all),
+  so it consults a Security Operations Agent and receives a sanitized judgment while keeping
+  ownership of the answer. Turn the consult off and the same question yields a thinner answer:
+  the lamp is intentional, but the reason belongs to a domain that will not disclose it.
 - `DemoStage=ToolApproval` — the third human-control point, and the reactive one: the agent may
   decide by itself to file a maintenance work item, and `ApprovalRequiredAIFunction` makes the
   framework intercept that call so a supervisor approves before it runs. MRTR was the tool asking,
@@ -133,6 +139,9 @@ boundary, so switching stages does not restart the application.
 - `CommandCenter.Api` aggregates the deterministic operational view without calling SmartPole directly.
 - `DemoScenario.Api` applies synthetic presenter scenarios.
 - `OperationsAgent.Api` hosts one general, read-only **Caesarea Operations Agent**.
+- `SecurityHub.Api` owns active security operations, including restricted detail.
+- `SecurityAgent.Api` hosts the **Security Operations Agent** — the only service that may read the
+  Security Hub, published to other domains as a consult capability.
 
 The agent has no direct SmartPole access and no write capability below the InteractiveInput stage.
 In that stage's window the single write tool (`restore_scheduled_mode`) exists only over MCP and

@@ -81,6 +81,48 @@ public interface ICommandCenterScenarioClient
     public Task ApplyScenarioAsync(CommandCenterScenarioContext scenarioContext, string correlationId, CancellationToken cancellationToken);
 }
 
+/// <summary>
+/// Coordinates reset and scenario synchronization calls to the Security Hub boundary, so a
+/// scenario that asserts an active operation says so in the Security domain as well - the two
+/// boundaries must never contradict each other on stage.
+/// </summary>
+public interface ISecurityScenarioClient
+{
+    /// <summary>
+    /// Clears every recorded security operation.
+    /// </summary>
+    /// <param name="correlationId">The correlation identifier spanning the scenario orchestration request.</param>
+    /// <param name="cancellationToken">The token used to cancel the operation.</param>
+    public Task ResetAsync(string correlationId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Applies the supplied synchronization request to the Security Hub.
+    /// </summary>
+    /// <param name="request">The Security Hub synchronization request.</param>
+    /// <param name="correlationId">The correlation identifier spanning the scenario orchestration request.</param>
+    /// <param name="cancellationToken">The token used to cancel the operation.</param>
+    public Task ApplyScenarioAsync(SecurityScenarioSyncRequest request, string correlationId, CancellationToken cancellationToken);
+}
+
+/// <inheritdoc cref="ISecurityScenarioClient"/>
+public sealed partial class HttpSecurityScenarioClient(HttpClient httpClient, ILogger<HttpSecurityScenarioClient> logger) : ISecurityScenarioClient
+{
+    /// <inheritdoc />
+    public Task ResetAsync(string correlationId, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(correlationId);
+        return ScenarioHttpRequestSender.SendAsync(httpClient, logger, "Security Hub", "reset", ScenarioHttpRequestFactory.CreateRequest(HttpMethod.Post, "/api/security/admin/reset", correlationId), correlationId, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public Task ApplyScenarioAsync(SecurityScenarioSyncRequest request, string correlationId, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentException.ThrowIfNullOrWhiteSpace(correlationId);
+        return ScenarioHttpRequestSender.SendAsync(httpClient, logger, "Security Hub", "apply scenario", ScenarioHttpRequestFactory.CreateRequest(HttpMethod.Post, "/api/security/admin/scenario", correlationId, request), correlationId, cancellationToken);
+    }
+}
+
 /// <inheritdoc cref="ISmartPoleScenarioClient"/>
 public sealed partial class HttpSmartPoleScenarioClient(HttpClient httpClient, ILogger<HttpSmartPoleScenarioClient> logger) : ISmartPoleScenarioClient
 {

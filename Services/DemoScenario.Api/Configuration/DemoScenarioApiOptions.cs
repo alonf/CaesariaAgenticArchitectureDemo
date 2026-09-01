@@ -15,6 +15,13 @@ internal sealed class DemoScenarioApiOptions : IValidatableObject
     [Required]
     public string CommandCenterBaseUri { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Gets or sets the base address of the Security Hub, synchronized from the same scenario
+    /// recipe so the Security and Energy domains never contradict each other.
+    /// </summary>
+    [Required]
+    public string SecurityHubBaseUri { get; set; } = string.Empty;
+
     [Required]
     public string OperationsAgentBaseUri { get; set; } = string.Empty;
 
@@ -39,6 +46,13 @@ internal sealed class DemoScenarioApiOptions : IValidatableObject
             yield return new ValidationResult(
                 "DemoScenarioApi:CommandCenterBaseUri must be a valid absolute or Aspire service-discovery URI.",
                 [nameof(CommandCenterBaseUri)]);
+        }
+
+        if (!ServiceUriValidator.TryValidateAbsoluteOrServiceDiscoveryUri(SecurityHubBaseUri, out _))
+        {
+            yield return new ValidationResult(
+                "DemoScenarioApi:SecurityHubBaseUri must be a valid absolute or Aspire service-discovery URI.",
+                [nameof(SecurityHubBaseUri)]);
         }
 
         if (!ServiceUriValidator.TryValidateAbsoluteOrServiceDiscoveryUri(OperationsAgentBaseUri, out _))

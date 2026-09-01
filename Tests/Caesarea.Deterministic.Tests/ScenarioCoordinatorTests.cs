@@ -12,7 +12,7 @@ public sealed class ScenarioCoordinatorTests
         var energy = new FakeEnergyScenarioClient();
         var commandCenter = new FakeCommandCenterScenarioClient();
         var catalog = new ScenarioCatalog(clock);
-        var coordinator = new ScenarioCoordinator(smartpole, energy, commandCenter, catalog, clock, NullLogger<ScenarioCoordinator>.Instance);
+        var coordinator = new ScenarioCoordinator(smartpole, energy, new FakeSecurityScenarioClient(), commandCenter, catalog, clock, NullLogger<ScenarioCoordinator>.Instance);
 
         foreach (var scenario in catalog.GetAll())
         {
@@ -38,6 +38,7 @@ public sealed class ScenarioCoordinatorTests
         var coordinator = new ScenarioCoordinator(
             new FakeSmartPoleScenarioClient(),
             new FakeEnergyScenarioClient(),
+            new FakeSecurityScenarioClient(),
             commandCenter,
             new ScenarioCatalog(clock),
             clock,
@@ -62,7 +63,7 @@ public sealed class ScenarioCoordinatorTests
             OnApplyScenarioAsync = static (scenarioContext, correlationId, cancellationToken) => throw new HttpRequestException("Command Center unavailable.")
         };
         var catalog = new ScenarioCatalog(clock);
-        var coordinator = new ScenarioCoordinator(smartpole, energy, commandCenter, catalog, clock, NullLogger<ScenarioCoordinator>.Instance);
+        var coordinator = new ScenarioCoordinator(smartpole, energy, new FakeSecurityScenarioClient(), commandCenter, catalog, clock, NullLogger<ScenarioCoordinator>.Instance);
 
         await Assert.ThrowsAsync<HttpRequestException>(() => coordinator.ApplyAsync(ScenarioId.ForgottenOverride, "failure-corr", CancellationToken.None));
 

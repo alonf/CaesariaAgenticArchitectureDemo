@@ -6,6 +6,7 @@
 @inject WorkKnowledgeApiClient WorkKnowledgeClient
 @inject CaseMemoryApiClient CaseMemoryClient
 @inject ToolSourceApiClient ToolSourceClient
+@inject SecurityConsultApiClient SecurityConsultClient
 @inject VsCodeAttachService AttachService
 @inject IConfiguration Configuration
 @inject IOptions<DemoControlWebOptions> WebOptions
@@ -226,6 +227,33 @@
 
     <section class="panel switchboard-panel">
         <div class="panel-heading">
+            <h2>Security Consult</h2>
+            <span class="stamp">@SecurityConsultStamp</span>
+        </div>
+        @if (_securityConsult is null)
+        {
+            <p>@(_securityConsultMessage ?? "Loading security consult...")</p>
+        }
+        else
+        {
+            <p class="switchboard-note">Whether the Operations Agent may consult the Security Operations Agent. Ask the same question with it off and on: the second agent has to earn its cost.</p>
+            <div class="stage-switch-actions">
+                <button class="button @(_securityConsult.Enabled ? "secondary" : "primary")" @onclick="() => SetSecurityConsultAsync(false)" disabled="@_securityConsultBusy">
+                    Consult OFF
+                </button>
+                <button class="button @(_securityConsult.Enabled ? "primary" : "secondary")" @onclick="() => SetSecurityConsultAsync(true)" disabled="@_securityConsultBusy">
+                    Consult ON
+                </button>
+            </div>
+            @if (!string.IsNullOrWhiteSpace(_securityConsultMessage))
+            {
+                <p class="status-error">@_securityConsultMessage</p>
+            }
+        }
+    </section>
+
+    <section class="panel switchboard-panel">
+        <div class="panel-heading">
             <h2>Simulator Behavior</h2>
             <span class="stamp">@(_behavior is null ? "Unavailable" : $"{_behaviorDelayMs} ms delay")</span>
         </div>
@@ -317,6 +345,9 @@
     private ToolSourceState? _toolSource;
     private bool _toolSourceBusy;
     private string? _toolSourceMessage;
+    private SecurityConsultState? _securityConsult;
+    private bool _securityConsultBusy;
+    private string? _securityConsultMessage;
     private SimulatorBehaviorSettings? _behavior;
     private int _behaviorDelayMs;
     private bool _behaviorTimeout;
@@ -346,6 +377,12 @@
         { Cases.Count: 0 } => "Empty",
         { Cases.Count: var count } => $"{count} case(s)"
     };
+    private string SecurityConsultStamp => _securityConsult switch
+    {
+        null => "unknown",
+        { Enabled: true } => "consulting Security",
+        _ => "single agent"
+    };
     private string ToolSourceStamp => _toolSource switch
     {
         null => "Unavailable",
@@ -371,6 +408,7 @@
         await LoadWorkKnowledgeAsync(CancellationToken.None);
         await LoadCaseMemoryAsync(CancellationToken.None);
         await LoadToolSourceAsync(CancellationToken.None);
+        await LoadSecurityConsultAsync(CancellationToken.None);
 
         _pollingTokenSource = new CancellationTokenSource();
         _pollingTask = PollCatalogAsync(_pollingTokenSource.Token);
@@ -396,6 +434,11 @@
                     if (!_toolSourceBusy)
                     {
                         await LoadToolSourceAsync(cancellationToken);
+                    }
+
+                    if (!_securityConsultBusy)
+                    {
+                        await LoadSecurityConsultAsync(cancellationToken);
                     }
 
                     StateHasChanged();
@@ -563,6 +606,39 @@
         {
             _caseMemory = null;
             _caseMemoryMessage = $"Case memory unavailable: {exception.Message}";
+        }
+    }
+
+    private async Task LoadSecurityConsultAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            _securityConsult = await SecurityConsultClient.GetStatusAsync(cancellationToken);
+            _securityConsultMessage = null;
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            _securityConsult = null;
+            _securityConsultMessage = $"Security consult unavailable: {exception.Message}";
+        }
+    }
+
+    private async Task SetSecurityConsultAsync(bool enabled)
+    {
+        _securityConsultBusy = true;
+
+        try
+        {
+            _securityConsult = await SecurityConsultClient.SetEnabledAsync(enabled, CancellationToken.None);
+            _securityConsultMessage = null;
+        }
+        catch (Exception exception)
+        {
+            _securityConsultMessage = $"Security consult change failed: {exception.Message}";
+        }
+        finally
+        {
+            _securityConsultBusy = false;
         }
     }
 

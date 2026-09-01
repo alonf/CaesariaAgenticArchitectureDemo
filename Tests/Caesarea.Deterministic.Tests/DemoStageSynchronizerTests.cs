@@ -88,6 +88,7 @@ public sealed class DemoStageSynchronizerTests
             approvals,
             new ToolSourceSwitch(),
             StageTransitionEffectsTests.CreateWorkflowService(approvals),
+            new SecurityConsultSwitch(),
             NullLogger<StageTransitionEffects>.Instance);
     }
 

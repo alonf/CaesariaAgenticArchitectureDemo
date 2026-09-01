@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -25,11 +25,14 @@
     <ProjectReference Include="..\..\Contracts\DemoScenario.Contracts\DemoScenario.Contracts.csproj" />
     <ProjectReference Include="..\..\Contracts\Energy.Contracts\Energy.Contracts.csproj" />
     <ProjectReference Include="..\..\Contracts\OperationsAgent.Contracts\OperationsAgent.Contracts.csproj" />
+    <ProjectReference Include="..\..\Contracts\Security.Contracts\Security.Contracts.csproj" />
     <ProjectReference Include="..\..\Contracts\SmartPole.Contracts\SmartPole.Contracts.csproj" />
     <ProjectReference Include="..\..\Services\CommandCenter.Api\CommandCenter.Api.csproj" />
     <ProjectReference Include="..\..\Services\DemoScenario.Api\DemoScenario.Api.csproj" />
     <ProjectReference Include="..\..\Services\EnergyHub.Api\EnergyHub.Api.csproj" />
     <ProjectReference Include="..\..\Services\OperationsAgent.Api\OperationsAgent.Api.csproj" />
+    <ProjectReference Include="..\..\Services\SecurityAgent.Api\SecurityAgent.Api.csproj" />
+    <ProjectReference Include="..\..\Services\SecurityHub.Api\SecurityHub.Api.csproj" />
     <ProjectReference Include="..\..\Services\SmartPole.Simulator.Api\SmartPole.Simulator.Api.csproj" />
     <ProjectReference Include="..\..\Apps\CommandCenter.Web\CommandCenter.Web.csproj" />
   </ItemGroup>

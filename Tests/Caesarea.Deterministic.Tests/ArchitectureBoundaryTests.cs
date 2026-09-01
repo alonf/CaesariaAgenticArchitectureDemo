@@ -158,6 +158,32 @@ public sealed class ArchitectureBoundaryTests
     }
 
     [Fact]
+    public void OperationsAgentHasNoPathToTheSecurityHub()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var operationsAgentRoot = Path.Combine(repositoryRoot, "Services", "OperationsAgent.Api");
+        var sourceText = string.Join(
+            Environment.NewLine,
+            Directory.GetFiles(operationsAgentRoot, "*.*", SearchOption.AllDirectories)
+                .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+                .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+                .Where(path => path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase)
+                    || path.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase)
+                    || path.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+                .Select(File.ReadAllText));
+
+        // This is the assertion the second agent's justification rests on. If the Operations Agent
+        // could read the Security Hub directly, the right answer would be a tool, not an agent
+        // (slide 36) - so the hub must be unreachable from here, by address or by contract.
+        Assert.DoesNotContain("securityhub", sourceText, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Security.Contracts", sourceText, StringComparison.Ordinal);
+        Assert.DoesNotContain("/api/security", sourceText, StringComparison.OrdinalIgnoreCase);
+
+        // What it does have is the consult across the boundary, and only that.
+        Assert.Contains("securityagent-mcp", sourceText, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void SensitiveWorkItemToolIsAlwaysApprovalWrapped()
     {
         var repositoryRoot = FindRepositoryRoot();

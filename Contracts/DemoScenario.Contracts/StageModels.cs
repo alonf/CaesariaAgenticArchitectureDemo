@@ -66,7 +66,14 @@ public enum DemoStage
     /// supervisor approves it - reactive control, where the model picks the path and policy
     /// decides whether it may proceed.
     /// </summary>
-    ToolApproval
+    ToolApproval,
+
+    /// <summary>
+    /// A second agent earns its cost: Security is a distinct reasoning and permission boundary,
+    /// so the Operations Agent consults a Security Operations Agent that reads records it cannot,
+    /// and receives a sanitized judgment while keeping ownership of the answer.
+    /// </summary>
+    MultiAgent
 }
 
 /// <summary>
