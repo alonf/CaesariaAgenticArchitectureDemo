@@ -43,6 +43,7 @@ Lecture-ready prompts are maintained as standalone files under `docs/prompts`. I
 - [Stage 5 — Skills](prompts/05-skills.md)
 - [Stage 6 — McpTools](prompts/06-mcp.md)
 - [Stage 7 — InteractiveInput](prompts/07-interactive-input.md)
+- [Stage 8 — Workflow](prompts/08-workflow.md)
 
 As further stages are implemented, add one independently presentable prompt file per stage and link it here. Do not duplicate full prompt bodies in this overview after extraction.
 

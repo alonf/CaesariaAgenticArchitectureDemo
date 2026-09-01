@@ -57,6 +57,11 @@ public static class DemoSnippets
     /// approval before any side effect.
     /// </summary>
     public const string InteractiveInput = "MULTI_ROUND_TRIP_REQUEST";
+
+    /// <summary>
+    /// Gets the workflow snippet: building the explicit remediation orchestration graph.
+    /// </summary>
+    public const string Workflow = "WORKFLOW";
 }
 
 /// <summary>

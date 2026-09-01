@@ -20,6 +20,11 @@ builder.Services.AddHttpClient<IEnergyReadGateway, HttpEnergyReadGateway>((servi
     var options = serviceProvider.GetRequiredService<IOptions<OperationsAgentApiOptions>>().Value;
     client.BaseAddress = new Uri(options.EnergyHubBaseUri, UriKind.Absolute);
 });
+builder.Services.AddHttpClient<IEnergyCommandGateway, HttpEnergyCommandGateway>((serviceProvider, client) =>
+{
+    var options = serviceProvider.GetRequiredService<IOptions<OperationsAgentApiOptions>>().Value;
+    client.BaseAddress = new Uri(options.EnergyHubBaseUri, UriKind.Absolute);
+});
 builder.Services.AddHttpClient<ICommandCenterStageReader, CommandCenterStageReader>((serviceProvider, client) =>
 {
     var options = serviceProvider.GetRequiredService<IOptions<OperationsAgentApiOptions>>().Value;
@@ -54,6 +59,7 @@ builder.Services.AddSingleton<ICaseMemoryStore, InMemoryCaseMemoryStore>();
 builder.Services.AddSingleton<ToolSourceSwitch>();
 builder.Services.AddSingleton<PendingApprovalStore>();
 builder.Services.AddSingleton<StageTransitionEffects>();
+builder.Services.AddSingleton<RemediationWorkflowService>();
 // The HTTP client the MCP transport rides on; service discovery and the standard resilience
 // pipeline apply like any other outbound client.
 builder.Services.AddHttpClient("energyhub-mcp", (serviceProvider, client) =>
@@ -104,7 +110,11 @@ app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.UseHttpsRedirection();
 app.MapDefaultEndpoints();
-app.MapDemoBreakpoints(DemoSnippets.AgentCreation, DemoSnippets.FunctionTool, DemoSnippets.Session, DemoSnippets.Knowledge, DemoSnippets.CaseMemory, DemoSnippets.Skills, DemoSnippets.McpClient);
+app.MapDemoBreakpoints(DemoSnippets.AgentCreation, DemoSnippets.FunctionTool, DemoSnippets.Session, DemoSnippets.Knowledge, DemoSnippets.CaseMemory, DemoSnippets.Skills, DemoSnippets.McpClient, DemoSnippets.Workflow);
+
+// Instantiate the workflow service at startup: the definition (diagram + YAML) renders once
+// here, so a wiring or graph error fails the service start instead of the first panel load.
+_ = app.Services.GetRequiredService<RemediationWorkflowService>();
 
 var operationsAgent = app.MapGroup("/api/operations-agent")
     .WithTags("Operations Agent");
@@ -204,6 +214,49 @@ approvals.MapPost("/{id}", (HttpContext context, string id, OperationsAgentAppro
             context.GetCorrelationId()));
 });
 
+// The explicit remediation workflow: a code-built orchestration graph run on demand, with
+// live steps and a self-rendered definition. Available only at the Workflow stage.
+var remediation = app.MapGroup("/api/operations-agent/remediation")
+    .WithTags("Remediation Workflow");
+
+remediation.MapPost("/", (HttpContext context, OperationsAgentRemediationRequest request, RemediationWorkflowService workflowService, DemoStageGate stageGate) =>
+{
+    if (CreateWorkflowStageProblem(context, stageGate) is { } stageProblem)
+    {
+        return stageProblem;
+    }
+
+    if (string.IsNullOrWhiteSpace(request.AssetId) || request.AssetId.Length > 64)
+    {
+        return Results.BadRequest(ProblemDetailsFactory.Create(
+            StatusCodes.Status400BadRequest,
+            "Invalid request",
+            "A remediation run requires an asset identifier of at most 64 characters.",
+            context.GetCorrelationId()));
+    }
+
+    return Results.Ok(workflowService.StartRun(request.AssetId.Trim(), context.GetCorrelationId()));
+});
+remediation.MapGet("/definition", (HttpContext context, RemediationWorkflowService workflowService, DemoStageGate stageGate) =>
+    CreateWorkflowStageProblem(context, stageGate) is { } stageProblem
+        ? stageProblem
+        : Results.Ok(workflowService.GetDefinition()));
+remediation.MapGet("/runs/{runId}", (HttpContext context, string runId, RemediationWorkflowService workflowService, DemoStageGate stageGate) =>
+{
+    if (CreateWorkflowStageProblem(context, stageGate) is { } stageProblem)
+    {
+        return stageProblem;
+    }
+
+    return workflowService.GetRun(runId) is { } report
+        ? Results.Ok(report)
+        : Results.NotFound(ProblemDetailsFactory.Create(
+            StatusCodes.Status404NotFound,
+            "Workflow run not found",
+            $"No remediation workflow run with id {runId} exists.",
+            context.GetCorrelationId()));
+});
+
 // Presenter toggle: where the streetlight tool comes from. Available only once the McpTools
 // stage introduces the mechanism; the flip itself is the lecture beat.
 var toolSource = app.MapGroup("/api/operations-agent/tool-source")
@@ -242,6 +295,15 @@ demoStage.MapPost("/", (DemoStageStatus stage, DemoStageGate stageGate, FoundryC
 });
 
 await app.RunAsync();
+
+static IResult? CreateWorkflowStageProblem(HttpContext context, DemoStageGate stageGate) =>
+    stageGate.GetCurrent().Id < DemoStage.Workflow
+        ? Results.Problem(ProblemDetailsFactory.Create(
+            StatusCodes.Status409Conflict,
+            "Remediation workflow disabled in the current demo stage",
+            $"The remediation workflow requires the Workflow stage; the current stage is {stageGate.GetCurrent().Name}.",
+            context.GetCorrelationId()))
+        : null;
 
 static OperationsAgentCaseMemoryStatus CreateCaseMemoryStatus(ICaseMemoryStore store) =>
     new([.. store.GetAll().Select(closedCase => new OperationsAgentRecalledCase(

@@ -51,6 +51,48 @@ public sealed record OperationsAgentPendingApproval(
 public sealed record OperationsAgentApprovalDecision(bool Approved);
 
 /// <summary>
+/// Requests one run of the explicit remediation workflow.
+/// </summary>
+/// <param name="AssetId">The streetlight asset to remediate.</param>
+public sealed record OperationsAgentRemediationRequest(string AssetId);
+
+/// <summary>
+/// One step of a remediation workflow run, as reported by the workflow engine's event stream.
+/// </summary>
+/// <param name="ExecutorId">The workflow node that ran (validate, policy, approval, execute, verify).</param>
+/// <param name="Status">The step status: Running, Completed, or Failed.</param>
+/// <param name="At">When the step reached this status.</param>
+/// <param name="Detail">A short human-readable note about what the step decided or did.</param>
+public sealed record OperationsAgentWorkflowStep(
+    string ExecutorId,
+    string Status,
+    DateTimeOffset At,
+    string? Detail);
+
+/// <summary>
+/// The outcome of one remediation workflow run.
+/// </summary>
+/// <param name="RunId">The run identifier.</param>
+/// <param name="Completed">Whether the run has finished (successfully or not).</param>
+/// <param name="Executed">Whether the restore command actually executed.</param>
+/// <param name="Summary">The projector-friendly outcome summary from the verify step.</param>
+/// <param name="Steps">The steps of the run, in execution order.</param>
+public sealed record OperationsAgentWorkflowRunReport(
+    string RunId,
+    bool Completed,
+    bool Executed,
+    string Summary,
+    IReadOnlyList<OperationsAgentWorkflowStep> Steps);
+
+/// <summary>
+/// The remediation workflow definition in its two expressions: the diagram generated from the
+/// code-built graph, and the equivalent declarative YAML.
+/// </summary>
+/// <param name="Mermaid">The Mermaid.js diagram produced by the workflow visualizer.</param>
+/// <param name="Yaml">The declarative YAML form of the same orchestration.</param>
+public sealed record OperationsAgentWorkflowDefinition(string Mermaid, string Yaml);
+
+/// <summary>
 /// Identifies where the agent's streetlight tool comes from for a run.
 /// </summary>
 public enum OperationsAgentToolSource

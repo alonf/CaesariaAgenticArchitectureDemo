@@ -46,7 +46,12 @@ public sealed class StageCatalog
             DemoStage.InteractiveInput,
             "Interactive Input",
             "The first write-capable tool: restore_scheduled_mode over MCP with Multi Round-Trip Requests. The tool pauses input-required for explicit operator approval - no side effect before the input arrives. Requires Tools: MCP.",
-            ["Deterministic scenarios", "Manual operator actions", "Caesarea Operations Agent", "get_streetlight_state tool", "AgentSession follow-ups", "search_work_knowledge retrieval", "Retrieved-evidence trace with citation badges", "Case-memory recall (hypotheses)", "Skill discovery and load_skill procedure", "Tools: LOCAL / MCP toggle (runtime tool discovery)", "restore_scheduled_mode with MRTR operator approval"])
+            ["Deterministic scenarios", "Manual operator actions", "Caesarea Operations Agent", "get_streetlight_state tool", "AgentSession follow-ups", "search_work_knowledge retrieval", "Retrieved-evidence trace with citation badges", "Case-memory recall (hypotheses)", "Skill discovery and load_skill procedure", "Tools: LOCAL / MCP toggle (runtime tool discovery)", "restore_scheduled_mode with MRTR operator approval"]),
+        new(
+            DemoStage.Workflow,
+            "Workflow",
+            "Remediation becomes an explicit code-built workflow: validate, policy, an operator-approval gate when a manual override would be cleared, execute, verify. Deterministic orchestration with visible steps and branching - the graph renders its own diagram.",
+            ["Deterministic scenarios", "Manual operator actions", "Caesarea Operations Agent", "get_streetlight_state tool", "AgentSession follow-ups", "search_work_knowledge retrieval", "Retrieved-evidence trace with citation badges", "Case-memory recall (hypotheses)", "Skill discovery and load_skill procedure", "Tools: LOCAL / MCP toggle (runtime tool discovery)", "restore_scheduled_mode with MRTR operator approval", "Explicit remediation workflow (validate / policy / approval / execute / verify)"])
     ];
 
     /// <summary>

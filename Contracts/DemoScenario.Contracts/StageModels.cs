@@ -51,7 +51,14 @@ public enum DemoStage
     /// Round-Trip Requests (MRTR). The tool pauses input-required for explicit operator approval
     /// and produces no side effect before the input arrives.
     /// </summary>
-    InteractiveInput
+    InteractiveInput,
+
+    /// <summary>
+    /// Remediation becomes an explicit workflow: validate, policy, an approval gate when the
+    /// policy demands one, execute, verify - deterministic orchestration with visible steps and
+    /// branching, instead of emergent model behavior.
+    /// </summary>
+    Workflow
 }
 
 /// <summary>

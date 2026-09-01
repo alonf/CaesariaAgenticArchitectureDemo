@@ -75,6 +75,45 @@ internal sealed class OperationsAgentApiClient
         response.EnsureSuccessStatusCode();
     }
 
+    public async Task<OperationsAgentWorkflowDefinition> GetWorkflowDefinitionAsync(CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/operations-agent/remediation/definition");
+        request.Headers.Add(CorrelationHeaderNames.XCorrelationId, CorrelationIds.Create());
+        using var response = await _httpClient.SendAsync(request, cancellationToken);
+
+        response.EnsureSuccessStatusCode();
+
+        return await response.Content.ReadFromJsonAsync<OperationsAgentWorkflowDefinition>(SerializerOptions, cancellationToken)
+            ?? throw new InvalidOperationException("Workflow definition response was empty.");
+    }
+
+    public async Task<OperationsAgentWorkflowRunReport> StartWorkflowRunAsync(string assetId, CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/operations-agent/remediation/")
+        {
+            Content = JsonContent.Create(new OperationsAgentRemediationRequest(assetId), options: SerializerOptions)
+        };
+        request.Headers.Add(CorrelationHeaderNames.XCorrelationId, CorrelationIds.Create());
+        using var response = await _httpClient.SendAsync(request, cancellationToken);
+
+        response.EnsureSuccessStatusCode();
+
+        return await response.Content.ReadFromJsonAsync<OperationsAgentWorkflowRunReport>(SerializerOptions, cancellationToken)
+            ?? throw new InvalidOperationException("Workflow start response was empty.");
+    }
+
+    public async Task<OperationsAgentWorkflowRunReport> GetWorkflowRunAsync(string runId, CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"/api/operations-agent/remediation/runs/{Uri.EscapeDataString(runId)}");
+        request.Headers.Add(CorrelationHeaderNames.XCorrelationId, CorrelationIds.Create());
+        using var response = await _httpClient.SendAsync(request, cancellationToken);
+
+        response.EnsureSuccessStatusCode();
+
+        return await response.Content.ReadFromJsonAsync<OperationsAgentWorkflowRunReport>(SerializerOptions, cancellationToken)
+            ?? throw new InvalidOperationException("Workflow run response was empty.");
+    }
+
     public async Task<OperationsAgentRecalledCase> CloseCaseAsync(
         string assetId,
         string symptom,

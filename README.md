@@ -78,6 +78,7 @@ grows one capability at a time, and each stage maps to a concrete MAF concept:
 | Skills | `AgentSkillsProvider` — progressive disclosure of documented, auditable procedures |
 | McpTools | MCP server (`ModelContextProtocol.AspNetCore`) + runtime tool discovery (`McpClient`) |
 | InteractiveInput | MCP Multi Round-Trip Requests — `InputRequiredException` + elicitation handler |
+| Workflow | `Microsoft.Agents.AI.Workflows` — code-built graph (`WorkflowBuilder`), approval-gate node, self-rendered diagram |
 
 Each stage has a build-and-design document under [docs/prompts/](docs/prompts/), the exact
 lecture-slide code lives in named `#region` blocks (see the deck anchors in the docs), and
@@ -109,6 +110,10 @@ The demo runs as one application with a presenter-controlled `DemoStage`:
   with **Multi Round-Trip Requests (MRTR)**. The tool pauses input-required for explicit operator
   approval and produces no side effect before the input arrives; deny and the state provably
   does not change.
+- `DemoStage=Workflow` — remediation becomes an **explicit code-built workflow**: validate,
+  policy, an operator-approval gate when a manual override would be cleared, execute, verify.
+  The graph renders its own Mermaid diagram (`WorkflowVisualizer`), live steps stream to the
+  Command Center, and the equivalent declarative YAML is displayed beside it.
 
 `CommandCenter.Api` owns the selected stage. `DemoScenario.Api` reads and changes it through that authoritative
 boundary, so switching stages does not restart the application.

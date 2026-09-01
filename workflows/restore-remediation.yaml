@@ -1,0 +1,39 @@
+# The restore-remediation orchestration in its declarative form.
+#
+# The demo builds and runs the identical graph in code (the WORKFLOW region in
+# RemediationWorkflowService); this file is displayed beside the generated diagram for
+# comparison and is not executed. Microsoft Agent Framework also supports authoring
+# workflows declaratively and hosting them in Foundry - the Hosting stage picks that up.
+name: restore-remediation
+description: >-
+  Validate against authoritative state, decide by policy, gate on operator approval when a
+  manual override would be cleared, execute the restore, and verify the result.
+start: validate
+executors:
+  - id: validate
+    description: Read the authoritative Energy Hub twin for the requested asset.
+  - id: policy
+    description: >-
+      Action is required when the reported state disagrees with the schedule; approval is
+      required when clearing a manual override - a human put it there, a human takes it away.
+  - id: approval
+    description: Park the question with the operator; the workflow waits for the decision.
+  - id: execute
+    description: Restore scheduled mode through the Energy Hub, or explain why not.
+  - id: verify
+    description: Re-read the twin and yield the verified outcome.
+edges:
+  - from: validate
+    to: policy
+  - from: policy
+    to: approval
+    condition: plan.RequiresApproval
+  - from: policy
+    to: execute
+    condition: "!plan.RequiresApproval"
+  - from: approval
+    to: execute
+  - from: execute
+    to: verify
+output:
+  from: verify

@@ -4,6 +4,7 @@
 @inject OperationsAgentApiClient OperationsAgentClient
 @inject IConfiguration Configuration
 @inject IOptions<CommandCenterWebOptions> WebOptions
+@inject IJSRuntime JS
 
 <PageTitle>Caesarea City Command Center</PageTitle>
 
@@ -514,6 +515,14 @@
                             </button>
                         }
 
+                        @if (IsWorkflowStage)
+                        {
+                            <button class="action-button investigate-button @(_workflowBusy ? "busy" : string.Empty)" @onclick="RunWorkflowAsync" disabled="@_workflowBusy">
+                                <span>@(_workflowBusy ? "Workflow running..." : $"Run remediation workflow for {_snapshot.AssetId}")</span>
+                                <svg viewBox="0 0 24 24"><path d="M4 4h6v6H4V4Zm10 0h6v6h-6V4ZM4 14h6v6H4v-6Zm13 0v3h-4v3h7v-6h-3Z" /></svg>
+                            </button>
+                        }
+
                         @if (_pendingApprovals.Count > 0)
                         {
                             <div class="agent-summary approval-panel">
@@ -526,7 +535,54 @@
                                         <button class="action-button approval-deny" @onclick="() => RespondToApprovalAsync(approval.Id, false)" disabled="@_approvalBusy">Deny</button>
                                     </div>
                                 }
-                                <p class="agent-footnote">The remote tool is paused input-required (MCP MRTR). Nothing changes until you answer.</p>
+                                <p class="agent-footnote">@(_workflowBusy
+                                    ? "The workflow's approval node is paused. Nothing changes until you answer."
+                                    : "The remote tool is paused input-required (MCP MRTR). Nothing changes until you answer.")</p>
+                            </div>
+                        }
+
+                        @if (IsWorkflowStage && _workflowRun is { } workflowRun)
+                        {
+                            <div class="agent-summary wfrun-panel">
+                                <small>Remediation workflow run</small>
+                                <ol class="wfrun-steps">
+                                    @foreach (var step in workflowRun.Steps)
+                                    {
+                                        <li class="wfrun-step @step.Status.ToLowerInvariant()">
+                                            <div class="wfrun-step-head">
+                                                <span class="wfrun-step-node">@step.ExecutorId</span>
+                                                <span class="wfrun-step-status">@step.Status</span>
+                                            </div>
+                                            @if (!string.IsNullOrWhiteSpace(step.Detail))
+                                            {
+                                                <p class="wfrun-step-detail">@step.Detail</p>
+                                            }
+                                        </li>
+                                    }
+                                </ol>
+                                @if (workflowRun.Completed)
+                                {
+                                    <p class="wfrun-outcome @(workflowRun.Executed ? "executed" : string.Empty)">@workflowRun.Summary</p>
+                                }
+                            </div>
+                        }
+
+                        @if (IsWorkflowStage && !string.IsNullOrWhiteSpace(_workflowMessage))
+                        {
+                            <p class="agent-footnote">@_workflowMessage</p>
+                        }
+
+                        @if (IsWorkflowStage && _workflowDefinition is not null)
+                        {
+                            <div class="agent-summary wfrun-definition">
+                                <small>Workflow definition</small>
+                                <div class="wfrun-tabs">
+                                    <button class="wfrun-tab @(_workflowTab == "diagram" ? "active" : string.Empty)" @onclick='() => SelectWorkflowTab("diagram")'>Graph (generated)</button>
+                                    <button class="wfrun-tab @(_workflowTab == "yaml" ? "active" : string.Empty)" @onclick='() => SelectWorkflowTab("yaml")'>Declarative YAML</button>
+                                </div>
+                                <div id="workflow-diagram" class="wfrun-diagram" hidden="@(_workflowTab != "diagram")"></div>
+                                <pre class="wfrun-yaml" hidden="@(_workflowTab != "yaml")">@_workflowDefinition.Yaml</pre>
+                                <p class="agent-footnote">The diagram is generated from the code-built graph; the YAML is the equivalent declarative form - displayed, not executed.</p>
                             </div>
                         }
 
@@ -581,6 +637,13 @@
     private DemoStage? _lastObservedStage;
     private IReadOnlyList<OperationsAgentPendingApproval> _pendingApprovals = [];
     private bool _approvalBusy;
+    private bool _workflowBusy;
+    private OperationsAgentWorkflowRunReport? _workflowRun;
+    private string? _workflowMessage;
+    private OperationsAgentWorkflowDefinition? _workflowDefinition;
+    private bool _workflowDefinitionLoading;
+    private bool _workflowDiagramRendered;
+    private string _workflowTab = "diagram";
 
     private string StageName => _snapshot?.CurrentStage.Name ?? Configuration["DemoStage"] ?? "Deterministic";
     private bool IsAgentStage => _snapshot?.CurrentStage.Id >= DemoStage.InvestigationAgent;
@@ -588,6 +651,7 @@
     private bool IsMemoryStage => _snapshot?.CurrentStage.Id >= DemoStage.Memory;
     private bool IsSkillsStage => _snapshot?.CurrentStage.Id >= DemoStage.Skills;
     private bool IsInteractiveStage => _snapshot?.CurrentStage.Id >= DemoStage.InteractiveInput;
+    private bool IsWorkflowStage => _snapshot?.CurrentStage.Id >= DemoStage.Workflow;
     private string CloseCaseLabel => (_caseBusy, _caseClosed) switch
     {
         (true, _) => "Recording...",
@@ -749,6 +813,91 @@
     private Task RestoreViaAgentAsync() => AskAgentCoreAsync(
         $"Restore streetlight {_snapshot?.AssetId ?? WebOptions.Value.AssetId} to scheduled mode.",
         sessionId: null);
+
+    // The workflow definition (diagram + YAML) loads lazily the first time the Workflow stage is
+    // on screen, and the Mermaid diagram renders once its container exists in the DOM.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (IsWorkflowStage && _workflowDefinition is null && !_workflowDefinitionLoading)
+        {
+            _workflowDefinitionLoading = true;
+
+            try
+            {
+                _workflowDefinition = await OperationsAgentClient.GetWorkflowDefinitionAsync(CancellationToken.None);
+                StateHasChanged();
+            }
+            catch (Exception exception)
+            {
+                _workflowMessage = $"The workflow definition could not be loaded: {exception.Message}";
+            }
+            finally
+            {
+                _workflowDefinitionLoading = false;
+            }
+        }
+
+        if (_workflowDefinition is { } definition && !_workflowDiagramRendered)
+        {
+            _workflowDiagramRendered = true;
+            await JS.InvokeVoidAsync("caesareaWorkflow.render", "workflow-diagram", definition.Mermaid);
+        }
+    }
+
+    private void SelectWorkflowTab(string tab) => _workflowTab = tab;
+
+    private async Task RunWorkflowAsync()
+    {
+        if (_workflowBusy)
+        {
+            return;
+        }
+
+        _workflowBusy = true;
+        _workflowMessage = null;
+        _workflowRun = null;
+        using var approvalPolling = new CancellationTokenSource();
+        var approvalPollingTask = PollApprovalsAsync(approvalPolling.Token);
+
+        try
+        {
+            var report = await OperationsAgentClient.StartWorkflowRunAsync(
+                _snapshot?.AssetId ?? WebOptions.Value.AssetId, CancellationToken.None);
+            _workflowRun = report;
+            StateHasChanged();
+
+            // The server bounds a run at five minutes; this polling cap is just above it.
+            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+            var remainingTicks = 360;
+
+            while (_workflowRun is { Completed: false } && remainingTicks-- > 0 && await timer.WaitForNextTickAsync())
+            {
+                try
+                {
+                    _workflowRun = await OperationsAgentClient.GetWorkflowRunAsync(report.RunId, CancellationToken.None);
+                }
+                catch (Exception)
+                {
+                    // One failed poll must not end the timeline; the next tick tries again.
+                }
+
+                StateHasChanged();
+            }
+
+            await LoadSnapshotAsync(CancellationToken.None, showErrorIfMissing: false);
+        }
+        catch (Exception exception)
+        {
+            _workflowMessage = $"The workflow could not be run: {exception.Message}";
+        }
+        finally
+        {
+            _workflowBusy = false;
+            await approvalPolling.CancelAsync();
+            await approvalPollingTask;
+            _pendingApprovals = [];
+        }
+    }
 
     private async Task RespondToApprovalAsync(string approvalId, bool approved)
     {
@@ -943,6 +1092,12 @@
                 _agentSessionId = null;
                 _agentMessage = "Demo stage moved back; the conversational session was reset.";
                 _agentMessageIsError = false;
+            }
+
+            if (snapshot.CurrentStage.Id < DemoStage.Workflow && _workflowRun is not null)
+            {
+                _workflowRun = null;
+                _workflowMessage = null;
             }
 
             _lastObservedStage = snapshot.CurrentStage.Id;

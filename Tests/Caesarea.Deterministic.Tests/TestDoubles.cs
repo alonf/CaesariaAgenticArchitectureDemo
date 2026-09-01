@@ -284,6 +284,30 @@ internal sealed class FakeEnergyReadGateway : IEnergyReadGateway
             : Task.FromResult(Activity);
 }
 
+internal sealed class FakeEnergyCommandGateway : IEnergyCommandGateway
+{
+    public int RestoreCalls { get; private set; }
+
+    public string? LastCorrelationId { get; private set; }
+
+    public Func<string, string, CancellationToken, Task<RestoreScheduledModeResult>>? OnRestoreScheduledModeAsync { get; set; }
+
+    public Task<RestoreScheduledModeResult> RestoreScheduledModeAsync(string assetId, string correlationId, CancellationToken cancellationToken)
+    {
+        RestoreCalls++;
+        LastCorrelationId = correlationId;
+
+        if (OnRestoreScheduledModeAsync is not null)
+        {
+            return OnRestoreScheduledModeAsync(assetId, correlationId, cancellationToken);
+        }
+
+        return Task.FromResult(new RestoreScheduledModeResult(
+            assetId, false, false, CommandExecutionStatus.Succeeded, correlationId,
+            "Restored to scheduled mode.", DateTimeOffset.UtcNow));
+    }
+}
+
 internal sealed class FakeOperationsAgentStageClient : IOperationsAgentStageClient
 {
     public int ApplyCalls { get; private set; }
