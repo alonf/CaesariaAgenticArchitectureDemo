@@ -4,57 +4,80 @@ using SecurityAgent.Api.Services;
 namespace Caesarea.Deterministic.Tests;
 
 /// <summary>
-/// The boundary between the Security domain and every other domain. The Security Agent is
-/// instructed to withhold restricted detail, but instructions are requests; these tests pin the
-/// structural guarantee that no restricted value can cross even when the model discloses it.
+/// The boundary between the Security domain and every other domain. The consulted agent is
+/// instructed to disclose nothing, but instructions are requests; these tests pin the structural
+/// guarantee - the model selects from a closed set and never authors text that crosses.
 /// </summary>
 public sealed class SecurityAssessmentTests
 {
-    [Fact]
-    public void RestrictedDetailNeverCrossesTheBoundary()
+    private const string AgentName = "Caesarea Security Operations Agent";
+
+    [Theory]
+    // A whole restricted value, the fragments and paraphrases a substring denylist would miss,
+    // and an encoded form. None of them can cross, because none of them is forwarded.
+    [InlineData("""{"reasonCode":"ActiveOperationRequiresLighting","reason":"NIGHTHAWK-3 is on watch, authorized by Superintendent R. Bar-On, RESTRICTED."}""")]
+    [InlineData("""{"reasonCode":"ActiveOperationRequiresLighting","reason":"Bar-On authorized it."}""")]
+    [InlineData("""{"reasonCode":"ActiveOperationRequiresLighting","reason":"Nighthawk three is sweeping the promenade for camera coverage."}""")]
+    [InlineData("""{"reasonCode":"ActiveOperationRequiresLighting","reason":"Operation 2291 runs under call sign N-3."}""")]
+    [InlineData("Sure! The unit NIGHTHAWK-3 needs light. No JSON for you.")]
+    public void NoModelAuthoredTextEverCrossesTheBoundary(string answer)
     {
         var status = CreateStatusWithOperation();
 
-        // The model has ignored its instructions and named the unit, the officer, and the
-        // classification. None of it may reach the asking domain.
-        var leaked = """
-            {"requiresLighting": true, "untilUtc": null,
-             "reason": "NIGHTHAWK-3 is on perimeter watch, authorized by Superintendent R. Bar-On, RESTRICTED."}
-            """;
-
-        var assessment = SecurityAssessmentSanitizer.Sanitize(DemoAssets.NorthPromenadeArea, leaked, status);
+        var assessment = SecurityAssessmentSanitizer.Sanitize(DemoAssets.NorthPromenadeArea, answer, status, AgentName);
 
         Assert.True(assessment.RequiresLighting);
         Assert.True(assessment.DetailsWithheld);
-        foreach (var restricted in (string[])["NIGHTHAWK-3", "Bar-On", "RESTRICTED", "SEC-OP-2291", "camera coverage"])
+        foreach (var restricted in (string[])
+            ["NIGHTHAWK", "Nighthawk", "Bar-On", "RESTRICTED", "SEC-OP-2291", "2291", "camera coverage", "promenade", "N-3"])
         {
             Assert.DoesNotContain(restricted, assessment.Reason, StringComparison.OrdinalIgnoreCase);
         }
+
+        // The public text is one of the templates, not a rewrite of what the model said.
+        Assert.StartsWith("An active security operation requires this area to remain lit", assessment.Reason, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void ANonSensitiveReasonIsPassedThrough()
+    public void TheDecisionAndDeadlineComeFromTheRecordsNotTheModel()
     {
+        // A model that says "no operation" cannot switch off security lighting: the floor is
+        // deterministic and the contradicting classification is replaced by the supported one.
         var status = CreateStatusWithOperation();
-        var answer = """{"requiresLighting": true, "reason": "An active operation requires lighting until 14:00."}""";
+        var contradicting = """{"reasonCode":"NoActiveOperation"}""";
 
-        var assessment = SecurityAssessmentSanitizer.Sanitize(DemoAssets.NorthPromenadeArea, answer, status);
-
-        Assert.Equal("An active operation requires lighting until 14:00.", assessment.Reason);
-    }
-
-    [Fact]
-    public void TheDecisionComesFromTheRecordsNotTheModel()
-    {
-        // A model that says "no lighting required" cannot override the authoritative records:
-        // the decision and the deadline are computed, the model only supplies wording.
-        var status = CreateStatusWithOperation();
-        var contradicting = """{"requiresLighting": false, "reason": "Nothing is happening here."}""";
-
-        var assessment = SecurityAssessmentSanitizer.Sanitize(DemoAssets.NorthPromenadeArea, contradicting, status);
+        var assessment = SecurityAssessmentSanitizer.Sanitize(DemoAssets.NorthPromenadeArea, contradicting, status, AgentName);
 
         Assert.True(assessment.RequiresLighting);
+        Assert.Equal(SecurityLightingReason.ActiveOperationRequiresLighting, assessment.ReasonCode);
         Assert.Equal(status.Operations[0].EndsAt, assessment.UntilUtc);
+    }
+
+    [Fact]
+    public void AnAgreeingClassificationIsKept()
+    {
+        var status = CreateStatusWithOperation();
+        var agreeing = """{"reasonCode":"ActiveOperationRequiresLighting"}""";
+
+        var assessment = SecurityAssessmentSanitizer.Sanitize(DemoAssets.NorthPromenadeArea, agreeing, status, AgentName);
+
+        Assert.Equal(SecurityLightingReason.ActiveOperationRequiresLighting, assessment.ReasonCode);
+        Assert.Equal(AgentName, assessment.AssessedBy);
+    }
+
+    [Fact]
+    public void AnActiveOperationThatDoesNotNeedLightingIsDistinguished()
+    {
+        var status = CreateStatusWithOperation(requiresLighting: false);
+
+        var assessment = SecurityAssessmentSanitizer.Sanitize(
+            DemoAssets.NorthPromenadeArea, """{"reasonCode":"ActiveOperationWithoutLightingRequirement"}""", status, AgentName);
+
+        Assert.False(assessment.RequiresLighting);
+        Assert.Null(assessment.UntilUtc);
+        Assert.Equal(SecurityLightingReason.ActiveOperationWithoutLightingRequirement, assessment.ReasonCode);
+        // An operation is still active, so the fact that detail exists is itself disclosed.
+        Assert.True(assessment.DetailsWithheld);
     }
 
     [Fact]
@@ -62,27 +85,58 @@ public sealed class SecurityAssessmentTests
     {
         var status = new SecurityAreaStatus(DemoAssets.NorthPromenadeArea, [], DateTimeOffset.UtcNow);
 
-        var assessment = SecurityAssessmentSanitizer.Sanitize(DemoAssets.NorthPromenadeArea, answer: null, status);
+        var assessment = SecurityAssessmentSanitizer.Sanitize(DemoAssets.NorthPromenadeArea, answer: null, status, AgentName);
 
         Assert.False(assessment.RequiresLighting);
         Assert.Null(assessment.UntilUtc);
         Assert.False(assessment.DetailsWithheld);
-        Assert.Contains("No active security operation", assessment.Reason, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(SecurityLightingReason.NoActiveOperation, assessment.ReasonCode);
     }
 
-    [Fact]
-    public void AnUnparseableAnswerFallsBackToASafeReason()
+    [Theory]
+    [InlineData("""{"reasonCode":42}""")]
+    [InlineData("""{"reasonCode":{"nested":"object"}}""")]
+    [InlineData("""{"reasonCode":"NotARealCode"}""")]
+    [InlineData("""{"unterminated": """)]
+    public void MalformedClassificationsFallBackToTheRecords(string answer)
     {
         var status = CreateStatusWithOperation();
 
-        var assessment = SecurityAssessmentSanitizer.Sanitize(
-            DemoAssets.NorthPromenadeArea, "I could not produce JSON, but NIGHTHAWK-3 is out there.", status);
+        var assessment = SecurityAssessmentSanitizer.Sanitize(DemoAssets.NorthPromenadeArea, answer, status, AgentName);
 
+        Assert.Equal(SecurityLightingReason.ActiveOperationRequiresLighting, assessment.ReasonCode);
         Assert.True(assessment.RequiresLighting);
-        Assert.DoesNotContain("NIGHTHAWK-3", assessment.Reason, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static SecurityAreaStatus CreateStatusWithOperation()
+    [Fact]
+    public void TheRestrictedToolServesOnlyTheAreaUnderAssessment()
+    {
+        // The model asking about a different area must not receive another area's records.
+        var status = CreateStatusWithOperation();
+        var tools = new SecurityAreaTools(
+            DemoAssets.NorthPromenadeArea, status, "scope-corr", NullLogger<SecurityAreaTools>.Instance);
+
+        Assert.Same(status, tools.GetAreaSecurityOperations(DemoAssets.NorthPromenadeArea));
+        Assert.Same(status, tools.GetAreaSecurityOperations("north promenade"));
+
+        var refused = Assert.Throws<ArgumentException>(() => tools.GetAreaSecurityOperations("Harbor District"));
+        Assert.Contains("out of scope", refused.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void TheToolServesTheSameSnapshotTheResultIsComputedFrom()
+    {
+        // One read, one snapshot: the agent cannot be shown records that the sanitizer did not
+        // also see, which is what makes "nothing undisclosed can leak" true by construction.
+        var status = CreateStatusWithOperation();
+        var tools = new SecurityAreaTools(
+            DemoAssets.NorthPromenadeArea, status, "snapshot-corr", NullLogger<SecurityAreaTools>.Instance);
+
+        Assert.Same(status, tools.GetAreaSecurityOperations(DemoAssets.NorthPromenadeArea));
+        Assert.Same(status, tools.GetAreaSecurityOperations(DemoAssets.NorthPromenadeArea));
+    }
+
+    private static SecurityAreaStatus CreateStatusWithOperation(bool requiresLighting = true)
     {
         var now = new DateTimeOffset(2026, 9, 1, 11, 0, 0, TimeSpan.Zero);
         return new SecurityAreaStatus(
@@ -91,7 +145,7 @@ public sealed class SecurityAssessmentTests
                 new SecurityOperationRecord(
                     "SEC-OP-2291",
                     DemoAssets.NorthPromenadeArea,
-                    RequiresLighting: true,
+                    requiresLighting,
                     now.AddHours(-1),
                     now.AddHours(3),
                     Classification: "RESTRICTED",

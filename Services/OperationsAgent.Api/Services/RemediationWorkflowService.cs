@@ -15,6 +15,7 @@ public sealed partial class RemediationWorkflowService
 {
     private static readonly TimeSpan RunBudget = TimeSpan.FromMinutes(5);
     private const int MaxRetainedRuns = 20;
+    private const int MaxConcurrentRuns = 8;
 
     private readonly IEnergyReadGateway _readGateway;
     private readonly IEnergyCommandGateway _commandGateway;
@@ -102,6 +103,16 @@ public sealed partial class RemediationWorkflowService
             if (_runs.Values.Any(existing => !existing.IsFinished
                 && string.Equals(existing.AssetId, assetId, StringComparison.OrdinalIgnoreCase)))
             {
+                report = null!;
+                return false;
+            }
+
+            // Admission is separate from retention: retention prunes finished runs, and cannot
+            // evict one that is still executing, so the number of *active* runs needs its own
+            // ceiling or many assets could hold the store above its limit indefinitely.
+            if (_runs.Values.Count(existing => !existing.IsFinished) >= MaxConcurrentRuns)
+            {
+                RemediationWorkflowLog.AdmissionRefused(_logger, assetId, MaxConcurrentRuns);
                 report = null!;
                 return false;
             }
@@ -506,6 +517,12 @@ internal static partial class RemediationWorkflowLog
         Level = LogLevel.Error,
         Message = "Remediation workflow run {RunId} for asset {AssetId} failed. CorrelationId: {CorrelationId}.")]
     internal static partial void RunFailed(ILogger logger, string runId, string assetId, string correlationId, Exception exception);
+
+    [LoggerMessage(
+        EventId = 2647,
+        Level = LogLevel.Warning,
+        Message = "Remediation run for asset {AssetId} was refused: {MaxConcurrentRuns} runs are already in flight.")]
+    internal static partial void AdmissionRefused(ILogger logger, string assetId, int maxConcurrentRuns);
 
     [LoggerMessage(
         EventId = 2644,

@@ -213,7 +213,10 @@ public sealed class OperatorApprovalExecutor(PendingApprovalStore pendingApprova
         var (_, decision) = pendingApprovals.Create(
             $"Remediation workflow: restore {input.Request.AssetId} to scheduled mode? The active manual override will be cleared.",
             input.Request.CorrelationId,
-            cancellationToken);
+            cancellationToken,
+            OperationsAgentControlPoint.WorkflowGate,
+            OperationsAgentToolNames.RestoreScheduledMode,
+            $"assetId: {input.Request.AssetId}, stateRevision: {input.ValidatedStateRevision}");
         var approved = await decision;
         return input with { OperatorApproved = approved };
     }

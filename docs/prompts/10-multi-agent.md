@@ -12,15 +12,31 @@ tool cannot cross. Security is that boundary: it owns records the Operations Age
 
 Of slide 36's five reasons, two carry this stage:
 
-- **Authority and permissions** — the Security Hub is reachable from exactly one service. An
-  architecture test asserts that `OperationsAgent.Api` contains no Security Hub address, no
-  Security contract reference, and no `/api/security` path. If it could read the hub, the honest
-  answer would be a tool.
+- **Authority and permissions** — the Security Hub is reachable from exactly one service. The hub
+  *enforces* this rather than assuming it: every route requires a caller identity, reads admit the
+  Security Agent only, and the admin routes admit the scenario service only. An architecture test
+  additionally asserts that `OperationsAgent.Api` contains no Security Hub address, no Security
+  contract reference, and no `/api/security` path. If it could read the hub, the honest answer
+  would be a tool.
 - **Context isolation** — restricted operational detail never enters the Operations Agent's
-  context window. Only a typed, sanitized verdict crosses.
+  context window. Only a typed, closed-set verdict crosses.
 
 Expertise and ownership/lifecycle support the case. "Different model" does not apply here, and
 claiming it would be dishonest.
+
+**What the second agent actually decides, stated precisely.** The safety-critical part of the
+answer is deterministic: if a record says lighting is required, it is required, and the deadline
+comes from the record. The agent contributes *interpretation* — reading several operations with
+overlapping windows and free-text notes and classifying the situation — and, more importantly,
+**containment**: it is the thing that can hold the restricted records at all. This stage is
+therefore best presented as a permission-and-isolation boundary, not as proof that a model was
+required to reach the verdict. A deterministic Security-domain service could compute the same
+verdict; what it could not do is let a *reasoning* caller ask open questions of the Security
+domain without handing that caller the records. That is the architectural claim, and it is the
+one worth making on stage.
+
+The demo-grade caller identity is a header, not an authenticated principal. It is enforced, and it
+is honest about what it is: the Governance stage replaces it with real identity.
 
 ## Composition: relationship first, boundary second
 
@@ -43,10 +59,13 @@ does not imply group chat. Those are independent axes."* This stage picks one po
   restricted tool, its own model call, and the only Security Hub client in the system. Published
   over MCP as `assess_lighting_requirement`.
 - **`MULTI_AGENT`** region — composing the second agent, in the service that owns it.
-- **Structural sanitization** — the agent is *instructed* to withhold restricted detail, and
-  `SecurityAssessmentSanitizer` *guarantees* it: the decision and deadline are computed from the
-  records rather than taken from the model, and any reason containing a restricted value is
-  replaced wholesale. Instructions are a request; a boundary should be a guarantee.
+- **Structural sanitization** — no model-authored text crosses the boundary at all. The agent
+  selects a **reason code from a closed set**; the decision and deadline are computed from the
+  records, and the public sentence is rendered from a deterministic template. A denylist would not
+  have been enough: "Bar-On authorized it" contains no whole restricted value, and a paraphrase or
+  an abbreviation contains none either. The agent's snapshot is also the sanitizer's snapshot -
+  one read, served to the model by a tool bound to the area under assessment - so nothing can be
+  disclosed that was not also examined.
 - **The lighting domain learns the requirement, not its origin.** `OperationalContext` carries
   `RequiresLighting` and a non-attributed summary — deliberately no "security operation active"
   flag. Deterministic automation stays safe (the workflow still refuses to "correct" a lamp that
@@ -74,17 +93,21 @@ does not imply group chat. Those are independent axes."* This stage picks one po
 
 ## Verification
 
-- Deterministic tests pin the sanitizer against a model that leaks the call sign, the officer, the
-  classification and the notes; that the verdict and deadline come from the records rather than
-  from the model; and that the Operations Agent has no path to the Security Hub.
+- Deterministic tests pin the sanitizer against a model that leaks whole restricted values,
+  fragments, paraphrases and abbreviations; that the verdict and deadline come from the records
+  rather than from the model; that the restricted tool refuses an out-of-scope area and serves the
+  same snapshot the result is computed from; that the hub rejects the wrong caller on each route
+  over real HTTP; and that the Operations Agent has no path to the Security Hub.
 - The live walk applies the scenario, checks that the Security Hub agrees with it, asks with the
   consult off and on, asserts the consult only happens when enabled, and scans the answer for
   every restricted token.
 
 ## Deck note
 
-**Slides 41–42 (A2A) cannot be demoed from this repository's feeds.** There is no
-`Microsoft.Agents.AI.A2A` package on nuget.org, and no `AddA2AServer` / `A2ACardResolver` /
-`AgentCard` type in any package the solution restores. MCP wrapping covers the same axis and is
-slide 40's own top-right block. If the A2A package exists on a private feed, adding it as a second
-boundary for the same delegation is a small increment on top of this stage.
+**Slides 41–42 (A2A) are demoable and simply not implemented yet.** `Microsoft.Agents.AI.A2A` and
+`Microsoft.Agents.AI.Hosting.A2A.AspNetCore` are published on nuget.org in the same preview family
+this solution already uses (`1.20.0-preview.*`). An earlier version of this note claimed they were
+unavailable; that was wrong — the package search behind it omitted `--prerelease`. Adding A2A as a
+*second boundary for the same delegation* — flip the Security consult between MCP and A2A while
+the relationship stays "delegate" — is the natural next increment, and is the sharpest possible
+demonstration of slide 39's independent axes.

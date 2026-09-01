@@ -39,20 +39,43 @@ public sealed record SecurityAreaStatus(
     DateTimeOffset ObservedAt);
 
 /// <summary>
-/// The sanitized answer that crosses the domain boundary. It carries a decision and a
-/// non-sensitive justification - never the operation record, and never a restricted field.
+/// The closed set of conclusions the Security domain will disclose to another domain. The
+/// consulted agent selects one; it never authors the words that cross the boundary, because free
+/// text cannot be checked for confidentiality - a fragment, a paraphrase or an abbreviation of a
+/// restricted value would all pass a substring test.
+/// </summary>
+public enum SecurityLightingReason
+{
+    /// <summary>No operation is active in the area.</summary>
+    NoActiveOperation,
+
+    /// <summary>An operation is active and requires the area to remain lit.</summary>
+    ActiveOperationRequiresLighting,
+
+    /// <summary>An operation is active but does not require lighting.</summary>
+    ActiveOperationWithoutLightingRequirement
+}
+
+/// <summary>
+/// The sanitized answer that crosses the domain boundary: a decision, a closed-set reason, and a
+/// deadline computed from the authoritative records. It never carries the operation record, a
+/// restricted field, or any words the consulted model wrote.
 /// </summary>
 /// <param name="Area">The area assessed.</param>
 /// <param name="RequiresLighting">Whether an active operation requires the area to stay lit.</param>
 /// <param name="UntilUtc">When the requirement lapses, when one applies.</param>
-/// <param name="Reason">A short non-sensitive justification.</param>
+/// <param name="ReasonCode">The closed-set conclusion.</param>
+/// <param name="Reason">The public explanation, rendered from a deterministic template.</param>
 /// <param name="DetailsWithheld">Whether restricted detail was deliberately not disclosed.</param>
+/// <param name="AssessedBy">The agent that produced the conclusion, so the consult is visible in a trace.</param>
 public sealed record SecurityLightingAssessment(
     string Area,
     bool RequiresLighting,
     DateTimeOffset? UntilUtc,
+    SecurityLightingReason ReasonCode,
     string Reason,
-    bool DetailsWithheld);
+    bool DetailsWithheld,
+    string AssessedBy);
 
 /// <summary>
 /// Synchronizes the Security Hub with a deterministic presenter scenario.

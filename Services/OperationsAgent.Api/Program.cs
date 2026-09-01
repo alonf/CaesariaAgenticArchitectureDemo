@@ -460,6 +460,14 @@ static async Task<IResult> AskAsync(
             $"The authoritative Energy Hub could not be reached: {exception.Message}",
             context.GetCorrelationId()));
     }
+    catch (OperationsAgentApprovalLoopException exception)
+    {
+        return TypedResults.Problem(ProblemDetailsFactory.Create(
+            StatusCodes.Status409Conflict,
+            "Tool approval was not resolved",
+            $"{exception.Message} Ask again, or answer the request when it appears.",
+            context.GetCorrelationId()));
+    }
     catch (OperationsAgentToolUnavailableException exception)
     {
         return TypedResults.Problem(ProblemDetailsFactory.Create(

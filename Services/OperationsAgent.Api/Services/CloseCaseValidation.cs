@@ -39,6 +39,15 @@ internal static partial class CloseCaseValidation
         return null;
     }
 
+    /// <summary>
+    /// Determines whether an asset identifier is in the canonical Caesarea form. Shared so every
+    /// model-supplied identifier is validated the same way, whichever capability supplied it.
+    /// </summary>
+    /// <param name="assetId">The identifier to check.</param>
+    /// <returns><see langword="true"/> when the identifier is canonical.</returns>
+    public static bool IsKnownAssetId(string? assetId) =>
+        !string.IsNullOrWhiteSpace(assetId) && AssetIdRegex().IsMatch(assetId);
+
     [GeneratedRegex(@"^[A-Za-z]{1,4}-\d{1,6}$", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
     private static partial Regex AssetIdRegex();
 }

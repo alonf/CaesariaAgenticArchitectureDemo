@@ -278,6 +278,28 @@ public sealed partial class FoundryOperationsAgent(
             }
             #endregion
 
+            #region TOOL_APPROVAL
+            DemoBreakpoints.Pause(DemoSnippets.ToolApproval);
+
+            // The third control point. MRTR was the tool asking for input; the workflow's gate was
+            // a node in an orchestration we drew. This one is reactive: the model picks a
+            // sensitive capability on its own, and the framework intercepts the call so a
+            // supervisor decides before it runs. Nothing about the tool itself changes.
+            if (currentStage >= DemoStage.ToolApproval)
+            {
+                var maintenanceTools = new MaintenanceTools(
+                    _workItems, _stageGate, correlationId, _loggerFactory.CreateLogger<MaintenanceTools>());
+
+                AIFunction fileWorkItem = new ApprovalRequiredAIFunction(
+                    AIFunctionFactory.Create(
+                        maintenanceTools.CreateMaintenanceWorkItemAsync,
+                        OperationsAgentToolNames.CreateMaintenanceWorkItem,
+                        "Files a maintenance work item so a technician is dispatched to an asset."));
+
+                agentTools.Add(fileWorkItem);
+            }
+            #endregion
+
             // A second agent, not a second tool: Security owns records this service may not read,
             // so the question crosses a boundary and comes back as a judgment. The relationship is
             // delegation - the Operations Agent keeps ownership of the answer it gives the operator.
@@ -305,28 +327,6 @@ public sealed partial class FoundryOperationsAgent(
                         $"The Security Operations Agent could not be consulted: {exception.Message}", exception);
                 }
             }
-
-            #region TOOL_APPROVAL
-            DemoBreakpoints.Pause(DemoSnippets.ToolApproval);
-
-            // The third control point. MRTR was the tool asking for input; the workflow's gate was
-            // a node in an orchestration we drew. This one is reactive: the model picks a
-            // sensitive capability on its own, and the framework intercepts the call so a
-            // supervisor decides before it runs. Nothing about the tool itself changes.
-            if (currentStage >= DemoStage.ToolApproval)
-            {
-                var maintenanceTools = new MaintenanceTools(
-                    _workItems, correlationId, _loggerFactory.CreateLogger<MaintenanceTools>());
-
-                AIFunction fileWorkItem = new ApprovalRequiredAIFunction(
-                    AIFunctionFactory.Create(
-                        maintenanceTools.CreateMaintenanceWorkItemAsync,
-                        OperationsAgentToolNames.CreateMaintenanceWorkItem,
-                        "Files a maintenance work item so a technician is dispatched to an asset."));
-
-                agentTools.Add(fileWorkItem);
-            }
-            #endregion
 
             List<AIContextProvider> contextProviders = [];
 
@@ -544,7 +544,18 @@ public sealed partial class FoundryOperationsAgent(
                 new ChatMessage(ChatRole.User, decisions), session, cancellationToken: cancellationToken);
         }
 
-        return response;
+        // The framework's guidance is to keep resolving until no approval requests remain. Bounded
+        // here, so exhaustion is an explicit failure rather than a half-finished answer.
+        var unresolved = response.Messages
+            .SelectMany(message => message.Contents)
+            .OfType<ToolApprovalRequestContent>()
+            .Select(request => DescribeToolCall(request).Name)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+
+        return unresolved.Length == 0
+            ? response
+            : throw new OperationsAgentApprovalLoopException(MaxToolApprovalRounds, string.Join(", ", unresolved));
     }
 
     // The approval request carries the tool call the model chose; the operator is shown the tool
@@ -571,7 +582,10 @@ public sealed partial class FoundryOperationsAgent(
         var (_, decision) = _pendingApprovalStore.Create(
             $"The agent selected {name} ({arguments}). Approve running it?",
             correlationId,
-            cancellationToken);
+            cancellationToken,
+            OperationsAgentControlPoint.ToolApproval,
+            name,
+            arguments);
         var approved = await decision;
 
         // A stage downgrade while the question was pending withdraws the capability, so the
@@ -596,7 +610,9 @@ public sealed partial class FoundryOperationsAgent(
             var (_, decision) = _pendingApprovalStore.Create(
                 elicitation?.Message ?? "A remote tool requests operator confirmation.",
                 correlationId,
-                elicitationCancellation);
+                elicitationCancellation,
+                OperationsAgentControlPoint.InteractiveInput,
+                OperationsAgentToolNames.RestoreScheduledMode);
             var approved = await decision;
 
             // A stage downgrade while the question was pending withdraws the capability: the

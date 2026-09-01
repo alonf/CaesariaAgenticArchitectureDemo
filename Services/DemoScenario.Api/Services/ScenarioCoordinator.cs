@@ -106,8 +106,10 @@ public sealed partial class ScenarioCoordinator : IDisposable
             await _energyScenarioClient.ResetAsync(correlationId, cancellationToken);
             await _energyScenarioClient.ApplyScenarioAsync(recipe.EnergyState, correlationId, cancellationToken);
 
-            // The Security domain is synchronized from the same recipe, so the two boundaries
-            // can never disagree about whether an operation is active.
+            // The Security domain is synchronized from the same recipe, so after a successful
+            // application the two boundaries agree about whether an operation is active. The
+            // synchronization is sequential and not transactional: a failure part-way leaves the
+            // earlier boundaries on the new scenario, and the presenter re-applies.
             await _securityScenarioClient.ResetAsync(correlationId, cancellationToken);
 
             if (recipe.SecurityState is { } securityState)

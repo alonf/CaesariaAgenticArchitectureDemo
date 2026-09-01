@@ -107,11 +107,16 @@ public interface ISecurityScenarioClient
 /// <inheritdoc cref="ISecurityScenarioClient"/>
 public sealed partial class HttpSecurityScenarioClient(HttpClient httpClient, ILogger<HttpSecurityScenarioClient> logger) : ISecurityScenarioClient
 {
+    // The Security Hub admits this caller on its admin routes and nowhere else; it may seed
+    // operations and may not read them.
+    private const string CallerHeaderName = "X-Caesarea-Caller";
+    private const string CallerName = "demo-scenario";
+
     /// <inheritdoc />
     public Task ResetAsync(string correlationId, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(correlationId);
-        return ScenarioHttpRequestSender.SendAsync(httpClient, logger, "Security Hub", "reset", ScenarioHttpRequestFactory.CreateRequest(HttpMethod.Post, "/api/security/admin/reset", correlationId), correlationId, cancellationToken);
+        return ScenarioHttpRequestSender.SendAsync(httpClient, logger, "Security Hub", "reset", CreateCallerRequest(HttpMethod.Post, "/api/security/admin/reset", correlationId), correlationId, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -119,7 +124,14 @@ public sealed partial class HttpSecurityScenarioClient(HttpClient httpClient, IL
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentException.ThrowIfNullOrWhiteSpace(correlationId);
-        return ScenarioHttpRequestSender.SendAsync(httpClient, logger, "Security Hub", "apply scenario", ScenarioHttpRequestFactory.CreateRequest(HttpMethod.Post, "/api/security/admin/scenario", correlationId, request), correlationId, cancellationToken);
+        return ScenarioHttpRequestSender.SendAsync(httpClient, logger, "Security Hub", "apply scenario", CreateCallerRequest(HttpMethod.Post, "/api/security/admin/scenario", correlationId, request), correlationId, cancellationToken);
+    }
+
+    private static HttpRequestMessage CreateCallerRequest(HttpMethod method, string relativeUri, string correlationId, object? body = null)
+    {
+        var request = ScenarioHttpRequestFactory.CreateRequest(method, relativeUri, correlationId, body);
+        request.Headers.Add(CallerHeaderName, CallerName);
+        return request;
     }
 }
 

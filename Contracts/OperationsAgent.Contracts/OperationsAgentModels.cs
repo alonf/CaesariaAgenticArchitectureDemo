@@ -62,11 +62,34 @@ public sealed record OperationsAgentSecurityConsultStatus(bool Enabled);
 /// <param name="Message">The question the tool asked the operator.</param>
 /// <param name="RequestedAt">When the tool paused for input.</param>
 /// <param name="CorrelationId">The correlation identifier of the agent run that paused.</param>
+/// <param name="ControlPoint">Which control point raised the request, so the operator is told what they are answering.</param>
+/// <param name="ToolName">The capability awaiting a decision, when the control point names one.</param>
+/// <param name="ToolArguments">The arguments that capability would run with, when they are known.</param>
 public sealed record OperationsAgentPendingApproval(
     string Id,
     string Message,
     DateTimeOffset RequestedAt,
-    string CorrelationId);
+    string CorrelationId,
+    OperationsAgentControlPoint ControlPoint = OperationsAgentControlPoint.InteractiveInput,
+    string? ToolName = null,
+    string? ToolArguments = null);
+
+/// <summary>
+/// The control point that paused for the operator. Three different mechanisms raise the same
+/// prompt, and which one it is carries the whole lesson of stages 7 to 9 - so it is stated in the
+/// contract rather than inferred from whatever the UI happens to be doing at the time.
+/// </summary>
+public enum OperationsAgentControlPoint
+{
+    /// <summary>An MCP tool paused mid-call for input it needs (MRTR).</summary>
+    InteractiveInput,
+
+    /// <summary>An approval node inside the remediation workflow.</summary>
+    WorkflowGate,
+
+    /// <summary>The framework intercepted a protected capability the model selected.</summary>
+    ToolApproval
+}
 
 /// <summary>
 /// The operator's answer to a pending interactive-input request.

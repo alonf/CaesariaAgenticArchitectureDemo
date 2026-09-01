@@ -11,6 +11,7 @@ public sealed class MrtrRequestStateStore(TimeProvider timeProvider)
 {
     private static readonly TimeSpan StateLifetime = TimeSpan.FromMinutes(5);
     private const int MaxOutstandingStates = 100;
+    private readonly Lock _issueGate = new();
     private readonly ConcurrentDictionary<string, (string AssetId, DateTimeOffset ExpiresAt)> _issued = new(StringComparer.Ordinal);
 
     /// <summary>
@@ -22,25 +23,29 @@ public sealed class MrtrRequestStateStore(TimeProvider timeProvider)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(assetId);
 
-        // A pause the client never returns to would otherwise leave its token behind forever.
-        PruneExpired();
-
-        // A hard ceiling as well as an expiry: a client that opens pauses in a loop cannot grow
-        // the store without bound inside the five-minute window. The oldest unanswered pause is
-        // dropped first, and its continuation is then refused rather than silently honored.
-        while (_issued.Count >= MaxOutstandingStates)
+        // Prune, evict and insert happen under one lock: concurrent issuers cannot each observe
+        // room and then all take it, so the ceiling is a real bound rather than a likely one.
+        lock (_issueGate)
         {
-            var oldest = _issued.OrderBy(entry => entry.Value.ExpiresAt).Select(entry => entry.Key).FirstOrDefault();
+            PruneExpired();
 
-            if (oldest is null || !_issued.TryRemove(oldest, out _))
+            // A hard ceiling as well as an expiry: a client that opens pauses in a loop cannot
+            // grow the store inside the five-minute window. The oldest unanswered pause is
+            // dropped first, and its continuation is then refused rather than silently honored.
+            while (_issued.Count >= MaxOutstandingStates)
             {
-                break;
-            }
-        }
+                var oldest = _issued.OrderBy(entry => entry.Value.ExpiresAt).Select(entry => entry.Key).FirstOrDefault();
 
-        var token = Guid.NewGuid().ToString("N");
-        _issued[token] = (assetId, timeProvider.GetUtcNow() + StateLifetime);
-        return token;
+                if (oldest is null || !_issued.TryRemove(oldest, out _))
+                {
+                    break;
+                }
+            }
+
+            var token = Guid.NewGuid().ToString("N");
+            _issued[token] = (assetId, timeProvider.GetUtcNow() + StateLifetime);
+            return token;
+        }
     }
 
     private void PruneExpired()

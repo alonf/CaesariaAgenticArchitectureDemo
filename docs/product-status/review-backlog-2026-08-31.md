@@ -225,6 +225,44 @@ All findings from the full working-tree review are now resolved.
    exposes no predicate text), the README describes the write capability's stage *window* rather
    than "from that stage on", and the vendored Mermaid folder carries the full upstream MIT text.
 
+## Fixed in the ToolApproval / MultiAgent review pass (September 2026)
+
+1. **The consulted agent could disclose an unexamined snapshot (high)** — the Security Agent read
+   the hub once for sanitization and its internal tool read it again with a model-supplied area.
+   Now one snapshot is captured and served by a tool bound to the area under assessment; an
+   out-of-scope area is refused.
+2. **The denylist was not a confidentiality guarantee (high)** — it forwarded model prose unless a
+   whole restricted value appeared verbatim, so "Bar-On authorized it", a paraphrase, or an
+   abbreviation all crossed. No model-authored text crosses now: the agent selects a reason code
+   from a closed set, the verdict and deadline are computed from the records, and the public
+   sentence is rendered from a template. Tests cover fragments, paraphrases and encodings.
+3. **The permission boundary is enforced, not assumed** — the Security Hub requires a caller
+   identity on every route: reads admit the Security Agent only, admin routes admit the scenario
+   service only, verified over real HTTP. It is a demo-grade header rather than an authenticated
+   principal, and the stage document now says so plainly.
+4. **The multi-agent claim is stated precisely** — the verdict is deterministic by design (a model
+   must not be able to switch off security lighting), so the stage is presented as a permission
+   and isolation boundary rather than proof that a model was required to reach the answer. The
+   assessment carries the consulted agent's name so the nested consult is visible in a trace.
+5. **Approved maintenance cannot execute after a downgrade** — the stage is rechecked inside the
+   tool, immediately before the side effect, not only before the resumed run.
+6. **Approval-loop exhaustion fails explicitly** — unresolved approval requests after the bounded
+   rounds raise `OperationsAgentApprovalLoopException`, answered as 409, instead of returning an
+   unfinished turn and persisting it as successful.
+7. **The control point is in the contract** — each pending approval carries a typed
+   `OperationsAgentControlPoint` plus the tool name and arguments, and the Command Center renders
+   each row from its own type instead of inferring it from busy flags.
+8. **The A2A note was factually wrong and is corrected** — `Microsoft.Agents.AI.A2A` and
+   `Microsoft.Agents.AI.Hosting.A2A.AspNetCore` are published in the same preview family this
+   solution uses; the earlier claim came from a package search that omitted `--prerelease`.
+9. **The caps are hard** — MRTR issuance prunes, evicts and inserts under one lock, and the
+   workflow separates concurrent-run admission from completed-run retention.
+10. **Smaller fixes** — a non-string `reasonCode` can no longer throw; scenario synchronization is
+    described as consistent after successful application rather than impossible to disagree; and
+    model-supplied maintenance arguments are validated against the canonical asset form and capped.
+11. **Presented-code order** — the `TOOL_APPROVAL` region now precedes the MultiAgent composition,
+    so stepping through cumulative stages follows the lecture order.
+
 ## Deferred (with trigger)
 
 - **Snippet region scan scope** (low, from the demo-anchor review): the region synchronization

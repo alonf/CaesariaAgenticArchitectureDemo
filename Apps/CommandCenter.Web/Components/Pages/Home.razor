@@ -546,8 +546,10 @@
                                         <button class="action-button approval-approve" @onclick="() => RespondToApprovalAsync(approval.Id, true)" disabled="@_approvalBusy">Approve</button>
                                         <button class="action-button approval-deny" @onclick="() => RespondToApprovalAsync(approval.Id, false)" disabled="@_approvalBusy">Deny</button>
                                     </div>
+                                    @* Each request states which control point raised it - that
+                                       distinction is the whole lesson of stages 7 to 9. *@
+                                    <p class="agent-footnote">@ApprovalFootnote(approval)</p>
                                 }
-                                <p class="agent-footnote">@ApprovalFootnote</p>
                             </div>
                         }
 
@@ -903,12 +905,14 @@
 
     private void SelectWorkflowTab(string tab) => _workflowTab = tab;
 
-    // Three different control points can raise the same prompt; say which one the operator is
-    // answering, because that distinction is the whole point of the last three stages.
-    private string ApprovalFootnote => (_workflowBusy, IsToolApprovalStage && _agentBusy) switch
+    // Read from the request itself, never inferred from what this page happens to be doing: an
+    // agent-started workflow and a concurrent ask would both fool a busy-flag guess.
+    private static string ApprovalFootnote(OperationsAgentPendingApproval approval) => approval.ControlPoint switch
     {
-        (true, _) => "The workflow's approval node is paused. Nothing changes until you answer.",
-        (_, true) => "The agent selected a protected capability and the framework intercepted the call. Nothing runs until you answer.",
+        OperationsAgentControlPoint.WorkflowGate =>
+            "The workflow's approval node is paused. Nothing changes until you answer.",
+        OperationsAgentControlPoint.ToolApproval =>
+            "The agent selected a protected capability and the framework intercepted the call. Nothing runs until you answer.",
         _ => "The remote tool is paused input-required (MCP MRTR). Nothing changes until you answer."
     };
 

@@ -220,7 +220,9 @@ public sealed class ArchitectureBoundaryTests
         Assert.True(restoreToolIndex > windowGateIndex, "The restore tool must be exposed only inside the stage window.");
         Assert.True(workflowGateIndex >= 0, "The Workflow stage gate for the governed operation is missing.");
         Assert.True(workflowToolIndex > workflowGateIndex, "The workflow-start tool must be exposed only behind the Workflow stage gate.");
-        Assert.Equal(1, CountOccurrences(agentText, "OperationsAgentToolNames.RestoreScheduledMode"));
+        // Counted on the registration itself, not on every mention of the name: the approval
+        // prompt also names the capability, and that is metadata, not a second exposure.
+        Assert.Equal(1, CountOccurrences(agentText, "FindDiscoveredTool(discoveredTools, OperationsAgentToolNames.RestoreScheduledMode)"));
     }
 
     private static string FindRepositoryRoot()

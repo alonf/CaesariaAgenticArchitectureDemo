@@ -38,8 +38,24 @@ Slide 34's notes give the taxonomy this stage completes:
 - **A refusal stands for the request.** If the model asks again for a capability the operator just
   declined, it is answered from that standing decision instead of asking again until the execution
   budget expires. Bounded at three rounds.
-- **Stage-gated and downgrade-safe**: the capability exists only at ToolApproval+, and an approval
-  answered after a downgrade is refused.
+- **Stage-gated and downgrade-safe**: the capability exists only at ToolApproval+, an approval
+  answered after a downgrade is refused, and the stage is rechecked *inside the tool*, immediately
+  before the work item is filed — the operator answers seconds before the model calls, and the
+  capability can be withdrawn in between.
+- **Arguments are validated** even though the model supplies them: the asset identifier must be
+  canonical and the summary is capped, so a hallucinated asset never enters the work-item store.
+- **Exhaustion fails loudly.** If approval requests remain after the bounded rounds, the turn
+  fails with a 409 rather than returning a half-finished answer and persisting it as a completed
+  turn.
+
+## A note on what this approval is bound to
+
+The requirements bind the *physical* corrective command to a validated state revision, because the
+world can move between deciding and acting. This approval is bound to **the specific tool call**
+instead, which is the framework's own binding, and that is the right choice here: filing a work
+item is an administrative record, not a state transition, so there is no prior state whose change
+would invalidate the decision. What can change is the *capability* — hence the stage recheck
+immediately before the write. Stage 8's physical command keeps the revision binding.
 
 ## Lecture beat
 

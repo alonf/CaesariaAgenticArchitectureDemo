@@ -33,6 +33,8 @@ public sealed class HttpSecurityHubGateway(HttpClient httpClient) : ISecurityHub
         using var request = new HttpRequestMessage(
             HttpMethod.Get, $"/api/security/areas/{Uri.EscapeDataString(area)}/operations");
         request.Headers.Add(CorrelationHeaderNames.XCorrelationId, correlationId);
+        // The hub admits this caller and no other on the read route.
+        request.Headers.Add("X-Caesarea-Caller", "security-agent");
 
         using var response = await httpClient.SendAsync(request, cancellationToken);
         response.EnsureSuccessStatusCode();

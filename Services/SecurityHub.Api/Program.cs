@@ -30,6 +30,13 @@ await app.RunAsync();
 
 static IResult GetAreaStatus(HttpContext context, string area, SecurityHubService hub)
 {
+    // Reading operations is the restricted capability, and the rule is enforced here rather than
+    // assumed of the callers: only the Security domain's own agent is admitted.
+    if (CallerIdentity.Reject(context, CallerIdentity.SecurityAgent) is { } forbidden)
+    {
+        return forbidden;
+    }
+
     if (string.IsNullOrWhiteSpace(area))
     {
         return TypedResults.BadRequest(ProblemDetailsFactory.Create(
@@ -43,7 +50,9 @@ static IResult GetAreaStatus(HttpContext context, string area, SecurityHubServic
 }
 
 static IResult ApplyScenario(HttpContext context, SecurityScenarioSyncRequest request, SecurityHubService hub) =>
-    TypedResults.Ok(hub.ApplyScenario(request, context.GetCorrelationId()));
+    CallerIdentity.Reject(context, CallerIdentity.DemoScenario)
+        ?? TypedResults.Ok(hub.ApplyScenario(request, context.GetCorrelationId()));
 
 static IResult Reset(HttpContext context, SecurityHubService hub) =>
-    TypedResults.Ok(hub.Reset(context.GetCorrelationId()));
+    CallerIdentity.Reject(context, CallerIdentity.DemoScenario)
+        ?? TypedResults.Ok(hub.Reset(context.GetCorrelationId()));

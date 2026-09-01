@@ -19,8 +19,17 @@ public sealed partial class PendingApprovalStore(TimeProvider timeProvider, ILog
     /// <param name="message">The question the paused tool asked.</param>
     /// <param name="correlationId">The correlation identifier of the agent run.</param>
     /// <param name="cancellationToken">Cancels the wait when the agent run is abandoned.</param>
+    /// <param name="controlPoint">Which control point raised the request.</param>
+    /// <param name="toolName">The capability awaiting a decision, when one is named.</param>
+    /// <param name="toolArguments">The arguments that capability would run with, when known.</param>
     /// <returns>The pending approval identifier and the decision task.</returns>
-    public (string Id, Task<bool> Decision) Create(string message, string correlationId, CancellationToken cancellationToken)
+    public (string Id, Task<bool> Decision) Create(
+        string message,
+        string correlationId,
+        CancellationToken cancellationToken,
+        OperationsAgentControlPoint controlPoint = OperationsAgentControlPoint.InteractiveInput,
+        string? toolName = null,
+        string? toolArguments = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(message);
         ArgumentException.ThrowIfNullOrWhiteSpace(correlationId);
@@ -28,7 +37,8 @@ public sealed partial class PendingApprovalStore(TimeProvider timeProvider, ILog
         var id = Guid.NewGuid().ToString("N");
         var completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         var entry = new PendingEntry(
-            new OperationsAgentPendingApproval(id, message, timeProvider.GetUtcNow(), correlationId),
+            new OperationsAgentPendingApproval(
+                id, message, timeProvider.GetUtcNow(), correlationId, controlPoint, toolName, toolArguments),
             completion);
 
         // Insert before registering the cancellation callback, so a token that fires at any
