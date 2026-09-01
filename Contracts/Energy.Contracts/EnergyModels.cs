@@ -78,6 +78,11 @@ public sealed record EnergyOperationalTwin(
 /// <param name="CorrelationId">The correlation identifier spanning the end-to-end request.</param>
 /// <param name="Summary">The projector-friendly completion summary.</param>
 /// <param name="CompletedAt">The time at which the command completed.</param>
+/// <param name="PreconditionFailed">
+/// Indicates that the command was refused without any side effect because the caller's validated
+/// state revision is no longer current. This is not a downstream failure: the caller decided
+/// against a picture that has since moved, and must re-validate before commanding again.
+/// </param>
 public sealed record RestoreScheduledModeResult(
     string AssetId,
     bool? DesiredIsOn,
@@ -85,4 +90,19 @@ public sealed record RestoreScheduledModeResult(
     CommandExecutionStatus Status,
     string CorrelationId,
     string Summary,
-    DateTimeOffset CompletedAt);
+    DateTimeOffset CompletedAt,
+    bool PreconditionFailed = false);
+
+/// <summary>
+/// Names the machine-readable markers the Energy Hub puts on command problem responses, so a
+/// caller can tell a refused precondition ("your picture is stale, look again") from a genuine
+/// downstream failure ("the city did not do what you asked") without parsing prose.
+/// </summary>
+public static class EnergyCommandProblem
+{
+    /// <summary>
+    /// The problem-details extension set to <see langword="true"/> when a command was refused
+    /// because the caller's validated state revision is no longer current.
+    /// </summary>
+    public const string PreconditionFailedExtension = "preconditionFailed";
+}

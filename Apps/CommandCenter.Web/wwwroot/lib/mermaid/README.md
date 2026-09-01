@@ -8,7 +8,7 @@ network dependency: a conference room's Wi-Fi must never decide whether the demo
 | Package | [mermaid](https://www.npmjs.com/package/mermaid) |
 | Version | 11.12.0 |
 | Source | `https://cdn.jsdelivr.net/npm/mermaid@11.12.0/dist/mermaid.min.js` |
-| License | MIT — © 2014–present Knut Sveidqvist |
+| License | MIT — © 2014–2022 Knut Sveidqvist; full text in [LICENSE](LICENSE) |
 | SHA-256 | `07e37dfa97b337ccc85365d57eddf99b9706f09db3b59b260d0333b23b343c4b` |
 
 The file is stored byte-for-byte (see [.gitattributes](../../../../../.gitattributes)); do not

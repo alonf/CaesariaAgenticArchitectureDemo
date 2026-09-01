@@ -190,6 +190,41 @@ All findings from the full working-tree review are now resolved.
 10. **Vendored asset hygiene** — `.gitattributes` stores `*.min.js` byte-for-byte with no
     whitespace checks, and the Mermaid folder records source, version, SHA-256, and license.
 
+## Fixed in the Workflow-stage second review pass (September 2026)
+
+1. **The precondition marker was never sent (high)** — the Energy Hub detected the stale revision
+   and answered 409, but never set the `preconditionFailed` extension the gateway looks for, so
+   over real HTTP a refusal was read as a plain command failure and the re-validation path never
+   ran. The workflow tests missed it because the fake gateway returned the flag directly. Fixed
+   with a typed discriminator (`RestoreScheduledModeResult.PreconditionFailed`) driving the
+   shared `EnergyCommandProblem.PreconditionFailedExtension`, replacing the summary-prefix match,
+   and pinned by an integration test that drives the real endpoint through the real
+   `HttpEnergyCommandGateway`. That test was confirmed to fail without the marker.
+2. **An approval could authorize a newer override (high)** — after a precondition failure the
+   earlier approval was reused whenever the fresh state still required approval, and a revision
+   cannot distinguish harmless movement from a replaced operator override. The step now fails
+   closed: a re-validated state that still requires approval needs a *fresh* one, and only a
+   state that no longer requires approval is retried. The stage is rechecked before the retry.
+3. **Transport and verification failures bypassed the work-item branch** — gateway exceptions
+   escaped to the run's outer handler, which marked the run failed without raising the
+   maintenance work item the requirement calls for. Expected downstream failures (unreachable
+   hub, non-caller timeouts) now become outcome data that routes to `workitem`; caller and stage
+   cancellation still propagate as cancellation.
+4. **Agent-started runs are visible and approvable** — the run report carries its asset and
+   correlation, a correlation-filtered lookup exposes the run the agent started, and the Command
+   Center adopts it after an ask so its steps appear and its approval gate is answerable. Terminal
+   run logs carry asset and correlation.
+5. **The Command Center judged anomalies by the raw schedule** — it now uses the same
+   `IsAnomalous` rule as the workflow and the Energy Hub, and shows Schedule beside Effective
+   target so the security-operation distinction is visible on the projector ("Lit for operation",
+   attention count zero).
+6. **Hard bounds on the registries** — MRTR tokens have an issuance ceiling as well as an expiry,
+   run pruning skips active entries instead of abandoning the sweep, evicted runs are disposed,
+   and a finished run triggers another sweep.
+7. **Claims match the implementation** — the YAML/graph test is described as topological (the SDK
+   exposes no predicate text), the README describes the write capability's stage *window* rather
+   than "from that stage on", and the vendored Mermaid folder carries the full upstream MIT text.
+
 ## Deferred (with trigger)
 
 - **Snippet region scan scope** (low, from the demo-anchor review): the region synchronization

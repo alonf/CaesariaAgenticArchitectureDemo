@@ -133,23 +133,76 @@ public sealed class RemediationWorkflowServiceTests
     }
 
     [Fact]
-    public async Task StateChangeAfterApprovalIsRetriedOnceAgainstTheFreshRevision()
+    public async Task ApprovalDoesNotCarryOverToAStateThatStillNeedsApproval()
     {
-        // The operator approved clearing an override, and the picture moved while they decided.
-        // The approval still stands for an override that still exists, so one bounded retry
-        // executes - against the new revision, never the stale one.
+        // The operator approved clearing the override they were shown, and the picture moved
+        // while they decided. The twin cannot tell "the same override" from "a new one asserted
+        // since", so the approval must not carry over: fail closed and ask again.
         var world = new WorkflowWorld(CreateTwin(reportedIsOn: true, manualOverride: true));
         world.MutateOnNextCommand(twin => twin with { LastReportedAt = twin.LastReportedAt.AddMinutes(1) });
 
-        var report = world.Service.StartRun("L-417", "wf-retry-corr");
+        var report = world.Service.StartRun("L-417", "wf-stale-approval-corr");
         var approvalId = await world.WaitForApprovalAsync();
         Assert.True(world.Approvals.TryRespond(approvalId, approved: true));
+        var finished = await world.WaitForCompletionAsync(report.RunId);
+
+        Assert.False(finished.CommandExecuted);
+        Assert.Equal("Unresolved", finished.Status);
+        Assert.True(world.Twin.ManualOverride);
+        // Exactly one refused attempt: no command was issued on the strength of the old approval.
+        Assert.Equal(1, world.CommandGateway.RestoreCalls);
+        Assert.Contains("does not carry over", finished.Steps.Single(step => step.ExecutorId == "execute").Detail!, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task StateChangeThatNoLongerNeedsApprovalRetriesOnceAgainstTheFreshRevision()
+    {
+        // Harmless movement on the automatic branch: policy still says act, still without an
+        // approval, so one bounded retry executes - against the new revision, never the stale one.
+        var world = new WorkflowWorld(CreateTwin(reportedIsOn: true, manualOverride: false));
+        world.MutateOnNextCommand(twin => twin with { LastReportedAt = twin.LastReportedAt.AddMinutes(1) });
+
+        var report = world.Service.StartRun("L-417", "wf-retry-corr");
         var finished = await world.WaitForCompletionAsync(report.RunId);
 
         Assert.True(finished.CommandExecuted);
         Assert.True(finished.Resolved);
         Assert.Equal(2, world.CommandGateway.RestoreCalls);
         Assert.Equal(world.RevisionBeforeLastCommand, world.CommandGateway.LastExpectedStateRevision);
+    }
+
+    [Fact]
+    public async Task UnreachableEnergyHubRaisesAWorkItemInsteadOfCrashingTheRun()
+    {
+        var world = new WorkflowWorld(CreateTwin(reportedIsOn: true, manualOverride: false));
+        world.CommandGateway.OnRestoreScheduledModeAsync = (_, _, _, _) =>
+            throw new HttpRequestException("Energy Hub is unreachable.");
+
+        var report = world.Service.StartRun("L-417", "wf-transport-corr");
+        var finished = await world.WaitForCompletionAsync(report.RunId);
+
+        Assert.False(finished.CommandExecuted);
+        Assert.Equal("Failed", finished.Status);
+        Assert.NotNull(finished.WorkItemId);
+        Assert.Single(world.WorkItems.Created);
+    }
+
+    [Fact]
+    public async Task UnverifiableStateAfterACommandRaisesAWorkItem()
+    {
+        // The command landed and the verification read timed out. Unverifiable is not resolved,
+        // and a change we cannot confirm is exactly what maintenance needs to look at.
+        var world = new WorkflowWorld(CreateTwin(reportedIsOn: true, manualOverride: false));
+        world.FailReadsAfterFirst(new TimeoutException("The Energy Hub read timed out."));
+
+        var report = world.Service.StartRun("L-417", "wf-verify-timeout-corr");
+        var finished = await world.WaitForCompletionAsync(report.RunId);
+
+        Assert.True(finished.CommandExecuted);
+        Assert.False(finished.Resolved);
+        Assert.Equal("Failed", finished.Status);
+        Assert.NotNull(finished.WorkItemId);
+        Assert.Contains("Verification failed", finished.Steps.Single(step => step.ExecutorId == "verify").Detail!, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -384,6 +437,8 @@ public sealed class RemediationWorkflowServiceTests
     {
         private readonly bool _applyRestoreToTwin;
         private Func<EnergyOperationalTwin, EnergyOperationalTwin>? _mutateOnNextCommand;
+        private Exception? _readFailure;
+        private int _reads;
 
         public WorkflowWorld(EnergyOperationalTwin initialTwin, bool applyRestoreToTwin = true)
         {
@@ -394,7 +449,16 @@ public sealed class RemediationWorkflowServiceTests
             {
                 State = initialTwin,
                 Activity = [],
-                OnGetStateAsync = (_, _, _) => Task.FromResult(Twin)
+                OnGetStateAsync = (_, _, _) =>
+                {
+                    if (_readFailure is { } failure && _reads++ > 0)
+                    {
+                        return Task.FromException<EnergyOperationalTwin>(failure);
+                    }
+
+                    _reads++;
+                    return Task.FromResult(Twin);
+                }
             };
             CommandGateway = new FakeEnergyCommandGateway
             {
@@ -462,6 +526,10 @@ public sealed class RemediationWorkflowServiceTests
 
         public void MutateOnNextCommand(Func<EnergyOperationalTwin, EnergyOperationalTwin> mutate) =>
             _mutateOnNextCommand = mutate;
+
+        // Validation succeeds, then the boundary stops answering - the shape of a verification
+        // timeout that happens after a command has already changed the city.
+        public void FailReadsAfterFirst(Exception failure) => _readFailure = failure;
 
         public void MoveStageTo(DemoStage stage) =>
             StageGate.SetCurrent(new DemoStageStatus(stage, stage.ToString(), "Test stage", ["Test"], DateTimeOffset.UtcNow, "stage-corr"));

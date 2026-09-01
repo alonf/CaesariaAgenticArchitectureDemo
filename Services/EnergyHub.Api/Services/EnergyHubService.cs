@@ -9,11 +9,6 @@ public sealed partial class EnergyHubService
     private const string SupersededSummary =
         "Restore Scheduled Mode was superseded by a newer operation, scenario change, or reset; the newer state was preserved.";
 
-    /// <summary>
-    /// Prefix of the summary returned when a command's state precondition no longer holds. Callers
-    /// match on it to re-validate rather than treating the refusal as a downstream failure.
-    /// </summary>
-    public const string PreconditionFailedSummaryPrefix = "Precondition failed:";
 
     private readonly object _gate = new();
     private readonly ISmartPoleGateway _smartpoleGateway;
@@ -229,8 +224,9 @@ public sealed partial class EnergyHubService
                     _twin.ReportedIsOn,
                     CommandExecutionStatus.Failed,
                     correlationId,
-                    $"{PreconditionFailedSummaryPrefix} the caller validated state revision {expected}, but the authoritative revision is now {_revision}. No change was made.",
-                    _timeProvider.GetUtcNow());
+                    $"Precondition failed: the caller validated state revision {expected}, but the authoritative revision is now {_revision}. No change was made.",
+                    _timeProvider.GetUtcNow(),
+                    PreconditionFailed: true);
             }
 
             // Accepting a restore claims a fresh revision, so of two concurrent restores only the

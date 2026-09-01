@@ -10,6 +10,7 @@ namespace EnergyHub.Api.Services;
 public sealed class MrtrRequestStateStore(TimeProvider timeProvider)
 {
     private static readonly TimeSpan StateLifetime = TimeSpan.FromMinutes(5);
+    private const int MaxOutstandingStates = 100;
     private readonly ConcurrentDictionary<string, (string AssetId, DateTimeOffset ExpiresAt)> _issued = new(StringComparer.Ordinal);
 
     /// <summary>
@@ -23,6 +24,19 @@ public sealed class MrtrRequestStateStore(TimeProvider timeProvider)
 
         // A pause the client never returns to would otherwise leave its token behind forever.
         PruneExpired();
+
+        // A hard ceiling as well as an expiry: a client that opens pauses in a loop cannot grow
+        // the store without bound inside the five-minute window. The oldest unanswered pause is
+        // dropped first, and its continuation is then refused rather than silently honored.
+        while (_issued.Count >= MaxOutstandingStates)
+        {
+            var oldest = _issued.OrderBy(entry => entry.Value.ExpiresAt).Select(entry => entry.Key).FirstOrDefault();
+
+            if (oldest is null || !_issued.TryRemove(oldest, out _))
+            {
+                break;
+            }
+        }
 
         var token = Guid.NewGuid().ToString("N");
         _issued[token] = (assetId, timeProvider.GetUtcNow() + StateLifetime);

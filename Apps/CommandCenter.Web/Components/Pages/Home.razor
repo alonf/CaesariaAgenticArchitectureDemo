@@ -146,7 +146,10 @@
                     </div>
                     <dl class="compact-facts">
                         <div><dt>Reported</dt><dd class="@LampClass">@OnOff(_snapshot.OperationalState.ReportedIsOn)</dd></div>
-                        <div><dt>Expected</dt><dd>@OnOff(_snapshot.OperationalState.ExpectedScheduledState)</dd></div>
+                        <div><dt>Schedule</dt><dd>@OnOff(_snapshot.OperationalState.ExpectedScheduledState)</dd></div>
+                        @* The effective target outranks the schedule when an operation requires
+                           lighting; showing both makes the security-operation beat visible. *@
+                        <div><dt>Effective target</dt><dd>@OnOff(_snapshot.OperationalState.EffectiveTargetIsOn)</dd></div>
                         <div><dt>Health</dt><dd class="@HealthClass">@_snapshot.OperationalState.ControllerHealth.Status</dd></div>
                     </dl>
                 </section>
@@ -235,6 +238,7 @@
                     <div class="event-facts">
                         <div><span>Observed</span><strong>@OnOff(_snapshot.OperationalState.ReportedIsOn)</strong></div>
                         <div><span>Schedule</span><strong>@OnOff(_snapshot.OperationalState.ExpectedScheduledState)</strong></div>
+                        <div><span>Effective target</span><strong>@OnOff(_snapshot.OperationalState.EffectiveTargetIsOn)</strong></div>
                         <div><span>Override</span><strong>@YesNo(_snapshot.OperationalState.ManualOverride)</strong></div>
                     </div>
                 </section>
@@ -710,8 +714,9 @@
     private TimeSpan PollingInterval => TimeSpan.FromSeconds(WebOptions.Value.PollingIntervalSeconds);
     private string LampClass => _snapshot?.OperationalState.ReportedIsOn == true ? "success-text" : "neutral-text";
     private string HealthClass => _snapshot?.OperationalState.ControllerHealth.Status == ControllerHealthStatus.Healthy ? "success-text" : "warning-text";
-    private bool IsAnomaly => _snapshot is not null
-        && _snapshot.OperationalState.ReportedIsOn != _snapshot.OperationalState.ExpectedScheduledState;
+    // The same canonical rule the workflow and the Energy Hub use: a lamp deliberately lit for an
+    // active operation is not an anomaly, so the console must not raise attention for it.
+    private bool IsAnomaly => _snapshot?.OperationalState.IsAnomalous == true;
     private string MarkerClass => IsAnomaly ? "attention" : "normal";
     private string IncidentPanelClass => _snapshot?.OpenIncident is null ? "no-incident" : "has-incident";
     private string AttentionClass => IsAnomaly ? "warning-text" : "success-text";
@@ -720,11 +725,18 @@
     private int IncidentCount => _snapshot?.OpenIncident is null ? 0 : 1;
     private int CustomerReportCount => _snapshot?.CustomerReport is null ? 0 : 1;
     private string IncidentSeverityText => _snapshot?.OpenIncident?.Severity.ToString() ?? "None";
-    private string AssetCondition => IsAnomaly ? "Schedule mismatch" : "Normal";
+    private string AssetCondition => (IsAnomaly, _snapshot?.OperationalState.OperationContext.RequiresLighting) switch
+    {
+        (true, _) => "Schedule mismatch",
+        (false, true) => "Lit for operation",
+        _ => "Normal"
+    };
     private string CurrentOperationalQuestion => _snapshot switch
     {
         { CustomerReport: not null } snapshot => $"Customer reports {snapshot.AssetId} on during daylight. Why is it happening?",
-        { } snapshot when IsAnomaly => $"Why is streetlight {snapshot.AssetId} {OnOff(snapshot.OperationalState.ReportedIsOn).ToLowerInvariant()} against its schedule?",
+        { } snapshot when IsAnomaly => $"Why is streetlight {snapshot.AssetId} {OnOff(snapshot.OperationalState.ReportedIsOn).ToLowerInvariant()} against its effective target?",
+        { } snapshot when snapshot.OperationalState.OperationContext.RequiresLighting =>
+            $"Streetlight {snapshot.AssetId} is lit as the active operation requires.",
         { } snapshot => $"Streetlight {snapshot.AssetId} matches its expected schedule.",
         null => string.Empty
     };
@@ -931,29 +943,7 @@
         {
             var report = await OperationsAgentClient.StartWorkflowRunAsync(
                 _snapshot?.AssetId ?? WebOptions.Value.AssetId, CancellationToken.None);
-            _workflowRun = report;
-            StateHasChanged();
-            await ApplyDiagramHighlightAsync();
-
-            // The server bounds a run at five minutes; this polling cap is just above it.
-            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
-            var remainingTicks = 360;
-
-            while (_workflowRun is { Completed: false } && remainingTicks-- > 0 && await timer.WaitForNextTickAsync())
-            {
-                try
-                {
-                    _workflowRun = await OperationsAgentClient.GetWorkflowRunAsync(report.RunId, CancellationToken.None);
-                }
-                catch (Exception)
-                {
-                    // One failed poll must not end the timeline; the next tick tries again.
-                }
-
-                StateHasChanged();
-                await ApplyDiagramHighlightAsync();
-            }
-
+            await MonitorWorkflowRunAsync(report);
             await LoadSnapshotAsync(CancellationToken.None, showErrorIfMissing: false);
         }
         catch (Exception exception)
@@ -966,6 +956,79 @@
             await approvalPolling.CancelAsync();
             await approvalPollingTask;
             _pendingApprovals = [];
+        }
+    }
+
+    // Follows one run to its end, whoever started it: the panel button, or the agent on the
+    // operator's behalf. The caller owns approval polling, so the gate stays answerable.
+    private async Task MonitorWorkflowRunAsync(OperationsAgentWorkflowRunReport report)
+    {
+        _workflowRun = report;
+        StateHasChanged();
+        await ApplyDiagramHighlightAsync();
+
+        // The server bounds a run at five minutes; this polling cap is just above it.
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+        var remainingTicks = 360;
+
+        while (_workflowRun is { Completed: false } && remainingTicks-- > 0 && await timer.WaitForNextTickAsync())
+        {
+            try
+            {
+                _workflowRun = await OperationsAgentClient.GetWorkflowRunAsync(report.RunId, CancellationToken.None);
+            }
+            catch (Exception)
+            {
+                // One failed poll must not end the timeline; the next tick tries again.
+            }
+
+            StateHasChanged();
+            await ApplyDiagramHighlightAsync();
+        }
+    }
+
+    // At the Workflow stage the agent answers by *starting* an operation, so the answer arrives
+    // long before the run does. Adopt the run it started - found by this request's correlation -
+    // so its steps appear and its approval gate is answerable from the same panel.
+    private async Task AdoptAgentStartedRunAsync(string? correlationId)
+    {
+        if (!IsWorkflowStage || string.IsNullOrWhiteSpace(correlationId))
+        {
+            return;
+        }
+
+        try
+        {
+            // The tool returns as soon as the run is registered, but validation may still be in
+            // flight; a few attempts cover the gap without blocking the answer.
+            for (var attempt = 0; attempt < 5; attempt++)
+            {
+                if (await OperationsAgentClient.FindWorkflowRunByCorrelationAsync(correlationId, CancellationToken.None) is { } report)
+                {
+                    using var approvalPolling = new CancellationTokenSource();
+                    var approvalPollingTask = PollApprovalsAsync(approvalPolling.Token);
+
+                    try
+                    {
+                        await MonitorWorkflowRunAsync(report);
+                    }
+                    finally
+                    {
+                        await approvalPolling.CancelAsync();
+                        await approvalPollingTask;
+                        _pendingApprovals = [];
+                    }
+
+                    await LoadSnapshotAsync(CancellationToken.None, showErrorIfMissing: false);
+                    return;
+                }
+
+                await Task.Delay(TimeSpan.FromMilliseconds(400));
+            }
+        }
+        catch (Exception exception)
+        {
+            _workflowMessage = $"The workflow the agent started could not be followed: {exception.Message}";
         }
     }
 
@@ -1148,6 +1211,13 @@
             await approvalPolling.CancelAsync();
             await approvalPollingTask;
             _pendingApprovals = [];
+        }
+
+        // The agent may have answered by starting a governed operation rather than acting; follow
+        // it so the operator sees - and can answer - the run the agent started for them.
+        if (_agentResponse is { } startedResponse)
+        {
+            await AdoptAgentStartedRunAsync(startedResponse.CorrelationId);
         }
     }
 

@@ -124,13 +124,16 @@ static async Task<IResult> RestoreScheduledModeAsync(HttpContext context, string
             expectedStateRevision);
 
         // A refused precondition is its own answer, not a downstream failure: the caller decided
-        // against a state that has since moved, and must re-validate before commanding again.
-        if (result.Summary.StartsWith(EnergyHubService.PreconditionFailedSummaryPrefix, StringComparison.Ordinal))
+        // against a state that has since moved, and must re-validate before commanding again. The
+        // machine-readable marker is what lets a caller tell the two apart.
+        if (result.PreconditionFailed)
         {
-            return TypedResults.Conflict(CreateCommandProblem(
+            var preconditionProblem = CreateCommandProblem(
                 StatusCodes.Status409Conflict,
                 "Restore scheduled mode precondition failed",
-                result));
+                result);
+            preconditionProblem.Extensions[EnergyCommandProblem.PreconditionFailedExtension] = true;
+            return TypedResults.Conflict(preconditionProblem);
         }
 
         return result.Status switch

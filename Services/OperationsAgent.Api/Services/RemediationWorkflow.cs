@@ -246,47 +246,90 @@ public sealed class ExecuteRestoreExecutor(
                 $"The operator declined; {input.Request.AssetId} was left unchanged.");
         }
 
-        // The capability itself can be withdrawn while the run waits: a stage downgrade means the
-        // write no longer exists, and a decision taken at a higher stage may not execute at a lower one.
-        if (stageGate.GetCurrent().Id < DemoStage.Workflow)
+        if (WithdrawnByStage(input) is { } withdrawn)
         {
-            return new RemediationExecution(input.Request, RemediationExecutionResult.StageWithdrawn,
-                $"The demo stage left Workflow before the command was issued; {input.Request.AssetId} was left unchanged.");
+            return withdrawn;
         }
 
-        var result = await commandGateway.RestoreScheduledModeAsync(
-            input.Request.AssetId, input.Request.CorrelationId, input.ValidatedStateRevision, cancellationToken);
-
-        if (!result.PreconditionFailed)
+        try
         {
-            return DescribeCommand(input, result);
+            var result = await commandGateway.RestoreScheduledModeAsync(
+                input.Request.AssetId, input.Request.CorrelationId, input.ValidatedStateRevision, cancellationToken);
+
+            if (!result.PreconditionFailed)
+            {
+                return DescribeCommand(input, result);
+            }
+
+            // The state moved under the decision. Re-validate once against the authoritative
+            // picture rather than retrying blindly.
+            var twin = await readGateway.GetStateAsync(input.Request.AssetId, input.Request.CorrelationId, cancellationToken);
+            var decision = RemediationPolicy.Evaluate(twin);
+
+            if (!decision.ActionRequired)
+            {
+                return new RemediationExecution(input.Request, RemediationExecutionResult.StateChanged,
+                    $"State changed while the workflow was deciding: {decision.Reason} No command was issued.");
+            }
+
+            // Fail closed: an approval was given for a picture that no longer exists. The twin
+            // cannot tell "the same override the operator saw" from "a new override asserted
+            // since", so a state that still needs approval needs a *fresh* one - reusing the old
+            // answer could clear an override the operator never looked at.
+            if (decision.RequiresApproval)
+            {
+                return new RemediationExecution(input.Request, RemediationExecutionResult.StateChanged,
+                    input.OperatorApproved
+                        ? $"State changed after the operator approved, and the new state still requires approval: {decision.Reason} The earlier approval does not carry over, so no command was issued. Run the operation again."
+                        : $"State changed while the workflow was deciding and now requires operator approval: {decision.Reason} No command was issued.");
+            }
+
+            if (WithdrawnByStage(input) is { } withdrawnBeforeRetry)
+            {
+                return withdrawnBeforeRetry;
+            }
+
+            var retry = await commandGateway.RestoreScheduledModeAsync(
+                input.Request.AssetId, input.Request.CorrelationId, twin.StateRevision, cancellationToken);
+
+            return retry.PreconditionFailed
+                ? new RemediationExecution(input.Request, RemediationExecutionResult.StateChanged,
+                    $"State kept changing while the workflow was executing; {input.Request.AssetId} was left unchanged.")
+                : DescribeCommand(input, retry);
         }
-
-        // The state moved under the decision. Re-validate once against the authoritative picture
-        // rather than retrying blindly - and never grant an approval the operator did not give.
-        var twin = await readGateway.GetStateAsync(input.Request.AssetId, input.Request.CorrelationId, cancellationToken);
-        var decision = RemediationPolicy.Evaluate(twin);
-
-        if (!decision.ActionRequired)
+        catch (Exception exception) when (IsDownstreamFailure(exception, cancellationToken))
         {
-            return new RemediationExecution(input.Request, RemediationExecutionResult.StateChanged,
-                $"State changed while the workflow was deciding: {decision.Reason} No command was issued.");
+            // A boundary that cannot be reached is a failed correction, not a crashed run: it
+            // flows on as data so the verify and work-item nodes still get to do their jobs.
+            return new RemediationExecution(input.Request, RemediationExecutionResult.CommandFailed,
+                $"The Energy Hub could not be reached to restore {input.Request.AssetId}: {exception.Message}");
         }
-
-        if (decision.RequiresApproval && !input.OperatorApproved)
-        {
-            return new RemediationExecution(input.Request, RemediationExecutionResult.StateChanged,
-                $"State changed while the workflow was deciding and now requires operator approval: {decision.Reason} No command was issued.");
-        }
-
-        var retry = await commandGateway.RestoreScheduledModeAsync(
-            input.Request.AssetId, input.Request.CorrelationId, twin.StateRevision, cancellationToken);
-
-        return retry.PreconditionFailed
-            ? new RemediationExecution(input.Request, RemediationExecutionResult.StateChanged,
-                $"State kept changing while the workflow was executing; {input.Request.AssetId} was left unchanged.")
-            : DescribeCommand(input, retry);
     }
+
+    /// <summary>
+    /// Determines whether an exception is an expected downstream failure the workflow should carry
+    /// as data. Cancellation raised by the caller's own token stays an exception, because that is
+    /// the run being withdrawn rather than the city failing to answer.
+    /// </summary>
+    /// <param name="exception">The exception to classify.</param>
+    /// <param name="cancellationToken">The run's cancellation token.</param>
+    /// <returns><see langword="true"/> for an expected downstream failure.</returns>
+    internal static bool IsDownstreamFailure(Exception exception, CancellationToken cancellationToken) =>
+        exception switch
+        {
+            OperationCanceledException => !cancellationToken.IsCancellationRequested,
+            HttpRequestException or InvalidOperationException or TimeoutException => true,
+            _ => false
+        };
+
+    private RemediationExecution? WithdrawnByStage(RemediationPlan input) =>
+        // The capability itself can be withdrawn while the run waits: a stage downgrade means the
+        // write no longer exists, and a decision taken at a higher stage may not execute at a
+        // lower one. Checked again before a retry, because time passes there too.
+        stageGate.GetCurrent().Id < DemoStage.Workflow
+            ? new RemediationExecution(input.Request, RemediationExecutionResult.StageWithdrawn,
+                $"The demo stage left Workflow before the command was issued; {input.Request.AssetId} was left unchanged.")
+            : null;
 
     private static RemediationExecution DescribeCommand(RemediationPlan input, EnergyCommandOutcome outcome) =>
         new(
@@ -309,15 +352,29 @@ public sealed class VerifyStateExecutor(IEnergyReadGateway readGateway)
     public override async ValueTask<RemediationVerification> HandleAsync(
         RemediationExecution input, IWorkflowContext context, CancellationToken cancellationToken = default)
     {
-        var twin = await readGateway.GetStateAsync(input.Request.AssetId, input.Request.CorrelationId, cancellationToken);
-        var resolved = !twin.IsAnomalous;
+        try
+        {
+            var twin = await readGateway.GetStateAsync(input.Request.AssetId, input.Request.CorrelationId, cancellationToken);
+            var resolved = !twin.IsAnomalous;
 
-        return new RemediationVerification(
-            input.Request,
-            input.Result,
-            input.CommandExecuted,
-            resolved,
-            $"{input.Summary} Verified: {twin.AssetId} is {(twin.ReportedIsOn ? "on" : "off")} and {(resolved ? "matches" : "still violates")} its effective target.");
+            return new RemediationVerification(
+                input.Request,
+                input.Result,
+                input.CommandExecuted,
+                resolved,
+                $"{input.Summary} Verified: {twin.AssetId} is {(twin.ReportedIsOn ? "on" : "off")} and {(resolved ? "matches" : "still violates")} its effective target.");
+        }
+        catch (Exception exception) when (ExecuteRestoreExecutor.IsDownstreamFailure(exception, cancellationToken))
+        {
+            // Unverifiable is not resolved. If a command already changed the city and we cannot
+            // confirm the result, that is exactly the case a maintenance work item exists for.
+            return new RemediationVerification(
+                input.Request,
+                input.Result,
+                input.CommandExecuted,
+                Resolved: false,
+                $"{input.Summary} Verification failed: the authoritative state for {input.Request.AssetId} could not be read ({exception.Message}).");
+        }
     }
 }
 

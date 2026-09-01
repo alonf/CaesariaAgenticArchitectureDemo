@@ -39,11 +39,6 @@ public interface IEnergyCommandGateway
 /// <inheritdoc cref="IEnergyCommandGateway"/>
 public sealed partial class HttpEnergyCommandGateway(HttpClient httpClient, ILogger<HttpEnergyCommandGateway> logger) : IEnergyCommandGateway
 {
-    /// <summary>
-    /// The problem-details extension the Energy Hub sets when it refuses a stale command.
-    /// </summary>
-    public const string PreconditionFailedExtension = "preconditionFailed";
-
     private static readonly JsonSerializerOptions SerializerOptions = CaesareaJsonDefaults.CreateSerializerOptions();
 
     /// <inheritdoc />
@@ -72,7 +67,7 @@ public sealed partial class HttpEnergyCommandGateway(HttpClient httpClient, ILog
 
         var problem = await TryReadProblemAsync(response, cancellationToken);
         var preconditionFailed = response.StatusCode == HttpStatusCode.Conflict
-            && problem?.Extensions.TryGetValue(PreconditionFailedExtension, out var flag) == true
+            && problem?.Extensions.TryGetValue(EnergyCommandProblem.PreconditionFailedExtension, out var flag) == true
             && flag is JsonElement { ValueKind: JsonValueKind.True };
         var summary = problem?.Detail ?? problem?.Title ?? $"Energy Hub restore failed with status code {(int)response.StatusCode}.";
 

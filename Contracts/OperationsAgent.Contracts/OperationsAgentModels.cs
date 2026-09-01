@@ -98,6 +98,8 @@ public sealed record MaintenanceWorkItem(
 /// run can fail after a command already changed something.
 /// </summary>
 /// <param name="RunId">The run identifier.</param>
+/// <param name="AssetId">The asset the run is remediating.</param>
+/// <param name="CorrelationId">The correlation identifier of the request that started the run, so a caller can find its own run.</param>
 /// <param name="Completed">Whether the run has finished (successfully or not).</param>
 /// <param name="CommandExecuted">Whether a command actually changed the asset.</param>
 /// <param name="Resolved">Whether the asset ended in its effective target state, as verified by a re-read.</param>
@@ -107,6 +109,8 @@ public sealed record MaintenanceWorkItem(
 /// <param name="Steps">The steps of the run, in execution order.</param>
 public sealed record OperationsAgentWorkflowRunReport(
     string RunId,
+    string AssetId,
+    string CorrelationId,
     bool Completed,
     bool CommandExecuted,
     bool Resolved,

@@ -129,9 +129,11 @@ boundary, so switching stages does not restart the application.
 - `DemoScenario.Api` applies synthetic presenter scenarios.
 - `OperationsAgent.Api` hosts one general, read-only **Caesarea Operations Agent**.
 
-The agent has no direct SmartPole access, and no write capability below the InteractiveInput
-stage; from that stage on, the single write tool (`restore_scheduled_mode`) exists only over MCP
-and only behind an interactive operator approval — the tool pauses before any side effect.
+The agent has no direct SmartPole access and no write capability below the InteractiveInput stage.
+In that stage's window the single write tool (`restore_scheduled_mode`) exists only over MCP and
+only behind an interactive operator approval — the tool pauses before any side effect. At the
+Workflow stage even that is withdrawn: the agent asks the governed operation to start, and the
+workflow owns validation, policy, approval, execution, and verification.
 Deterministic Hubs keep operational authority at every stage: sessions are context, memory is
 hypothesis, knowledge is evidence, and skills are procedure — the agent's answers cite which is
 which.

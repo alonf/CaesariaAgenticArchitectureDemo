@@ -114,13 +114,19 @@ public sealed partial class RemediationWorkflowService
     private OperationsAgentWorkflowRunReport StartRunCore(string assetId, string correlationId)
     {
         var runId = Guid.NewGuid().ToString("N");
-        var state = new RunState(runId, assetId);
+        var state = new RunState(runId, assetId, correlationId);
         _runs[runId] = state;
         _runOrder.Enqueue(runId);
         PruneRuns();
         RemediationWorkflowLog.RunStarted(_logger, runId, assetId, correlationId);
 
-        _ = Task.Run(() => RunCoreAsync(state, new RemediationRequest(assetId, correlationId)));
+        _ = Task.Run(async () =>
+        {
+            await RunCoreAsync(state, new RemediationRequest(assetId, correlationId));
+            // The finished run becomes evictable; sweeping here keeps the tail bounded even when
+            // no new run is started for a while.
+            PruneRuns();
+        });
 
         return state.ToReport();
     }
@@ -134,6 +140,23 @@ public sealed partial class RemediationWorkflowService
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(runId);
         return _runs.TryGetValue(runId, out var state) ? state.ToReport() : null;
+    }
+
+    /// <summary>
+    /// Finds the run started by a given request, so a caller that asked the agent to remediate can
+    /// follow the run the agent started - and answer its approval - without owning the run id.
+    /// </summary>
+    /// <param name="correlationId">The correlation identifier of the request that started the run.</param>
+    /// <returns>The most recent matching run, or <see langword="null"/> when there is none.</returns>
+    public OperationsAgentWorkflowRunReport? FindRunByCorrelation(string correlationId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(correlationId);
+
+        return _runs.Values
+            .Where(state => string.Equals(state.CorrelationId, correlationId, StringComparison.Ordinal))
+            .Select(state => state.ToReport())
+            .OrderByDescending(report => report.Steps.Count)
+            .FirstOrDefault();
     }
 
     /// <summary>
@@ -155,17 +178,24 @@ public sealed partial class RemediationWorkflowService
 
     private void PruneRuns()
     {
-        // A presenter console needs the recent tail, not every run since startup.
-        while (_runs.Count > MaxRetainedRuns && _runOrder.TryDequeue(out var oldestRunId))
+        // A presenter console needs the recent tail, not every run since startup. An entry still
+        // executing is skipped rather than ending the sweep, so one long-running approval cannot
+        // hold the whole history in memory; it is retired on the next sweep after it finishes.
+        var examined = 0;
+        var queued = _runOrder.Count;
+
+        while (_runs.Count > MaxRetainedRuns && examined++ < queued && _runOrder.TryDequeue(out var oldestRunId))
         {
             if (_runs.TryGetValue(oldestRunId, out var oldest) && !oldest.IsFinished)
             {
-                // Never evict a run that is still executing; retire it after it finishes.
                 _runOrder.Enqueue(oldestRunId);
-                return;
+                continue;
             }
 
-            _runs.TryRemove(oldestRunId, out _);
+            if (_runs.TryRemove(oldestRunId, out var removed))
+            {
+                removed.Dispose();
+            }
         }
     }
 
@@ -219,28 +249,30 @@ public sealed partial class RemediationWorkflowService
             if (state.CancellationRequested)
             {
                 state.CompleteIfRunning("Cancelled", "The workflow run was cancelled - the demo stage moved back before it finished.");
-                RemediationWorkflowLog.RunCancelled(_logger, state.RunId);
+                RemediationWorkflowLog.RunCancelled(_logger, state.RunId, state.AssetId, state.CorrelationId);
                 return;
             }
 
             state.CompleteIfRunning("Unresolved", "The workflow ended without yielding an outcome.");
-            RemediationWorkflowLog.RunCompleted(_logger, state.RunId, state.Status);
+            RemediationWorkflowLog.RunCompleted(_logger, state.RunId, state.AssetId, state.Status, state.CorrelationId);
         }
         catch (OperationCanceledException)
         {
             state.Fail("Cancelled", "The workflow run was cancelled - the approval wait timed out, or the demo stage moved back.");
-            RemediationWorkflowLog.RunCancelled(_logger, state.RunId);
+            RemediationWorkflowLog.RunCancelled(_logger, state.RunId, state.AssetId, state.CorrelationId);
         }
         catch (Exception exception)
         {
             state.Fail("Failed", $"The workflow run failed: {exception.Message}");
-            RemediationWorkflowLog.RunFailed(_logger, state.RunId, exception);
+            RemediationWorkflowLog.RunFailed(_logger, state.RunId, state.AssetId, state.CorrelationId, exception);
         }
     }
 
     /// <summary>
     /// Builds the remediation graph for inspection. Tests compare the displayed declarative YAML
-    /// against this - the very graph that runs - so the two expressions cannot drift.
+    /// against this - the very graph that runs - so their <em>topology</em> cannot drift: same
+    /// start, nodes, edges, and which edges are conditional. The SDK does not expose the
+    /// predicates themselves, so the condition expressions in the YAML are documentation.
     /// </summary>
     /// <returns>The workflow.</returns>
     internal Workflow BuildWorkflowForInspection() => CreateRemediationWorkflow();
@@ -307,9 +339,11 @@ public sealed partial class RemediationWorkflowService
         _ => null
     };
 
-    private sealed class RunState(string runId, string assetId) : IDisposable
+    private sealed class RunState(string runId, string assetId, string correlationId) : IDisposable
     {
         public string AssetId { get; } = assetId;
+
+        public string CorrelationId { get; } = correlationId;
 
         private readonly Lock _gate = new();
         private readonly List<OperationsAgentWorkflowStep> _steps = [];
@@ -431,6 +465,8 @@ public sealed partial class RemediationWorkflowService
             {
                 return new OperationsAgentWorkflowRunReport(
                     RunId,
+                    AssetId,
+                    CorrelationId,
                     _finished,
                     _commandExecuted,
                     _resolved,
@@ -456,20 +492,20 @@ internal static partial class RemediationWorkflowLog
     [LoggerMessage(
         EventId = 2641,
         Level = LogLevel.Information,
-        Message = "Remediation workflow run {RunId} completed with status {Status}.")]
-    internal static partial void RunCompleted(ILogger logger, string runId, string status);
+        Message = "Remediation workflow run {RunId} for asset {AssetId} completed with status {Status}. CorrelationId: {CorrelationId}.")]
+    internal static partial void RunCompleted(ILogger logger, string runId, string assetId, string status, string correlationId);
 
     [LoggerMessage(
         EventId = 2642,
         Level = LogLevel.Warning,
-        Message = "Remediation workflow run {RunId} was cancelled.")]
-    internal static partial void RunCancelled(ILogger logger, string runId);
+        Message = "Remediation workflow run {RunId} for asset {AssetId} was cancelled. CorrelationId: {CorrelationId}.")]
+    internal static partial void RunCancelled(ILogger logger, string runId, string assetId, string correlationId);
 
     [LoggerMessage(
         EventId = 2643,
         Level = LogLevel.Error,
-        Message = "Remediation workflow run {RunId} failed.")]
-    internal static partial void RunFailed(ILogger logger, string runId, Exception exception);
+        Message = "Remediation workflow run {RunId} for asset {AssetId} failed. CorrelationId: {CorrelationId}.")]
+    internal static partial void RunFailed(ILogger logger, string runId, string assetId, string correlationId, Exception exception);
 
     [LoggerMessage(
         EventId = 2644,

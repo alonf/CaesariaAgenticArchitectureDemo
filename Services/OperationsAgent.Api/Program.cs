@@ -245,6 +245,23 @@ remediation.MapPost("/", (HttpContext context, OperationsAgentRemediationRequest
             $"A remediation workflow run is already in flight for {request.AssetId.Trim()}; wait for it to finish before starting another.",
             context.GetCorrelationId()));
 });
+// A caller that asked the agent to remediate holds its own correlation, not a run id; this lets
+// it find, watch, and approve the run the agent started on its behalf.
+remediation.MapGet("/runs", (HttpContext context, string correlationId, RemediationWorkflowService workflowService, DemoStageGate stageGate) =>
+{
+    if (CreateWorkflowStageProblem(context, stageGate) is { } stageProblem)
+    {
+        return stageProblem;
+    }
+
+    return string.IsNullOrWhiteSpace(correlationId)
+        ? Results.BadRequest(ProblemDetailsFactory.Create(
+            StatusCodes.Status400BadRequest,
+            "Invalid request",
+            "A correlation identifier is required to look up a workflow run.",
+            context.GetCorrelationId()))
+        : Results.Ok(workflowService.FindRunByCorrelation(correlationId));
+});
 remediation.MapGet("/work-items", (HttpContext context, IWorkItemGateway workItems, DemoStageGate stageGate) =>
     CreateWorkflowStageProblem(context, stageGate) is { } stageProblem
         ? stageProblem

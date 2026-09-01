@@ -102,6 +102,19 @@ internal sealed class OperationsAgentApiClient
             ?? throw new InvalidOperationException("Workflow start response was empty.");
     }
 
+    public async Task<OperationsAgentWorkflowRunReport?> FindWorkflowRunByCorrelationAsync(string correlationId, CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"/api/operations-agent/remediation/runs?correlationId={Uri.EscapeDataString(correlationId)}");
+        request.Headers.Add(CorrelationHeaderNames.XCorrelationId, CorrelationIds.Create());
+        using var response = await _httpClient.SendAsync(request, cancellationToken);
+
+        response.EnsureSuccessStatusCode();
+
+        return await response.Content.ReadFromJsonAsync<OperationsAgentWorkflowRunReport>(SerializerOptions, cancellationToken);
+    }
+
     public async Task<OperationsAgentWorkflowRunReport> GetWorkflowRunAsync(string runId, CancellationToken cancellationToken)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, $"/api/operations-agent/remediation/runs/{Uri.EscapeDataString(runId)}");
