@@ -527,6 +527,14 @@
                             </button>
                         }
 
+                        @if (IsToolApprovalStage)
+                        {
+                            <button class="action-button investigate-button @(_agentBusy ? "busy" : string.Empty)" @onclick="RequestMaintenanceAsync" disabled="@_agentBusy">
+                                <span>@(_agentBusy ? "Working..." : $"Ask the agent to handle {_snapshot.AssetId}'s faulty controller")</span>
+                                <svg viewBox="0 0 24 24"><path d="M14 7a4 4 0 0 0-5.5 4.9l-4.6 4.6 2.6 2.6 4.6-4.6A4 4 0 0 0 17 9.5L14.5 12 12 9.5 14.5 7Z" /></svg>
+                            </button>
+                        }
+
                         @if (_pendingApprovals.Count > 0)
                         {
                             <div class="agent-summary approval-panel">
@@ -539,9 +547,7 @@
                                         <button class="action-button approval-deny" @onclick="() => RespondToApprovalAsync(approval.Id, false)" disabled="@_approvalBusy">Deny</button>
                                     </div>
                                 }
-                                <p class="agent-footnote">@(_workflowBusy
-                                    ? "The workflow's approval node is paused. Nothing changes until you answer."
-                                    : "The remote tool is paused input-required (MCP MRTR). Nothing changes until you answer.")</p>
+                                <p class="agent-footnote">@ApprovalFootnote</p>
                             </div>
                         }
 
@@ -666,6 +672,7 @@
     private bool IsSkillsStage => _snapshot?.CurrentStage.Id >= DemoStage.Skills;
     private bool IsInteractiveStage => _snapshot?.CurrentStage.Id >= DemoStage.InteractiveInput;
     private bool IsWorkflowStage => _snapshot?.CurrentStage.Id >= DemoStage.Workflow;
+    private bool IsToolApprovalStage => _snapshot?.CurrentStage.Id >= DemoStage.ToolApproval;
     private string CloseCaseLabel => (_caseBusy, _caseClosed) switch
     {
         (true, _) => "Recording...",
@@ -836,6 +843,12 @@
         $"Restore streetlight {_snapshot?.AssetId ?? WebOptions.Value.AssetId} to scheduled mode.",
         sessionId: null);
 
+    // Deliberately does not name a tool: the point of this stage is that the model decides for
+    // itself that filing a work item is the right action, and the framework intercepts it.
+    private Task RequestMaintenanceAsync() => AskAgentCoreAsync(
+        $"The controller on streetlight {_snapshot?.AssetId ?? WebOptions.Value.AssetId} is faulty and needs a technician on site. Handle it.",
+        sessionId: null);
+
     // The workflow definition (diagram + YAML) loads lazily the first time the Workflow stage is
     // on screen, and the Mermaid diagram renders once its container exists in the DOM.
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -889,6 +902,15 @@
     }
 
     private void SelectWorkflowTab(string tab) => _workflowTab = tab;
+
+    // Three different control points can raise the same prompt; say which one the operator is
+    // answering, because that distinction is the whole point of the last three stages.
+    private string ApprovalFootnote => (_workflowBusy, IsToolApprovalStage && _agentBusy) switch
+    {
+        (true, _) => "The workflow's approval node is paused. Nothing changes until you answer.",
+        (_, true) => "The agent selected a protected capability and the framework intercepted the call. Nothing runs until you answer.",
+        _ => "The remote tool is paused input-required (MCP MRTR). Nothing changes until you answer."
+    };
 
     private static string WorkflowOutcomeClass(OperationsAgentWorkflowRunReport run) => run.Status switch
     {

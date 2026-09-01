@@ -62,6 +62,12 @@ public static class DemoSnippets
     /// Gets the workflow snippet: building the explicit remediation orchestration graph.
     /// </summary>
     public const string Workflow = "WORKFLOW";
+
+    /// <summary>
+    /// Gets the tool-approval snippet: wrapping a model-selected sensitive capability so the
+    /// framework intercepts it and a supervisor approves before it runs.
+    /// </summary>
+    public const string ToolApproval = "TOOL_APPROVAL";
 }
 
 /// <summary>

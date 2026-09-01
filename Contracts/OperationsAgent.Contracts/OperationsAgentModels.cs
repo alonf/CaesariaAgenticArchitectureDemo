@@ -34,6 +34,12 @@ public static class OperationsAgentToolNames
     /// replaces the agent's direct write: the agent requests the operation, the workflow owns it.
     /// </summary>
     public const string StartRestoreLightingOperation = "start_restore_lighting_operation";
+
+    /// <summary>
+    /// The sensitive administrative capability the model may select for itself: filing a
+    /// maintenance work item. Wrapped so a supervisor approves before it runs.
+    /// </summary>
+    public const string CreateMaintenanceWorkItem = "create_maintenance_work_item";
 }
 
 /// <summary>

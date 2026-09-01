@@ -72,9 +72,12 @@ public sealed class ArchitectureBoundaryTests
         // write, and the only direct write the agent ever holds is the MCP tool in its window.
         var agentPath = Path.Combine(repositoryRoot, "Services", "OperationsAgent.Api", "Services", "FoundryOperationsAgent.cs");
         var agentText = File.ReadAllText(agentPath);
-        Assert.Equal(2, CountOccurrences(agentText, "AIFunctionFactory.Create("));
+        Assert.Equal(3, CountOccurrences(agentText, "AIFunctionFactory.Create("));
         Assert.Contains("EnergyTools.StreetlightStateToolName", agentText, StringComparison.Ordinal);
         Assert.Contains("OperationsAgentToolNames.StartRestoreLightingOperation", agentText, StringComparison.Ordinal);
+        // The third is the maintenance capability, and it only reaches the model wrapped for
+        // approval - pinned separately by SensitiveWorkItemToolIsAlwaysApprovalWrapped.
+        Assert.Contains("OperationsAgentToolNames.CreateMaintenanceWorkItem", agentText, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -152,6 +155,24 @@ public sealed class ArchitectureBoundaryTests
         Assert.True(restoreCallIndex > confirmationCheckIndex, "The restore call must be reachable only after the confirmation check.");
         Assert.Contains("IsMrtrSupported", toolText, StringComparison.Ordinal);
         Assert.Contains("InputRequiredException", toolText, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SensitiveWorkItemToolIsAlwaysApprovalWrapped()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var agentText = File.ReadAllText(Path.Combine(repositoryRoot, "Services", "OperationsAgent.Api", "Services", "FoundryOperationsAgent.cs"));
+
+        // The work-item capability may only reach the model through the approval wrapper: an
+        // unwrapped AIFunctionFactory.Create over the maintenance tool would hand the agent an
+        // unsupervised way to commit city resources.
+        var wrapperIndex = agentText.IndexOf("new ApprovalRequiredAIFunction(", StringComparison.Ordinal);
+        var toolIndex = agentText.IndexOf("maintenanceTools.CreateMaintenanceWorkItemAsync", StringComparison.Ordinal);
+
+        Assert.True(wrapperIndex >= 0, "The maintenance tool is no longer wrapped for approval.");
+        Assert.True(toolIndex > wrapperIndex, "The maintenance tool must be created inside the approval wrapper.");
+        Assert.Equal(1, CountOccurrences(agentText, "maintenanceTools.CreateMaintenanceWorkItemAsync"));
+        Assert.Contains("currentStage >= DemoStage.ToolApproval", agentText, StringComparison.Ordinal);
     }
 
     [Fact]

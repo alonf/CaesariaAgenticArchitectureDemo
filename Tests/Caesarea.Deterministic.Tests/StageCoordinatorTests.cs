@@ -59,15 +59,19 @@ public sealed class StageCoordinatorTests
 
         var stages = catalog.GetAll();
 
-        Assert.Contains(stages, descriptor => descriptor.Id == DemoStage.Deterministic);
-        Assert.Contains(stages, descriptor => descriptor.Id == DemoStage.InvestigationAgent);
-        Assert.Contains(stages, descriptor => descriptor.Id == DemoStage.Session);
-        Assert.Contains(stages, descriptor => descriptor.Id == DemoStage.Knowledge);
-        Assert.Contains(stages, descriptor => descriptor.Id == DemoStage.Memory);
-        Assert.Contains(stages, descriptor => descriptor.Id == DemoStage.Skills);
-        Assert.Contains(stages, descriptor => descriptor.Id == DemoStage.McpTools);
-        Assert.Contains(stages, descriptor => descriptor.Id == DemoStage.InteractiveInput);
+        // Every stage the enum defines must be presentable, in enum order: a new stage that the
+        // presenter switchboard cannot show is a stage that cannot be demoed.
+        Assert.Equal(Enum.GetValues<DemoStage>(), stages.Select(descriptor => descriptor.Id));
         Assert.All(stages, descriptor => Assert.NotEmpty(descriptor.Capabilities));
+        Assert.All(stages, descriptor => Assert.NotEmpty(descriptor.Description));
+
+        // Capabilities accumulate: each stage keeps everything the previous one could do.
+        foreach (var (previous, next) in stages.Zip(stages.Skip(1)))
+        {
+            Assert.True(
+                previous.Capabilities.All(capability => next.Capabilities.Contains(capability)),
+                $"Stage {next.Name} dropped a capability that {previous.Name} advertised.");
+        }
     }
 
     [Fact]

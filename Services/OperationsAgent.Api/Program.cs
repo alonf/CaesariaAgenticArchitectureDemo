@@ -90,6 +90,7 @@ builder.Services.AddSingleton<IOperationsAgent>(serviceProvider =>
         serviceProvider.GetRequiredService<ToolSourceSwitch>(),
         serviceProvider.GetRequiredService<PendingApprovalStore>(),
         serviceProvider.GetRequiredService<RemediationWorkflowService>(),
+        serviceProvider.GetRequiredService<IWorkItemGateway>(),
         serviceProvider.GetRequiredService<IHttpClientFactory>(),
         McpEndpoint.Create(options.EnergyHubBaseUri),
         skillsDirectory,
@@ -112,7 +113,7 @@ app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.UseHttpsRedirection();
 app.MapDefaultEndpoints();
-app.MapDemoBreakpoints(DemoSnippets.AgentCreation, DemoSnippets.FunctionTool, DemoSnippets.Session, DemoSnippets.Knowledge, DemoSnippets.CaseMemory, DemoSnippets.Skills, DemoSnippets.McpClient, DemoSnippets.Workflow);
+app.MapDemoBreakpoints(DemoSnippets.AgentCreation, DemoSnippets.FunctionTool, DemoSnippets.Session, DemoSnippets.Knowledge, DemoSnippets.CaseMemory, DemoSnippets.Skills, DemoSnippets.McpClient, DemoSnippets.Workflow, DemoSnippets.ToolApproval);
 
 // Instantiate the workflow service at startup: the definition (diagram + YAML) renders once
 // here, so a wiring or graph error fails the service start instead of the first panel load.

@@ -79,6 +79,7 @@ grows one capability at a time, and each stage maps to a concrete MAF concept:
 | McpTools | MCP server (`ModelContextProtocol.AspNetCore`) + runtime tool discovery (`McpClient`) |
 | InteractiveInput | MCP Multi Round-Trip Requests — `InputRequiredException` + elicitation handler |
 | Workflow | `Microsoft.Agents.AI.Workflows` — code-built graph (`WorkflowBuilder`), approval-gate node, self-rendered diagram |
+| ToolApproval | `ApprovalRequiredAIFunction` — the model selects a protected capability and the framework intercepts it |
 
 Each stage has a build-and-design document under [docs/prompts/](docs/prompts/), the exact
 lecture-slide code lives in named `#region` blocks (see the deck anchors in the docs), and
@@ -110,6 +111,10 @@ The demo runs as one application with a presenter-controlled `DemoStage`:
   with **Multi Round-Trip Requests (MRTR)**. The tool pauses input-required for explicit operator
   approval and produces no side effect before the input arrives; deny and the state provably
   does not change.
+- `DemoStage=ToolApproval` — the third human-control point, and the reactive one: the agent may
+  decide by itself to file a maintenance work item, and `ApprovalRequiredAIFunction` makes the
+  framework intercept that call so a supervisor approves before it runs. MRTR was the tool asking,
+  the workflow gate was a node we drew; here the model chooses and policy intercepts.
 - `DemoStage=Workflow` — remediation becomes an **explicit code-built workflow**: validate,
   policy, an operator-approval gate when a manual override would be cleared, execute, verify, and
   a maintenance work item when the correction does not hold. The agent stops writing and starts

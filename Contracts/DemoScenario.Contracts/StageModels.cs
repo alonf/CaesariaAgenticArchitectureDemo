@@ -58,7 +58,15 @@ public enum DemoStage
     /// policy demands one, execute, verify - deterministic orchestration with visible steps and
     /// branching, instead of emergent model behavior.
     /// </summary>
-    Workflow
+    Workflow,
+
+    /// <summary>
+    /// The third human-control point: a sensitive capability the model may choose for itself.
+    /// Filing a maintenance work item is wrapped so the framework intercepts the call and a
+    /// supervisor approves it - reactive control, where the model picks the path and policy
+    /// decides whether it may proceed.
+    /// </summary>
+    ToolApproval
 }
 
 /// <summary>

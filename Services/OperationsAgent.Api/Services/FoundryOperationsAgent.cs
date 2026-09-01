@@ -26,6 +26,7 @@ public sealed partial class FoundryOperationsAgent(
     ToolSourceSwitch toolSourceSwitch,
     PendingApprovalStore pendingApprovalStore,
     RemediationWorkflowService remediationWorkflow,
+    IWorkItemGateway workItems,
     IHttpClientFactory httpClientFactory,
     Uri mcpEndpoint,
     string? skillsDirectory,
@@ -58,7 +59,10 @@ public sealed partial class FoundryOperationsAgent(
     private readonly ICaseMemoryStore _caseMemoryStore = caseMemoryStore ?? throw new ArgumentNullException(nameof(caseMemoryStore));
     private readonly ToolSourceSwitch _toolSourceSwitch = toolSourceSwitch ?? throw new ArgumentNullException(nameof(toolSourceSwitch));
     private readonly PendingApprovalStore _pendingApprovalStore = pendingApprovalStore ?? throw new ArgumentNullException(nameof(pendingApprovalStore));
+    private const int MaxToolApprovalRounds = 3;
+
     private readonly RemediationWorkflowService _remediationWorkflow = remediationWorkflow ?? throw new ArgumentNullException(nameof(remediationWorkflow));
+    private readonly IWorkItemGateway _workItems = workItems ?? throw new ArgumentNullException(nameof(workItems));
     private readonly IHttpClientFactory _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
     private readonly Uri _mcpEndpoint = mcpEndpoint ?? throw new ArgumentNullException(nameof(mcpEndpoint));
     private readonly string? _skillsDirectory = skillsDirectory;
@@ -262,6 +266,28 @@ public sealed partial class FoundryOperationsAgent(
             }
             #endregion
 
+            #region TOOL_APPROVAL
+            DemoBreakpoints.Pause(DemoSnippets.ToolApproval);
+
+            // The third control point. MRTR was the tool asking for input; the workflow's gate was
+            // a node in an orchestration we drew. This one is reactive: the model picks a
+            // sensitive capability on its own, and the framework intercepts the call so a
+            // supervisor decides before it runs. Nothing about the tool itself changes.
+            if (currentStage >= DemoStage.ToolApproval)
+            {
+                var maintenanceTools = new MaintenanceTools(
+                    _workItems, correlationId, _loggerFactory.CreateLogger<MaintenanceTools>());
+
+                AIFunction fileWorkItem = new ApprovalRequiredAIFunction(
+                    AIFunctionFactory.Create(
+                        maintenanceTools.CreateMaintenanceWorkItemAsync,
+                        OperationsAgentToolNames.CreateMaintenanceWorkItem,
+                        "Files a maintenance work item so a technician is dispatched to an asset."));
+
+                agentTools.Add(fileWorkItem);
+            }
+            #endregion
+
             List<AIContextProvider> contextProviders = [];
 
             if (workKnowledge is not null)
@@ -341,6 +367,11 @@ public sealed partial class FoundryOperationsAgent(
             var response = await agent.RunAsync(question, session, cancellationToken: timeoutSource.Token);
             #endregion
 
+            // The run stops with a request instead of an answer when the model selected a
+            // protected capability. Carry each request to the operator and resume the same
+            // session with their decision, exactly as the framework's approval flow prescribes.
+            response = await ResolveToolApprovalsAsync(agent, session, response, correlationId, timeoutSource.Token);
+
             var serializedSession = await agent.SerializeSessionAsync(session, cancellationToken: timeoutSource.Token);
             var resolvedSessionId = _sessionStore.SaveState(sessionId, serializedSession, currentStage);
             OperationsAgentLog.RequestCompleted(_logger, correlationId);
@@ -406,6 +437,98 @@ public sealed partial class FoundryOperationsAgent(
         }
     }
 
+    /// <summary>
+    /// Resolves any tool-approval requests the run returned, then resumes the same session with
+    /// the operator's decisions. Bounded, so a model that keeps re-requesting cannot loop the
+    /// operator forever.
+    /// </summary>
+    private async Task<AgentResponse> ResolveToolApprovalsAsync(
+        AIAgent agent,
+        AgentSession session,
+        AgentResponse response,
+        string correlationId,
+        CancellationToken cancellationToken)
+    {
+        // A refusal stands for this request: if the model asks again for a capability the operator
+        // just declined, it is answered from the standing decision rather than nagging the
+        // operator with the same question until the execution budget runs out.
+        HashSet<string> declined = new(StringComparer.Ordinal);
+
+        for (var round = 0; round < MaxToolApprovalRounds; round++)
+        {
+            var requests = response.Messages
+                .SelectMany(message => message.Contents)
+                .OfType<ToolApprovalRequestContent>()
+                .ToList();
+
+            if (requests.Count == 0)
+            {
+                return response;
+            }
+
+            List<AIContent> decisions = [];
+
+            foreach (var request in requests)
+            {
+                var toolName = DescribeToolCall(request).Name;
+
+                if (declined.Contains(toolName))
+                {
+                    decisions.Add(request.CreateResponse(false, "The operator already declined this capability for this request."));
+                    OperationsAgentLog.ToolApprovalRepeated(_logger, toolName, correlationId);
+                    continue;
+                }
+
+                var approved = await RequestOperatorApprovalAsync(request, correlationId, cancellationToken);
+
+                if (!approved)
+                {
+                    declined.Add(toolName);
+                }
+
+                decisions.Add(request.CreateResponse(approved));
+                OperationsAgentLog.ToolApprovalAnswered(_logger, toolName, approved, correlationId);
+            }
+
+            response = await agent.RunAsync(
+                new ChatMessage(ChatRole.User, decisions), session, cancellationToken: cancellationToken);
+        }
+
+        return response;
+    }
+
+    // The approval request carries the tool call the model chose; the operator is shown the tool
+    // and its arguments, because "approve an action" means nothing without knowing which action.
+    private static (string Name, string Arguments) DescribeToolCall(ToolApprovalRequestContent request)
+    {
+        if (request.ToolCall is not FunctionCallContent call)
+        {
+            return ("an unnamed capability", "no arguments");
+        }
+
+        var arguments = call.Arguments is { Count: > 0 } callArguments
+            ? string.Join(", ", callArguments.Select(argument => $"{argument.Key}: {argument.Value}"))
+            : "no arguments";
+
+        return (call.Name, arguments);
+    }
+
+    private async Task<bool> RequestOperatorApprovalAsync(
+        ToolApprovalRequestContent request, string correlationId, CancellationToken cancellationToken)
+    {
+        var (name, arguments) = DescribeToolCall(request);
+
+        var (_, decision) = _pendingApprovalStore.Create(
+            $"The agent selected {name} ({arguments}). Approve running it?",
+            correlationId,
+            cancellationToken);
+        var approved = await decision;
+
+        // A stage downgrade while the question was pending withdraws the capability, so the
+        // answer is refused even if the operator approved in the same instant.
+        return approved && _stageGate.GetCurrent().Id >= DemoStage.ToolApproval;
+    }
+
     private static McpClientTool FindDiscoveredTool(IList<McpClientTool> discoveredTools, string toolName) =>
         discoveredTools.FirstOrDefault(tool => tool.Name == toolName)
         ?? throw new OperationsAgentToolUnavailableException(
@@ -457,4 +580,16 @@ internal static partial class OperationsAgentLog
         Level = LogLevel.Information,
         Message = "Operations Agent request completed. CorrelationId: {CorrelationId}.")]
     internal static partial void RequestCompleted(ILogger logger, string correlationId);
+
+    [LoggerMessage(
+        EventId = 2402,
+        Level = LogLevel.Information,
+        Message = "Operator answered the tool-approval request for {ToolName}: approved={Approved}. CorrelationId: {CorrelationId}.")]
+    internal static partial void ToolApprovalAnswered(ILogger logger, string toolName, bool approved, string correlationId);
+
+    [LoggerMessage(
+        EventId = 2403,
+        Level = LogLevel.Information,
+        Message = "Re-requested capability {ToolName} was refused from the operator's standing decision for this request. CorrelationId: {CorrelationId}.")]
+    internal static partial void ToolApprovalRepeated(ILogger logger, string toolName, string correlationId);
 }
