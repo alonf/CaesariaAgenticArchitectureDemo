@@ -1126,8 +1126,10 @@ svg {
 }
 
 .investigate-button {
-    margin-top: 0;
-    margin-bottom: 4px;
+    /* Breathing room between the button and whatever sits above it (question card, footnote,
+       or another button); the bottom stays flush so following footnotes control their own gap. */
+    margin-top: 10px;
+    margin-bottom: 0;
 }
 
 .agent-message {

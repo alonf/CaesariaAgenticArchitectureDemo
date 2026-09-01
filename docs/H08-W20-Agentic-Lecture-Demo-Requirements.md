@@ -3139,33 +3139,24 @@ application is the **Foundry Hosted Agent / agent identity / Agent 365** portion
 ### 39.4 Required UI affordances
 
 - `DemoControl.Web`: stage picker / **Next Stage** button, scenario presets, the five toggles,
-  **Run evals**, reset, and per-stage **Show code** buttons (Section 39.5).
+  **Run evals**, reset, and per-snippet **Break on next run** checkboxes (Section 39.6).
 - `CommandCenter.Web`: per-stage canned prompt buttons; capability panel; tool/evidence timeline;
   workflow view; approval drawer; evidence ledger; stage + toggle badges always visible.
 
-### 39.5 "Show code" — open VS Code at the stage's code
+### 39.5 Showing the stage's code — superseded by demo breakpoints
 
-Each stage-map row corresponds to one or more `#region <CONCEPT>` snippet regions (Section 2.3). The
-stage screen SHALL be able to open the relevant source in the editor:
-
-- The SnippetExporter SHALL additionally emit a region index,
-  `docs/lecture-snippets/regions.json`, mapping each region name to its repo-relative file and
-  start line. The existing CI snippet-drift check keeps this index current.
-- `DemoControl.Web` SHALL show one **Show code** button per region belonging to the current stage,
-  resolved from the region index.
-- Clicking a button calls a **presenter-only, localhost-only** endpoint on the locally running demo
-  host, which launches the editor via `code --goto "<RepoRoot>/<file>:<line>"`. The repository root
-  comes from `Demo__RepoRoot` or is auto-detected at startup; the demo MUST degrade gracefully
-  (disabled button + tooltip) when VS Code is not on PATH.
-- In audience profiles the endpoint is disabled; the button either falls back to a
-  `vscode://file/<abs-path>:<line>` deep link or is hidden.
-- Because the buttons resolve from the same `#region` markers that generate the slide snippets, the
-  code opened live on stage is guaranteed to be the code shown on the slide.
+**Decision (September 2026): the separate "Show code" feature is deliberately dropped.** The demo
+breakpoints (Section 39.6) land VS Code on the exact `#region` line *with live state and
+single-stepping*, which is strictly better than a cold `code --goto` file open, and one mechanism
+across all stages beats two. Artifacts that never execute in a request path do not need an editor
+jump either: the workflow's declarative YAML renders inside the Command Center workflow panel, and
+SKILL.md is opened manually only for the deliberate live-edit beat. The `regions.json` index
+remains a concern of the snippet exporter alone (Section 2.3) and is not a UI dependency.
 
 ### 39.6 Demo breakpoints — break and single-step a snippet on demand
 
-Next to each **Show code** button, `DemoControl.Web` SHALL show a **Break on next run** checkbox per
-snippet region, so the presenter can single-step the exact code just shown on the slide:
+`DemoControl.Web` SHALL show a **Break on next run** checkbox per snippet region, so the presenter
+can single-step the exact code shown on the slide:
 
 - Each region's code begins with one call: `DemoBreakpoints.Pause(DemoSnippets.AgentCreation);`
   (a tiny service in `Caesarea.ServiceDefaults`; no domain dependency).
@@ -3174,8 +3165,8 @@ snippet region, so the presenter can single-step the exact code just shown on th
 - `Pause` is marked `[Conditional("DEBUG")]` — calls are removed entirely from Release builds — and
   `[DebuggerHidden]`/`[DebuggerStepThrough]`, so the debugger surfaces the break at the call site:
   the presenter lands on the demo line itself, not inside the helper.
-- The checkbox list is driven by the same `regions.json` index as Show code, keeping slide snippet,
-  Show code target, and breakpoint location provably the same code.
+- The checkbox list is driven by each service's runtime breakpoint registration, and tests keep
+  the registered names, the `#region` markers, and the `DemoSnippets` constants provably in sync.
 - The snippet exporter SHALL strip `DemoBreakpoints.Pause` lines when generating slide snippets, so
   the exported code stays identical to what the deck teaches.
 - Each participating service exposes a presenter-only `/api/demo-breakpoints` endpoint holding the
