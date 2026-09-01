@@ -29,7 +29,9 @@ window.caesareaWorkflow = {
         }
 
         for (const node of element.querySelectorAll("g.node")) {
-            node.classList.remove("wf-running", "wf-completed", "wf-failed");
+            // Sweep every state mark, whatever it was: a rerun must never inherit the previous
+            // run's colors (a leftover wf-declined would out-rank a fresh wf-completed in CSS).
+            node.classList.remove(...[...node.classList].filter(mark => mark.startsWith("wf-")));
             const label = (node.textContent || "").trim();
             const key = Object.keys(states || {}).find(id => label === id || label.startsWith(id + " "));
 

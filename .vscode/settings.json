@@ -1,5 +1,5 @@
 {
-    // The test project runs on Microsoft.Testing.Platform (xunit.v3); the VSTest protocol would
-    // abort looking for testhost.dll.
-    "dotnet.testWindow.useTestingPlatformProtocol": true
+    // The test project runs on Microsoft.Testing.Platform (xunit.v3); use C# Dev Kit's
+    // lightweight test experience instead of the legacy VSTest/testhost path.
+    "dotnet.testWindow.enableNextTest": true
 }
