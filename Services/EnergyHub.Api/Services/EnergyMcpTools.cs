@@ -54,7 +54,11 @@ public sealed class EnergyRestoreMcpTool(
     /// <param name="assetId">The streetlight asset identifier.</param>
     /// <param name="cancellationToken">The token used to cancel the operation.</param>
     /// <returns>The command outcome, or a cancellation note when the operator declines.</returns>
-    [McpServerTool(Name = "restore_scheduled_mode", ReadOnly = false, Destructive = false, Idempotent = true, OpenWorld = false)]
+    // Conservative by protocol convention, and honestly so: clearing an operator's manual
+    // override discards intent that a human deliberately expressed, and a repeat call issues
+    // another physical command with its own command and activity records rather than collapsing
+    // into the first. A client may use these hints to decide what needs review.
+    [McpServerTool(Name = "restore_scheduled_mode", ReadOnly = false, Destructive = true, Idempotent = false, OpenWorld = false)]
     [Description("Restores a streetlight to its scheduled lighting mode, clearing any manual override. Requires explicit operator confirmation before anything changes.")]
     public async Task<string> RestoreScheduledModeAsync(
         McpServer server,

@@ -67,9 +67,14 @@ public sealed class ArchitectureBoundaryTests
         Assert.DoesNotContain("Incident", toolsetText, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Activity", toolsetText, StringComparison.OrdinalIgnoreCase);
 
+        // The agent composes exactly two local function tools. One reads authoritative state and
+        // one asks the governed operation to start from the Workflow stage. Neither performs a
+        // write, and the only direct write the agent ever holds is the MCP tool in its window.
         var agentPath = Path.Combine(repositoryRoot, "Services", "OperationsAgent.Api", "Services", "FoundryOperationsAgent.cs");
         var agentText = File.ReadAllText(agentPath);
-        Assert.Equal(1, CountOccurrences(agentText, "AIFunctionFactory.Create("));
+        Assert.Equal(2, CountOccurrences(agentText, "AIFunctionFactory.Create("));
+        Assert.Contains("EnergyTools.StreetlightStateToolName", agentText, StringComparison.Ordinal);
+        Assert.Contains("OperationsAgentToolNames.StartRestoreLightingOperation", agentText, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -155,14 +160,20 @@ public sealed class ArchitectureBoundaryTests
         var repositoryRoot = FindRepositoryRoot();
         var agentText = File.ReadAllText(Path.Combine(repositoryRoot, "Services", "OperationsAgent.Api", "Services", "FoundryOperationsAgent.cs"));
 
-        // The agent exposes the restore tool only at the InteractiveInput stage and only via MCP
-        // discovery; every earlier stage keeps its read-only truth.
-        var stageGateIndex = agentText.IndexOf("currentStage >= DemoStage.InteractiveInput", StringComparison.Ordinal);
+        // The direct write exists in exactly one stage window: it appears at InteractiveInput,
+        // where MRTR guards it, and is withdrawn at Workflow, where the agent must request the
+        // governed operation instead of performing the write itself.
+        var windowGateIndex = agentText.IndexOf(
+            "currentStage >= DemoStage.InteractiveInput && currentStage < DemoStage.Workflow", StringComparison.Ordinal);
         var restoreToolIndex = agentText.IndexOf("OperationsAgentToolNames.RestoreScheduledMode", StringComparison.Ordinal);
+        var workflowToolIndex = agentText.IndexOf("OperationsAgentToolNames.StartRestoreLightingOperation", StringComparison.Ordinal);
+        var workflowGateIndex = agentText.IndexOf("currentStage >= DemoStage.Workflow", StringComparison.Ordinal);
 
-        Assert.True(stageGateIndex >= 0, "The InteractiveInput stage gate is missing.");
-        Assert.True(restoreToolIndex > stageGateIndex, "The restore tool must be exposed only behind the InteractiveInput stage gate.");
-        Assert.Equal(1, CountOccurrences(agentText, "RestoreScheduledMode"));
+        Assert.True(windowGateIndex >= 0, "The InteractiveInput..Workflow stage window for the direct write is missing.");
+        Assert.True(restoreToolIndex > windowGateIndex, "The restore tool must be exposed only inside the stage window.");
+        Assert.True(workflowGateIndex >= 0, "The Workflow stage gate for the governed operation is missing.");
+        Assert.True(workflowToolIndex > workflowGateIndex, "The workflow-start tool must be exposed only behind the Workflow stage gate.");
+        Assert.Equal(1, CountOccurrences(agentText, "OperationsAgentToolNames.RestoreScheduledMode"));
     }
 
     private static string FindRepositoryRoot()

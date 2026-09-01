@@ -150,6 +150,46 @@ All findings from the full working-tree review are now resolved.
     state-changing tool immediately (the tool obtains the operator's confirmation itself), fixing
     occasional runs that narrated instead of pausing.
 
+## Fixed in the Workflow-stage review pass (September 2026)
+
+1. **Effective target, not raw schedule (high)** — policy and verification judged anomalies
+   against `ExpectedScheduledState`, so the Security Operation scenario (lighting required while
+   the daylight schedule says off) was classified as an anomaly and **auto-corrected without
+   approval**. Both boundaries now share one canonical rule, `LightingTarget.Resolve`, which the
+   Energy Hub's `ComputeScheduledTarget` also delegates to; the twin exposes `EffectiveTargetIsOn`
+   and `IsAnomalous`. A workflow test proves required lighting is never remediated, and the live
+   walk applies the scenario end to end.
+2. **State validated before approval is now protected at execution (high)** — the Energy Hub
+   exposes an authoritative `StateRevision` on the twin (bumped by reset, scenario application,
+   and every accepted command); the workflow captures it at validate, the restore carries it, and
+   the Hub checks it under the same lock that claims the command, returning 409 with a
+   `preconditionFailed` marker. The execute step re-validates once, refuses to clear an override
+   that appeared after a no-approval decision, retries only against the fresh revision, rechecks
+   the demo stage immediately before commanding, and a downgrade cancels in-flight runs.
+3. **Own-write evidence exemption is now one-time and state-checked (high)** — the fingerprint
+   uses the authoritative state revision, and adoption requires the last command to be this run's,
+   to have succeeded, and the observed state to match what it commanded. A later telemetry change
+   while the same command record stands makes the answer stale, as a regression test pins.
+4. **Executed is not resolved** — the run report separates `CommandExecuted`, `Resolved`, and a
+   terminal `Status`; a run that fails after a command landed still reports that it landed, and
+   the UI colors by verified resolution.
+5. **Requirements alignment** — the agent no longer holds the direct write at Workflow+; it calls
+   `start_restore_lighting_operation`, and the workflow owns the operation. The failure branch
+   raises a maintenance work item in a work-management emulator (`IWorkItemGateway`), and the
+   completion is audited. Checkpoint/resume is deferred with a trigger in the stage document.
+6. **Honest MCP write annotations** — `restore_scheduled_mode` is now `Destructive = true`,
+   `Idempotent = false`: it discards operator intent and each call issues another physical command.
+7. **Workflow diagram survives stage round-trips** — the render flag resets when leaving the
+   stage, rendering requires the Workflow stage, and the flag is set only after the interop call
+   succeeds.
+8. **Bounded registries** — completed workflow runs are pruned to a recent tail (never evicting a
+   run still executing), work items are capped, and expired MRTR tokens are swept on issue.
+9. **YAML/graph equivalence is enforced** — a test compares the displayed declarative topology
+   (start, nodes, edge endpoints, which edges are conditional) against the executing graph via
+   `ReflectExecutors`/`ReflectEdges`, rather than checking for a couple of substrings.
+10. **Vendored asset hygiene** — `.gitattributes` stores `*.min.js` byte-for-byte with no
+    whitespace checks, and the Mermaid folder records source, version, SHA-256, and license.
+
 ## Deferred (with trigger)
 
 - **Snippet region scan scope** (low, from the demo-anchor review): the region synchronization

@@ -159,6 +159,28 @@ public sealed record OperationalContext(bool SecurityOperationActive, bool Requi
 }
 
 /// <summary>
+/// Resolves the single authoritative answer to "should this lamp be on right now?". Cross-domain
+/// operational context outranks the daylight schedule: a security operation that requires lighting
+/// keeps the lamp on even while the schedule says off. Every boundary that judges an anomaly, and
+/// every boundary that commands a correction, must use this one definition - an asset that is
+/// intentionally lit is not an anomaly to remediate.
+/// </summary>
+public static class LightingTarget
+{
+    /// <summary>
+    /// Resolves the effective lighting target from the schedule and the operational context.
+    /// </summary>
+    /// <param name="expectedScheduledState">The daylight schedule's target.</param>
+    /// <param name="operationContext">The cross-domain operational context.</param>
+    /// <returns><see langword="true"/> when the lamp should be on.</returns>
+    public static bool Resolve(bool expectedScheduledState, OperationalContext operationContext)
+    {
+        ArgumentNullException.ThrowIfNull(operationContext);
+        return operationContext.RequiresLighting || expectedScheduledState;
+    }
+}
+
+/// <summary>
 /// Represents a correlated command request and its completion state.
 /// </summary>
 /// <param name="Operation">The projector-friendly operation name.</param>

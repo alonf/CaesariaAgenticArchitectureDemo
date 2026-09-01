@@ -21,9 +21,25 @@ public sealed class MrtrRequestStateStore(TimeProvider timeProvider)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(assetId);
 
+        // A pause the client never returns to would otherwise leave its token behind forever.
+        PruneExpired();
+
         var token = Guid.NewGuid().ToString("N");
         _issued[token] = (assetId, timeProvider.GetUtcNow() + StateLifetime);
         return token;
+    }
+
+    private void PruneExpired()
+    {
+        var now = timeProvider.GetUtcNow();
+
+        foreach (var (token, issued) in _issued)
+        {
+            if (now > issued.ExpiresAt)
+            {
+                _issued.TryRemove(token, out _);
+            }
+        }
     }
 
     /// <summary>

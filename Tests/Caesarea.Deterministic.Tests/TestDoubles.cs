@@ -2,6 +2,7 @@ using CommandCenter.Api.Services;
 using DemoScenario.Api.Services;
 using EnergyHub.Api.Services;
 using OperationsAgent.Api.Services;
+using OperationsAgent.Contracts;
 
 namespace Caesarea.Deterministic.Tests;
 
@@ -290,22 +291,44 @@ internal sealed class FakeEnergyCommandGateway : IEnergyCommandGateway
 
     public string? LastCorrelationId { get; private set; }
 
-    public Func<string, string, CancellationToken, Task<RestoreScheduledModeResult>>? OnRestoreScheduledModeAsync { get; set; }
+    public long? LastExpectedStateRevision { get; private set; }
 
-    public Task<RestoreScheduledModeResult> RestoreScheduledModeAsync(string assetId, string correlationId, CancellationToken cancellationToken)
+    public Func<string, string, long, CancellationToken, Task<EnergyCommandOutcome>>? OnRestoreScheduledModeAsync { get; set; }
+
+    public Task<EnergyCommandOutcome> RestoreScheduledModeAsync(
+        string assetId,
+        string correlationId,
+        long expectedStateRevision,
+        CancellationToken cancellationToken)
     {
         RestoreCalls++;
         LastCorrelationId = correlationId;
+        LastExpectedStateRevision = expectedStateRevision;
 
         if (OnRestoreScheduledModeAsync is not null)
         {
-            return OnRestoreScheduledModeAsync(assetId, correlationId, cancellationToken);
+            return OnRestoreScheduledModeAsync(assetId, correlationId, expectedStateRevision, cancellationToken);
         }
 
-        return Task.FromResult(new RestoreScheduledModeResult(
-            assetId, false, false, CommandExecutionStatus.Succeeded, correlationId,
-            "Restored to scheduled mode.", DateTimeOffset.UtcNow));
+        return Task.FromResult(new EnergyCommandOutcome(
+            CommandExecutionStatus.Succeeded, "Restored to scheduled mode.", PreconditionFailed: false));
     }
+}
+
+internal sealed class FakeWorkItemGateway : IWorkItemGateway
+{
+    private readonly List<MaintenanceWorkItem> _workItems = [];
+
+    public IReadOnlyList<MaintenanceWorkItem> Created => _workItems;
+
+    public Task<MaintenanceWorkItem> CreateAsync(string assetId, string summary, string correlationId, CancellationToken cancellationToken)
+    {
+        var workItem = new MaintenanceWorkItem($"WI-{_workItems.Count + 1}", assetId, summary, DateTimeOffset.UtcNow, correlationId);
+        _workItems.Add(workItem);
+        return Task.FromResult(workItem);
+    }
+
+    public IReadOnlyList<MaintenanceWorkItem> GetAll() => [.. _workItems];
 }
 
 internal sealed class FakeOperationsAgentStageClient : IOperationsAgentStageClient

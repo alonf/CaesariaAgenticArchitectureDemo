@@ -38,12 +38,15 @@ public sealed class EnergyMcpServerIntegrationTests
         Assert.True(readAnnotations.IdempotentHint);
         Assert.False(readAnnotations.OpenWorldHint);
 
+        // The write tool is conservatively annotated: clearing an operator's override discards
+        // intent a human expressed, and a repeat call issues another physical command rather than
+        // collapsing into the first.
         var restore = Assert.Single(tools, tool => tool.Name == RestoreToolName);
         var restoreAnnotations = restore.ProtocolTool.Annotations;
         Assert.NotNull(restoreAnnotations);
         Assert.False(restoreAnnotations.ReadOnlyHint);
-        Assert.False(restoreAnnotations.DestructiveHint);
-        Assert.True(restoreAnnotations.IdempotentHint);
+        Assert.True(restoreAnnotations.DestructiveHint);
+        Assert.False(restoreAnnotations.IdempotentHint);
         Assert.False(restoreAnnotations.OpenWorldHint);
     }
 

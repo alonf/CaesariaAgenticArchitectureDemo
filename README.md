@@ -111,9 +111,12 @@ The demo runs as one application with a presenter-controlled `DemoStage`:
   approval and produces no side effect before the input arrives; deny and the state provably
   does not change.
 - `DemoStage=Workflow` — remediation becomes an **explicit code-built workflow**: validate,
-  policy, an operator-approval gate when a manual override would be cleared, execute, verify.
-  The graph renders its own Mermaid diagram (`WorkflowVisualizer`), live steps stream to the
-  Command Center, and the equivalent declarative YAML is displayed beside it.
+  policy, an operator-approval gate when a manual override would be cleared, execute, verify, and
+  a maintenance work item when the correction does not hold. The agent stops writing and starts
+  *requesting* the operation; the command carries the state revision it was decided on, so a
+  picture that moved is refused rather than acted on. The graph renders its own Mermaid diagram
+  (`WorkflowVisualizer`), live steps stream to the Command Center, and the equivalent declarative
+  YAML is displayed beside it.
 
 `CommandCenter.Api` owns the selected stage. `DemoScenario.Api` reads and changes it through that authoritative
 boundary, so switching stages does not restart the application.

@@ -8,6 +8,13 @@ public sealed partial class EnergyHubService
     private const string RestoreScheduledModeOperation = "Restore scheduled mode";
     private const string SupersededSummary =
         "Restore Scheduled Mode was superseded by a newer operation, scenario change, or reset; the newer state was preserved.";
+
+    /// <summary>
+    /// Prefix of the summary returned when a command's state precondition no longer holds. Callers
+    /// match on it to re-validate rather than treating the refusal as a downstream failure.
+    /// </summary>
+    public const string PreconditionFailedSummaryPrefix = "Precondition failed:";
+
     private readonly object _gate = new();
     private readonly ISmartPoleGateway _smartpoleGateway;
     private readonly TimeProvider _timeProvider;
@@ -46,7 +53,7 @@ public sealed partial class EnergyHubService
 
         lock (_gate)
         {
-            return _twin;
+            return CurrentTwin();
         }
     }
 
@@ -98,7 +105,7 @@ public sealed partial class EnergyHubService
                 _twin = CreateTwinFromPhysical(physicalState, desiredIsOn, null, null);
                 AddActivity("Energy Hub reset to the current deterministic SmartPole state.", correlationId, ActivityKind.Synchronization, true, null);
                 EnergyHubServiceLog.ResetCompleted(_logger, DemoAssets.StreetlightAssetId, correlationId, desiredIsOn);
-                return _twin;
+                return CurrentTwin();
             }
         }
         catch (OperationCanceledException exception) when (cancellationToken.IsCancellationRequested)
@@ -149,7 +156,7 @@ public sealed partial class EnergyHubService
                 _twin = CreateTwinFromPhysical(physicalState, request.DesiredIsOn, request.OpenIncidentId, null);
                 AddActivity(request.Summary, correlationId, ActivityKind.Scenario, true, null);
                 EnergyHubServiceLog.ScenarioSynchronizationCompleted(_logger, DemoAssets.StreetlightAssetId, correlationId, request.OpenIncidentId ?? "none");
-                return _twin;
+                return CurrentTwin();
             }
         }
         catch (OperationCanceledException exception) when (cancellationToken.IsCancellationRequested)
@@ -180,8 +187,16 @@ public sealed partial class EnergyHubService
     /// <param name="assetId">The asset identifier to restore.</param>
     /// <param name="correlationId">The correlation identifier spanning the command request.</param>
     /// <param name="cancellationToken">The token used to cancel the operation.</param>
+    /// <param name="expectedStateRevision">
+    /// The state revision the caller validated its decision against. When supplied and no longer
+    /// current, the command is refused without any side effect - the caller must re-validate.
+    /// </param>
     /// <returns>The authoritative command outcome.</returns>
-    public async Task<RestoreScheduledModeResult> RestoreScheduledModeAsync(string assetId, string correlationId, CancellationToken cancellationToken)
+    public async Task<RestoreScheduledModeResult> RestoreScheduledModeAsync(
+        string assetId,
+        string correlationId,
+        CancellationToken cancellationToken,
+        long? expectedStateRevision = null)
     {
         EnsureAsset(assetId);
         ArgumentException.ThrowIfNullOrWhiteSpace(correlationId);
@@ -203,6 +218,21 @@ public sealed partial class EnergyHubService
 
         lock (_gate)
         {
+            // The precondition and the claim share one lock: a caller that decided against
+            // revision N cannot have the state change between the check and the accept.
+            if (expectedStateRevision is { } expected && _revision != expected)
+            {
+                EnergyHubServiceLog.RestorePreconditionFailed(_logger, assetId, correlationId, expected, _revision);
+                return new RestoreScheduledModeResult(
+                    assetId,
+                    _twin.DesiredIsOn,
+                    _twin.ReportedIsOn,
+                    CommandExecutionStatus.Failed,
+                    correlationId,
+                    $"{PreconditionFailedSummaryPrefix} the caller validated state revision {expected}, but the authoritative revision is now {_revision}. No change was made.",
+                    _timeProvider.GetUtcNow());
+            }
+
             // Accepting a restore claims a fresh revision, so of two concurrent restores only the
             // most recently accepted one can commit; the older one reports superseded even when it
             // completes last.
@@ -424,7 +454,7 @@ public sealed partial class EnergyHubService
     public static bool ComputeScheduledTarget(SmartPolePhysicalState physicalState)
     {
         ArgumentNullException.ThrowIfNull(physicalState);
-        return physicalState.OperationContext.RequiresLighting || physicalState.ExpectedScheduledState;
+        return LightingTarget.Resolve(physicalState.ExpectedScheduledState, physicalState.OperationContext);
     }
 
     /// <summary>
@@ -554,6 +584,10 @@ public sealed partial class EnergyHubService
             correlationId,
             SupersededSummary,
             _timeProvider.GetUtcNow());
+
+    // Stamps the authoritative revision onto the twin handed out. Must be called while holding
+    // the gate, so the state and the revision a caller later quotes back cannot disagree.
+    private EnergyOperationalTwin CurrentTwin() => _twin with { StateRevision = _revision };
 
     private static EnergyOperationalTwin CreateTwinFromPhysical(
         SmartPolePhysicalState physicalState,
@@ -794,4 +828,10 @@ internal static partial class EnergyHubServiceLog
         Level = LogLevel.Warning,
         Message = "Restore Scheduled Mode was superseded by a scenario change or reset for asset {AssetId}. CorrelationId: {CorrelationId}.")]
     internal static partial void RestoreSuperseded(ILogger logger, string assetId, string correlationId);
+
+    [LoggerMessage(
+        EventId = 1525,
+        Level = LogLevel.Warning,
+        Message = "Restore Scheduled Mode refused for asset {AssetId}: the caller validated revision {ExpectedRevision} but the authoritative revision is {CurrentRevision}. CorrelationId: {CorrelationId}.")]
+    internal static partial void RestorePreconditionFailed(ILogger logger, string assetId, string correlationId, long expectedRevision, long currentRevision);
 }

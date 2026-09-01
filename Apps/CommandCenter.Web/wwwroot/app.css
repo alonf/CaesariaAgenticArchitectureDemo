@@ -1464,8 +1464,24 @@ svg {
     font-weight: 600;
 }
 
-.wfrun-outcome.executed {
+.wfrun-outcome.resolved {
     color: var(--cp-success);
+}
+
+.wfrun-outcome.unresolved,
+.wfrun-outcome.failed {
+    color: var(--cp-danger);
+}
+
+.wfrun-outcome-status {
+    margin-right: 6px;
+    padding: 1px 8px;
+    border: 1px solid currentColor;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
 }
 
 .wfrun-tabs {

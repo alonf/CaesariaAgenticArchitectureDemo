@@ -28,6 +28,12 @@ public static class OperationsAgentToolNames
 
     /// <summary>The MCP write tool that restores a streetlight to scheduled mode after approval.</summary>
     public const string RestoreScheduledMode = "restore_scheduled_mode";
+
+    /// <summary>
+    /// The tool that starts the governed remediation workflow. From the Workflow stage this
+    /// replaces the agent's direct write: the agent requests the operation, the workflow owns it.
+    /// </summary>
+    public const string StartRestoreLightingOperation = "start_restore_lighting_operation";
 }
 
 /// <summary>
@@ -72,18 +78,41 @@ public sealed record OperationsAgentWorkflowStep(
     string? Detail);
 
 /// <summary>
-/// The outcome of one remediation workflow run.
+/// A maintenance work item raised by the remediation workflow's failure branch.
+/// </summary>
+/// <param name="WorkItemId">The stable work item identifier.</param>
+/// <param name="AssetId">The asset needing maintenance.</param>
+/// <param name="Summary">Why the automated correction did not resolve the anomaly.</param>
+/// <param name="CreatedAt">When the work item was raised.</param>
+/// <param name="CorrelationId">The correlation identifier of the workflow run that raised it.</param>
+public sealed record MaintenanceWorkItem(
+    string WorkItemId,
+    string AssetId,
+    string Summary,
+    DateTimeOffset CreatedAt,
+    string CorrelationId);
+
+/// <summary>
+/// The outcome of one remediation workflow run. "A command ran" and "the city is in the state it
+/// should be" are separate facts: a correction can execute and still leave the asset wrong, and a
+/// run can fail after a command already changed something.
 /// </summary>
 /// <param name="RunId">The run identifier.</param>
 /// <param name="Completed">Whether the run has finished (successfully or not).</param>
-/// <param name="Executed">Whether the restore command actually executed.</param>
-/// <param name="Summary">The projector-friendly outcome summary from the verify step.</param>
+/// <param name="CommandExecuted">Whether a command actually changed the asset.</param>
+/// <param name="Resolved">Whether the asset ended in its effective target state, as verified by a re-read.</param>
+/// <param name="Status">The run status: Running, Succeeded, Unresolved, Failed, or Cancelled.</param>
+/// <param name="Summary">The projector-friendly outcome summary.</param>
+/// <param name="WorkItemId">The maintenance work item raised by the failure branch, if any.</param>
 /// <param name="Steps">The steps of the run, in execution order.</param>
 public sealed record OperationsAgentWorkflowRunReport(
     string RunId,
     bool Completed,
-    bool Executed,
+    bool CommandExecuted,
+    bool Resolved,
+    string Status,
     string Summary,
+    string? WorkItemId,
     IReadOnlyList<OperationsAgentWorkflowStep> Steps);
 
 /// <summary>

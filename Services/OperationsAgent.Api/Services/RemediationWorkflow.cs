@@ -17,37 +17,86 @@ public sealed record RemediationRequest(string AssetId, string CorrelationId);
 public sealed record RemediationAssessment(RemediationRequest Request, EnergyOperationalTwin Twin);
 
 /// <summary>
+/// The deterministic policy decision for one observed state.
+/// </summary>
+/// <param name="ActionRequired">Whether the reported state disagrees with the effective target.</param>
+/// <param name="RequiresApproval">Whether an operator must approve before the correction runs.</param>
+/// <param name="Reason">A short human-readable statement of the decision.</param>
+public sealed record RemediationPolicyDecision(bool ActionRequired, bool RequiresApproval, string Reason);
+
+/// <summary>
+/// The demo's remediation policy, written once and used by both the policy node and the
+/// re-validation the execute node performs when state moved while the workflow was deciding.
+/// Only rules explicitly defined for this demo appear here.
+/// </summary>
+public static class RemediationPolicy
+{
+    /// <summary>
+    /// Evaluates the policy against an authoritative twin.
+    /// </summary>
+    /// <param name="twin">The authoritative operational twin.</param>
+    /// <returns>The policy decision.</returns>
+    public static RemediationPolicyDecision Evaluate(EnergyOperationalTwin twin)
+    {
+        ArgumentNullException.ThrowIfNull(twin);
+
+        // The effective target already accounts for cross-domain context, so a lamp deliberately
+        // lit for a security operation is not an anomaly - and is never "corrected".
+        var actionRequired = twin.IsAnomalous;
+        var requiresApproval = actionRequired && twin.ManualOverride;
+        var state = twin.ReportedIsOn ? "on" : "off";
+        var reason = (actionRequired, requiresApproval) switch
+        {
+            (false, _) when twin.OperationContext.RequiresLighting =>
+                $"{twin.AssetId} is {state} as the active operational context requires; nothing to correct.",
+            (false, _) => $"{twin.AssetId} already matches its schedule; nothing to execute.",
+            (true, true) => $"{twin.AssetId} is {state} against its effective target under a manual override; operator approval is required to clear it.",
+            (true, false) => $"{twin.AssetId} is {state} against its effective target with no manual override; restoring automatically."
+        };
+
+        return new RemediationPolicyDecision(actionRequired, requiresApproval, reason);
+    }
+}
+
+/// <summary>
 /// The policy step's decision, flowing (possibly through the approval gate) to the execute step.
 /// </summary>
 /// <param name="Request">The originating remediation request.</param>
-/// <param name="ActionRequired">Whether the reported state disagrees with the schedule.</param>
+/// <param name="ValidatedStateRevision">The authoritative state revision this decision was made against.</param>
+/// <param name="ActionRequired">Whether the reported state disagrees with the effective target.</param>
 /// <param name="RequiresApproval">Whether policy demands an operator approval before executing.</param>
 /// <param name="OperatorApproved">The operator's decision, stamped by the approval gate.</param>
 /// <param name="Reason">A short human-readable statement of the decision.</param>
 public sealed record RemediationPlan(
     RemediationRequest Request,
+    long ValidatedStateRevision,
     bool ActionRequired,
     bool RequiresApproval,
     bool OperatorApproved,
     string Reason);
 
 /// <summary>
-/// How the execute step concluded - the distinction the run view colors by: a restore that ran,
-/// nothing to do, a human refusal, or a command that was attempted and failed.
+/// How the execute step concluded - the distinction the run view colors by.
 /// </summary>
 public enum RemediationExecutionResult
 {
     /// <summary>The restore command executed and the Energy Hub confirmed it.</summary>
     Restored,
 
-    /// <summary>The asset already matched its schedule; no command was issued.</summary>
+    /// <summary>The asset already matched its effective target; no command was issued.</summary>
     NothingToDo,
 
     /// <summary>The operator declined; no command was issued.</summary>
     Declined,
 
     /// <summary>The restore command was attempted and the Energy Hub reported failure.</summary>
-    CommandFailed
+    CommandFailed,
+
+    /// <summary>State moved while the workflow was deciding, so the validated decision was refused.</summary>
+    StateChanged,
+
+    /// <summary>The demo stage left Workflow before the command was issued.</summary>
+    StageWithdrawn
 }
 
 /// <summary>
@@ -59,22 +108,61 @@ public enum RemediationExecutionResult
 public sealed record RemediationExecution(RemediationRequest Request, RemediationExecutionResult Result, string Summary)
 {
     /// <summary>
-    /// Gets a value indicating whether the restore command actually restored the asset.
+    /// Gets a value indicating whether a command actually changed the asset.
     /// </summary>
-    public bool Executed => Result == RemediationExecutionResult.Restored;
+    public bool CommandExecuted => Result == RemediationExecutionResult.Restored;
+
+    /// <summary>
+    /// Gets a value indicating whether a command was sent to the Energy Hub at all - true even
+    /// when it failed, because a failed attempt is still an attempt that must be reported.
+    /// </summary>
+    public bool CommandAttempted => Result is RemediationExecutionResult.Restored or RemediationExecutionResult.CommandFailed;
 }
 
 /// <summary>
-/// The verify step's final outcome, yielded as the workflow's output.
+/// The verify step's finding: what the workflow did, and what the authoritative state says now.
 /// </summary>
-/// <param name="Executed">Whether the restore command actually restored the asset.</param>
-/// <param name="InSchedule">Whether the re-read twin now matches its schedule.</param>
+/// <param name="Request">The originating remediation request.</param>
+/// <param name="ExecutionResult">How the execute step concluded.</param>
+/// <param name="CommandExecuted">Whether a command actually changed the asset.</param>
+/// <param name="Resolved">Whether the re-read twin now matches its effective target.</param>
+/// <param name="Summary">The projector-friendly finding.</param>
+/// <param name="WorkItemId">The maintenance work item raised for an unresolved correction, if any.</param>
+public sealed record RemediationVerification(
+    RemediationRequest Request,
+    RemediationExecutionResult ExecutionResult,
+    bool CommandExecuted,
+    bool Resolved,
+    string Summary,
+    string? WorkItemId = null)
+{
+    /// <summary>
+    /// Gets a value indicating whether the correction was attempted and did not leave the asset
+    /// in its effective target state - the branch that raises a maintenance work item. An
+    /// operator's refusal is a decision, not a fault, so it never raises one.
+    /// </summary>
+    public bool RequiresWorkItem =>
+        ExecutionResult == RemediationExecutionResult.CommandFailed || (CommandExecuted && !Resolved);
+}
+
+/// <summary>
+/// The workflow's final, audited outcome.
+/// </summary>
+/// <param name="CommandExecuted">Whether a command actually changed the asset.</param>
+/// <param name="Resolved">Whether the asset ended in its effective target state.</param>
+/// <param name="Status">The terminal run status: Succeeded, Unresolved, or Failed.</param>
 /// <param name="Summary">The projector-friendly outcome summary.</param>
-public sealed record RemediationOutcome(bool Executed, bool InSchedule, string Summary);
+/// <param name="WorkItemId">The maintenance work item raised, if any.</param>
+public sealed record RemediationOutcome(
+    bool CommandExecuted,
+    bool Resolved,
+    string Status,
+    string Summary,
+    string? WorkItemId);
 
 /// <summary>
 /// Validates the request against reality: reads the authoritative twin so every later step
-/// reasons over verified state, never over the operator's assumption.
+/// reasons over verified state, never over the agent's or the operator's cached picture.
 /// </summary>
 public sealed class ValidateRequestExecutor(IEnergyReadGateway readGateway)
     : Executor<RemediationRequest, RemediationAssessment>("validate")
@@ -89,9 +177,8 @@ public sealed class ValidateRequestExecutor(IEnergyReadGateway readGateway)
 }
 
 /// <summary>
-/// The deterministic policy: action is required when the reported state disagrees with the
-/// schedule, and an operator must approve whenever a manual override would be cleared - a human
-/// put it there, so a human takes it away.
+/// Applies the deterministic policy and carries the validated state revision forward, so the
+/// command the workflow eventually issues is bound to the picture the decision was made on.
 /// </summary>
 public sealed class EvaluatePolicyExecutor() : Executor<RemediationAssessment, RemediationPlan>("policy")
 {
@@ -99,17 +186,15 @@ public sealed class EvaluatePolicyExecutor() : Executor<RemediationAssessment, R
     public override ValueTask<RemediationPlan> HandleAsync(
         RemediationAssessment input, IWorkflowContext context, CancellationToken cancellationToken = default)
     {
-        var twin = input.Twin;
-        var actionRequired = twin.ReportedIsOn != twin.ExpectedScheduledState;
-        var requiresApproval = actionRequired && twin.ManualOverride;
-        var reason = (actionRequired, requiresApproval) switch
-        {
-            (false, _) => $"{twin.AssetId} already matches its schedule; nothing to execute.",
-            (true, true) => $"{twin.AssetId} is {(twin.ReportedIsOn ? "on" : "off")} against its schedule under a manual override; operator approval is required to clear it.",
-            (true, false) => $"{twin.AssetId} is {(twin.ReportedIsOn ? "on" : "off")} against its schedule with no manual override; restoring automatically."
-        };
+        var decision = RemediationPolicy.Evaluate(input.Twin);
 
-        return ValueTask.FromResult(new RemediationPlan(input.Request, actionRequired, requiresApproval, OperatorApproved: false, reason));
+        return ValueTask.FromResult(new RemediationPlan(
+            input.Request,
+            input.Twin.StateRevision,
+            decision.ActionRequired,
+            decision.RequiresApproval,
+            OperatorApproved: false,
+            decision.Reason));
     }
 }
 
@@ -135,10 +220,15 @@ public sealed class OperatorApprovalExecutor(PendingApprovalStore pendingApprova
 }
 
 /// <summary>
-/// Executes the restore through the Energy Hub command gateway - or explains why it did not:
-/// nothing to do, or the operator declined.
+/// Executes the restore through the Energy Hub command gateway - or explains why it did not.
+/// Time passes between validation and execution (an operator may think for minutes), so the
+/// command carries the validated state revision and the Energy Hub refuses it if the picture
+/// moved; the step then re-validates once and never escalates its own authority.
 /// </summary>
-public sealed class ExecuteRestoreExecutor(IEnergyCommandGateway commandGateway)
+public sealed class ExecuteRestoreExecutor(
+    IEnergyCommandGateway commandGateway,
+    IEnergyReadGateway readGateway,
+    DemoStageGate stageGate)
     : Executor<RemediationPlan, RemediationExecution>("execute")
 {
     /// <inheritdoc />
@@ -156,33 +246,129 @@ public sealed class ExecuteRestoreExecutor(IEnergyCommandGateway commandGateway)
                 $"The operator declined; {input.Request.AssetId} was left unchanged.");
         }
 
-        var result = await commandGateway.RestoreScheduledModeAsync(input.Request.AssetId, input.Request.CorrelationId, cancellationToken);
-        return new RemediationExecution(
+        // The capability itself can be withdrawn while the run waits: a stage downgrade means the
+        // write no longer exists, and a decision taken at a higher stage may not execute at a lower one.
+        if (stageGate.GetCurrent().Id < DemoStage.Workflow)
+        {
+            return new RemediationExecution(input.Request, RemediationExecutionResult.StageWithdrawn,
+                $"The demo stage left Workflow before the command was issued; {input.Request.AssetId} was left unchanged.");
+        }
+
+        var result = await commandGateway.RestoreScheduledModeAsync(
+            input.Request.AssetId, input.Request.CorrelationId, input.ValidatedStateRevision, cancellationToken);
+
+        if (!result.PreconditionFailed)
+        {
+            return DescribeCommand(input, result);
+        }
+
+        // The state moved under the decision. Re-validate once against the authoritative picture
+        // rather than retrying blindly - and never grant an approval the operator did not give.
+        var twin = await readGateway.GetStateAsync(input.Request.AssetId, input.Request.CorrelationId, cancellationToken);
+        var decision = RemediationPolicy.Evaluate(twin);
+
+        if (!decision.ActionRequired)
+        {
+            return new RemediationExecution(input.Request, RemediationExecutionResult.StateChanged,
+                $"State changed while the workflow was deciding: {decision.Reason} No command was issued.");
+        }
+
+        if (decision.RequiresApproval && !input.OperatorApproved)
+        {
+            return new RemediationExecution(input.Request, RemediationExecutionResult.StateChanged,
+                $"State changed while the workflow was deciding and now requires operator approval: {decision.Reason} No command was issued.");
+        }
+
+        var retry = await commandGateway.RestoreScheduledModeAsync(
+            input.Request.AssetId, input.Request.CorrelationId, twin.StateRevision, cancellationToken);
+
+        return retry.PreconditionFailed
+            ? new RemediationExecution(input.Request, RemediationExecutionResult.StateChanged,
+                $"State kept changing while the workflow was executing; {input.Request.AssetId} was left unchanged.")
+            : DescribeCommand(input, retry);
+    }
+
+    private static RemediationExecution DescribeCommand(RemediationPlan input, EnergyCommandOutcome outcome) =>
+        new(
             input.Request,
-            result.Status == CommandExecutionStatus.Succeeded
+            outcome.Status == CommandExecutionStatus.Succeeded
                 ? RemediationExecutionResult.Restored
                 : RemediationExecutionResult.CommandFailed,
-            $"{result.Status}: {result.Summary}");
+            $"{outcome.Status}: {outcome.Summary}");
+}
+
+/// <summary>
+/// Closes the loop: re-reads the authoritative twin and reports whether the asset actually ended
+/// in its effective target state. A command that reported success but left the asset wrong is
+/// still unresolved.
+/// </summary>
+public sealed class VerifyStateExecutor(IEnergyReadGateway readGateway)
+    : Executor<RemediationExecution, RemediationVerification>("verify")
+{
+    /// <inheritdoc />
+    public override async ValueTask<RemediationVerification> HandleAsync(
+        RemediationExecution input, IWorkflowContext context, CancellationToken cancellationToken = default)
+    {
+        var twin = await readGateway.GetStateAsync(input.Request.AssetId, input.Request.CorrelationId, cancellationToken);
+        var resolved = !twin.IsAnomalous;
+
+        return new RemediationVerification(
+            input.Request,
+            input.Result,
+            input.CommandExecuted,
+            resolved,
+            $"{input.Summary} Verified: {twin.AssetId} is {(twin.ReportedIsOn ? "on" : "off")} and {(resolved ? "matches" : "still violates")} its effective target.");
     }
 }
 
 /// <summary>
-/// Closes the loop: re-reads the authoritative twin and returns the workflow's final outcome -
-/// the claim of success is checked against reality, never assumed from the command result. The
-/// builder marks this executor with WithOutputFrom, so its result is the workflow's output.
+/// The failure branch: a correction that was attempted and did not resolve raises a maintenance
+/// work item, so an unfixable asset becomes someone's job instead of a silent red badge.
 /// </summary>
-public sealed class VerifyStateExecutor(IEnergyReadGateway readGateway)
-    : Executor<RemediationExecution, RemediationOutcome>("verify")
+public sealed class CreateWorkItemExecutor(IWorkItemGateway workItems)
+    : Executor<RemediationVerification, RemediationVerification>("workitem")
 {
     /// <inheritdoc />
-    public override async ValueTask<RemediationOutcome> HandleAsync(
-        RemediationExecution input, IWorkflowContext context, CancellationToken cancellationToken = default)
+    public override async ValueTask<RemediationVerification> HandleAsync(
+        RemediationVerification input, IWorkflowContext context, CancellationToken cancellationToken = default)
     {
-        var twin = await readGateway.GetStateAsync(input.Request.AssetId, input.Request.CorrelationId, cancellationToken);
-        var inSchedule = twin.ReportedIsOn == twin.ExpectedScheduledState;
-        return new RemediationOutcome(
-            input.Executed,
-            inSchedule,
-            $"{input.Summary} Verified: {twin.AssetId} is {(twin.ReportedIsOn ? "on" : "off")} and {(inSchedule ? "matches" : "still violates")} its schedule.");
+        var workItem = await workItems.CreateAsync(
+            input.Request.AssetId,
+            $"Automated remediation did not restore {input.Request.AssetId} to its effective target. {input.Summary}",
+            input.Request.CorrelationId,
+            cancellationToken);
+
+        return input with
+        {
+            WorkItemId = workItem.WorkItemId,
+            Summary = $"{input.Summary} Maintenance work item {workItem.WorkItemId} raised."
+        };
+    }
+}
+
+/// <summary>
+/// Publishes the audited completion: the terminal status separates "a command ran" from "the
+/// city is in the state it should be", because those are different facts and the second is the
+/// one that matters.
+/// </summary>
+public sealed class CompleteRunExecutor(ILogger<CompleteRunExecutor> logger)
+    : Executor<RemediationVerification, RemediationOutcome>("complete")
+{
+    /// <inheritdoc />
+    public override ValueTask<RemediationOutcome> HandleAsync(
+        RemediationVerification input, IWorkflowContext context, CancellationToken cancellationToken = default)
+    {
+        var status = (input.Resolved, input.RequiresWorkItem) switch
+        {
+            (true, _) => "Succeeded",
+            (false, true) => "Failed",
+            (false, false) => "Unresolved"
+        };
+
+        RemediationWorkflowLog.RunAudited(
+            logger, input.Request.AssetId, status, input.CommandExecuted, input.WorkItemId ?? "none", input.Request.CorrelationId);
+
+        return ValueTask.FromResult(new RemediationOutcome(
+            input.CommandExecuted, input.Resolved, status, input.Summary, input.WorkItemId));
     }
 }

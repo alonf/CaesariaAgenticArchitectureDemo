@@ -1,0 +1,4 @@
+# Vendored third-party bundles are stored byte-for-byte: no line-ending normalization and no
+# whitespace checks, so `git diff --check` stays clean and the file keeps its published hash.
+*.min.js -text -whitespace
+*.min.css -text -whitespace

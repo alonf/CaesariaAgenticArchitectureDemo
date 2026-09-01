@@ -562,7 +562,16 @@
                                 </ol>
                                 @if (workflowRun.Completed)
                                 {
-                                    <p class="wfrun-outcome @(workflowRun.Executed ? "executed" : string.Empty)">@workflowRun.Summary</p>
+                                    @* Colored by verified resolution, never by "a command ran": an executed
+                                       correction that left the asset wrong is not a success. *@
+                                    <p class="wfrun-outcome @WorkflowOutcomeClass(workflowRun)">
+                                        <span class="wfrun-outcome-status">@workflowRun.Status</span>
+                                        @workflowRun.Summary
+                                    </p>
+                                    @if (!workflowRun.Resolved && workflowRun.CommandExecuted)
+                                    {
+                                        <p class="wfrun-step-detail">A command did change the asset, but verification says it is still not in its effective target state.</p>
+                                    }
                                 }
                             </div>
                         }
@@ -628,6 +637,7 @@
     private string? _agentMessage;
     private bool _agentMessageIsError;
     private string? _agentEvidenceVersion;
+    private bool _agentOwnWriteAdopted;
     private string? _expandedEvidenceId;
     private string? _caseMessage;
     private bool _caseBusy;
@@ -837,10 +847,29 @@
             }
         }
 
+        // Leaving the Workflow stage removes the diagram element from the DOM, so the next visit
+        // must render into the new element rather than trusting a flag from the old one.
+        if (!IsWorkflowStage)
+        {
+            _workflowDiagramRendered = false;
+            return;
+        }
+
         if (_workflowDefinition is { } definition && !_workflowDiagramRendered)
         {
-            _workflowDiagramRendered = true;
-            await JS.InvokeVoidAsync("caesareaWorkflow.render", "workflow-diagram", definition.Mermaid);
+            try
+            {
+                await JS.InvokeVoidAsync("caesareaWorkflow.render", "workflow-diagram", definition.Mermaid);
+                // Only a render that actually succeeded counts; a failed interop call must leave
+                // the next pass free to try again.
+                _workflowDiagramRendered = true;
+            }
+            catch (JSException exception)
+            {
+                _workflowMessage = $"The workflow diagram could not be rendered: {exception.Message}";
+                return;
+            }
+
             // A run may already be on screen after a reconnect or a late-arriving definition,
             // so project its state onto the freshly rendered diagram.
             await ApplyDiagramHighlightAsync();
@@ -848,6 +877,13 @@
     }
 
     private void SelectWorkflowTab(string tab) => _workflowTab = tab;
+
+    private static string WorkflowOutcomeClass(OperationsAgentWorkflowRunReport run) => run.Status switch
+    {
+        "Succeeded" => "resolved",
+        "Failed" => "failed",
+        _ => "unresolved"
+    };
 
     // Projects the live run onto the generated diagram - completed nodes turn green, the active
     // node pulses amber, and a failed node turns red. Without a run, every mark is removed.
@@ -1051,6 +1087,7 @@
         _agentBusy = true;
         _agentResponse = null;
         _agentEvidenceVersion = null;
+        _agentOwnWriteAdopted = false;
         _expandedEvidenceId = null;
         _caseMessage = null;
         _caseClosed = false;
@@ -1077,11 +1114,14 @@
                     requestedEvidenceVersion,
                     _snapshot,
                     outcome.Result?.CorrelationId,
-                    out var currentEvidenceVersion))
+                    ownWriteAlreadyAdopted: false,
+                    out var currentEvidenceVersion,
+                    out var adoptedOwnWrite))
                 {
                     _agentResponse = outcome.Result;
                     _agentSessionId = outcome.Result?.SessionId;
                     _agentEvidenceVersion = currentEvidenceVersion;
+                    _agentOwnWriteAdopted = adoptedOwnWrite;
                 }
                 else
                 {
@@ -1142,16 +1182,20 @@
                     _agentEvidenceVersion,
                     snapshot,
                     agentResponse.CorrelationId,
-                    out var currentEvidenceVersion))
+                    _agentOwnWriteAdopted,
+                    out var currentEvidenceVersion,
+                    out var adoptedOwnWrite))
                 {
                     // An own write that propagated after the answer landed advances the guard's
-                    // floor instead of tripping it on the next unrelated change.
+                    // floor once; anything after that makes the answer stale.
                     _agentEvidenceVersion = currentEvidenceVersion;
+                    _agentOwnWriteAdopted |= adoptedOwnWrite;
                 }
                 else
                 {
                     _agentResponse = null;
                     _agentEvidenceVersion = null;
+                    _agentOwnWriteAdopted = false;
                     _agentMessage = "Operational state changed. Ask the agent again.";
                     _agentMessageIsError = false;
                 }

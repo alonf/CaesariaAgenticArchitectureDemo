@@ -12,7 +12,9 @@ namespace OperationsAgent.Api.Services;
 /// <summary>
 /// Hosts the general Caesarea Operations Agent using Microsoft Foundry. Capabilities compose by
 /// demo stage: the read-only Energy Hub tool (local or discovered over MCP), knowledge retrieval,
-/// case memory, skills, and - from the Interactive Input stage - the approval-guarded restore tool.
+/// case memory, skills, the approval-guarded restore tool for the Interactive Input stage window,
+/// and - from the Workflow stage, in its place - the tool that starts the governed remediation
+/// operation the workflow owns.
 /// </summary>
 public sealed partial class FoundryOperationsAgent(
     AIProjectClient projectClient,
@@ -23,6 +25,7 @@ public sealed partial class FoundryOperationsAgent(
     DemoStageGate stageGate,
     ToolSourceSwitch toolSourceSwitch,
     PendingApprovalStore pendingApprovalStore,
+    RemediationWorkflowService remediationWorkflow,
     IHttpClientFactory httpClientFactory,
     Uri mcpEndpoint,
     string? skillsDirectory,
@@ -40,8 +43,9 @@ public sealed partial class FoundryOperationsAgent(
         When asked why an operational state exists and a work-knowledge search capability is
         available, search it for maintenance or override evidence and cite the evidence identifiers
         you used. If no evidence exists, say so; never invent work orders or notes.
-        When the operator asks you to change an asset's state and a tool that performs that change
-        is available, invoke that tool immediately - it obtains the operator's confirmation itself
+        When the operator asks you to change an asset's state and a tool for that change is
+        available - either one that performs it or one that starts a governed operation - invoke
+        that tool immediately. Confirmation is obtained by the tool or by the operation it starts
         before anything changes, so do not ask for permission in text first. If no such tool is
         available, say the action is not possible at this stage.
         Do not invent operational facts. If the available tools cannot answer the question, say so clearly.
@@ -54,6 +58,7 @@ public sealed partial class FoundryOperationsAgent(
     private readonly ICaseMemoryStore _caseMemoryStore = caseMemoryStore ?? throw new ArgumentNullException(nameof(caseMemoryStore));
     private readonly ToolSourceSwitch _toolSourceSwitch = toolSourceSwitch ?? throw new ArgumentNullException(nameof(toolSourceSwitch));
     private readonly PendingApprovalStore _pendingApprovalStore = pendingApprovalStore ?? throw new ArgumentNullException(nameof(pendingApprovalStore));
+    private readonly RemediationWorkflowService _remediationWorkflow = remediationWorkflow ?? throw new ArgumentNullException(nameof(remediationWorkflow));
     private readonly IHttpClientFactory _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
     private readonly Uri _mcpEndpoint = mcpEndpoint ?? throw new ArgumentNullException(nameof(mcpEndpoint));
     private readonly string? _skillsDirectory = skillsDirectory;
@@ -227,9 +232,10 @@ public sealed partial class FoundryOperationsAgent(
 
                 agentTools.Add(FindDiscoveredTool(discoveredTools, EnergyTools.StreetlightStateToolName));
 
-                // The write tool joins only at the InteractiveInput stage - and only over MCP, where
-                // the MRTR approval pause guards it.
-                if (currentStage >= DemoStage.InteractiveInput)
+                // The direct write exists in one stage window only: it joins at InteractiveInput,
+                // where the MRTR approval pause guards it, and is withdrawn again at Workflow,
+                // where the agent must request the governed operation instead of performing it.
+                if (currentStage >= DemoStage.InteractiveInput && currentStage < DemoStage.Workflow)
                 {
                     agentTools.Add(FindDiscoveredTool(discoveredTools, OperationsAgentToolNames.RestoreScheduledMode));
                 }
@@ -240,6 +246,19 @@ public sealed partial class FoundryOperationsAgent(
                     energyTools.GetStreetlightStateAsync,
                     EnergyTools.StreetlightStateToolName,
                     "Gets the current authoritative operational state of a streetlight."));
+            }
+
+            // From the Workflow stage the corrective capability is an orchestration, not a write:
+            // the agent starts the governed operation and the workflow owns validation, policy,
+            // approval, execution, and verification.
+            if (currentStage >= DemoStage.Workflow)
+            {
+                var remediationTools = new RemediationTools(
+                    _remediationWorkflow, correlationId, _loggerFactory.CreateLogger<RemediationTools>());
+                agentTools.Add(AIFunctionFactory.Create(
+                    remediationTools.StartRestoreLightingOperation,
+                    OperationsAgentToolNames.StartRestoreLightingOperation,
+                    "Starts the governed Restore Lighting Operation workflow for a streetlight."));
             }
             #endregion
 

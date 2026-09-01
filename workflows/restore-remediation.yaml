@@ -2,26 +2,36 @@
 #
 # The demo builds and runs the identical graph in code (the WORKFLOW region in
 # RemediationWorkflowService); this file is displayed beside the generated diagram for
-# comparison and is not executed. Microsoft Agent Framework also supports authoring
+# comparison and is not executed. A deterministic test compares this topology against the
+# executing graph, so the two cannot drift. Microsoft Agent Framework also supports authoring
 # workflows declaratively and hosting them in Foundry - the Hosting stage picks that up.
 name: restore-remediation
 description: >-
   Validate against authoritative state, decide by policy, gate on operator approval when a
-  manual override would be cleared, execute the restore, and verify the result.
+  manual override would be cleared, execute the restore against the validated state revision,
+  verify the result, raise a maintenance work item when the correction did not hold, and
+  publish the audited completion.
 start: validate
 executors:
   - id: validate
-    description: Read the authoritative Energy Hub twin for the requested asset.
+    description: Read the authoritative Energy Hub twin, including its state revision.
   - id: policy
     description: >-
-      Action is required when the reported state disagrees with the schedule; approval is
-      required when clearing a manual override - a human put it there, a human takes it away.
+      Action is required when the reported state disagrees with the effective target (schedule
+      plus operational context); approval is required when clearing a manual override - a human
+      put it there, a human takes it away.
   - id: approval
     description: Park the question with the operator; the workflow waits for the decision.
   - id: execute
-    description: Restore scheduled mode through the Energy Hub, or explain why not.
+    description: >-
+      Restore scheduled mode through the Energy Hub, carrying the validated state revision so a
+      picture that moved is refused rather than acted on; re-validate once and never self-approve.
   - id: verify
-    description: Re-read the twin and yield the verified outcome.
+    description: Re-read the twin and report whether the asset reached its effective target.
+  - id: workitem
+    description: Raise a maintenance work item when an attempted correction did not resolve.
+  - id: complete
+    description: Publish the audited outcome, separating "a command ran" from "the city is correct".
 edges:
   - from: validate
     to: policy
@@ -35,5 +45,13 @@ edges:
     to: execute
   - from: execute
     to: verify
+  - from: verify
+    to: workitem
+    condition: verification.RequiresWorkItem
+  - from: verify
+    to: complete
+    condition: "!verification.RequiresWorkItem"
+  - from: workitem
+    to: complete
 output:
-  from: verify
+  from: complete

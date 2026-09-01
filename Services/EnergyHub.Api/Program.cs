@@ -113,11 +113,25 @@ static IResult GetActivity(HttpContext context, string assetId, int? limit, Ener
     }
 }
 
-static async Task<IResult> RestoreScheduledModeAsync(HttpContext context, string assetId, EnergyHubService hub, CancellationToken cancellationToken)
+static async Task<IResult> RestoreScheduledModeAsync(HttpContext context, string assetId, long? expectedStateRevision, EnergyHubService hub, CancellationToken cancellationToken)
 {
     try
     {
-        var result = await hub.RestoreScheduledModeAsync(ValidateAssetId(assetId), context.GetCorrelationId(), cancellationToken);
+        var result = await hub.RestoreScheduledModeAsync(
+            ValidateAssetId(assetId),
+            context.GetCorrelationId(),
+            cancellationToken,
+            expectedStateRevision);
+
+        // A refused precondition is its own answer, not a downstream failure: the caller decided
+        // against a state that has since moved, and must re-validate before commanding again.
+        if (result.Summary.StartsWith(EnergyHubService.PreconditionFailedSummaryPrefix, StringComparison.Ordinal))
+        {
+            return TypedResults.Conflict(CreateCommandProblem(
+                StatusCodes.Status409Conflict,
+                "Restore scheduled mode precondition failed",
+                result));
+        }
 
         return result.Status switch
         {

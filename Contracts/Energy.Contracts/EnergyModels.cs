@@ -32,6 +32,12 @@ public sealed record EnergyScenarioSyncRequest(
 /// <param name="OpenIncidentId">The current open incident identifier, if any.</param>
 /// <param name="LastReportedAt">The time of the last authoritative SmartPole report.</param>
 /// <param name="OperationContext">The contextual requirement that can override the normal schedule.</param>
+/// <param name="StateRevision">
+/// The authoritative state version, bumped by every mutation the Energy Hub accepts (reset,
+/// scenario application, and each accepted command). A caller that validated state and then took
+/// time to decide - a workflow waiting for an operator, for example - passes the revision it
+/// validated back with its command, and the Energy Hub refuses to act on a stale picture.
+/// </param>
 public sealed record EnergyOperationalTwin(
     string AssetId,
     string Area,
@@ -46,7 +52,21 @@ public sealed record EnergyOperationalTwin(
     bool HasRecentMaintenance,
     string? OpenIncidentId,
     DateTimeOffset LastReportedAt,
-    OperationalContext OperationContext);
+    OperationalContext OperationContext,
+    long StateRevision = 0)
+{
+    /// <summary>
+    /// Gets the effective lighting target: what the lamp should be doing right now once
+    /// cross-domain operational context is taken into account, not merely what the daylight
+    /// schedule says.
+    /// </summary>
+    public bool EffectiveTargetIsOn => LightingTarget.Resolve(ExpectedScheduledState, OperationContext);
+
+    /// <summary>
+    /// Gets a value indicating whether the reported state disagrees with the effective target.
+    /// </summary>
+    public bool IsAnomalous => ReportedIsOn != EffectiveTargetIsOn;
+}
 
 /// <summary>
 /// Represents the outcome of the narrow deterministic operation that returns the asset to scheduled mode.

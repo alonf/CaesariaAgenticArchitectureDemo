@@ -59,6 +59,7 @@ builder.Services.AddSingleton<ICaseMemoryStore, InMemoryCaseMemoryStore>();
 builder.Services.AddSingleton<ToolSourceSwitch>();
 builder.Services.AddSingleton<PendingApprovalStore>();
 builder.Services.AddSingleton<StageTransitionEffects>();
+builder.Services.AddSingleton<IWorkItemGateway, SimulatedWorkItemGateway>();
 builder.Services.AddSingleton<RemediationWorkflowService>();
 // The HTTP client the MCP transport rides on; service discovery and the standard resilience
 // pipeline apply like any other outbound client.
@@ -88,6 +89,7 @@ builder.Services.AddSingleton<IOperationsAgent>(serviceProvider =>
         serviceProvider.GetRequiredService<DemoStageGate>(),
         serviceProvider.GetRequiredService<ToolSourceSwitch>(),
         serviceProvider.GetRequiredService<PendingApprovalStore>(),
+        serviceProvider.GetRequiredService<RemediationWorkflowService>(),
         serviceProvider.GetRequiredService<IHttpClientFactory>(),
         McpEndpoint.Create(options.EnergyHubBaseUri),
         skillsDirectory,
@@ -237,6 +239,10 @@ remediation.MapPost("/", (HttpContext context, OperationsAgentRemediationRequest
 
     return Results.Ok(workflowService.StartRun(request.AssetId.Trim(), context.GetCorrelationId()));
 });
+remediation.MapGet("/work-items", (HttpContext context, IWorkItemGateway workItems, DemoStageGate stageGate) =>
+    CreateWorkflowStageProblem(context, stageGate) is { } stageProblem
+        ? stageProblem
+        : Results.Ok(workItems.GetAll()));
 remediation.MapGet("/definition", (HttpContext context, RemediationWorkflowService workflowService, DemoStageGate stageGate) =>
     CreateWorkflowStageProblem(context, stageGate) is { } stageProblem
         ? stageProblem

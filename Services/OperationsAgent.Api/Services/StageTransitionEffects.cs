@@ -10,6 +10,7 @@ namespace OperationsAgent.Api.Services;
 public sealed partial class StageTransitionEffects(
     PendingApprovalStore pendingApprovals,
     ToolSourceSwitch toolSourceSwitch,
+    RemediationWorkflowService remediationWorkflow,
     ILogger<StageTransitionEffects> logger)
 {
     /// <summary>
@@ -25,6 +26,13 @@ public sealed partial class StageTransitionEffects(
         }
 
         pendingApprovals.CancelAll();
+
+        // A remediation run composed at the Workflow stage must not go on executing below it -
+        // including a run on the automatic branch that never parked an approval.
+        if (current < DemoStage.Workflow)
+        {
+            remediationWorkflow.CancelActiveRuns();
+        }
 
         if (current < DemoStage.McpTools && toolSourceSwitch.Current != OperationsAgentToolSource.Local)
         {

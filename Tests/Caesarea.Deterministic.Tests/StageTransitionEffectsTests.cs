@@ -51,7 +51,35 @@ public sealed class StageTransitionEffectsTests
     {
         var approvals = new PendingApprovalStore(new TestTimeProvider(), NullLogger<PendingApprovalStore>.Instance);
         var toolSource = new ToolSourceSwitch();
-        var effects = new StageTransitionEffects(approvals, toolSource, NullLogger<StageTransitionEffects>.Instance);
+        var effects = new StageTransitionEffects(
+            approvals, toolSource, CreateWorkflowService(approvals), NullLogger<StageTransitionEffects>.Instance);
         return (effects, approvals, toolSource);
     }
+
+    internal static RemediationWorkflowService CreateWorkflowService(PendingApprovalStore approvals) =>
+        new(
+            new FakeEnergyReadGateway { State = CreateTwin(), Activity = [] },
+            new FakeEnergyCommandGateway(),
+            new FakeWorkItemGateway(),
+            approvals,
+            new DemoStageGate(DemoStage.Workflow),
+            TimeProvider.System,
+            NullLoggerFactory.Instance,
+            NullLogger<RemediationWorkflowService>.Instance);
+
+    private static EnergyOperationalTwin CreateTwin() => new(
+        DemoAssets.StreetlightAssetId,
+        DemoAssets.NorthPromenadeArea,
+        ReportedIsOn: false,
+        DesiredIsOn: false,
+        IsDaylight: true,
+        ExpectedScheduledState: false,
+        ManualOverride: false,
+        ControllerHealthInfo.Healthy,
+        LastCommand: null,
+        LastMaintenanceTime: null,
+        HasRecentMaintenance: false,
+        OpenIncidentId: null,
+        LastReportedAt: DateTimeOffset.UtcNow,
+        OperationalContext.None);
 }

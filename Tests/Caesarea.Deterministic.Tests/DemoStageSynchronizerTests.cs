@@ -78,11 +78,18 @@ public sealed class DemoStageSynchronizerTests
             reader,
             gate,
             new FoundryCredentialWarmup(new FakeTokenCredential(), NullLogger<FoundryCredentialWarmup>.Instance),
-            new StageTransitionEffects(
-                new PendingApprovalStore(TimeProvider.System, NullLogger<PendingApprovalStore>.Instance),
-                new ToolSourceSwitch(),
-                NullLogger<StageTransitionEffects>.Instance),
+            CreateTransitionEffects(),
             NullLogger<DemoStageSynchronizer>.Instance);
+
+    private static StageTransitionEffects CreateTransitionEffects()
+    {
+        var approvals = new PendingApprovalStore(TimeProvider.System, NullLogger<PendingApprovalStore>.Instance);
+        return new StageTransitionEffects(
+            approvals,
+            new ToolSourceSwitch(),
+            StageTransitionEffectsTests.CreateWorkflowService(approvals),
+            NullLogger<StageTransitionEffects>.Instance);
+    }
 
     private static DemoStageStatus CreateStatus(DemoStage stage) =>
         new(stage, stage.ToString(), "Test stage", ["Test"], DateTimeOffset.UtcNow, "sync-corr");
