@@ -61,7 +61,8 @@ public sealed partial class StageCoordinator : IDisposable
             descriptor.Description,
             descriptor.Capabilities,
             _timeProvider.GetUtcNow(),
-            correlationId);
+            correlationId,
+            descriptor.Walkthrough);
 
         await _applicationLock.WaitAsync(cancellationToken);
 

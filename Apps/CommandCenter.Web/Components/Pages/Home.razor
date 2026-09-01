@@ -42,7 +42,55 @@
         <button class="workspace-tab">Assets</button>
         <button class="workspace-tab">Activity</button>
         <span class="stage-chip">@StageName stage</span>
+        @* The script lives in a panel the presenter opens, not inline in the operator's view. *@
+        @if (_snapshot?.CurrentStage.Walkthrough is not null)
+        {
+            <button class="walkthrough-toggle @(_showWalkthrough ? "active" : string.Empty)"
+                    @onclick="() => _showWalkthrough = !_showWalkthrough"
+                    aria-expanded="@_showWalkthrough">
+                @(_showWalkthrough ? "Hide walkthrough" : "Walkthrough")
+            </button>
+        }
     </nav>
+
+    @if (_showWalkthrough && _snapshot?.CurrentStage.Walkthrough is { } walkthrough)
+    {
+        <aside class="walkthrough-panel" aria-label="Stage walkthrough">
+            <div class="walkthrough-heading">
+                <strong>@StageName</strong>
+                <button class="walkthrough-close" @onclick="() => _showWalkthrough = false" aria-label="Close walkthrough">&times;</button>
+            </div>
+
+            @if (walkthrough.Prerequisites.Count > 0)
+            {
+                <small>Needs</small>
+                <ul class="walkthrough-prereqs">
+                    @foreach (var prerequisite in walkthrough.Prerequisites)
+                    {
+                        <li>@prerequisite</li>
+                    }
+                </ul>
+            }
+
+            <small>Steps</small>
+            <ol class="walkthrough-steps">
+                @foreach (var step in walkthrough.Steps)
+                {
+                    <li>
+                        <span class="walkthrough-surface @SurfaceClass(step.Surface)">@SurfaceLabel(step.Surface)</span>
+                        <span class="walkthrough-action">@step.Action</span>
+                        @if (!string.IsNullOrWhiteSpace(step.Expect))
+                        {
+                            <span class="walkthrough-expect">@step.Expect</span>
+                        }
+                    </li>
+                }
+            </ol>
+
+            <small>The point</small>
+            <p class="walkthrough-point">@walkthrough.Point</p>
+        </aside>
+    }
 
     @if (!string.IsNullOrWhiteSpace(_message))
     {
@@ -540,8 +588,10 @@
                             <p class="agent-empty">Ask the general agent whether L-417 is currently on.</p>
                         }
 
+                        <div class="rail-actions @(_showEarlierActions ? string.Empty : "hide-earlier")">
                         @if (IsSessionStage && _agentSessionId is not null)
                         {
+                            <div class="@RailActionClass(DemoStage.Session)">
                             <button class="action-button investigate-button @(_agentBusy ? "busy" : string.Empty)" @onclick="AskFollowUpAsync" disabled="@_agentBusy">
                                 <span>@(_agentBusy ? "Asking..." : "Ask \"Why?\" (same session)")</span>
                                 <svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9h-2a7 7 0 1 1-7-7v3l5-4-5-4Z" /></svg>
@@ -549,38 +599,47 @@
                             <p class="agent-footnote">
                                 Session @ShortCorrelation(_agentSessionId) - conversational context, never authoritative state.
                             </p>
+                            </div>
                         }
 
                         @if (IsSkillsStage)
                         {
+                            <div class="@RailActionClass(DemoStage.Skills)">
                             <button class="action-button investigate-button @(_agentBusy ? "busy" : string.Empty)" @onclick="InvestigateAsync" disabled="@_agentBusy">
                                 <span>@(_agentBusy ? "Investigating..." : $"Investigate {_snapshot.AssetId} (new session)")</span>
                                 <svg viewBox="0 0 24 24"><path d="M9 3h6l1 4h4l-2 6h-4l-1 8h-2l-1-8H6L4 7h4l1-4Z" /></svg>
                             </button>
+                            </div>
                         }
 
                         @if (IsInteractiveStage)
                         {
+                            <div class="@RailActionClass(DemoStage.InteractiveInput)">
                             <button class="action-button investigate-button @(_agentBusy ? "busy" : string.Empty)" @onclick="RestoreViaAgentAsync" disabled="@_agentBusy">
                                 <span>@(_agentBusy ? "Working..." : $"Restore {_snapshot.AssetId} to scheduled mode (agent)")</span>
                                 <svg viewBox="0 0 24 24"><path d="M12 5V2L8 6l4 4V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7Z" /></svg>
                             </button>
+                            </div>
                         }
 
                         @if (IsWorkflowStage)
                         {
+                            <div class="@RailActionClass(DemoStage.Workflow)">
                             <button class="action-button investigate-button @(_workflowBusy ? "busy" : string.Empty)" @onclick="RunWorkflowAsync" disabled="@_workflowBusy">
                                 <span>@(_workflowBusy ? "Workflow running..." : $"Run remediation workflow for {_snapshot.AssetId}")</span>
                                 <svg viewBox="0 0 24 24"><path d="M4 4h6v6H4V4Zm10 0h6v6h-6V4ZM4 14h6v6H4v-6Zm13 0v3h-4v3h7v-6h-3Z" /></svg>
                             </button>
+                            </div>
                         }
 
                         @if (IsToolApprovalStage)
                         {
+                            <div class="@RailActionClass(DemoStage.ToolApproval)">
                             <button class="action-button investigate-button @(_agentBusy ? "busy" : string.Empty)" @onclick="RequestMaintenanceAsync" disabled="@_agentBusy">
                                 <span>@(_agentBusy ? "Working..." : $"Ask the agent to handle {_snapshot.AssetId}'s faulty controller")</span>
                                 <svg viewBox="0 0 24 24"><path d="M14 7a4 4 0 0 0-5.5 4.9l-4.6 4.6 2.6 2.6 4.6-4.6A4 4 0 0 0 17 9.5L14.5 12 12 9.5 14.5 7Z" /></svg>
                             </button>
+                            </div>
                         }
 
                         @* The stage's question is "why is it on?", not "is it on?" - only the
@@ -588,10 +647,12 @@
                            button instead of depending on the model volunteering a consult. *@
                         @if (IsMultiAgentStage)
                         {
+                            <div class="@RailActionClass(DemoStage.MultiAgent)">
                             <button class="action-button investigate-button @(_agentBusy ? "busy" : string.Empty)" @onclick="AssessSecuritySituationAsync" disabled="@_agentBusy">
                                 <span>@(_agentBusy ? "Asking..." : $"Why is {_snapshot.AssetId} on during daylight? (new session)")</span>
                                 <svg viewBox="0 0 24 24"><path d="M12 3 4 6v5c0 5 3.4 8.5 8 10 4.6-1.5 8-5 8-10V6l-8-3Z" /></svg>
                             </button>
+                            </div>
                         }
 
                         @if (_pendingApprovals.Count > 0)
@@ -683,23 +744,37 @@
 
                         @if (IsMemoryStage)
                         {
-                            @if (_agentResponse is not null)
-                            {
-                                <button class="action-button investigate-button @CloseCaseStateClass" @onclick="CloseCaseAsync" disabled="@(_agentBusy || _caseBusy || _caseClosed)">
-                                    <span>@CloseCaseLabel</span>
-                                    <svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4Z" /></svg>
+                            <div class="@RailActionClass(DemoStage.Memory)">
+                                @if (_agentResponse is not null)
+                                {
+                                    <button class="action-button investigate-button @CloseCaseStateClass" @onclick="CloseCaseAsync" disabled="@(_agentBusy || _caseBusy || _caseClosed)">
+                                        <span>@CloseCaseLabel</span>
+                                        <svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4Z" /></svg>
+                                    </button>
+                                }
+
+                                <button class="action-button investigate-button @(_agentBusy ? "busy" : string.Empty)" @onclick="AskSecondAssetAsync" disabled="@_agentBusy">
+                                    <span>@(_agentBusy ? "Asking..." : $"Ask about {DemoAssets.SecondStreetlightAssetId} (new session)")</span>
+                                    <svg viewBox="0 0 24 24"><path d="M11 4a7 7 0 1 0 4.9 12.1l4.5 4.5 1.4-1.4-4.5-4.5A7 7 0 0 0 11 4Zm0 2a5 5 0 1 1 0 10 5 5 0 0 1 0-10Z" /></svg>
                                 </button>
-                            }
 
-                            <button class="action-button investigate-button @(_agentBusy ? "busy" : string.Empty)" @onclick="AskSecondAssetAsync" disabled="@_agentBusy">
-                                <span>@(_agentBusy ? "Asking..." : $"Ask about {DemoAssets.SecondStreetlightAssetId} (new session)")</span>
-                                <svg viewBox="0 0 24 24"><path d="M11 4a7 7 0 1 0 4.9 12.1l4.5 4.5 1.4-1.4-4.5-4.5A7 7 0 0 0 11 4Zm0 2a5 5 0 1 1 0 10 5 5 0 0 1 0-10Z" /></svg>
+                                @if (!string.IsNullOrWhiteSpace(_caseMessage))
+                                {
+                                    <p class="agent-footnote">@_caseMessage</p>
+                                }
+                            </div>
+                        }
+                        </div>
+
+                        @* Cumulative by design: nothing was removed, and the presenter can show
+                           that on demand without hunting for this stage's button. *@
+                        @if (EarlierActionCount > 0)
+                        {
+                            <button class="rail-actions-toggle" @onclick="() => _showEarlierActions = !_showEarlierActions">
+                                @(_showEarlierActions
+                                    ? "Hide earlier stages"
+                                    : $"Earlier stages - still available ({EarlierActionCount})")
                             </button>
-
-                            @if (!string.IsNullOrWhiteSpace(_caseMessage))
-                            {
-                                <p class="agent-footnote">@_caseMessage</p>
-                            }
                         }
                     </section>
                 </aside>
@@ -802,6 +877,44 @@
     private bool IsAnomaly => _snapshot?.OperationalState.IsAnomalous == true;
 
     private bool IsMultiAgentStage => _snapshot?.CurrentStage.Id >= DemoStage.MultiAgent;
+
+    private bool _showWalkthrough;
+
+    private static string SurfaceLabel(DemoSurface surface) => surface switch
+    {
+        DemoSurface.Switchboard => "Switchboard",
+        DemoSurface.Code => "Code",
+        _ => "Command Center"
+    };
+
+    private static string SurfaceClass(DemoSurface surface) => surface switch
+    {
+        // Prefixed: app.css already owns .command-center (the page root, min-height 100vh) and
+        // an unprefixed modifier silently inherits it.
+        DemoSurface.Switchboard => "wt-switchboard",
+        DemoSurface.Code => "wt-code",
+        _ => "wt-command-center"
+    };
+
+    // The rail is cumulative by design - every earlier capability is still there, and being able to
+    // show that is part of the argument. What it must not do is leave the presenter hunting for the
+    // one button this stage is about, so the current stage's actions lead and the rest fold away.
+    private bool _showEarlierActions;
+
+    private string RailActionClass(DemoStage stage) =>
+        _snapshot?.CurrentStage.Id == stage ? "rail-action current" : "rail-action earlier";
+
+    private int EarlierActionCount => _snapshot is not { } snapshot ? 0 : new[]
+    {
+        (DemoStage.InvestigationAgent, IsAgentStage),
+        (DemoStage.Session, IsSessionStage && _agentSessionId is not null),
+        (DemoStage.Memory, IsMemoryStage),
+        (DemoStage.Skills, IsSkillsStage),
+        (DemoStage.InteractiveInput, IsInteractiveStage),
+        (DemoStage.Workflow, IsWorkflowStage),
+        (DemoStage.ToolApproval, IsToolApprovalStage),
+        (DemoStage.MultiAgent, IsMultiAgentStage)
+    }.Count(entry => entry.Item2 && entry.Item1 != snapshot.CurrentStage.Id);
 
     private bool SecurityWasConsulted => _agentResponse?.Delegations is { Count: > 0 };
 

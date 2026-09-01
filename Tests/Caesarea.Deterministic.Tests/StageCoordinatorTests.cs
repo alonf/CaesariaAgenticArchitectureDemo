@@ -6,6 +6,54 @@ namespace Caesarea.Deterministic.Tests;
 public sealed class StageCoordinatorTests
 {
     [Fact]
+    public void EveryStageCarriesAWalkthroughThePresenterCanFollow()
+    {
+        // The Command Center's buttons cannot convey the script on their own: some stages keep the
+        // same button and change switchboard state instead, and InteractiveInput needs Tools: MCP
+        // as a silent precondition. A stage without a walkthrough leaves the presenter guessing.
+        var catalog = new StageCatalog();
+
+        foreach (var descriptor in catalog.GetAll())
+        {
+            var walkthrough = descriptor.Walkthrough;
+
+            Assert.True(walkthrough is not null, $"{descriptor.Name} has no walkthrough.");
+            Assert.NotEmpty(walkthrough.Steps);
+            Assert.False(string.IsNullOrWhiteSpace(walkthrough.Point), $"{descriptor.Name} states no point.");
+            Assert.All(walkthrough.Steps, step => Assert.False(string.IsNullOrWhiteSpace(step.Action)));
+        }
+    }
+
+    [Fact]
+    public void StagesThatDependOnSwitchboardStateSaySo()
+    {
+        // These are the beats a button label cannot describe, and the ones that silently do nothing
+        // when the switchboard is in the wrong state.
+        var catalog = new StageCatalog();
+
+        Assert.Contains(
+            catalog.GetDescriptor(DemoStage.InteractiveInput).Walkthrough!.Prerequisites,
+            prerequisite => prerequisite.Contains("Tools: MCP", StringComparison.Ordinal));
+
+        Assert.Contains(
+            catalog.GetDescriptor(DemoStage.MultiAgent).Walkthrough!.Prerequisites,
+            prerequisite => prerequisite.Contains("consult", StringComparison.OrdinalIgnoreCase));
+
+        Assert.Contains(
+            catalog.GetDescriptor(DemoStage.McpTools).Walkthrough!.Steps,
+            step => step.Surface == DemoSurface.Switchboard);
+    }
+
+    [Fact]
+    public void TheAppliedStageCarriesItsWalkthroughToTheCommandCenter()
+    {
+        var descriptor = new StageCatalog().GetDescriptor(DemoStage.MultiAgent);
+
+        // The panel reads this from the applied stage, so it must survive the coordinator.
+        Assert.NotNull(descriptor.Walkthrough);
+    }
+
+    [Fact]
     public async Task CoordinatorReadsAuthoritativeDeterministicStage()
     {
         var coordinator = CreateCoordinator(new TestTimeProvider(), out _, out _);

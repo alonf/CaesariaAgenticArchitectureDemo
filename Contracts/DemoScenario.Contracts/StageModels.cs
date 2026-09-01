@@ -83,11 +83,53 @@ public enum DemoStage
 /// <param name="Name">The projector-friendly stage name.</param>
 /// <param name="Description">The stage description shown in the presenter UI.</param>
 /// <param name="Capabilities">The capabilities enabled once the stage is active.</param>
+/// <param name="Walkthrough">What the presenter actually does at this stage.</param>
 public sealed record DemoStageDescriptor(
     DemoStage Id,
     string Name,
     string Description,
-    IReadOnlyList<string> Capabilities);
+    IReadOnlyList<string> Capabilities,
+    DemoStageWalkthrough? Walkthrough = null);
+
+/// <summary>
+/// The presenter's script for one stage. The Command Center's action buttons cannot convey this on
+/// their own: several stages keep the same button and change switchboard state instead - Tools
+/// LOCAL/MCP, the security consult, withheld evidence - and one stage needs Tools: MCP as a silent
+/// precondition, so pressing the button with the wrong state simply does nothing interesting.
+/// </summary>
+/// <param name="Prerequisites">Switchboard state the beat depends on, in the order to set it.</param>
+/// <param name="Steps">What to do, in order.</param>
+/// <param name="Point">The one line this stage exists to land.</param>
+public sealed record DemoStageWalkthrough(
+    IReadOnlyList<string> Prerequisites,
+    IReadOnlyList<DemoStageWalkthroughStep> Steps,
+    string Point);
+
+/// <summary>
+/// One step of a stage walkthrough.
+/// </summary>
+/// <param name="Surface">Where the step happens.</param>
+/// <param name="Action">What the presenter does.</param>
+/// <param name="Expect">What should appear as a result, when the step has a visible outcome.</param>
+public sealed record DemoStageWalkthroughStep(
+    DemoSurface Surface,
+    string Action,
+    string? Expect = null);
+
+/// <summary>
+/// The screen a walkthrough step happens on.
+/// </summary>
+public enum DemoSurface
+{
+    /// <summary>The Command Center operations view.</summary>
+    CommandCenter,
+
+    /// <summary>The presenter switchboard (DemoControl).</summary>
+    Switchboard,
+
+    /// <summary>The editor or the repository - a code or file step.</summary>
+    Code
+}
 
 /// <summary>
 /// Represents the demo stage currently applied across the Caesarea services.
@@ -98,13 +140,15 @@ public sealed record DemoStageDescriptor(
 /// <param name="Capabilities">The capabilities enabled while this stage is current.</param>
 /// <param name="AppliedAt">The time at which the stage was applied.</param>
 /// <param name="CorrelationId">The correlation identifier spanning the stage change.</param>
+/// <param name="Walkthrough">What the presenter does at this stage, for the walkthrough panel.</param>
 public sealed record DemoStageStatus(
     DemoStage Id,
     string Name,
     string Description,
     IReadOnlyList<string> Capabilities,
     DateTimeOffset AppliedAt,
-    string CorrelationId);
+    string CorrelationId,
+    DemoStageWalkthrough? Walkthrough = null);
 
 /// <summary>
 /// Represents the demo stage catalog returned to the presenter switchboard.
