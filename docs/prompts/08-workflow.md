@@ -45,9 +45,11 @@ data — it renders its own diagram.
    that runs* — point at the two policy branches.
 2. Arm `WORKFLOW` in DemoControl, click **Run remediation workflow**: the debugger lands at the
    builder; step the slide-shaped graph construction, then continue.
-3. The timeline fills node by node; at `approval` it pauses — the same operator prompt as the
-   MRTR stage, now raised by an orchestration node instead of a paused tool. **Deny** first:
-   execute reports the decline, verify reports the override still standing.
+3. The timeline fills node by node — and the diagram lights up live with it: completed nodes
+   turn green, the active node pulses amber. At `approval` the run pauses — the same operator
+   prompt as the MRTR stage, now raised by an orchestration node instead of a paused tool, with
+   the pulsing gate visible in the graph. **Deny** first: execute reports the decline, verify
+   reports the override still standing.
 4. Run again, **approve**: execute restores through the Energy Hub, verify re-reads and
    confirms, the map updates.
 5. Contrast: MRTR was a *tool* pausing mid-call; the workflow is *structure* — the pause is a

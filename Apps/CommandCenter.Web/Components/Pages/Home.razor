@@ -841,10 +841,42 @@
         {
             _workflowDiagramRendered = true;
             await JS.InvokeVoidAsync("caesareaWorkflow.render", "workflow-diagram", definition.Mermaid);
+            // A run may already be on screen after a reconnect or a late-arriving definition,
+            // so project its state onto the freshly rendered diagram.
+            await ApplyDiagramHighlightAsync();
         }
     }
 
     private void SelectWorkflowTab(string tab) => _workflowTab = tab;
+
+    // Projects the live run onto the generated diagram - completed nodes turn green, the active
+    // node pulses amber, and a failed node turns red. Without a run, every mark is removed.
+    private async Task ApplyDiagramHighlightAsync()
+    {
+        if (!_workflowDiagramRendered)
+        {
+            return;
+        }
+
+        var states = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        if (_workflowRun is { } run)
+        {
+            foreach (var step in run.Steps)
+            {
+                states[step.ExecutorId] = step.Status.ToLowerInvariant();
+            }
+        }
+
+        try
+        {
+            await JS.InvokeVoidAsync("caesareaWorkflow.highlight", "workflow-diagram", states);
+        }
+        catch (JSException)
+        {
+            // Highlighting is a visual garnish; a failed interop call must not break the run view.
+        }
+    }
 
     private async Task RunWorkflowAsync()
     {
@@ -865,6 +897,7 @@
                 _snapshot?.AssetId ?? WebOptions.Value.AssetId, CancellationToken.None);
             _workflowRun = report;
             StateHasChanged();
+            await ApplyDiagramHighlightAsync();
 
             // The server bounds a run at five minutes; this polling cap is just above it.
             using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
@@ -882,6 +915,7 @@
                 }
 
                 StateHasChanged();
+                await ApplyDiagramHighlightAsync();
             }
 
             await LoadSnapshotAsync(CancellationToken.None, showErrorIfMissing: false);

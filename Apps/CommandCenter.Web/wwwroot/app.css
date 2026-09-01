@@ -1495,6 +1495,42 @@ svg {
     height: auto;
 }
 
+/* Live run projection onto the generated diagram: Mermaid inlines fill/stroke on the node
+   shapes, so the state classes must win with !important. */
+.wfrun-diagram g.node.wf-running rect,
+.wfrun-diagram g.node.wf-running polygon,
+.wfrun-diagram g.node.wf-running path {
+    stroke: var(--cp-warning) !important;
+    stroke-width: 3px !important;
+    fill: rgba(245, 158, 11, 0.18) !important;
+}
+
+.wfrun-diagram g.node.wf-running {
+    animation: wfrun-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes wfrun-pulse {
+    50% {
+        opacity: 0.55;
+    }
+}
+
+.wfrun-diagram g.node.wf-completed rect,
+.wfrun-diagram g.node.wf-completed polygon,
+.wfrun-diagram g.node.wf-completed path {
+    stroke: var(--cp-success) !important;
+    stroke-width: 2.5px !important;
+    fill: rgba(22, 163, 74, 0.14) !important;
+}
+
+.wfrun-diagram g.node.wf-failed rect,
+.wfrun-diagram g.node.wf-failed polygon,
+.wfrun-diagram g.node.wf-failed path {
+    stroke: var(--cp-danger) !important;
+    stroke-width: 3px !important;
+    fill: rgba(220, 38, 38, 0.15) !important;
+}
+
 .wfrun-yaml {
     margin: 10px 0 0;
     padding: 10px;
