@@ -168,6 +168,29 @@ public sealed class CustomerReportModule
     }
 
     /// <summary>
+    /// Atomically removes the current customer report when its identifier matches: only one of
+    /// two concurrent resolvers wins, so the resolution activity is recorded exactly once.
+    /// </summary>
+    /// <param name="reportId">The report identifier the caller intends to remove.</param>
+    /// <param name="removed">The removed report, when the identifiers matched.</param>
+    /// <returns><see langword="true"/> when a matching report existed and was removed.</returns>
+    public bool TryRemove(string reportId, out CustomerReportRecord removed)
+    {
+        lock (_gate)
+        {
+            if (_current is { } current && string.Equals(current.Id, reportId, StringComparison.OrdinalIgnoreCase))
+            {
+                removed = current;
+                _current = null;
+                return true;
+            }
+        }
+
+        removed = null!;
+        return false;
+    }
+
+    /// <summary>
     /// Replaces the current customer report.
     /// </summary>
     /// <param name="report">The report to store, or <see langword="null"/> to clear it.</param>

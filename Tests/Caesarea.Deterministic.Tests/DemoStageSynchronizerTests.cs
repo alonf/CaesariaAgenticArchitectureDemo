@@ -78,6 +78,10 @@ public sealed class DemoStageSynchronizerTests
             reader,
             gate,
             new FoundryCredentialWarmup(new FakeTokenCredential(), NullLogger<FoundryCredentialWarmup>.Instance),
+            new StageTransitionEffects(
+                new PendingApprovalStore(TimeProvider.System, NullLogger<PendingApprovalStore>.Instance),
+                new ToolSourceSwitch(),
+                NullLogger<StageTransitionEffects>.Instance),
             NullLogger<DemoStageSynchronizer>.Instance);
 
     private static DemoStageStatus CreateStatus(DemoStage stage) =>

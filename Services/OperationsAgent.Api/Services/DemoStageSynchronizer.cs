@@ -48,6 +48,7 @@ public sealed partial class DemoStageSynchronizer(
     ICommandCenterStageReader stageReader,
     DemoStageGate stageGate,
     FoundryCredentialWarmup credentialWarmup,
+    StageTransitionEffects transitionEffects,
     ILogger<DemoStageSynchronizer> logger) : BackgroundService
 {
     private static readonly TimeSpan InitialRetryInterval = TimeSpan.FromSeconds(2);
@@ -104,6 +105,7 @@ public sealed partial class DemoStageSynchronizer(
             var stage = await stageReader.GetCurrentStageAsync(correlationId, cancellationToken);
             var previous = stageGate.GetCurrent();
             var applied = stageGate.SetCurrent(stage);
+            transitionEffects.Apply(previous.Id, applied.Id);
 
             if (applied.Id != previous.Id)
             {

@@ -52,6 +52,57 @@ public sealed class PendingApprovalStoreTests
         Assert.Empty(store.GetAll());
     }
 
+    [Fact]
+    public async Task AlreadyCancelledRunNeverLeavesAnOrphanedEntry()
+    {
+        // The race the store must win: a token that is cancelled before (or while) Create
+        // registers its callback must still remove the entry and cancel the decision.
+        var store = CreateStore();
+        using var runCancellation = new CancellationTokenSource();
+        await runCancellation.CancelAsync();
+
+        var (_, decision) = store.Create("Restore L-417?", "approval-corr", runCancellation.Token);
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => decision);
+        Assert.Empty(store.GetAll());
+    }
+
+    [Fact]
+    public async Task CancelAllCancelsEveryPendingDecision()
+    {
+        var store = CreateStore();
+        var (_, first) = store.Create("Restore L-417?", "corr-1", CancellationToken.None);
+        var (_, second) = store.Create("Restore L-528?", "corr-2", CancellationToken.None);
+
+        var cancelled = store.CancelAll();
+
+        Assert.Equal(2, cancelled);
+        Assert.Empty(store.GetAll());
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => first);
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => second);
+    }
+
+    [Fact]
+    public void CancelAllOnAnEmptyStoreReportsZero()
+    {
+        var store = CreateStore();
+
+        Assert.Equal(0, store.CancelAll());
+    }
+
+    [Fact]
+    public async Task DecisionDeliveredBeforeCancellationWins()
+    {
+        var store = CreateStore();
+        using var runCancellation = new CancellationTokenSource();
+        var (id, decision) = store.Create("Restore L-417?", "approval-corr", runCancellation.Token);
+
+        Assert.True(store.TryRespond(id, approved: true));
+        await runCancellation.CancelAsync();
+
+        Assert.True(await decision);
+    }
+
     private static PendingApprovalStore CreateStore() =>
         new(new TestTimeProvider(), NullLogger<PendingApprovalStore>.Instance);
 }

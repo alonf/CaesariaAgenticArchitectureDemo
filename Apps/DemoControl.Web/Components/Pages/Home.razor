@@ -390,6 +390,14 @@
                     await LoadStageCatalogAsync(cancellationToken, showErrors: _stageCatalog is null);
                     await LoadBreakpointsAsync(cancellationToken);
                     await LoadCaseMemoryAsync(cancellationToken);
+
+                    // The tool source can change server-side (a stage downgrade resets it to
+                    // Local); keep the toggle truthful without a page action.
+                    if (!_toolSourceBusy)
+                    {
+                        await LoadToolSourceAsync(cancellationToken);
+                    }
+
                     StateHasChanged();
                 });
             }

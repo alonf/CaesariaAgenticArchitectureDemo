@@ -135,14 +135,16 @@ public sealed class ArchitectureBoundaryTests
         var repositoryRoot = FindRepositoryRoot();
         var toolText = File.ReadAllText(Path.Combine(repositoryRoot, "Services", "EnergyHub.Api", "Services", "EnergyMcpTools.cs"));
 
-        // The write tool's no-side-effect-before-input guard: the approval check comes before the
-        // restore call, MRTR support is verified, and the pause is a protocol-level
-        // InputRequiredException - not UI convention.
-        var approvalCheckIndex = toolText.IndexOf("TryGetApproval(context", StringComparison.Ordinal);
+        // The write tool's no-side-effect-before-input guard: the one-time request-state check
+        // and the confirmation check both come before the restore call, MRTR support is verified,
+        // and the pause is a protocol-level InputRequiredException - not UI convention.
+        var stateCheckIndex = toolText.IndexOf("requestStateStore.TryConsume(", StringComparison.Ordinal);
+        var confirmationCheckIndex = toolText.IndexOf("IsApproved(response)", StringComparison.Ordinal);
         var restoreCallIndex = toolText.IndexOf("RestoreScheduledModeAsync(assetId", StringComparison.Ordinal);
 
-        Assert.True(approvalCheckIndex >= 0, "The restore tool no longer checks for operator approval.");
-        Assert.True(restoreCallIndex > approvalCheckIndex, "The restore call must be reachable only after the approval check.");
+        Assert.True(stateCheckIndex >= 0, "The restore tool no longer validates the one-time request state.");
+        Assert.True(confirmationCheckIndex > stateCheckIndex, "The confirmation check must come after the request-state validation.");
+        Assert.True(restoreCallIndex > confirmationCheckIndex, "The restore call must be reachable only after the confirmation check.");
         Assert.Contains("IsMrtrSupported", toolText, StringComparison.Ordinal);
         Assert.Contains("InputRequiredException", toolText, StringComparison.Ordinal);
     }

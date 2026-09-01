@@ -53,6 +53,7 @@ builder.Services.AddSingleton<IWorkKnowledgeSearch>(serviceProvider => servicePr
 builder.Services.AddSingleton<ICaseMemoryStore, InMemoryCaseMemoryStore>();
 builder.Services.AddSingleton<ToolSourceSwitch>();
 builder.Services.AddSingleton<PendingApprovalStore>();
+builder.Services.AddSingleton<StageTransitionEffects>();
 // The HTTP client the MCP transport rides on; service discovery and the standard resilience
 // pipeline apply like any other outbound client.
 builder.Services.AddHttpClient("energyhub-mcp", (serviceProvider, client) =>
@@ -183,14 +184,25 @@ var approvals = app.MapGroup("/api/operations-agent/approvals")
     .WithTags("Interactive Input");
 
 approvals.MapGet("/", (PendingApprovalStore store) => TypedResults.Ok(store.GetAll()));
-approvals.MapPost("/{id}", (HttpContext context, string id, OperationsAgentApprovalDecision decision, PendingApprovalStore store) =>
-    store.TryRespond(id, decision.Approved)
+approvals.MapPost("/{id}", (HttpContext context, string id, OperationsAgentApprovalDecision decision, PendingApprovalStore store, DemoStageGate stageGate) =>
+{
+    if (stageGate.GetCurrent().Id < DemoStage.InteractiveInput)
+    {
+        return Results.Problem(ProblemDetailsFactory.Create(
+            StatusCodes.Status409Conflict,
+            "Interactive input disabled in the current demo stage",
+            $"Approvals require the Interactive Input stage; the current stage is {stageGate.GetCurrent().Name}.",
+            context.GetCorrelationId()));
+    }
+
+    return store.TryRespond(id, decision.Approved)
         ? Results.Ok()
         : Results.NotFound(ProblemDetailsFactory.Create(
             StatusCodes.Status404NotFound,
             "Pending approval not found",
             $"No interactive-input request with id {id} is awaiting a decision.",
-            context.GetCorrelationId())));
+            context.GetCorrelationId()));
+});
 
 // Presenter toggle: where the streetlight tool comes from. Available only once the McpTools
 // stage introduces the mechanism; the flip itself is the lecture beat.
@@ -213,9 +225,11 @@ toolSource.MapPost("/", (HttpContext context, OperationsAgentToolSourceStatus st
     toolSourceSwitch.Current = status.Source;
     return Results.Ok(new OperationsAgentToolSourceStatus(toolSourceSwitch.Current));
 });
-demoStage.MapPost("/", (DemoStageStatus stage, DemoStageGate stageGate, FoundryCredentialWarmup credentialWarmup) =>
+demoStage.MapPost("/", (DemoStageStatus stage, DemoStageGate stageGate, FoundryCredentialWarmup credentialWarmup, StageTransitionEffects transitionEffects) =>
 {
+    var previous = stageGate.GetCurrent();
     var applied = stageGate.SetCurrent(stage);
+    transitionEffects.Apply(previous.Id, applied.Id);
 
     // Entering an agent-enabled stage triggers the one-time credential warmup, so the Deterministic
     // stage keeps its promise that no AI credential is used.
@@ -320,6 +334,14 @@ static async Task<IResult> AskAsync(
             StatusCodes.Status502BadGateway,
             "Operations Agent tool unavailable",
             $"The authoritative Energy Hub could not be reached: {exception.Message}",
+            context.GetCorrelationId()));
+    }
+    catch (OperationsAgentToolUnavailableException exception)
+    {
+        return TypedResults.Problem(ProblemDetailsFactory.Create(
+            StatusCodes.Status502BadGateway,
+            "Operations Agent tool unavailable",
+            exception.Message,
             context.GetCorrelationId()));
     }
     catch (OperationsAgentTimedOutException exception)

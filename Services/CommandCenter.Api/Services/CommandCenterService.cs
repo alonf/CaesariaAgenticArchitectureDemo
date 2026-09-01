@@ -148,14 +148,11 @@ public sealed partial class CommandCenterService
         ArgumentException.ThrowIfNullOrWhiteSpace(reportId);
         ArgumentException.ThrowIfNullOrWhiteSpace(correlationId);
 
-        var report = _customerReportModule.GetCurrent();
-
-        if (report is null || !string.Equals(report.Id, reportId, StringComparison.OrdinalIgnoreCase))
+        if (!_customerReportModule.TryRemove(reportId, out var report))
         {
             return false;
         }
 
-        _customerReportModule.Reset();
         _activityTimelineModule.Add(CreateActivity(
             report.AssetId,
             correlationId,

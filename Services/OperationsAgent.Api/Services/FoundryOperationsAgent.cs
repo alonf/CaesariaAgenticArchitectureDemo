@@ -3,13 +3,16 @@ using System.Text.Json;
 using Azure.AI.Projects;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
+using ModelContextProtocol;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 
 namespace OperationsAgent.Api.Services;
 
 /// <summary>
-/// Hosts the general Caesarea Operations Agent using Microsoft Foundry and one read-only Energy Hub tool.
+/// Hosts the general Caesarea Operations Agent using Microsoft Foundry. Capabilities compose by
+/// demo stage: the read-only Energy Hub tool (local or discovered over MCP), knowledge retrieval,
+/// case memory, skills, and - from the Interactive Input stage - the approval-guarded restore tool.
 /// </summary>
 public sealed partial class FoundryOperationsAgent(
     AIProjectClient projectClient,
@@ -37,6 +40,10 @@ public sealed partial class FoundryOperationsAgent(
         When asked why an operational state exists and a work-knowledge search capability is
         available, search it for maintenance or override evidence and cite the evidence identifiers
         you used. If no evidence exists, say so; never invent work orders or notes.
+        When the operator asks you to change an asset's state and a tool that performs that change
+        is available, invoke that tool immediately - it obtains the operator's confirmation itself
+        before anything changes, so do not ask for permission in text first. If no such tool is
+        available, say the action is not possible at this stage.
         Do not invent operational facts. If the available tools cannot answer the question, say so clearly.
         """;
 
@@ -88,199 +95,210 @@ public sealed partial class FoundryOperationsAgent(
         // mid-composition can never produce a mixed capability set.
         var currentStage = _stageGate.GetCurrent().Id;
 
-        #region KNOWLEDGE_RETRIEVAL
-        DemoBreakpoints.Pause(DemoSnippets.Knowledge);
-
-        TextSearchProvider? workKnowledge = null;
-
-        // Retrieval trace for the UI: what the search returned, which is not the same claim as
-        // what the agent cited. Tool invocations run sequentially, so a plain list is safe.
-        List<WorkEvidence> retrievedEvidence = [];
-
-        if (currentStage >= DemoStage.Knowledge)
-        {
-            workKnowledge = new TextSearchProvider(
-                async (query, searchCancellationToken) =>
-                {
-                    var evidence = await _workKnowledgeSearch.SearchAsync(query, correlationId, searchCancellationToken);
-                    retrievedEvidence.AddRange(evidence);
-                    return evidence.Select(item => new TextSearchProvider.TextSearchResult
-                    {
-                        SourceName = $"{item.SourceType} {item.Id} ({item.SourceLabel})",
-                        Text = $"{item.Title} - {item.Summary} (recorded {item.OccurredAt:u})"
-                    });
-                },
-                new TextSearchProviderOptions
-                {
-                    SearchTime = TextSearchProviderOptions.TextSearchBehavior.OnDemandFunctionCalling,
-                    FunctionToolName = OperationsAgentToolNames.SearchWorkKnowledge,
-                    FunctionToolDescription =
-                        "Searches organizational work knowledge such as work orders, technician notes, and maintenance records."
-                },
-                _loggerFactory);
-        }
-        #endregion
-
-        #region CASE_MEMORY
-        DemoBreakpoints.Pause(DemoSnippets.CaseMemory);
-
-        CaseMemoryProvider? caseMemory = null;
-
-        // Hypothesis trace for the UI: which closed cases the provider recalled this run.
-        List<ClosedCase> recalledCases = [];
-
-        if (currentStage >= DemoStage.Memory)
-        {
-            caseMemory = new CaseMemoryProvider(
-                _caseMemoryStore,
-                recalled => recalledCases.AddRange(recalled),
-                correlationId,
-                _loggerFactory.CreateLogger<CaseMemoryProvider>());
-        }
-        #endregion
-
-        #region AGENT_SKILLS
-        DemoBreakpoints.Pause(DemoSnippets.Skills);
-
-        AgentSkillsProvider? skills = null;
-        IReadOnlyList<SkillDescriptor> advertisedSkills = [];
-
-        if (currentStage >= DemoStage.Skills && _skillsDirectory is not null)
-        {
-            // Progressive disclosure: skill names/descriptions are advertised in the system
-            // prompt; the model loads a full procedure on demand through the load_skill tool.
-            // Approval for load_skill is disabled here and returns in the ToolApproval stage.
-            skills = new AgentSkillsProvider(
-                _skillsDirectory,
-                options: new AgentSkillsProviderOptions { DisableLoadSkillApproval = true },
-                loggerFactory: _loggerFactory);
-        }
-        #endregion
-
-        #region MCP_CLIENT
-        DemoBreakpoints.Pause(DemoSnippets.McpClient);
-
-        // Same capability, presenter-selected boundary: the streetlight tool is either the local
-        // function compiled into this service, or discovered at runtime from the Energy Hub's MCP
-        // server - McpClientTool IS an AIFunction, so everything downstream cannot tell them apart.
-        var toolSource = currentStage >= DemoStage.McpTools
-            ? _toolSourceSwitch.Current
-            : OperationsAgentToolSource.Local;
-        McpClient? mcpClient = null;
-        List<AITool> agentTools = [];
-
-        if (toolSource == OperationsAgentToolSource.Mcp)
-        {
-            var mcpHttpClient = _httpClientFactory.CreateClient("energyhub-mcp");
-            mcpHttpClient.DefaultRequestHeaders.Add(CorrelationHeaderNames.XCorrelationId, correlationId);
-
-            var transport = new HttpClientTransport(
-                new HttpClientTransportOptions { Endpoint = _mcpEndpoint },
-                mcpHttpClient,
-                _loggerFactory,
-                ownsHttpClient: true);
-
-            // When a remote tool pauses input-required (MRTR), the elicitation handler carries
-            // the question to the operator; the paused call resumes with the answer.
-            var mcpOptions = new McpClientOptions
-            {
-                Handlers = new McpClientHandlers
-                {
-                    ElicitationHandler = CreateOperatorApprovalHandler(correlationId)
-                }
-            };
-
-            mcpClient = await McpClient.CreateAsync(
-                transport,
-                mcpOptions,
-                loggerFactory: _loggerFactory,
-                cancellationToken: cancellationToken);
-
-            var discoveredTools = await mcpClient.ListToolsAsync(cancellationToken: cancellationToken);
-            agentTools.Add(discoveredTools.Single(tool => tool.Name == EnergyTools.StreetlightStateToolName));
-
-            // The write tool joins only at the InteractiveInput stage - and only over MCP, where
-            // the MRTR approval pause guards it.
-            if (currentStage >= DemoStage.InteractiveInput)
-            {
-                agentTools.Add(discoveredTools.Single(tool => tool.Name == OperationsAgentToolNames.RestoreScheduledMode));
-            }
-        }
-        else
-        {
-            agentTools.Add(AIFunctionFactory.Create(
-                energyTools.GetStreetlightStateAsync,
-                EnergyTools.StreetlightStateToolName,
-                "Gets the current authoritative operational state of a streetlight."));
-        }
-        #endregion
-
-        List<AIContextProvider> contextProviders = [];
-
-        if (workKnowledge is not null)
-        {
-            contextProviders.Add(workKnowledge);
-        }
-
-        if (caseMemory is not null)
-        {
-            contextProviders.Add(caseMemory);
-        }
-
-        if (skills is not null)
-        {
-            contextProviders.Add(skills);
-        }
-
-        #region AGENT_CREATION
-        DemoBreakpoints.Pause(DemoSnippets.AgentCreation);
-
-        AIAgent agent = _projectClient.AsAIAgent(
-            options: new ChatClientAgentOptions
-            {
-                Name = _agentName,
-                ChatOptions = new()
-                {
-                    ModelId = _modelDeploymentName,
-                    Instructions = Instructions,
-                    Tools = agentTools
-                },
-                // Capabilities join as context providers: knowledge retrieval contributes an
-                // on-demand search tool; case memory contributes trusted hypothesis rules plus
-                // recalled cases as separate untrusted reference data.
-                AIContextProviders = contextProviders.Count > 0 ? contextProviders : null
-            },
-            clientFactory: client =>
-            {
-                modelFlightRecorder = new ModelExchangeRecorder(client);
-                return new FunctionInvokingChatClient(modelFlightRecorder, _loggerFactory)
-                {
-                    MaximumIterationsPerRequest = _maxFunctionIterations,
-                    MaximumConsecutiveErrorsPerRequest = 1,
-                    AllowConcurrentInvocation = false
-                };
-            },
-            loggerFactory: _loggerFactory);
-        #endregion
-
-        if (skills is not null)
-        {
-            // Snapshot the advertised skills before the run - through the SDK's own discovery, so
-            // the response reports exactly what the provider would advertise for THIS request even
-            // if the presenter edits the files while the model works.
-            advertisedSkills = await SkillCatalog.DescribeAsync(_skillsDirectory, agent, _loggerFactory, cancellationToken);
-        }
-
         OperationsAgentLog.RequestStarted(_logger, _modelDeploymentName, correlationId);
 
         using var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        // The execution budget guards against runaway model loops. With a debugger attached the
-        // presenter may be single-stepping a demo breakpoint, so the budget is suspended; otherwise
-        // a paused human would trip the timeout and abort the in-flight tool call mid-step.
+        // The execution budget is a wall-clock request budget: it covers capability composition
+        // (skill discovery, MCP connection and tool discovery) as well as model execution. With a
+        // debugger attached the presenter may be single-stepping a demo breakpoint, so the budget
+        // is suspended; otherwise a paused human would trip the timeout mid-step.
         timeoutSource.CancelAfter(Debugger.IsAttached ? Timeout.InfiniteTimeSpan : _requestTimeout);
+
+        TextSearchProvider? workKnowledge = null;
+        CaseMemoryProvider? caseMemory = null;
+        AgentSkillsProvider? skills = null;
+        McpClient? mcpClient = null;
+        HttpClientTransport? mcpTransport = null;
 
         try
         {
+            #region KNOWLEDGE_RETRIEVAL
+            DemoBreakpoints.Pause(DemoSnippets.Knowledge);
+
+            // Retrieval trace for the UI: what the search returned, which is not the same claim as
+            // what the agent cited. Tool invocations run sequentially, so a plain list is safe.
+            List<WorkEvidence> retrievedEvidence = [];
+
+            if (currentStage >= DemoStage.Knowledge)
+            {
+                workKnowledge = new TextSearchProvider(
+                    async (query, searchCancellationToken) =>
+                    {
+                        var evidence = await _workKnowledgeSearch.SearchAsync(query, correlationId, searchCancellationToken);
+                        retrievedEvidence.AddRange(evidence);
+                        return evidence.Select(item => new TextSearchProvider.TextSearchResult
+                        {
+                            SourceName = $"{item.SourceType} {item.Id} ({item.SourceLabel})",
+                            Text = $"{item.Title} - {item.Summary} (recorded {item.OccurredAt:u})"
+                        });
+                    },
+                    new TextSearchProviderOptions
+                    {
+                        SearchTime = TextSearchProviderOptions.TextSearchBehavior.OnDemandFunctionCalling,
+                        FunctionToolName = OperationsAgentToolNames.SearchWorkKnowledge,
+                        FunctionToolDescription =
+                            "Searches organizational work knowledge such as work orders, technician notes, and maintenance records."
+                    },
+                    _loggerFactory);
+            }
+            #endregion
+
+            #region CASE_MEMORY
+            DemoBreakpoints.Pause(DemoSnippets.CaseMemory);
+
+            // Hypothesis trace for the UI: which closed cases the provider recalled this run.
+            List<ClosedCase> recalledCases = [];
+
+            if (currentStage >= DemoStage.Memory)
+            {
+                caseMemory = new CaseMemoryProvider(
+                    _caseMemoryStore,
+                    recalled => recalledCases.AddRange(recalled),
+                    correlationId,
+                    _loggerFactory.CreateLogger<CaseMemoryProvider>());
+            }
+            #endregion
+
+            #region AGENT_SKILLS
+            DemoBreakpoints.Pause(DemoSnippets.Skills);
+
+            IReadOnlyList<SkillDescriptor> advertisedSkills = [];
+
+            if (currentStage >= DemoStage.Skills && _skillsDirectory is not null)
+            {
+                // Progressive disclosure: skill names/descriptions are advertised in the system
+                // prompt; the model loads a full procedure on demand through the load_skill tool.
+                // Approval for load_skill is disabled here and returns in the ToolApproval stage.
+                skills = new AgentSkillsProvider(
+                    _skillsDirectory,
+                    options: new AgentSkillsProviderOptions { DisableLoadSkillApproval = true },
+                    loggerFactory: _loggerFactory);
+            }
+            #endregion
+
+            #region MCP_CLIENT
+            DemoBreakpoints.Pause(DemoSnippets.McpClient);
+
+            // Same capability, presenter-selected boundary: the streetlight tool is either the local
+            // function compiled into this service, or discovered at runtime from the Energy Hub's MCP
+            // server - McpClientTool IS an AIFunction, so everything downstream cannot tell them apart.
+            var toolSource = currentStage >= DemoStage.McpTools
+                ? _toolSourceSwitch.Current
+                : OperationsAgentToolSource.Local;
+            List<AITool> agentTools = [];
+
+            if (toolSource == OperationsAgentToolSource.Mcp)
+            {
+                var mcpHttpClient = _httpClientFactory.CreateClient("energyhub-mcp");
+                mcpHttpClient.DefaultRequestHeaders.Add(CorrelationHeaderNames.XCorrelationId, correlationId);
+
+                mcpTransport = new HttpClientTransport(
+                    new HttpClientTransportOptions { Endpoint = _mcpEndpoint },
+                    mcpHttpClient,
+                    _loggerFactory,
+                    ownsHttpClient: true);
+
+                // When a remote tool pauses input-required (MRTR), the elicitation handler carries
+                // the question to the operator; the paused call resumes with the answer.
+                var mcpOptions = new McpClientOptions
+                {
+                    Handlers = new McpClientHandlers
+                    {
+                        ElicitationHandler = CreateOperatorApprovalHandler(correlationId)
+                    }
+                };
+
+                IList<McpClientTool> discoveredTools;
+
+                try
+                {
+                    mcpClient = await McpClient.CreateAsync(
+                        mcpTransport,
+                        mcpOptions,
+                        loggerFactory: _loggerFactory,
+                        cancellationToken: timeoutSource.Token);
+                    discoveredTools = await mcpClient.ListToolsAsync(cancellationToken: timeoutSource.Token);
+                }
+                catch (McpException exception)
+                {
+                    throw new OperationsAgentToolUnavailableException(
+                        $"The Energy Hub MCP server could not be used: {exception.Message}", exception);
+                }
+
+                agentTools.Add(FindDiscoveredTool(discoveredTools, EnergyTools.StreetlightStateToolName));
+
+                // The write tool joins only at the InteractiveInput stage - and only over MCP, where
+                // the MRTR approval pause guards it.
+                if (currentStage >= DemoStage.InteractiveInput)
+                {
+                    agentTools.Add(FindDiscoveredTool(discoveredTools, OperationsAgentToolNames.RestoreScheduledMode));
+                }
+            }
+            else
+            {
+                agentTools.Add(AIFunctionFactory.Create(
+                    energyTools.GetStreetlightStateAsync,
+                    EnergyTools.StreetlightStateToolName,
+                    "Gets the current authoritative operational state of a streetlight."));
+            }
+            #endregion
+
+            List<AIContextProvider> contextProviders = [];
+
+            if (workKnowledge is not null)
+            {
+                contextProviders.Add(workKnowledge);
+            }
+
+            if (caseMemory is not null)
+            {
+                contextProviders.Add(caseMemory);
+            }
+
+            if (skills is not null)
+            {
+                contextProviders.Add(skills);
+            }
+
+            #region AGENT_CREATION
+            DemoBreakpoints.Pause(DemoSnippets.AgentCreation);
+
+            AIAgent agent = _projectClient.AsAIAgent(
+                options: new ChatClientAgentOptions
+                {
+                    Name = _agentName,
+                    ChatOptions = new()
+                    {
+                        ModelId = _modelDeploymentName,
+                        Instructions = Instructions,
+                        Tools = agentTools
+                    },
+                    // Capabilities join as context providers: knowledge retrieval contributes an
+                    // on-demand search tool; case memory contributes trusted hypothesis rules plus
+                    // recalled cases as separate untrusted reference data.
+                    AIContextProviders = contextProviders.Count > 0 ? contextProviders : null
+                },
+                clientFactory: client =>
+                {
+                    modelFlightRecorder = new ModelExchangeRecorder(client);
+                    return new FunctionInvokingChatClient(modelFlightRecorder, _loggerFactory)
+                    {
+                        MaximumIterationsPerRequest = _maxFunctionIterations,
+                        MaximumConsecutiveErrorsPerRequest = 1,
+                        AllowConcurrentInvocation = false
+                    };
+                },
+                loggerFactory: _loggerFactory);
+            #endregion
+
+            if (skills is not null)
+            {
+                // Snapshot the advertised skills before the run - through the SDK's own discovery, so
+                // the response reports exactly what the provider would advertise for THIS request even
+                // if the presenter edits the files while the model works.
+                advertisedSkills = await SkillCatalog.DescribeAsync(_skillsDirectory, agent, _loggerFactory, timeoutSource.Token);
+            }
+
             #region AGENT_SESSION
             DemoBreakpoints.Pause(DemoSnippets.Session);
 
@@ -352,17 +370,27 @@ public sealed partial class FoundryOperationsAgent(
         }
         finally
         {
-            // Per-request resources are disposed with the request: the skills provider owns its
-            // source pipeline, and the MCP client owns its transport (and, via ownsHttpClient,
-            // the HTTP client the transport used).
+            // Per-request resources are disposed with the request, on success and on any
+            // initialization failure: the skills provider owns its source pipeline, and the
+            // transport (disposed after the client) owns the HTTP client it was given.
             skills?.Dispose();
 
             if (mcpClient is not null)
             {
                 await mcpClient.DisposeAsync();
             }
+
+            if (mcpTransport is not null)
+            {
+                await mcpTransport.DisposeAsync();
+            }
         }
     }
+
+    private static McpClientTool FindDiscoveredTool(IList<McpClientTool> discoveredTools, string toolName) =>
+        discoveredTools.FirstOrDefault(tool => tool.Name == toolName)
+        ?? throw new OperationsAgentToolUnavailableException(
+            $"The Energy Hub MCP server did not offer the required tool '{toolName}'.");
 
     /// <summary>
     /// Creates the MRTR elicitation handler that bridges a paused remote tool to the operator:
@@ -374,10 +402,17 @@ public sealed partial class FoundryOperationsAgent(
         async (elicitation, elicitationCancellation) =>
         {
             var (_, decision) = _pendingApprovalStore.Create(
-                elicitation?.Message ?? "A remote tool requests operator approval.",
+                elicitation?.Message ?? "A remote tool requests operator confirmation.",
                 correlationId,
                 elicitationCancellation);
             var approved = await decision;
+
+            // A stage downgrade while the question was pending withdraws the capability: the
+            // confirmation is refused even if the operator answered approve in the same instant.
+            if (_stageGate.GetCurrent().Id < DemoStage.InteractiveInput)
+            {
+                approved = false;
+            }
 
             return new ElicitResult
             {

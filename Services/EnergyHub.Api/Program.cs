@@ -17,6 +17,8 @@ builder.Services.AddHttpClient<ISmartPoleGateway, HttpSmartPoleGateway>((service
     client.BaseAddress = new Uri(options.SmartPoleBaseUri, UriKind.Absolute);
 });
 builder.Services.AddSingleton<EnergyHubService>();
+builder.Services.AddSingleton<MrtrRequestStateStore>();
+builder.Services.AddHttpContextAccessor();
 
 // The Energy Hub owns and serves its streetlight tool over the Model Context Protocol: any
 // MCP-capable client can discover and invoke it at this boundary.

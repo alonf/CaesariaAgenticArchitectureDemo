@@ -109,6 +109,47 @@ All findings from the full working-tree review are now resolved.
 7. **Trust boundary documented** — skill content is injected as instructions without
    sanitization; only reviewed, trusted skill sources may be configured.
 
+## Fixed in the InteractiveInput-stage review pass (September 2026)
+
+1. **Own-write invalidation (high)** — an approved agent restore no longer invalidates the very
+   answer that reported it. The ask's correlation travels the whole chain (ask → MCP client
+   header → EnergyHub restore tool via `IHttpContextAccessor` → SmartPole → Command Center
+   `LastCommand`), and `AgentEvidenceGuard` accepts a changed snapshot when the last command
+   carries the answer's correlation while all ambient evidence (stage, scenario, report,
+   incident) is untouched — adopting the post-write version so later polling doesn't trip
+   either. Verified live end-to-end.
+2. **Stage-downgrade withdrawal** — `StageTransitionEffects` (wired into the stage endpoint and
+   the synchronizer) cancels every pending interactive-input request on any downgrade and resets
+   the tool source to Local below McpTools; the approvals decision endpoint is 409-gated below
+   InteractiveInput, and the elicitation handler re-checks the stage after its await. DemoControl
+   polls the tool source so the toggle stays truthful.
+3. **MRTR confirmation binding** — `MrtrRequestStateStore` issues a one-time, five-minute,
+   asset-bound request state with each pause; a continuation must echo it or the confirmation is
+   rejected (fabrication/replay impossible). `IsMrtrSupported` is checked before anything else.
+   Docs now call the mechanism operator confirmation — interactive input, not authorization.
+4. **PendingApprovalStore race** — the entry is stored before the cancellation callback is
+   registered, and an already-cancelled token cleans up deterministically; `CancelAll` supports
+   the downgrade path. Tests cover pre-cancelled tokens, decide-vs-cancel, and cancel-all.
+5. **MCP lifecycle and budget** — client/transport creation and tool discovery run inside the
+   request's wall-clock budget; the transport (owning its HTTP client) is disposed in `finally`
+   alongside the client; `McpException` and missing tools surface as
+   `OperationsAgentToolUnavailableException` → 502 instead of an unexplained 500.
+6. **Honest tool annotations** — `get_streetlight_state` declares ReadOnly/Idempotent/closed
+   world; `restore_scheduled_mode` declares non-destructive/Idempotent/closed world.
+7. **Approval polling resilience** — one failed poll no longer kills the Command Center's
+   approval loop; a failed decision delivery keeps the prompt (the tool is still paused) and the
+   buttons disable while a decision is in flight.
+8. **Atomic report resolution** — `CustomerReportModule.TryRemove` removes the matching report
+   under the lock (concurrency test pins exactly-one-winner); the web client treats only 404 as
+   "no longer open" and throws on other failures.
+9. **In-proc MCP integration tests** — the real Energy Hub MCP server boots under
+   `WebApplicationFactory` with only the SmartPole gateway faked, driven by the real MCP client:
+   discovery + annotations, read tool side-effect-free, restore without a handler never executes,
+   denial leaves state untouched, approval executes with the caller's correlation.
+10. **Restore-intent reliability** — the agent instructions now direct it to invoke an available
+    state-changing tool immediately (the tool obtains the operator's confirmation itself), fixing
+    occasional runs that narrated instead of pausing.
+
 ## Deferred (with trigger)
 
 - **Snippet region scan scope** (low, from the demo-anchor review): the region synchronization

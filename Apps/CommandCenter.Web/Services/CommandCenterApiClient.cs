@@ -1,3 +1,4 @@
+using System.Net;
 using System.Text.Json;
 using CommandCenter.Web.Configuration;
 using Microsoft.AspNetCore.Mvc;
@@ -62,7 +63,21 @@ internal sealed class CommandCenterApiClient
             $"/api/command-center/customer-reports/{Uri.EscapeDataString(reportId)}/resolve",
             correlationId);
         using var response = await _httpClient.SendAsync(request, cancellationToken);
-        return response.IsSuccessStatusCode;
+
+        if (response.IsSuccessStatusCode)
+        {
+            return true;
+        }
+
+        // Only "not found" means the report is no longer open; any other failure (a 500, a
+        // gateway problem) must not be mistaken for a completed resolution.
+        if (response.StatusCode == HttpStatusCode.NotFound)
+        {
+            return false;
+        }
+
+        response.EnsureSuccessStatusCode();
+        return false;
     }
 
     private static HttpRequestMessage CreateRequest(HttpMethod method, string relativeUri, string correlationId)

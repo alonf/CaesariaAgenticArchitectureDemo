@@ -152,6 +152,29 @@ public sealed class CommandCenterServiceTests
         Assert.Equal(DemoStage.Deterministic, service.GetCurrentStage().Id);
     }
 
+    [Fact]
+    public async Task ConcurrentResolutionsWinExactlyOnce()
+    {
+        // The module removal is atomic: of many racing resolvers only one observes the open
+        // report, so the resolution activity is recorded exactly once.
+        var module = new CustomerReportModule();
+        module.Replace(new CustomerReportRecord(
+            "REPORT-L417-001",
+            DemoAssets.StreetlightAssetId,
+            DemoAssets.NorthPromenadeArea,
+            "The light is on in daylight.",
+            "https://example.test/report.jpg",
+            "CityApp",
+            DateTimeOffset.UtcNow,
+            "report-corr"));
+
+        var attempts = await Task.WhenAll(Enumerable.Range(0, 16).Select(attempt =>
+            Task.Run(() => module.TryRemove("REPORT-L417-001", out _), TestContext.Current.CancellationToken)));
+
+        Assert.Equal(1, attempts.Count(removed => removed));
+        Assert.Null(module.GetCurrent());
+    }
+
     private static CommandCenterService CreateService(TestTimeProvider clock, FakeEnergyHubGateway? gateway = null) =>
         new(
             gateway ?? CreateGateway(clock),
