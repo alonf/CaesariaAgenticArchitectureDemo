@@ -4,6 +4,8 @@ namespace Caesarea.Deterministic.Tests;
 
 public sealed class ArchitectureBoundaryTests
 {
+    private static readonly string[] HostedProjectRoots = ["Services", "Apps"];
+
     [Fact]
     public void CommandCenterProjectDoesNotReferenceSmartPoleSimulator()
     {
@@ -223,6 +225,47 @@ public sealed class ArchitectureBoundaryTests
         // Counted on the registration itself, not on every mention of the name: the approval
         // prompt also names the capability, and that is metadata, not a second exposure.
         Assert.Equal(1, CountOccurrences(agentText, "FindDiscoveredTool(discoveredTools, OperationsAgentToolNames.RestoreScheduledMode, EnergyHubSourceName)"));
+    }
+
+    [Fact]
+    public void EveryHostedProjectDeclaresItsOwnEndpoint()
+    {
+        // Aspire takes each project's endpoints from its launch profile. A project without one gets
+        // no endpoint at all: service discovery cannot resolve it, and Kestrel falls back to the
+        // default port - so the second such project fails to bind and the process exits. That is
+        // how the Security Agent died under the AppHost while every scratchpad run passed, because
+        // a hand-rolled stack assigns ports explicitly and never exercises this.
+        var repositoryRoot = FindRepositoryRoot();
+        Dictionary<string, string> urlOwners = new(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var projectDirectory in HostedProjectRoots
+            .Select(root => Path.Combine(repositoryRoot, root))
+            .Where(Directory.Exists)
+            .SelectMany(Directory.GetDirectories))
+        {
+            var projectName = Path.GetFileName(projectDirectory);
+            var launchSettingsPath = Path.Combine(projectDirectory, "Properties", "launchSettings.json");
+
+            Assert.True(
+                File.Exists(launchSettingsPath),
+                $"{projectName} has no launch profile, so the AppHost gives it no endpoint and it falls back to the default Kestrel port.");
+
+            // A project lists the same URL in both its http and https profiles, so the comparison
+            // is between projects, not within one.
+            var applicationUrls = System.Text.RegularExpressions.Regex
+                .Matches(File.ReadAllText(launchSettingsPath), @"https?://localhost:(\d+)")
+                .Select(match => match.Value)
+                .Distinct(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var url in applicationUrls)
+            {
+                Assert.False(
+                    urlOwners.TryGetValue(url, out var owner),
+                    $"{projectName} and {owner} both bind {url}; the second to start cannot bind and exits.");
+
+                urlOwners[url] = projectName;
+            }
+        }
     }
 
     private static string FindRepositoryRoot()
