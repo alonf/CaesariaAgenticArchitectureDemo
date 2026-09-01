@@ -118,7 +118,11 @@ public sealed partial class RemediationWorkflowService
                         state.AddStep(new OperationsAgentWorkflowStep(invoked.ExecutorId, "Running", _timeProvider.GetUtcNow(), null));
                         break;
                     case ExecutorCompletedEvent completed:
-                        state.AddStep(new OperationsAgentWorkflowStep(completed.ExecutorId, "Completed", _timeProvider.GetUtcNow(), DescribeStepData(completed.ExecutorId, completed.Data)));
+                        state.AddStep(new OperationsAgentWorkflowStep(
+                            completed.ExecutorId,
+                            ResolveStepStatus(completed.ExecutorId, completed.Data),
+                            _timeProvider.GetUtcNow(),
+                            DescribeStepData(completed.ExecutorId, completed.Data)));
                         break;
                     case ExecutorFailedEvent failed:
                         state.AddStep(new OperationsAgentWorkflowStep(failed.ExecutorId, "Failed", _timeProvider.GetUtcNow(), failed.Data?.Message));
@@ -164,6 +168,22 @@ public sealed partial class RemediationWorkflowService
             .WithOutputFrom(verify)
             .Build();
     }
+
+    // A node that ran is not automatically a node that helped: the status carries the semantic
+    // outcome, so a denied gate, a skipped restore, or a still-violating verification never
+    // paints green in the run view.
+    private static string ResolveStepStatus(string executorId, object? data) => data switch
+    {
+        RemediationPlan plan when executorId == "approval" => plan.OperatorApproved ? "Completed" : "Declined",
+        RemediationExecution execution => execution.Result switch
+        {
+            RemediationExecutionResult.Restored => "Completed",
+            RemediationExecutionResult.CommandFailed => "Failed",
+            _ => "Skipped"
+        },
+        RemediationOutcome outcome => outcome.InSchedule ? "Completed" : "Unresolved",
+        _ => "Completed"
+    };
 
     private static string? DescribeStepData(string executorId, object? data) => data switch
     {

@@ -1410,8 +1410,15 @@ svg {
     border-left-color: var(--cp-success);
 }
 
-.wfrun-step.failed {
+.wfrun-step.failed,
+.wfrun-step.declined,
+.wfrun-step.unresolved {
     border-left-color: var(--cp-danger);
+}
+
+.wfrun-step.skipped {
+    border-left-color: var(--cp-border-strong);
+    border-left-style: dashed;
 }
 
 .wfrun-step-head {
@@ -1437,7 +1444,9 @@ svg {
     letter-spacing: 0.05em;
 }
 
-.workflow-step.failed .wfrun-step-status {
+.wfrun-step.failed .wfrun-step-status,
+.wfrun-step.declined .wfrun-step-status,
+.wfrun-step.unresolved .wfrun-step-status {
     color: var(--cp-danger);
 }
 
@@ -1525,10 +1534,25 @@ svg {
 
 .wfrun-diagram g.node.wf-failed rect,
 .wfrun-diagram g.node.wf-failed polygon,
-.wfrun-diagram g.node.wf-failed path {
+.wfrun-diagram g.node.wf-failed path,
+.wfrun-diagram g.node.wf-declined rect,
+.wfrun-diagram g.node.wf-declined polygon,
+.wfrun-diagram g.node.wf-declined path,
+.wfrun-diagram g.node.wf-unresolved rect,
+.wfrun-diagram g.node.wf-unresolved polygon,
+.wfrun-diagram g.node.wf-unresolved path {
     stroke: var(--cp-danger) !important;
     stroke-width: 3px !important;
     fill: rgba(220, 38, 38, 0.15) !important;
+}
+
+.wfrun-diagram g.node.wf-skipped rect,
+.wfrun-diagram g.node.wf-skipped polygon,
+.wfrun-diagram g.node.wf-skipped path {
+    stroke: var(--cp-border-strong) !important;
+    stroke-width: 2px !important;
+    stroke-dasharray: 6 4 !important;
+    fill: transparent !important;
 }
 
 .wfrun-yaml {

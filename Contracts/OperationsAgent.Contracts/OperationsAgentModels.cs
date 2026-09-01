@@ -60,7 +60,9 @@ public sealed record OperationsAgentRemediationRequest(string AssetId);
 /// One step of a remediation workflow run, as reported by the workflow engine's event stream.
 /// </summary>
 /// <param name="ExecutorId">The workflow node that ran (validate, policy, approval, execute, verify).</param>
-/// <param name="Status">The step status: Running, Completed, or Failed.</param>
+/// <param name="Status">The step's semantic outcome: Running, Completed, Declined (the operator
+/// refused the gate), Skipped (nothing executed), Unresolved (verification found the anomaly
+/// still standing), or Failed.</param>
 /// <param name="At">When the step reached this status.</param>
 /// <param name="Detail">A short human-readable note about what the step decided or did.</param>
 public sealed record OperationsAgentWorkflowStep(

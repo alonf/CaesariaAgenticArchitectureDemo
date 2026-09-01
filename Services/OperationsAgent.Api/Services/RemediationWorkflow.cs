@@ -32,12 +32,37 @@ public sealed record RemediationPlan(
     string Reason);
 
 /// <summary>
+/// How the execute step concluded - the distinction the run view colors by: a restore that ran,
+/// nothing to do, a human refusal, or a command that was attempted and failed.
+/// </summary>
+public enum RemediationExecutionResult
+{
+    /// <summary>The restore command executed and the Energy Hub confirmed it.</summary>
+    Restored,
+
+    /// <summary>The asset already matched its schedule; no command was issued.</summary>
+    NothingToDo,
+
+    /// <summary>The operator declined; no command was issued.</summary>
+    Declined,
+
+    /// <summary>The restore command was attempted and the Energy Hub reported failure.</summary>
+    CommandFailed
+}
+
+/// <summary>
 /// The execute step's outcome.
 /// </summary>
 /// <param name="Request">The originating remediation request.</param>
-/// <param name="Executed">Whether the restore command actually restored the asset.</param>
+/// <param name="Result">How the step concluded.</param>
 /// <param name="Summary">A short human-readable statement of what happened.</param>
-public sealed record RemediationExecution(RemediationRequest Request, bool Executed, string Summary);
+public sealed record RemediationExecution(RemediationRequest Request, RemediationExecutionResult Result, string Summary)
+{
+    /// <summary>
+    /// Gets a value indicating whether the restore command actually restored the asset.
+    /// </summary>
+    public bool Executed => Result == RemediationExecutionResult.Restored;
+}
 
 /// <summary>
 /// The verify step's final outcome, yielded as the workflow's output.
@@ -122,19 +147,21 @@ public sealed class ExecuteRestoreExecutor(IEnergyCommandGateway commandGateway)
     {
         if (!input.ActionRequired)
         {
-            return new RemediationExecution(input.Request, Executed: false, input.Reason);
+            return new RemediationExecution(input.Request, RemediationExecutionResult.NothingToDo, input.Reason);
         }
 
         if (input.RequiresApproval && !input.OperatorApproved)
         {
-            return new RemediationExecution(input.Request, Executed: false,
+            return new RemediationExecution(input.Request, RemediationExecutionResult.Declined,
                 $"The operator declined; {input.Request.AssetId} was left unchanged.");
         }
 
         var result = await commandGateway.RestoreScheduledModeAsync(input.Request.AssetId, input.Request.CorrelationId, cancellationToken);
         return new RemediationExecution(
             input.Request,
-            Executed: result.Status == CommandExecutionStatus.Succeeded,
+            result.Status == CommandExecutionStatus.Succeeded
+                ? RemediationExecutionResult.Restored
+                : RemediationExecutionResult.CommandFailed,
             $"{result.Status}: {result.Summary}");
     }
 }

@@ -44,6 +44,12 @@ public sealed class RemediationWorkflowServiceTests
         Assert.Equal(0, world.CommandGateway.RestoreCalls);
         Assert.Contains("declined", finished.Summary, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("still violates", finished.Summary, StringComparison.Ordinal);
+
+        // The run view must not paint a refusal green: the gate reports the denial, the
+        // execute step reports that nothing ran, and verification reports the standing anomaly.
+        Assert.Equal(
+            [("validate", "Completed"), ("policy", "Completed"), ("approval", "Declined"), ("execute", "Skipped"), ("verify", "Unresolved")],
+            finished.Steps.Select(step => (step.ExecutorId, step.Status)));
     }
 
     [Fact]
@@ -72,6 +78,28 @@ public sealed class RemediationWorkflowServiceTests
         Assert.Equal(0, world.CommandGateway.RestoreCalls);
         Assert.Empty(world.Approvals.GetAll());
         Assert.Contains("already matches its schedule", finished.Summary, StringComparison.Ordinal);
+
+        // Nothing executed, but the picture is healthy: execute reports the skip and
+        // verification confirms the schedule holds.
+        Assert.Equal("Skipped", finished.Steps.Single(step => step.ExecutorId == "execute").Status);
+        Assert.Equal("Completed", finished.Steps.Single(step => step.ExecutorId == "verify").Status);
+    }
+
+    [Fact]
+    public async Task FailedCommandPaintsFailureNotSuccess()
+    {
+        var world = new WorkflowWorld(CreateTwin(reportedIsOn: true, manualOverride: false));
+        world.CommandGateway.OnRestoreScheduledModeAsync = (assetId, correlationId, _) =>
+            Task.FromResult(new RestoreScheduledModeResult(
+                assetId, null, null, CommandExecutionStatus.Failed, correlationId,
+                "SmartPole did not confirm.", DateTimeOffset.UtcNow));
+
+        var report = world.Service.StartRun("L-417", "wf-fail-corr");
+        var finished = await world.WaitForCompletionAsync(report.RunId);
+
+        Assert.False(finished.Executed);
+        Assert.Equal("Failed", finished.Steps.Single(step => step.ExecutorId == "execute").Status);
+        Assert.Equal("Unresolved", finished.Steps.Single(step => step.ExecutorId == "verify").Status);
     }
 
     [Fact]
