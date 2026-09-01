@@ -17,7 +17,7 @@ internal sealed class DemoScenarioApiOptions : IValidatableObject
 
     /// <summary>
     /// Gets or sets the base address of the Security Hub, synchronized from the same scenario
-    /// recipe so the Security and Energy domains never contradict each other.
+    /// recipe so the Security and Energy domains agree once an application completes.
     /// </summary>
     [Required]
     public string SecurityHubBaseUri { get; set; } = string.Empty;

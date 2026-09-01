@@ -83,8 +83,9 @@ public interface ICommandCenterScenarioClient
 
 /// <summary>
 /// Coordinates reset and scenario synchronization calls to the Security Hub boundary, so a
-/// scenario that asserts an active operation says so in the Security domain as well - the two
-/// boundaries must never contradict each other on stage.
+/// scenario that asserts an active operation says so in the Security domain as well. After a
+/// complete application the two boundaries agree; a partial failure can leave them divergent
+/// until the scenario is applied again.
 /// </summary>
 public interface ISecurityScenarioClient
 {

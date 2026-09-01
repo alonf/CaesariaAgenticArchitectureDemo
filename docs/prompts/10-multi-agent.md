@@ -4,9 +4,10 @@ Deck anchor: `MULTI_AGENT` (MAF Multi-Agent, slides 36–40).
 
 ## Goal
 
-Add `DemoStage.MultiAgent`: a **second agent that earns its cost**. Slide 36 is blunt — *"If you
-only need another capability, add a tool, not an agent"* — so the demo has to show a boundary a
-tool cannot cross. Security is that boundary: it owns records the Operations Agent may not read.
+Add `DemoStage.MultiAgent`: a second agent introduced for a **real boundary**. Slide 36 is blunt —
+*"If you only need another capability, add a tool, not an agent"* — so the demo has to show a
+boundary a tool cannot cross. Security is that boundary: it owns records the Operations Agent may
+not read, and the hub enforces that rather than assuming it.
 
 ## Why a second agent here, and not anywhere else
 
@@ -24,16 +25,24 @@ Of slide 36's five reasons, two carry this stage:
 Expertise and ownership/lifecycle support the case. "Different model" does not apply here, and
 claiming it would be dishonest.
 
-**What the second agent actually decides, stated precisely.** The safety-critical part of the
-answer is deterministic: if a record says lighting is required, it is required, and the deadline
-comes from the record. The agent contributes *interpretation* — reading several operations with
-overlapping windows and free-text notes and classifying the situation — and, more importantly,
-**containment**: it is the thing that can hold the restricted records at all. This stage is
-therefore best presented as a permission-and-isolation boundary, not as proof that a model was
-required to reach the verdict. A deterministic Security-domain service could compute the same
-verdict; what it could not do is let a *reasoning* caller ask open questions of the Security
-domain without handing that caller the records. That is the architectural claim, and it is the
-one worth making on stage.
+**What the second agent actually decides, stated precisely.** Draw the line between the two halves
+of its answer and say it out loud:
+
+| Field | Decided by | Why |
+| --- | --- | --- |
+| `RequiresLighting`, `UntilUtc`, `ReasonCode` | the **records**, deterministically | a model must never be able to switch a city's security lighting off |
+| `Recommendation` | the **agent** | advice is judgment, and judgment is what a model is for |
+
+So the model is behaviourally relevant — its recommendation reaches the asking domain and shapes
+what the Operations Agent tells the operator — while having no authority over the safety-critical
+decision. That split *is* the lesson, and it generalizes: give the model the part where being
+wrong costs an awkward sentence, not the part where being wrong costs a dark street.
+
+Its larger contribution is **containment**: it is the thing that can hold the restricted records
+at all. A deterministic Security service could compute the same verdict; what it could not do is
+let a *reasoning* caller ask open questions of the Security domain without handing that caller the
+records. Present this stage as a permission-and-isolation boundary, not as proof that a model was
+required to reach the verdict.
 
 The demo-grade caller identity is a header, not an authenticated principal. It is enforced, and it
 is honest about what it is: the Governance stage replaces it with real identity.
@@ -53,8 +62,10 @@ does not imply group chat. Those are independent axes."* This stage picks one po
 
 - **`SecurityHub.Api`** — a deterministic hub owning active operations per area, with the
   restricted fields (classification, authorizing officer, unit call sign, notes) that make the
-  boundary real. Synchronized from the same scenario recipe as every other hub, so the Security
-  and Energy domains can never contradict each other on stage.
+  boundary real. Synchronized from the same scenario recipe as every other hub, so after a
+  successful application the Security and Energy domains agree; the synchronization is sequential
+  rather than transactional, so a partial failure can leave them briefly divergent until the
+  presenter re-applies.
 - **`SecurityAgent.Api`** — the Caesarea Security Operations Agent: its own instructions, its own
   restricted tool, its own model call, and the only Security Hub client in the system. Published
   over MCP as `assess_lighting_requirement`.

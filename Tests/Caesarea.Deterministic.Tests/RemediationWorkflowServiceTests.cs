@@ -318,14 +318,18 @@ public sealed class RemediationWorkflowServiceTests
         await world.WaitForApprovalAsync();
 
         // A second run would race the first one's precondition and leave the operator unsure
-        // which approval belongs to which run.
-        Assert.False(world.Service.TryStartRun("L-417", "wf-second-corr", out _));
+        // which approval belongs to which run - and the refusal says which refusal it is.
+        Assert.Equal(
+            RemediationStartOutcome.AssetAlreadyRunning,
+            world.Service.TryStartRun("L-417", "wf-second-corr", out _));
 
         Assert.True(world.Approvals.TryRespond(world.Approvals.GetAll()[0].Id, approved: true));
         await world.WaitForCompletionAsync(report.RunId);
 
         // Once it finishes the asset is free again.
-        Assert.True(world.Service.TryStartRun("L-417", "wf-third-corr", out var third));
+        Assert.Equal(
+            RemediationStartOutcome.Started,
+            world.Service.TryStartRun("L-417", "wf-third-corr", out var third));
         Assert.NotEqual(report.RunId, third.RunId);
     }
 

@@ -193,11 +193,11 @@ public sealed class ArchitectureBoundaryTests
         // unwrapped AIFunctionFactory.Create over the maintenance tool would hand the agent an
         // unsupervised way to commit city resources.
         var wrapperIndex = agentText.IndexOf("new ApprovalRequiredAIFunction(", StringComparison.Ordinal);
-        var toolIndex = agentText.IndexOf("maintenanceTools.CreateMaintenanceWorkItemAsync", StringComparison.Ordinal);
+        var toolIndex = agentText.IndexOf("maintenanceTools.CreateMaintenanceWorkItem", StringComparison.Ordinal);
 
         Assert.True(wrapperIndex >= 0, "The maintenance tool is no longer wrapped for approval.");
         Assert.True(toolIndex > wrapperIndex, "The maintenance tool must be created inside the approval wrapper.");
-        Assert.Equal(1, CountOccurrences(agentText, "maintenanceTools.CreateMaintenanceWorkItemAsync"));
+        Assert.Equal(1, CountOccurrences(agentText, "maintenanceTools.CreateMaintenanceWorkItem"));
         Assert.Contains("currentStage >= DemoStage.ToolApproval", agentText, StringComparison.Ordinal);
     }
 

@@ -66,4 +66,33 @@ public sealed class DemoStageGate
             return _currentStage;
         }
     }
+
+    /// <summary>
+    /// Runs a capability's side effect only while the stage still permits it, with the check and
+    /// the effect in one critical section. Checking the stage and then acting leaves a window in
+    /// which a downgrade lands between the two, and for a write that window is the difference
+    /// between "the capability was withdrawn" and "the capability was withdrawn but it wrote
+    /// anyway". The effect must be short and must not block: it runs while the gate is held.
+    /// </summary>
+    /// <typeparam name="T">The result type.</typeparam>
+    /// <param name="minimum">The stage the capability requires.</param>
+    /// <param name="effect">The side effect to perform while the stage holds.</param>
+    /// <param name="result">The effect's result, when it ran.</param>
+    /// <returns><see langword="false"/> when the stage no longer permits the capability.</returns>
+    public bool TryExecuteAtLeast<T>(DemoStage minimum, Func<T> effect, out T result)
+    {
+        ArgumentNullException.ThrowIfNull(effect);
+
+        lock (_gate)
+        {
+            if (_currentStage.Id < minimum)
+            {
+                result = default!;
+                return false;
+            }
+
+            result = effect();
+            return true;
+        }
+    }
 }

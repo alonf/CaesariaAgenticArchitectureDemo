@@ -392,11 +392,10 @@ public sealed class CreateWorkItemExecutor(IWorkItemGateway workItems)
     public override async ValueTask<RemediationVerification> HandleAsync(
         RemediationVerification input, IWorkflowContext context, CancellationToken cancellationToken = default)
     {
-        var workItem = await workItems.CreateAsync(
+        var workItem = workItems.Create(
             input.Request.AssetId,
             $"Automated remediation did not restore {input.Request.AssetId} to its effective target. {input.Summary}",
-            input.Request.CorrelationId,
-            cancellationToken);
+            input.Request.CorrelationId);
 
         return input with
         {

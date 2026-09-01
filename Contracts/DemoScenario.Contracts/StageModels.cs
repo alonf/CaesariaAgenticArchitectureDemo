@@ -69,9 +69,9 @@ public enum DemoStage
     ToolApproval,
 
     /// <summary>
-    /// A second agent earns its cost: Security is a distinct reasoning and permission boundary,
-    /// so the Operations Agent consults a Security Operations Agent that reads records it cannot,
-    /// and receives a sanitized judgment while keeping ownership of the answer.
+    /// A second agent for a real boundary: Security is a distinct permission and context
+    /// boundary, so the Operations Agent consults a Security Operations Agent that reads records
+    /// it cannot, and receives a sanitized judgment while keeping ownership of the answer.
     /// </summary>
     MultiAgent
 }

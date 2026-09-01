@@ -341,11 +341,14 @@ internal sealed class FakeWorkItemGateway : IWorkItemGateway
 
     public IReadOnlyList<MaintenanceWorkItem> Created => _workItems;
 
-    public Task<MaintenanceWorkItem> CreateAsync(string assetId, string summary, string correlationId, CancellationToken cancellationToken)
+    public Action? OnCreate { get; set; }
+
+    public MaintenanceWorkItem Create(string assetId, string summary, string correlationId)
     {
+        OnCreate?.Invoke();
         var workItem = new MaintenanceWorkItem($"WI-{_workItems.Count + 1}", assetId, summary, DateTimeOffset.UtcNow, correlationId);
         _workItems.Add(workItem);
-        return Task.FromResult(workItem);
+        return workItem;
     }
 
     public IReadOnlyList<MaintenanceWorkItem> GetAll() => [.. _workItems];

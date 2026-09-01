@@ -55,8 +55,10 @@ public static class OperationsAgentToolNames
 public sealed record OperationsAgentSecurityConsultStatus(bool Enabled);
 
 /// <summary>
-/// One interactive-input request awaiting the operator: a tool paused mid-execution (MCP MRTR)
-/// and will not produce any side effect until the operator answers.
+/// One decision awaiting the operator, from whichever control point raised it: a tool paused
+/// mid-execution (MCP MRTR), an approval node inside the remediation workflow, or the framework
+/// intercepting a protected capability the model selected. In every case nothing has happened yet
+/// and nothing will until the operator answers.
 /// </summary>
 /// <param name="Id">The pending approval identifier.</param>
 /// <param name="Message">The question the tool asked the operator.</param>

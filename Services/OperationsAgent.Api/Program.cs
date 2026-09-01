@@ -248,13 +248,22 @@ remediation.MapPost("/", (HttpContext context, OperationsAgentRemediationRequest
             context.GetCorrelationId()));
     }
 
-    return workflowService.TryStartRun(request.AssetId.Trim(), context.GetCorrelationId(), out var report)
-        ? Results.Ok(report)
-        : Results.Problem(ProblemDetailsFactory.Create(
+    var assetId = request.AssetId.Trim();
+
+    return workflowService.TryStartRun(assetId, context.GetCorrelationId(), out var report) switch
+    {
+        RemediationStartOutcome.Started => Results.Ok(report),
+        RemediationStartOutcome.AssetAlreadyRunning => Results.Problem(ProblemDetailsFactory.Create(
             StatusCodes.Status409Conflict,
             "Remediation already in progress",
-            $"A remediation workflow run is already in flight for {request.AssetId.Trim()}; wait for it to finish before starting another.",
-            context.GetCorrelationId()));
+            $"A remediation workflow run is already in flight for {assetId}; wait for it to finish before starting another.",
+            context.GetCorrelationId())),
+        _ => Results.Problem(ProblemDetailsFactory.Create(
+            StatusCodes.Status429TooManyRequests,
+            "Remediation capacity reached",
+            "As many remediation workflow runs are in flight as this service admits; wait for one to finish.",
+            context.GetCorrelationId()))
+    };
 });
 // A caller that asked the agent to remediate holds its own correlation, not a run id; this lets
 // it find, watch, and approve the run the agent started on its behalf.

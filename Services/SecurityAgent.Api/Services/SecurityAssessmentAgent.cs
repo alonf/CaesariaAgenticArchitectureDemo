@@ -25,12 +25,18 @@ public sealed partial class SecurityAssessmentAgent(
         Another city domain asks you exactly one thing: whether an active security operation
         requires an area to remain lit. Read the operations with the area security tool, which
         serves only the area you were asked about.
-        Then classify the situation. Reply with a single JSON object and nothing else:
+        Then classify the situation and decide what the asking domain should do. Several
+        operations may overlap, with different windows and notes; use your judgment. Reply with a
+        single JSON object and nothing else:
         {"reasonCode": "<one of: NoActiveOperation, ActiveOperationRequiresLighting,
-        ActiveOperationWithoutLightingRequirement>"}
-        Do not write any other text. The asking domain is not cleared for operational detail, and
-        only your classification crosses the boundary - unit call signs, authorizing officers,
-        classifications, operation identifiers and notes never leave this service.
+        ActiveOperationWithoutLightingRequirement>",
+         "recommendation": "<one of: NoActionRequired, LeaveLitUntilWindowEnds,
+        ReassessAfterWindow, ContactSecurityDesk>"}
+        Choose ContactSecurityDesk when the records are ambiguous, conflicting, or end very soon
+        and a human should decide. Do not write any other text. The asking domain is not cleared
+        for operational detail, and only these two choices cross the boundary - unit call signs,
+        authorizing officers, classifications, operation identifiers and notes never leave this
+        service.
         """;
 
     private readonly AIProjectClient _projectClient = projectClient ?? throw new ArgumentNullException(nameof(projectClient));
@@ -168,17 +174,28 @@ public static class SecurityAssessmentSanitizer
         var requiresLighting = lightingOperations.Length > 0;
         var untilUtc = requiresLighting ? lightingOperations.Max(operation => operation.EndsAt) : (DateTimeOffset?)null;
 
-        var reasonCode = ResolveReasonCode(ExtractReasonCode(answer), requiresLighting, status.Operations.Count > 0);
+        var reasonCode = ResolveReasonCode(ExtractCode<SecurityLightingReason>(answer, "reasonCode"), requiresLighting, status.Operations.Count > 0);
+
+        // The recommendation is the agent's own: any value from the closed set is honored, because
+        // advice cannot switch the lights off. Only an absent or unrecognized value falls back.
+        var recommendation = ExtractCode<SecurityLightingRecommendation>(answer, "recommendation")
+            ?? DefaultRecommendation(requiresLighting);
 
         return new SecurityLightingAssessment(
             area,
             requiresLighting,
             untilUtc,
             reasonCode,
+            recommendation,
             RenderReason(reasonCode, untilUtc),
             DetailsWithheld: status.Operations.Count > 0,
             assessedBy);
     }
+
+    private static SecurityLightingRecommendation DefaultRecommendation(bool requiresLighting) =>
+        requiresLighting
+            ? SecurityLightingRecommendation.LeaveLitUntilWindowEnds
+            : SecurityLightingRecommendation.NoActionRequired;
 
     // The classification may only stand when it agrees with the records; a code that contradicts
     // them is replaced by the one the records support.
@@ -206,7 +223,8 @@ public static class SecurityAssessmentSanitizer
         _ => "No active security operation affects lighting in this area."
     };
 
-    private static SecurityLightingReason? ExtractReasonCode(string? answer)
+    private static TCode? ExtractCode<TCode>(string? answer, string property)
+        where TCode : struct, Enum
     {
         if (string.IsNullOrWhiteSpace(answer))
         {
@@ -225,13 +243,13 @@ public static class SecurityAssessmentSanitizer
         {
             using var document = JsonDocument.Parse(answer[start..(end + 1)]);
 
-            if (!document.RootElement.TryGetProperty("reasonCode", out var reasonCode)
-                || reasonCode.ValueKind != JsonValueKind.String)
+            if (!document.RootElement.TryGetProperty(property, out var value)
+                || value.ValueKind != JsonValueKind.String)
             {
                 return null;
             }
 
-            return Enum.TryParse<SecurityLightingReason>(reasonCode.GetString(), ignoreCase: true, out var parsed)
+            return Enum.TryParse<TCode>(value.GetString(), ignoreCase: true, out var parsed)
                 ? parsed
                 : null;
         }

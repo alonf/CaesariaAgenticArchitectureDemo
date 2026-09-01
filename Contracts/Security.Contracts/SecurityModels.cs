@@ -57,6 +57,28 @@ public enum SecurityLightingReason
 }
 
 /// <summary>
+/// What the Security domain advises the asking domain to do. This is the consulted agent's own
+/// judgment: it reads the operations - several may overlap, with free-text notes and different
+/// windows - and picks the advice that fits. It is deliberately advisory, and deliberately cannot
+/// change <see cref="SecurityLightingAssessment.RequiresLighting"/> or its deadline, because a
+/// model must never be able to switch a city's security lighting off.
+/// </summary>
+public enum SecurityLightingRecommendation
+{
+    /// <summary>Nothing is required of the asking domain.</summary>
+    NoActionRequired,
+
+    /// <summary>Leave the lighting as it is for now.</summary>
+    LeaveLitUntilWindowEnds,
+
+    /// <summary>Re-ask once the current window has passed.</summary>
+    ReassessAfterWindow,
+
+    /// <summary>The situation needs a human at the security desk.</summary>
+    ContactSecurityDesk
+}
+
+/// <summary>
 /// The sanitized answer that crosses the domain boundary: a decision, a closed-set reason, and a
 /// deadline computed from the authoritative records. It never carries the operation record, a
 /// restricted field, or any words the consulted model wrote.
@@ -65,6 +87,7 @@ public enum SecurityLightingReason
 /// <param name="RequiresLighting">Whether an active operation requires the area to stay lit.</param>
 /// <param name="UntilUtc">When the requirement lapses, when one applies.</param>
 /// <param name="ReasonCode">The closed-set conclusion.</param>
+/// <param name="Recommendation">The consulted agent's advice - its judgment, and the one field it decides.</param>
 /// <param name="Reason">The public explanation, rendered from a deterministic template.</param>
 /// <param name="DetailsWithheld">Whether restricted detail was deliberately not disclosed.</param>
 /// <param name="AssessedBy">The agent that produced the conclusion, so the consult is visible in a trace.</param>
@@ -73,6 +96,7 @@ public sealed record SecurityLightingAssessment(
     bool RequiresLighting,
     DateTimeOffset? UntilUtc,
     SecurityLightingReason ReasonCode,
+    SecurityLightingRecommendation Recommendation,
     string Reason,
     bool DetailsWithheld,
     string AssessedBy);

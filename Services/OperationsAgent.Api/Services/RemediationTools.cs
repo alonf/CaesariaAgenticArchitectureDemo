@@ -31,9 +31,16 @@ public sealed partial class RemediationTools(
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(assetId);
 
-        if (!_workflowService.TryStartRun(assetId, _correlationId, out var report))
+        var outcome = _workflowService.TryStartRun(assetId, _correlationId, out var report);
+
+        if (outcome is not RemediationStartOutcome.Started)
         {
-            return $"A Restore Lighting Operation is already in progress for {assetId}; it must finish before another can start.";
+            return outcome switch
+            {
+                RemediationStartOutcome.AssetAlreadyRunning =>
+                    $"A Restore Lighting Operation is already in progress for {assetId}; it must finish before another can start.",
+                _ => "The city is already running as many remediation operations as it admits; try again once one finishes."
+            };
         }
 
         RemediationToolsLog.WorkflowStarted(_logger, report.RunId, assetId, _correlationId);

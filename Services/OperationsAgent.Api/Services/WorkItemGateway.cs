@@ -8,14 +8,16 @@ namespace OperationsAgent.Api.Services;
 public interface IWorkItemGateway
 {
     /// <summary>
-    /// Raises a maintenance work item for an asset.
+    /// Raises a maintenance work item for an asset. Creation is synchronous because the emulator
+    /// is in-process: that lets a caller perform the check and the write in one critical section.
+    /// A real work-management service would be asynchronous and would need a different atomicity
+    /// strategy - an idempotency key, or a capability token the service itself validates.
     /// </summary>
     /// <param name="assetId">The asset needing maintenance.</param>
     /// <param name="summary">Why the automated correction did not resolve the anomaly.</param>
     /// <param name="correlationId">The correlation identifier of the workflow run.</param>
-    /// <param name="cancellationToken">The token used to cancel the operation.</param>
     /// <returns>The created work item.</returns>
-    public Task<MaintenanceWorkItem> CreateAsync(string assetId, string summary, string correlationId, CancellationToken cancellationToken);
+    public MaintenanceWorkItem Create(string assetId, string summary, string correlationId);
 
     /// <summary>
     /// Gets the work items raised so far, newest first.
@@ -37,7 +39,7 @@ public sealed partial class SimulatedWorkItemGateway(TimeProvider timeProvider, 
     private int _sequence;
 
     /// <inheritdoc />
-    public Task<MaintenanceWorkItem> CreateAsync(string assetId, string summary, string correlationId, CancellationToken cancellationToken)
+    public MaintenanceWorkItem Create(string assetId, string summary, string correlationId)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(assetId);
         ArgumentException.ThrowIfNullOrWhiteSpace(summary);
@@ -57,7 +59,7 @@ public sealed partial class SimulatedWorkItemGateway(TimeProvider timeProvider, 
         }
 
         WorkItemLog.WorkItemCreated(logger, workItem.WorkItemId, assetId, correlationId);
-        return Task.FromResult(workItem);
+        return workItem;
     }
 
     /// <inheritdoc />

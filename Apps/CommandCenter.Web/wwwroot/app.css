@@ -1370,6 +1370,35 @@ svg {
     gap: 8px;
 }
 
+.approval-capability {
+    margin: 6px 0 0;
+    display: grid;
+    gap: 4px;
+}
+
+.approval-capability div {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.approval-capability dt {
+    min-width: 84px;
+    color: var(--cp-text-muted);
+    font-size: 0.74rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.approval-capability dd {
+    margin: 0;
+    color: var(--cp-text);
+    font-size: 0.8rem;
+    font-family: var(--cp-mono, monospace);
+    overflow-wrap: anywhere;
+}
+
 .approval-actions .action-button {
     margin-top: 4px;
     justify-content: center;

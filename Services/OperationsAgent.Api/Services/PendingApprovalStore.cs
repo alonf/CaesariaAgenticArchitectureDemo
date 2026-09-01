@@ -1,11 +1,12 @@
 namespace OperationsAgent.Api.Services;
 
 /// <summary>
-/// Bridges interactive-input requests (MCP MRTR and workflow approval gates) to the operator.
-/// When a remote tool or workflow node pauses for input, the question parks here; the Command
-/// Center lists it and posts the operator's decision, which releases the paused call. If the
-/// agent run is cancelled or times out - or the demo stage is downgraded - pending entries are
-/// cancelled and removed, and the paused work never executes.
+/// Bridges every operator decision to the Command Center, whichever control point raised it: an
+/// MCP tool paused input-required (MRTR), an approval node inside the remediation workflow, or
+/// the framework intercepting a protected capability the model selected. The question parks here
+/// carrying its control point; the Command Center lists it and posts the operator's decision,
+/// which releases the paused call. If the agent run is cancelled or times out - or the demo stage
+/// is downgraded - pending entries are cancelled and removed, and the paused work never executes.
 /// </summary>
 public sealed partial class PendingApprovalStore(TimeProvider timeProvider, ILogger<PendingApprovalStore> logger)
 {

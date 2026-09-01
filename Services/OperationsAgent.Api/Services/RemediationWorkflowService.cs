@@ -5,6 +5,22 @@ using Microsoft.Agents.AI.Workflows;
 namespace OperationsAgent.Api.Services;
 
 /// <summary>
+/// Why a remediation run did or did not start. The two refusals point at different problems, so
+/// they are different answers.
+/// </summary>
+public enum RemediationStartOutcome
+{
+    /// <summary>The run was started.</summary>
+    Started,
+
+    /// <summary>This asset already has a run in flight.</summary>
+    AssetAlreadyRunning,
+
+    /// <summary>The service is already running as many remediations as it admits.</summary>
+    CapacityReached
+}
+
+/// <summary>
 /// Runs the explicit remediation workflow: a code-built, deterministic orchestration graph
 /// (validate, policy, an operator-approval gate when policy demands one, execute, verify, a
 /// maintenance work item when the correction did not hold, complete) whose live steps stream to
@@ -80,20 +96,21 @@ public sealed partial class RemediationWorkflowService
     /// <param name="correlationId">The correlation identifier spanning the run.</param>
     /// <returns>The initial run report carrying the run identifier.</returns>
     public OperationsAgentWorkflowRunReport StartRun(string assetId, string correlationId) =>
-        TryStartRun(assetId, correlationId, out var report)
+        TryStartRun(assetId, correlationId, out var report) is RemediationStartOutcome.Started
             ? report
-            : throw new InvalidOperationException($"A remediation workflow run is already in progress for {assetId}.");
+            : throw new InvalidOperationException($"A remediation workflow run could not be started for {assetId}.");
 
     /// <summary>
-    /// Starts one remediation run unless the asset already has one in flight. Two concurrent
-    /// corrections of the same asset would race each other's preconditions and confuse the
-    /// operator about which approval belongs to which run, so one asset gets one run.
+    /// Starts one remediation run, unless the asset already has one in flight or the service is
+    /// already running as many as it admits. The two refusals are different facts and are reported
+    /// as different outcomes: telling a caller its asset is busy when eight unrelated assets are
+    /// the reason would send it looking in the wrong place.
     /// </summary>
     /// <param name="assetId">The streetlight asset to remediate.</param>
     /// <param name="correlationId">The correlation identifier spanning the run.</param>
     /// <param name="report">The initial run report when a run was started.</param>
-    /// <returns><see langword="false"/> when a run for this asset is already active.</returns>
-    public bool TryStartRun(string assetId, string correlationId, out OperationsAgentWorkflowRunReport report)
+    /// <returns>Which of the three outcomes occurred.</returns>
+    public RemediationStartOutcome TryStartRun(string assetId, string correlationId, out OperationsAgentWorkflowRunReport report)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(assetId);
         ArgumentException.ThrowIfNullOrWhiteSpace(correlationId);
@@ -104,7 +121,7 @@ public sealed partial class RemediationWorkflowService
                 && string.Equals(existing.AssetId, assetId, StringComparison.OrdinalIgnoreCase)))
             {
                 report = null!;
-                return false;
+                return RemediationStartOutcome.AssetAlreadyRunning;
             }
 
             // Admission is separate from retention: retention prunes finished runs, and cannot
@@ -114,11 +131,11 @@ public sealed partial class RemediationWorkflowService
             {
                 RemediationWorkflowLog.AdmissionRefused(_logger, assetId, MaxConcurrentRuns);
                 report = null!;
-                return false;
+                return RemediationStartOutcome.CapacityReached;
             }
 
             report = StartRunCore(assetId, correlationId);
-            return true;
+            return RemediationStartOutcome.Started;
         }
     }
 

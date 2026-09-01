@@ -263,6 +263,42 @@ All findings from the full working-tree review are now resolved.
 11. **Presented-code order** — the `TOOL_APPROVAL` region now precedes the MultiAgent composition,
     so stepping through cumulative stages follows the lecture order.
 
+## Fixed in the ToolApproval / MultiAgent second review pass (September 2026)
+
+1. **The stage check and the write are now one critical section** — the previous fix rechecked the
+   stage inside the tool but still checked and then wrote, so a downgrade could land between the
+   two and the withdrawn capability would write anyway. `DemoStageGate.TryExecuteAtLeast` holds the
+   gate across the effect, and `IWorkItemGateway.Create` became synchronous so the emulator's write
+   fits inside it (documented: a real work-management service would need an idempotency key or a
+   capability token instead). A test starts a downgrade from inside the write and proves it waits;
+   it was confirmed to fail against the check-then-write form.
+2. **The second model now has a say of its own** — the safety verdict must stay deterministic, so
+   the agent's contribution is the `Recommendation`: any value from the closed set is honored,
+   because advice cannot switch lighting off, and only an absent or unrecognized value falls back
+   to what the records imply. The stage documents and the catalog describe that instead of
+   claiming the model earns its cost by reaching the verdict.
+3. **The race and control-flow fixes now have regression coverage** — the approval loop moved into
+   `ToolApprovalResolver` so it can be exercised without a model (a standing refusal answers a
+   re-request, exhaustion throws), the API answers exhaustion with 409 over real HTTP, the
+   downgrade-vs-write race is pinned as above, 200 concurrent MRTR issuers still leave exactly 100
+   usable tokens, eight in-flight workflow runs admit no ninth, and a pending approval's typed
+   control point, tool name and arguments are asserted after a round trip through the API.
+4. **Capacity is refused as capacity** — `RemediationStartOutcome` separates "this asset is already
+   running" (409) from "this service is at capacity" (429), so a caller does not retry against the
+   wrong condition. Both statuses are asserted over HTTP, along with capacity freeing once runs
+   finish.
+5. **Remaining overclaims removed** — the scenario synchronization wording no longer implies
+   domains cannot disagree; what is claimed is consistency after a successful application.
+6. **Maintenance argument validation reads honestly** — the summary is trimmed before the length
+   check, an over-long summary is refused rather than silently shortened (the operator approved a
+   specific call), and the asset identifier is checked against the shared canonical form.
+7. **The typed approval metadata is used** — the Command Center renders the waiting capability and
+   its arguments from `ToolName`/`ToolArguments` rather than only the composed message.
+8. **A regression the extraction introduced, caught and closed** — moving the approval loop out of
+   the agent orphaned the `ToolApprovalRepeated` log, so a re-request answered from a standing
+   refusal became invisible on stage. `ResolveAsync` takes an `onStandingRefusal` callback and the
+   agent wires it back to the log.
+
 ## Deferred (with trigger)
 
 - **Snippet region scan scope** (low, from the demo-anchor review): the region synchronization
@@ -273,6 +309,12 @@ All findings from the full working-tree review are now resolved.
   gap (a `DemoSnippets` constant missing from runtime `MapDemoBreakpoints` registration) is
   closed by `RegisteredBreakpointsCoverEveryDemoSnippet`, which since the McpTools stage
   validates the union of every service's registration (MCP_SERVER registers in EnergyHub.Api).
+- **A2A as a second multi-agent transport** (from the ToolApproval / MultiAgent passes): the
+  Security consult runs over MCP today. `Microsoft.Agents.AI.A2A` and its hosting packages are
+  published in the same preview family, so the boundary could also be crossed as an A2A agent card
+  plus task exchange. Trigger: a lecture beat that contrasts the two transports — and when taken,
+  align every Agent Framework package to one version rather than taking the latest preview per
+  package independently.
 - **Multi-service breakpoint arming in DemoControl** (from the McpTools stage): the DemoControl
   breakpoints panel arms and attaches only the Operations Agent process; the Energy Hub's
   MCP_SERVER snippet pauses when a debugger is attached to EnergyHub.Api (compound launch) and

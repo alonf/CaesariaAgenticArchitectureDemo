@@ -108,6 +108,53 @@ public sealed class SecurityAssessmentTests
         Assert.True(assessment.RequiresLighting);
     }
 
+    [Theory]
+    [InlineData("ContactSecurityDesk", SecurityLightingRecommendation.ContactSecurityDesk)]
+    [InlineData("ReassessAfterWindow", SecurityLightingRecommendation.ReassessAfterWindow)]
+    [InlineData("NoActionRequired", SecurityLightingRecommendation.NoActionRequired)]
+    public void TheRecommendationIsTheAgentsOwn(string claimed, SecurityLightingRecommendation expected)
+    {
+        // What the second model is actually for. The safety decision is deterministic, so if the
+        // agent had no say at all it would not be earning its cost: reading overlapping windows and
+        // ambiguous notes to advise what the asking domain should do next is the say it has. Any
+        // value from the closed set is honored, including ones the records would not have chosen.
+        var status = CreateStatusWithOperation();
+
+        var assessment = SecurityAssessmentSanitizer.Sanitize(
+            DemoAssets.NorthPromenadeArea,
+            $$"""{"reasonCode":"ActiveOperationRequiresLighting","recommendation":"{{claimed}}"}""",
+            status,
+            AgentName);
+
+        Assert.Equal(expected, assessment.Recommendation);
+        // Advice, never authority: the lights stay on whatever the agent advises.
+        Assert.True(assessment.RequiresLighting);
+        Assert.Equal(status.Operations[0].EndsAt, assessment.UntilUtc);
+    }
+
+    [Theory]
+    [InlineData("""{"reasonCode":"ActiveOperationRequiresLighting"}""")]
+    [InlineData("""{"reasonCode":"ActiveOperationRequiresLighting","recommendation":"SendEveryoneHome"}""")]
+    [InlineData("""{"reasonCode":"ActiveOperationRequiresLighting","recommendation":7}""")]
+    public void AnAbsentOrUnrecognizedRecommendationFallsBackToTheRecords(string answer)
+    {
+        var status = CreateStatusWithOperation();
+
+        var assessment = SecurityAssessmentSanitizer.Sanitize(DemoAssets.NorthPromenadeArea, answer, status, AgentName);
+
+        Assert.Equal(SecurityLightingRecommendation.LeaveLitUntilWindowEnds, assessment.Recommendation);
+    }
+
+    [Fact]
+    public void TheFallbackRecommendationFollowsTheRecordsWhenNothingIsActive()
+    {
+        var status = new SecurityAreaStatus(DemoAssets.NorthPromenadeArea, [], DateTimeOffset.UtcNow);
+
+        var assessment = SecurityAssessmentSanitizer.Sanitize(DemoAssets.NorthPromenadeArea, answer: null, status, AgentName);
+
+        Assert.Equal(SecurityLightingRecommendation.NoActionRequired, assessment.Recommendation);
+    }
+
     [Fact]
     public void TheRestrictedToolServesOnlyTheAreaUnderAssessment()
     {

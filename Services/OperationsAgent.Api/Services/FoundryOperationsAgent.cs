@@ -292,7 +292,7 @@ public sealed partial class FoundryOperationsAgent(
 
                 AIFunction fileWorkItem = new ApprovalRequiredAIFunction(
                     AIFunctionFactory.Create(
-                        maintenanceTools.CreateMaintenanceWorkItemAsync,
+                        maintenanceTools.CreateMaintenanceWorkItem,
                         OperationsAgentToolNames.CreateMaintenanceWorkItem,
                         "Files a maintenance work item so a technician is dispatched to an asset."));
 
@@ -499,88 +499,29 @@ public sealed partial class FoundryOperationsAgent(
         string correlationId,
         CancellationToken cancellationToken)
     {
-        // A refusal stands for this request: if the model asks again for a capability the operator
-        // just declined, it is answered from the standing decision rather than nagging the
-        // operator with the same question until the execution budget runs out.
-        HashSet<string> declined = new(StringComparer.Ordinal);
-
-        for (var round = 0; round < MaxToolApprovalRounds; round++)
-        {
-            var requests = response.Messages
-                .SelectMany(message => message.Contents)
-                .OfType<ToolApprovalRequestContent>()
-                .ToList();
-
-            if (requests.Count == 0)
+        return await new ToolApprovalResolver(MaxToolApprovalRounds).ResolveAsync(
+            response,
+            async (request, decisionCancellation) =>
             {
-                return response;
-            }
-
-            List<AIContent> decisions = [];
-
-            foreach (var request in requests)
-            {
-                var toolName = DescribeToolCall(request).Name;
-
-                if (declined.Contains(toolName))
-                {
-                    decisions.Add(request.CreateResponse(false, "The operator already declined this capability for this request."));
-                    OperationsAgentLog.ToolApprovalRepeated(_logger, toolName, correlationId);
-                    continue;
-                }
-
-                var approved = await RequestOperatorApprovalAsync(request, correlationId, cancellationToken);
-
-                if (!approved)
-                {
-                    declined.Add(toolName);
-                }
-
-                decisions.Add(request.CreateResponse(approved));
+                var toolName = ToolApprovalResolver.DescribeToolCall(request).Name;
+                var approved = await RequestOperatorApprovalAsync(request, correlationId, decisionCancellation);
                 OperationsAgentLog.ToolApprovalAnswered(_logger, toolName, approved, correlationId);
-            }
-
-            response = await agent.RunAsync(
-                new ChatMessage(ChatRole.User, decisions), session, cancellationToken: cancellationToken);
-        }
-
-        // The framework's guidance is to keep resolving until no approval requests remain. Bounded
-        // here, so exhaustion is an explicit failure rather than a half-finished answer.
-        var unresolved = response.Messages
-            .SelectMany(message => message.Contents)
-            .OfType<ToolApprovalRequestContent>()
-            .Select(request => DescribeToolCall(request).Name)
-            .Distinct(StringComparer.Ordinal)
-            .ToArray();
-
-        return unresolved.Length == 0
-            ? response
-            : throw new OperationsAgentApprovalLoopException(MaxToolApprovalRounds, string.Join(", ", unresolved));
-    }
-
-    // The approval request carries the tool call the model chose; the operator is shown the tool
-    // and its arguments, because "approve an action" means nothing without knowing which action.
-    private static (string Name, string Arguments) DescribeToolCall(ToolApprovalRequestContent request)
-    {
-        if (request.ToolCall is not FunctionCallContent call)
-        {
-            return ("an unnamed capability", "no arguments");
-        }
-
-        var arguments = call.Arguments is { Count: > 0 } callArguments
-            ? string.Join(", ", callArguments.Select(argument => $"{argument.Key}: {argument.Value}"))
-            : "no arguments";
-
-        return (call.Name, arguments);
+                return approved;
+            },
+            (message, resumeCancellation) => agent.RunAsync(message, session, cancellationToken: resumeCancellation),
+            toolName => OperationsAgentLog.ToolApprovalRepeated(_logger, toolName, correlationId),
+            cancellationToken);
     }
 
     private async Task<bool> RequestOperatorApprovalAsync(
         ToolApprovalRequestContent request, string correlationId, CancellationToken cancellationToken)
     {
-        var (name, arguments) = DescribeToolCall(request);
+        var (name, arguments) = ToolApprovalResolver.DescribeToolCall(request);
 
+        // The prompt names the capability; the arguments travel as typed fields the Command Center
+        // lays out on their own, so a projector does not get one long run-on sentence.
         var (_, decision) = _pendingApprovalStore.Create(
-            $"The agent selected {name} ({arguments}). Approve running it?",
+            $"The agent selected {name}. Approve running it?",
             correlationId,
             cancellationToken,
             OperationsAgentControlPoint.ToolApproval,

@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using EnergyHub.Api.Services;
 
 namespace Caesarea.Deterministic.Tests;
@@ -54,5 +55,20 @@ public sealed class MrtrRequestStateStoreTests
         var token = store.Issue("L-417");
 
         Assert.True(store.TryConsume(token, "l-417"));
+    }
+
+    [Fact]
+    public void ConcurrentIssuersCannotPushThePauseStorePastItsCeiling()
+    {
+        // Prune, evict and insert happen under one lock, so issuers racing each other cannot each
+        // observe room and then all take it. The store publishes no count, so the ceiling is
+        // observed the way a client would meet it: exactly 100 of the 200 tokens still open a door.
+        var store = new MrtrRequestStateStore(new TestTimeProvider());
+        ConcurrentBag<string> tokens = [];
+
+        Parallel.For(0, 200, _ => tokens.Add(store.Issue("L-417")));
+
+        Assert.Equal(200, tokens.Count);
+        Assert.Equal(100, tokens.Count(token => store.TryConsume(token, "L-417")));
     }
 }

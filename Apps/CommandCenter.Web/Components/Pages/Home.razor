@@ -542,6 +542,18 @@
                                 @foreach (var approval in _pendingApprovals)
                                 {
                                     <p class="approval-message">@approval.Message</p>
+                                    @* The capability and its arguments come from the request, so
+                                       the operator sees exactly what they are approving. *@
+                                    @if (!string.IsNullOrWhiteSpace(approval.ToolName))
+                                    {
+                                        <dl class="approval-capability">
+                                            <div><dt>Capability</dt><dd>@approval.ToolName</dd></div>
+                                            @if (!string.IsNullOrWhiteSpace(approval.ToolArguments))
+                                            {
+                                                <div><dt>Arguments</dt><dd>@approval.ToolArguments</dd></div>
+                                            }
+                                        </dl>
+                                    }
                                     <div class="approval-actions">
                                         <button class="action-button approval-approve" @onclick="() => RespondToApprovalAsync(approval.Id, true)" disabled="@_approvalBusy">Approve</button>
                                         <button class="action-button approval-deny" @onclick="() => RespondToApprovalAsync(approval.Id, false)" disabled="@_approvalBusy">Deny</button>
