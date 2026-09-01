@@ -151,6 +151,56 @@ public sealed class AgentEvidenceGuardTests
         Assert.Null(version);
     }
 
+    [Fact]
+    public void AStageAdvanceIsReportedAsAStageChange()
+    {
+        // The operator is told what actually moved. Calling a stage advance an operational change
+        // sends the presenter looking at the city for something that never happened.
+        var before = CreateSnapshot();
+        var after = before with
+        {
+            CurrentStage = before.CurrentStage with { Id = DemoStage.Workflow, CorrelationId = "stage-corr-2" }
+        };
+
+        Assert.Equal(
+            AgentEvidenceChange.Stage,
+            AgentEvidenceGuard.DescribeChange(
+                AgentEvidenceGuard.GetEvidenceVersion(before),
+                AgentEvidenceGuard.GetEvidenceVersion(after)));
+    }
+
+    [Fact]
+    public void AMovedLampIsReportedAsAnOperationalChange()
+    {
+        var before = CreateSnapshot();
+        var after = before with
+        {
+            OperationalState = before.OperationalState with { ReportedIsOn = false, StateRevision = 8 }
+        };
+
+        Assert.Equal(
+            AgentEvidenceChange.OperationalState,
+            AgentEvidenceGuard.DescribeChange(
+                AgentEvidenceGuard.GetEvidenceVersion(before),
+                AgentEvidenceGuard.GetEvidenceVersion(after)));
+    }
+
+    [Fact]
+    public void AnIdenticalVersionReportsNoChange()
+    {
+        var snapshot = CreateSnapshot();
+        var version = AgentEvidenceGuard.GetEvidenceVersion(snapshot);
+
+        Assert.Equal(AgentEvidenceChange.None, AgentEvidenceGuard.DescribeChange(version, version));
+    }
+
+    [Fact]
+    public void AnUncomparableVersionIsNotGuessedAt()
+    {
+        Assert.Equal(AgentEvidenceChange.Unknown, AgentEvidenceGuard.DescribeChange(null, "a|b|c|d|e"));
+        Assert.Equal(AgentEvidenceChange.Unknown, AgentEvidenceGuard.DescribeChange("truncated", "a|b|c|d|e"));
+    }
+
     private static CommandCenterSnapshot CreateSnapshot()
     {
         var now = new DateTimeOffset(2026, 9, 1, 9, 0, 0, TimeSpan.Zero);

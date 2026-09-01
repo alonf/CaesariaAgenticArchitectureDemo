@@ -60,13 +60,18 @@ internal sealed partial class VsCodeAttachService(IWebHostEnvironment environmen
     }
 
     /// <summary>
-    /// Asks VS Code to attach the .NET debugger to the running Operations Agent service.
+    /// Asks VS Code to attach the .NET debugger to one running demo service. Snippets live in the
+    /// service whose code they pause, so the process to attach to is named by the caller rather
+    /// than fixed to the Operations Agent.
     /// </summary>
+    /// <param name="processName">The service process to attach to, for example OperationsAgent.Api.exe.</param>
     /// <param name="cancellationToken">Cancels the CLI call.</param>
     /// <returns>The command outcome with a presenter-facing message.</returns>
-    public async Task<VsCodeCommandResult> RequestAttachAsync(CancellationToken cancellationToken)
+    public async Task<VsCodeCommandResult> RequestAttachAsync(string processName, CancellationToken cancellationToken)
     {
-        var attachUri = $"vscode://{ExtensionId}/attach?processName={OperationsAgentProcessName}";
+        ArgumentException.ThrowIfNullOrWhiteSpace(processName);
+
+        var attachUri = $"vscode://{ExtensionId}/attach?processName={Uri.EscapeDataString(processName)}";
         var result = await RunCodeCliAsync($"--open-url \"{attachUri}\"", cancellationToken);
         VsCodeAttachLog.AttachRequested(logger, result.Succeeded);
 

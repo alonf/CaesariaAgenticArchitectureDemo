@@ -274,13 +274,21 @@ remediation.MapGet("/runs", (HttpContext context, string correlationId, Remediat
         return stageProblem;
     }
 
-    return string.IsNullOrWhiteSpace(correlationId)
-        ? Results.BadRequest(ProblemDetailsFactory.Create(
+    if (string.IsNullOrWhiteSpace(correlationId))
+    {
+        return Results.BadRequest(ProblemDetailsFactory.Create(
             StatusCodes.Status400BadRequest,
             "Invalid request",
             "A correlation identifier is required to look up a workflow run.",
-            context.GetCorrelationId()))
-        : Results.Ok(workflowService.FindRunByCorrelation(correlationId));
+            context.GetCorrelationId()));
+    }
+
+    // Most asks start no workflow, so "no run for this correlation" is the ordinary answer, not an
+    // error. It is reported as No Content rather than an empty 200 body, which a JSON client cannot
+    // deserialize - and which surfaced as a raw serializer error in the Command Center.
+    return workflowService.FindRunByCorrelation(correlationId) is { } run
+        ? Results.Ok(run)
+        : Results.NoContent();
 });
 remediation.MapGet("/work-items", (HttpContext context, IWorkItemGateway workItems, DemoStageGate stageGate) =>
     CreateWorkflowStageProblem(context, stageGate) is { } stageProblem

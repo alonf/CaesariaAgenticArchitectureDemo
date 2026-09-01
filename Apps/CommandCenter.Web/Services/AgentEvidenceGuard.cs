@@ -20,6 +20,16 @@ public static class AgentEvidenceGuard
     private const int AmbientComponentCount = 4;
     private const int ComponentCount = 5;
 
+    // Component order in the version string, so a difference can be named rather than guessed at.
+    private static readonly AgentEvidenceChange[] ComponentChanges =
+    [
+        AgentEvidenceChange.Stage,
+        AgentEvidenceChange.Scenario,
+        AgentEvidenceChange.CustomerReport,
+        AgentEvidenceChange.Incident,
+        AgentEvidenceChange.OperationalState
+    ];
+
     /// <summary>
     /// Computes the evidence version of a snapshot: the correlation identifiers and the
     /// authoritative state revision that change whenever the picture the agent reasons over
@@ -108,4 +118,67 @@ public static class AgentEvidenceGuard
         adoptedOwnWrite = true;
         return true;
     }
+
+    /// <summary>
+    /// Names what moved between two evidence versions, so the operator is told the actual cause -
+    /// advancing the demo stage is not an operational change, and saying it was sends the presenter
+    /// looking at the city for something that did not happen.
+    /// </summary>
+    /// <param name="requestedEvidenceVersion">The evidence version the answer is valid against.</param>
+    /// <param name="currentEvidenceVersion">The evidence version on screen now.</param>
+    /// <returns>The first component that differs, in fingerprint order.</returns>
+    public static AgentEvidenceChange DescribeChange(string? requestedEvidenceVersion, string? currentEvidenceVersion)
+    {
+        if (string.Equals(requestedEvidenceVersion, currentEvidenceVersion, StringComparison.Ordinal))
+        {
+            return AgentEvidenceChange.None;
+        }
+
+        var requestedComponents = requestedEvidenceVersion?.Split('|');
+        var currentComponents = currentEvidenceVersion?.Split('|');
+
+        if (requestedComponents is not { Length: ComponentCount } || currentComponents is not { Length: ComponentCount })
+        {
+            return AgentEvidenceChange.Unknown;
+        }
+
+        for (var i = 0; i < ComponentCount; i++)
+        {
+            if (!string.Equals(requestedComponents[i], currentComponents[i], StringComparison.Ordinal))
+            {
+                return ComponentChanges[i];
+            }
+        }
+
+        return AgentEvidenceChange.Unknown;
+    }
+}
+
+/// <summary>
+/// What made an agent answer stale. Several different events invalidate an answer, and they are
+/// not equally alarming: a presenter advancing the stage is expected, a lamp changing underneath
+/// the answer is the thing the operator needs to look at.
+/// </summary>
+public enum AgentEvidenceChange
+{
+    /// <summary>Nothing changed; the answer still describes the picture on screen.</summary>
+    None,
+
+    /// <summary>The presenter moved the demo stage.</summary>
+    Stage,
+
+    /// <summary>A different deterministic scenario was applied.</summary>
+    Scenario,
+
+    /// <summary>A customer report was raised or resolved.</summary>
+    CustomerReport,
+
+    /// <summary>An incident was opened or closed.</summary>
+    Incident,
+
+    /// <summary>The authoritative operational state moved.</summary>
+    OperationalState,
+
+    /// <summary>The versions differ but cannot be compared component by component.</summary>
+    Unknown
 }

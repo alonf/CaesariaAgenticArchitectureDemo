@@ -86,6 +86,44 @@ public sealed class OperationsAgentApiTests
     }
 
     [Fact]
+    public async Task AnAskThatStartedNoWorkflowIsAnsweredAsNoContent()
+    {
+        // Most asks start no workflow, so this lookup misses far more often than it hits. An empty
+        // 200 body is not JSON: the Command Center's client threw on it and printed the serializer
+        // error on the projector. Absence has to be reported as absence.
+        await using var world = new ApiWorld();
+        using var client = world.CreateClient();
+
+        using var response = await client.GetAsync(
+            "/api/operations-agent/remediation/runs?correlationId=no-such-correlation",
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task AStartedRunIsStillFoundByItsCorrelation()
+    {
+        await using var world = new ApiWorld();
+        using var client = world.CreateClient();
+
+        using var started = await StartRemediationAsync(client, "L-417");
+        started.EnsureSuccessStatusCode();
+        var report = await started.Content.ReadFromJsonAsync<OperationsAgentWorkflowRunReport>(
+            JsonOptions, TestContext.Current.CancellationToken);
+
+        var found = await client.GetFromJsonAsync<OperationsAgentWorkflowRunReport>(
+            $"/api/operations-agent/remediation/runs?correlationId={Uri.EscapeDataString(report!.CorrelationId)}",
+            JsonOptions,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(report.RunId, found!.RunId);
+
+        await DenyEveryPendingApprovalAsync(client, waitFor: 1);
+        await WaitForCompletionAsync(client, report.RunId);
+    }
+
+    [Fact]
     public async Task CapacityIsRefusedAsCapacityAndNotAsASameAssetConflict()
     {
         // Two different refusals: this asset is already being remediated, and this service is

@@ -88,36 +88,59 @@
         }
         else
         {
-            <p>Arm a snippet to pause the Operations Agent service at that code on its next run, then single-step it in the editor.</p>
-            <ul class="capability-list">
-                @foreach (var snippet in _breakpoints.Snippets)
-                {
-                    <li>
-                        <label>
-                            <input
-                                type="checkbox"
-                                checked="@snippet.IsArmed"
-                                disabled="@ArmDisabled"
-                                @onchange="e => SetBreakpointAsync(snippet.SnippetName, e.Value is true)" />
-                            @snippet.SnippetName - break on next run
-                        </label>
-                    </li>
-                }
-            </ul>
-            <div class="stage-switch-actions">
-                @if (_attachStatus is { VsCodeAvailable: true, ExtensionInstalled: false })
-                {
+            <p>Arm a snippet to pause its service at that code on its next run, then single-step it in the editor. A snippet lives in the service whose code it pauses, so each service is attached separately.</p>
+
+            @if (_attachStatus is { VsCodeAvailable: true, ExtensionInstalled: false })
+            {
+                <div class="stage-switch-actions">
                     <button class="button primary" @onclick="InstallExtensionAsync" disabled="@_attachBusy">
                         @(_attachBusy ? "Installing..." : "Install VS Code extension")
                     </button>
-                }
-                else if (_attachStatus is { ExtensionInstalled: true } && !_breakpoints.DebuggerAttached)
-                {
-                    <button class="button primary" @onclick="RequestAttachAsync" disabled="@_attachBusy">
-                        @(_attachBusy ? "Requesting..." : "Attach debugger")
-                    </button>
-                }
-            </div>
+                </div>
+            }
+
+            @foreach (var source in _breakpoints)
+            {
+                <div class="breakpoint-source">
+                    <div class="breakpoint-source-heading">
+                        <strong>@source.Service.DisplayName</strong>
+                        <span class="stamp">@SourceStamp(source)</span>
+                    </div>
+
+                    @if (source.Error is not null)
+                    {
+                        <p class="switchboard-note status-error">@source.Error</p>
+                    }
+                    else
+                    {
+                        <ul class="capability-list">
+                            @foreach (var snippet in source.Snippets)
+                            {
+                                <li>
+                                    <label>
+                                        <input
+                                            type="checkbox"
+                                            checked="@snippet.IsArmed"
+                                            disabled="@ArmDisabled"
+                                            @onchange="e => SetBreakpointAsync(source.Service.ClientName, snippet.SnippetName, e.Value is true)" />
+                                        @snippet.SnippetName - break on next run
+                                    </label>
+                                </li>
+                            }
+                        </ul>
+
+                        @if (_attachStatus is { ExtensionInstalled: true } && !source.DebuggerAttached)
+                        {
+                            <div class="stage-switch-actions">
+                                <button class="button" @onclick="() => RequestAttachAsync(source.Service.ProcessName)" disabled="@_attachBusy">
+                                    @(_attachBusy ? "Requesting..." : $"Attach debugger to {source.Service.DisplayName}")
+                                </button>
+                            </div>
+                        }
+                    }
+                </div>
+            }
+
             @if (_attachStatus is { VsCodeAvailable: false })
             {
                 <p class="switchboard-note">The VS Code CLI was not found on this machine; breakpoint arming is unavailable.</p>
@@ -126,7 +149,7 @@
             {
                 <p class="switchboard-note">Breakpoint arming is disabled until the demo-attach VS Code extension is installed.</p>
             }
-            else if (!_breakpoints.DebuggerAttached)
+            else
             {
                 <p class="switchboard-note">Armed snippets stay armed until a debugged run consumes them.</p>
             }
@@ -236,7 +259,7 @@
         }
         else
         {
-            <p class="switchboard-note">Whether the Operations Agent may consult the Security Operations Agent. Ask the same question with it off and on: the second agent has to earn its cost.</p>
+            <p class="switchboard-note">Whether the Operations Agent may consult the Security Operations Agent. Ask the same question with it off and on: with it off the lamp is still intentional, but the reason belongs to a domain that will not disclose it.</p>
             <div class="stage-switch-actions">
                 <button class="button @(_securityConsult.Enabled ? "secondary" : "primary")" @onclick="() => SetSecurityConsultAsync(false)" disabled="@_securityConsultBusy">
                     Consult OFF
@@ -329,7 +352,7 @@
 @code {
     private ScenarioCatalogResponse? _catalog;
     private DemoStageCatalogResponse? _stageCatalog;
-    private DemoBreakpointsResponse? _breakpoints;
+    private IReadOnlyList<DemoBreakpointSource>? _breakpoints;
     private bool _breakpointsBusy;
     private string? _breakpointsMessage;
     private VsCodeAttachStatus? _attachStatus;
@@ -389,13 +412,21 @@
         { Source: "Mcp" } => "MCP remote",
         _ => "Local function"
     };
+    // Each service is debugged separately, so the panel stamp counts how many are attached rather
+    // than claiming a single answer for all of them.
     private string BreakpointStamp => _breakpoints switch
     {
         null => "Unavailable",
+        _ => $"{_breakpoints.Count(source => source.DebuggerAttached)}/{_breakpoints.Count} services attached"
+    };
+    private bool ArmDisabled => _breakpointsBusy || _attachStatus is not { ExtensionInstalled: true };
+
+    private static string SourceStamp(DemoBreakpointSource source) => source switch
+    {
+        { Error: not null } => "Unavailable",
         { DebuggerAttached: true } => "Debugger attached",
         _ => "Debugger not attached"
     };
-    private bool ArmDisabled => _breakpointsBusy || _attachStatus is not { ExtensionInstalled: true };
     private TimeSpan PollingInterval => TimeSpan.FromSeconds(WebOptions.Value.PollingIntervalSeconds);
 
     protected override async Task OnInitializedAsync()
@@ -785,13 +816,13 @@
         }
     }
 
-    private async Task RequestAttachAsync()
+    private async Task RequestAttachAsync(string processName)
     {
         _attachBusy = true;
 
         try
         {
-            var result = await AttachService.RequestAttachAsync(CancellationToken.None);
+            var result = await AttachService.RequestAttachAsync(processName, CancellationToken.None);
             _attachMessage = result.Message;
             _attachMessageIsError = !result.Succeeded;
         }
@@ -802,13 +833,16 @@
         }
     }
 
-    private async Task SetBreakpointAsync(string snippetName, bool armed)
+    private async Task SetBreakpointAsync(string clientName, string snippetName, bool armed)
     {
         _breakpointsBusy = true;
 
         try
         {
-            _breakpoints = await BreakpointsClient.SetArmedAsync(snippetName, armed, CancellationToken.None);
+            // The arm goes to the owning service; the panel then re-reads every service so the
+            // other rows stay truthful too.
+            await BreakpointsClient.SetArmedAsync(clientName, snippetName, armed, CancellationToken.None);
+            await LoadBreakpointsAsync(CancellationToken.None);
             _breakpointsMessage = null;
         }
         catch (Exception exception)

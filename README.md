@@ -112,7 +112,7 @@ The demo runs as one application with a presenter-controlled `DemoStage`:
   with **Multi Round-Trip Requests (MRTR)**. The tool pauses input-required for explicit operator
   approval and produces no side effect before the input arrives; deny and the state provably
   does not change.
-- `DemoStage=MultiAgent` — a **second agent earns its cost**. The Security Hub holds records the
+- `DemoStage=MultiAgent` — a **second agent for a real boundary**. The Security Hub holds records the
   Operations Agent may not read (an architecture test pins that it has no route to them at all),
   so it consults a Security Operations Agent and receives a sanitized judgment while keeping
   ownership of the answer. Turn the consult off and the same question yields a thinner answer:

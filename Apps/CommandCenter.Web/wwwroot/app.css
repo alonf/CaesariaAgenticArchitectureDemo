@@ -159,6 +159,13 @@ svg {
     font-size: 1rem;
 }
 
+/* Overrides the block display the date line above sets, so the offset sits beside the time. */
+.status-clock .clock-zone {
+    display: inline;
+    color: var(--cp-text-muted);
+    font-size: 0.72rem;
+}
+
 .system-pill,
 .stage-chip,
 .severity-badge,
@@ -1379,6 +1386,9 @@ svg {
 .approval-capability div {
     display: flex;
     flex-wrap: wrap;
+    /* The label and the value are set at different sizes, so they are aligned on their shared text
+       baseline; stretching them instead leaves a short value visibly floating above its label. */
+    align-items: baseline;
     gap: 8px;
 }
 

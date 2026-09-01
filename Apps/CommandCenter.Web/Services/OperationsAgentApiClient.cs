@@ -1,3 +1,4 @@
+using System.Net;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 
@@ -111,6 +112,14 @@ internal sealed class OperationsAgentApiClient
         using var response = await _httpClient.SendAsync(request, cancellationToken);
 
         response.EnsureSuccessStatusCode();
+
+        // No run for this correlation is the ordinary case - most asks start no workflow - and the
+        // service reports it as No Content. Deserializing an empty body would throw, so the absence
+        // is read from the response itself rather than from a parse failure.
+        if (response.StatusCode == HttpStatusCode.NoContent || response.Content.Headers.ContentLength is 0)
+        {
+            return null;
+        }
 
         return await response.Content.ReadFromJsonAsync<OperationsAgentWorkflowRunReport>(SerializerOptions, cancellationToken);
     }

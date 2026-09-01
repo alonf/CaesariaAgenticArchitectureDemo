@@ -210,6 +210,25 @@ button {
     font-size: 0.82rem;
 }
 
+/* One block per service that registers snippets, each with its own debugger state. */
+.breakpoint-source {
+    margin-top: 0.9rem;
+    padding: 0.75rem 0.9rem;
+    border: 1px solid var(--panel-border, rgba(255, 255, 255, 0.08));
+    border-radius: 8px;
+}
+
+.breakpoint-source-heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.breakpoint-source .capability-list {
+    margin-bottom: 0.5rem;
+}
+
 #blazor-error-ui {
     background: rgba(255, 239, 191, 0.96);
     bottom: 0;

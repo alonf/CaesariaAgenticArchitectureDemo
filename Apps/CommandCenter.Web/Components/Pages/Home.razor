@@ -25,7 +25,10 @@
         <div class="command-status">
             <div class="status-clock">
                 <span>@DateTimeOffset.Now.ToString("dd MMM yyyy")</span>
-                <strong>@DateTimeOffset.Now.ToString("HH:mm")</strong>
+                @* The dashboard renders local time while an agent answer quotes UTC with a
+                   trailing Z. Naming the offset keeps the two readable side by side - they can
+                   show the same digits hours apart. *@
+                <strong>@DateTimeOffset.Now.ToString("HH:mm") <span class="clock-zone">@LocalZoneLabel</span></strong>
             </div>
             <span class="system-pill healthy"><i></i> Systems operational</span>
             <span class="operator-badge">OP</span>
@@ -84,11 +87,14 @@
                         <span class="hub-icon" aria-hidden="true">
                             <svg viewBox="0 0 24 24"><path d="M12 3 4 6v5c0 5 3.4 8.5 8 10 4.6-1.5 8-5 8-10V6l-8-3Z" /></svg>
                         </span>
+                        @* The Security domain becomes a live participant at the MultiAgent stage,
+                           where its own agent is consulted across the boundary. Before that it only
+                           contributes the operational context the Energy twin carries. *@
                         <span class="hub-copy">
                             <strong>Security Hub</strong>
-                            <small>Context only in Stage 0</small>
+                            <small>@(IsMultiAgentStage ? "Consulted through the Security Agent" : "Operational context only")</small>
                         </span>
-                        <span class="hub-state muted"></span>
+                        <span class="hub-state @(IsMultiAgentStage ? "healthy" : "muted")"></span>
                     </button>
 
                     <button class="hub-row">
@@ -97,7 +103,7 @@
                         </span>
                         <span class="hub-copy">
                             <strong>Mobility Hub</strong>
-                            <small>Not connected in Stage 0</small>
+                            <small>Not connected in this demo</small>
                         </span>
                         <span class="hub-state muted"></span>
                     </button>
@@ -258,7 +264,10 @@
                                 <svg viewBox="0 0 24 24"><path d="m12 3 9 17H3L12 3Zm0 6v5m0 3h.01" /></svg>
                             </span>
                             <strong>No incident created</strong>
-                            <p>The system exposes the operational anomaly, but Stage 0 does not investigate why it happened.</p>
+                            @* Two different reasons for an empty panel: nothing is wrong, or
+                               something is and no one has opened a record for it. Before the agent
+                               arrives, that second case is the whole point of the stage. *@
+                            <p>@IncidentEmptyExplanation</p>
                         </div>
                     }
                     else
@@ -738,6 +747,15 @@
     // The same canonical rule the workflow and the Energy Hub use: a lamp deliberately lit for an
     // active operation is not an anomaly, so the console must not raise attention for it.
     private bool IsAnomaly => _snapshot?.OperationalState.IsAnomalous == true;
+
+    private bool IsMultiAgentStage => _snapshot?.CurrentStage.Id >= DemoStage.MultiAgent;
+
+    private string IncidentEmptyExplanation => (IsAnomaly, IsAgentStage) switch
+    {
+        (false, _) => "Nothing is out of order: the asset matches its effective target.",
+        (true, false) => "The system exposes the operational anomaly, but the deterministic stage does not investigate why it happened.",
+        (true, true) => "The system exposes the operational anomaly; no incident record has been opened for it."
+    };
     private string MarkerClass => IsAnomaly ? "attention" : "normal";
     private string IncidentPanelClass => _snapshot?.OpenIncident is null ? "no-incident" : "has-incident";
     private string AttentionClass => IsAnomaly ? "warning-text" : "success-text";
@@ -1148,7 +1166,10 @@
         try
         {
             var assetId = ExtractAssetId(_lastAgentQuestion) ?? snapshot.AssetId;
-            var resolution = response.Answer.Length <= 500 ? response.Answer : $"{response.Answer[..500]}…";
+            // The answer is markdown; a stored case is recalled into a plain-text view, so the
+            // markup is removed before the length limit is applied to what actually gets stored.
+            var plainAnswer = AnswerHtml.ToPlainText(response.Answer);
+            var resolution = plainAnswer.Length <= 500 ? plainAnswer : $"{plainAnswer[..500]}…";
             var closedCase = await OperationsAgentClient.CloseCaseAsync(
                 assetId,
                 $"Streetlight {assetId} on during daylight against its schedule.",
@@ -1226,7 +1247,7 @@
                 }
                 else
                 {
-                    _agentMessage = "Operational state changed while the agent was answering. Ask again.";
+                    _agentMessage = $"{StaleAnswerCause(requestedEvidenceVersion, currentEvidenceVersion)} while the agent was answering. Ask again.";
                     _agentMessageIsError = true;
                 }
             }
@@ -1301,10 +1322,11 @@
                 }
                 else
                 {
+                    var cause = StaleAnswerCause(_agentEvidenceVersion, currentEvidenceVersion);
                     _agentResponse = null;
                     _agentEvidenceVersion = null;
                     _agentOwnWriteAdopted = false;
-                    _agentMessage = "Operational state changed. Ask the agent again.";
+                    _agentMessage = $"{cause}. Ask the agent again.";
                     _agentMessageIsError = false;
                 }
             }
@@ -1330,6 +1352,34 @@
 
     private static string FormatTimestamp(DateTimeOffset? value) =>
         value?.ToLocalTime().ToString("HH:mm:ss") ?? "n/a";
+
+    // An answer goes stale for several different reasons, and the operator is told which one.
+    // Reporting a stage advance as an operational change sends the presenter looking at the city
+    // for something that never happened.
+    private static string StaleAnswerCause(string? requestedEvidenceVersion, string? currentEvidenceVersion) =>
+        AgentEvidenceGuard.DescribeChange(requestedEvidenceVersion, currentEvidenceVersion) switch
+        {
+            AgentEvidenceChange.Stage => "The demo stage changed",
+            AgentEvidenceChange.Scenario => "A different scenario was applied",
+            AgentEvidenceChange.CustomerReport => "The customer report changed",
+            AgentEvidenceChange.Incident => "The incident record changed",
+            _ => "Operational state changed"
+        };
+
+    // Every clock on this dashboard is local; the offset is stated once, in the header.
+    private static string LocalZoneLabel
+    {
+        get
+        {
+            var offset = DateTimeOffset.Now.Offset;
+            var sign = offset < TimeSpan.Zero ? "-" : "+";
+            var minutes = Math.Abs(offset.Minutes);
+
+            return minutes == 0
+                ? $"UTC{sign}{Math.Abs(offset.Hours)}"
+                : $"UTC{sign}{Math.Abs(offset.Hours)}:{minutes:00}";
+        }
+    }
 
     private static string ShortCorrelation(string value) =>
         value.Length <= 12 ? value : value[..12];

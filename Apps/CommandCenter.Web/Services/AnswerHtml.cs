@@ -55,6 +55,21 @@ internal static class AnswerHtml
         return writer.ToString();
     }
 
+    /// <summary>
+    /// Converts model-produced markdown to plain text. Used where an answer is stored rather than
+    /// rendered - case memory is recalled into a plain-text view precisely because stored text is
+    /// untrusted, so markup left in it shows up verbatim as <c>**on**</c> on the projector.
+    /// </summary>
+    /// <param name="markdown">The model-produced markdown text.</param>
+    /// <returns>The text with markup removed and whitespace collapsed.</returns>
+    public static string ToPlainText(string markdown)
+    {
+        ArgumentNullException.ThrowIfNull(markdown);
+
+        var plain = Markdown.ToPlainText(markdown, Pipeline);
+        return string.Join(' ', plain.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+    }
+
     private static bool IsSafeUrl(string? url) =>
         Uri.TryCreate(url, UriKind.Absolute, out var parsed)
         && parsed.Scheme is "http" or "https" or "mailto";

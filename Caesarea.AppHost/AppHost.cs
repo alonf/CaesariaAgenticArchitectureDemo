@@ -45,9 +45,13 @@ builder.AddProject<Projects.CommandCenter_Web>("commandcenter-web")
     .WaitFor(commandCenterApi)
     .WithExternalHttpEndpoints();
 
+// The switchboard also addresses the Energy Hub and the Security Agent directly, because demo
+// snippets live in the service whose code they pause and each is armed at its own boundary.
 builder.AddProject<Projects.DemoControl_Web>("democontrol-web")
     .WithReference(demoScenarioApi)
     .WithReference(operationsAgentApi)
+    .WithReference(energyHub)
+    .WithReference(securityAgentApi)
     .WaitFor(demoScenarioApi)
     .WithExternalHttpEndpoints();
 

@@ -80,4 +80,31 @@ public sealed class AnswerHtmlTests
         Assert.DoesNotContain("pixel.png", html, StringComparison.Ordinal);
         Assert.Contains("status chart", html, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void StoredTextCarriesNoMarkup()
+    {
+        // A closed case is recalled into a plain-text view - stored text is untrusted, so it is
+        // never rendered as HTML. Markup left in it would show up verbatim on the projector.
+        var plain = AnswerHtml.ToPlainText("Yes. Streetlight **L-417** is currently reported as *on*.");
+
+        Assert.Equal("Yes. Streetlight L-417 is currently reported as on.", plain);
+    }
+
+    [Fact]
+    public void StructuredAnswersFlattenToOneReadableLine()
+    {
+        var plain = AnswerHtml.ToPlainText("# Brief\n\n- Override: **active**\n- Health: `healthy`\n");
+
+        Assert.Equal("Brief Override: active Health: healthy", plain);
+    }
+
+    [Fact]
+    public void ALinkKeepsItsTextAndDropsItsDestination()
+    {
+        var plain = AnswerHtml.ToPlainText("See [work order WO-8732](https://example.com/wo/8732).");
+
+        Assert.Contains("work order WO-8732", plain, StringComparison.Ordinal);
+        Assert.DoesNotContain("example.com", plain, StringComparison.Ordinal);
+    }
 }

@@ -20,11 +20,24 @@ builder.Services.AddHttpClient<DemoStageApiClient>((serviceProvider, client) =>
     var options = serviceProvider.GetRequiredService<IOptions<DemoControlWebOptions>>().Value;
     client.BaseAddress = new Uri(options.BaseUri, UriKind.Absolute);
 });
-builder.Services.AddHttpClient<DemoBreakpointsApiClient>((serviceProvider, client) =>
+// One named client per service that registers demo snippets; the switchboard fans out across all
+// of them so a snippet can be armed wherever its code lives.
+builder.Services.AddHttpClient("breakpoints-operationsagent", (serviceProvider, client) =>
 {
     var options = serviceProvider.GetRequiredService<IOptions<DemoControlWebOptions>>().Value;
     client.BaseAddress = new Uri(options.OperationsAgentBaseUri, UriKind.Absolute);
 });
+builder.Services.AddHttpClient("breakpoints-energyhub", (serviceProvider, client) =>
+{
+    var options = serviceProvider.GetRequiredService<IOptions<DemoControlWebOptions>>().Value;
+    client.BaseAddress = new Uri(options.EnergyHubBaseUri, UriKind.Absolute);
+});
+builder.Services.AddHttpClient("breakpoints-securityagent", (serviceProvider, client) =>
+{
+    var options = serviceProvider.GetRequiredService<IOptions<DemoControlWebOptions>>().Value;
+    client.BaseAddress = new Uri(options.SecurityAgentBaseUri, UriKind.Absolute);
+});
+builder.Services.AddSingleton<DemoBreakpointsApiClient>();
 builder.Services.AddHttpClient<WorkKnowledgeApiClient>((serviceProvider, client) =>
 {
     var options = serviceProvider.GetRequiredService<IOptions<DemoControlWebOptions>>().Value;
