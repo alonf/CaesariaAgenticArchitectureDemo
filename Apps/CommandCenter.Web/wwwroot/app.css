@@ -1383,6 +1383,86 @@ svg {
     gap: 4px;
 }
 
+/* The capability trace: one row per requested call, with what became of it. */
+.trace-calls {
+    margin: 6px 0 0;
+    padding-left: 18px;
+    display: grid;
+    gap: 6px;
+}
+
+.trace-call {
+    display: block;
+    font-family: var(--cp-mono, monospace);
+    font-size: 0.78rem;
+    overflow-wrap: anywhere;
+}
+
+.trace-status {
+    display: inline-block;
+    margin-top: 2px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.trace-status.ran {
+    color: var(--cp-success);
+    background: color-mix(in srgb, var(--cp-success) 12%, transparent);
+}
+
+.trace-status.denied,
+.trace-status.failed {
+    color: var(--cp-danger);
+    background: color-mix(in srgb, var(--cp-danger) 12%, transparent);
+}
+
+.trace-status.requested {
+    color: var(--cp-text-muted);
+    background: color-mix(in srgb, var(--cp-text-muted) 12%, transparent);
+}
+
+/* The consulted specialist's sanitized answer, shown as its own step in the trace. */
+.delegation-panel {
+    border-left: 3px solid var(--cp-accent, var(--cp-danger));
+}
+
+.delegation-agent {
+    margin: 2px 0 6px;
+    font-weight: 600;
+}
+
+.delegation-fields {
+    margin: 0 0 6px;
+    display: grid;
+    gap: 4px;
+}
+
+.delegation-fields div {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.delegation-fields dt {
+    min-width: 104px;
+    color: var(--cp-text-muted);
+    font-size: 0.74rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.delegation-fields dd {
+    margin: 0;
+    font-size: 0.82rem;
+    overflow-wrap: anywhere;
+}
+
 .approval-capability div {
     display: flex;
     flex-wrap: wrap;

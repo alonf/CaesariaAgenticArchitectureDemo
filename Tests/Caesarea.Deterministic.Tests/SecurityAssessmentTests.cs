@@ -94,6 +94,38 @@ public sealed class SecurityAssessmentTests
     }
 
     [Theory]
+    // Enum.TryParse accepts any numeric string and comma-separated combinations, so a "closed set"
+    // enforced by parsing alone is not closed: "999" would cross the boundary as an undefined value.
+    [InlineData("""{"reasonCode":"999"}""")]
+    [InlineData("""{"reasonCode":"-1"}""")]
+    [InlineData("""{"reasonCode":"NoActiveOperation, ActiveOperationRequiresLighting"}""")]
+    [InlineData("""{"reasonCode":"0"}""")]
+    public void AValueOutsideTheClosedSetIsRejected(string answer)
+    {
+        var status = CreateStatusWithOperation();
+
+        var assessment = SecurityAssessmentSanitizer.Sanitize(DemoAssets.NorthPromenadeArea, answer, status, AgentName);
+
+        // The records decide, and the classification that crosses is a defined member.
+        Assert.Equal(SecurityLightingReason.ActiveOperationRequiresLighting, assessment.ReasonCode);
+        Assert.True(Enum.IsDefined(assessment.ReasonCode));
+        Assert.True(Enum.IsDefined(assessment.Recommendation));
+    }
+
+    [Theory]
+    [InlineData("""{"reasonCode":"ActiveOperationRequiresLighting","recommendation":"999"}""")]
+    [InlineData("""{"reasonCode":"ActiveOperationRequiresLighting","recommendation":"ContactSecurityDesk, NoActionRequired"}""")]
+    public void ARecommendationOutsideTheClosedSetFallsBack(string answer)
+    {
+        var status = CreateStatusWithOperation();
+
+        var assessment = SecurityAssessmentSanitizer.Sanitize(DemoAssets.NorthPromenadeArea, answer, status, AgentName);
+
+        Assert.Equal(SecurityLightingRecommendation.LeaveLitUntilWindowEnds, assessment.Recommendation);
+        Assert.True(Enum.IsDefined(assessment.Recommendation));
+    }
+
+    [Theory]
     [InlineData("""{"reasonCode":42}""")]
     [InlineData("""{"reasonCode":{"nested":"object"}}""")]
     [InlineData("""{"reasonCode":"NotARealCode"}""")]

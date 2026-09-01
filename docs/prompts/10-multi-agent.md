@@ -86,15 +86,18 @@ does not imply group chat. Those are independent axes."* This stage picks one po
 
 ## Lecture beat
 
-1. Apply **Security Operation** and go to the MultiAgent stage with the consult **off**. Ask
-   *"Why is L-417 on during daylight?"*. The agent answers correctly but thinly: *"an external
+1. Apply **Security Operation** and go to the MultiAgent stage with the consult **off**. Click
+   **"Why is L-417 on during daylight? (new session)"** — the stage's own button, so the beat does
+   not depend on the model volunteering a consult for a question that never needed one. The agent
+   answers correctly but thinly: *"an external
    operational directive requires lighting in this area; the requesting domain is not disclosed."*
    It knows the lamp is intentional and cannot say more. Note what it does **not** do: it does not
    invent a reason, and it does not recommend restoring.
-2. Turn the consult **on** and ask again. Now the trace shows `assess_lighting_requirement`, and
-   the answer names an **active security operation**, states the time it lapses, and adds a
-   recommended action anchored to that deadline — plus one line the audience should notice in the
-   evidence list: *"Operational details are withheld."*
+2. Turn the consult **on** and ask again. The capability trace now shows `assess_lighting_requirement`
+   marked **ran**, and a **Consulted specialist** block appears carrying the other agent's own typed
+   answer: who assessed it, the verdict, its classification, its recommendation, the deadline, and
+   the line the audience should notice — *"Operational details are withheld."* The Operations
+   Agent's answer then repeats that recommendation rather than reaching one of its own.
 3. That contrast is the whole argument: the second agent did not add a capability, it added
    **authority to know something**. Point at the architecture test — the Operations Agent has no
    route to the Security Hub at all.

@@ -40,7 +40,8 @@ only — it is never the authoritative operational state, which stays in the det
 
 ## Lecture beat
 
-1. Switch to the Session stage; ask **"Is streetlight L-417 on?"** — tool invoked, 2 round trips.
+1. Switch to the Session stage; ask **"Is streetlight L-417 on?"** — the trace shows one tool call
+   marked **ran**, over 2 round trips.
 2. Click **Ask "Why?" (same session)** — the model resolves "Why?" to L-417 purely from session
    context: zero tool calls, one round trip, a few seconds.
 3. Land the line: *conversation continuity is useful context, not evidence about reality* —

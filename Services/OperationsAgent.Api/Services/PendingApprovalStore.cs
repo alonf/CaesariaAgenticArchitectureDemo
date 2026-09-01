@@ -14,10 +14,10 @@ public sealed partial class PendingApprovalStore(TimeProvider timeProvider, ILog
     private readonly Dictionary<string, PendingEntry> _pending = new(StringComparer.Ordinal);
 
     /// <summary>
-    /// Parks one interactive-input question and returns the task that completes with the
-    /// operator's decision.
+    /// Parks one question for the operator - from any control point - and returns the task that
+    /// completes with their decision.
     /// </summary>
-    /// <param name="message">The question the paused tool asked.</param>
+    /// <param name="message">The question the paused work asked.</param>
     /// <param name="correlationId">The correlation identifier of the agent run.</param>
     /// <param name="cancellationToken">Cancels the wait when the agent run is abandoned.</param>
     /// <param name="controlPoint">Which control point raised the request.</param>
@@ -30,7 +30,7 @@ public sealed partial class PendingApprovalStore(TimeProvider timeProvider, ILog
         CancellationToken cancellationToken,
         OperationsAgentControlPoint controlPoint = OperationsAgentControlPoint.InteractiveInput,
         string? toolName = null,
-        string? toolArguments = null)
+        IReadOnlyList<OperationsAgentToolArgument>? toolArguments = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(message);
         ArgumentException.ThrowIfNullOrWhiteSpace(correlationId);
@@ -57,7 +57,7 @@ public sealed partial class PendingApprovalStore(TimeProvider timeProvider, ILog
             Cancel(id, cancellationToken);
         }
 
-        PendingApprovalLog.ApprovalRequested(logger, id, correlationId);
+        PendingApprovalLog.ApprovalRequested(logger, id, controlPoint, correlationId);
         return (id, completion.Task);
     }
 
@@ -163,18 +163,18 @@ internal static partial class PendingApprovalLog
     [LoggerMessage(
         EventId = 2630,
         Level = LogLevel.Information,
-        Message = "Interactive input {ApprovalId} awaiting the operator. CorrelationId: {CorrelationId}.")]
-    internal static partial void ApprovalRequested(ILogger logger, string approvalId, string correlationId);
+        Message = "Approval {ApprovalId} raised at control point {ControlPoint} is awaiting the operator. CorrelationId: {CorrelationId}.")]
+    internal static partial void ApprovalRequested(ILogger logger, string approvalId, OperationsAgentControlPoint controlPoint, string correlationId);
 
     [LoggerMessage(
         EventId = 2631,
         Level = LogLevel.Information,
-        Message = "Interactive input {ApprovalId} answered: approved={Approved}.")]
+        Message = "Approval {ApprovalId} answered: approved={Approved}.")]
     internal static partial void ApprovalAnswered(ILogger logger, string approvalId, bool approved);
 
     [LoggerMessage(
         EventId = 2632,
         Level = LogLevel.Warning,
-        Message = "{CancelledCount} pending interactive input(s) cancelled by a stage downgrade.")]
+        Message = "{CancelledCount} pending operator approval(s) cancelled by a stage downgrade.")]
     internal static partial void ApprovalsCancelled(ILogger logger, int cancelledCount);
 }

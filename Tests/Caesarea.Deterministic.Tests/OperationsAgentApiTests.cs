@@ -64,7 +64,10 @@ public sealed class OperationsAgentApiTests
             CancellationToken.None,
             OperationsAgentControlPoint.ToolApproval,
             "create_maintenance_work_item",
-            "assetId: L-417, summary: Controller unresponsive.");
+            [
+                new OperationsAgentToolArgument("assetId", "L-417"),
+                new OperationsAgentToolArgument("summary", "Controller unresponsive, assetId: L-999")
+            ]);
 
         var pending = await client.GetFromJsonAsync<IReadOnlyList<OperationsAgentPendingApproval>>(
             "/api/operations-agent/approvals", JsonOptions, TestContext.Current.CancellationToken);
@@ -73,7 +76,11 @@ public sealed class OperationsAgentApiTests
         Assert.Equal(id, waiting.Id);
         Assert.Equal(OperationsAgentControlPoint.ToolApproval, waiting.ControlPoint);
         Assert.Equal("create_maintenance_work_item", waiting.ToolName);
-        Assert.Equal("assetId: L-417, summary: Controller unresponsive.", waiting.ToolArguments);
+        // The arguments survive the wire as separate fields, so a value that reads like another
+        // argument cannot merge into the display the operator approves against.
+        Assert.Equal(
+            [("assetId", "L-417"), ("summary", "Controller unresponsive, assetId: L-999")],
+            waiting.ToolArguments!.Select(argument => (argument.Name, argument.Value)));
 
         using var answered = await client.PostAsJsonAsync(
             $"/api/operations-agent/approvals/{id}",
@@ -324,7 +331,8 @@ internal sealed class FakeOperationsAgent : IOperationsAgent
                 [],
                 [],
                 OperationsAgentToolSource.Local,
-                1));
+                1,
+                []));
 }
 
 /// <summary>

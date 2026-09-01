@@ -201,10 +201,12 @@ cases.MapPost("/clear", (ICaseMemoryStore store) =>
     return TypedResults.Ok(CreateCaseMemoryStatus(store));
 });
 
-// Interactive-input bridge: questions a paused MCP tool asked the operator (MRTR). The Command
-// Center lists them and posts the decision, which releases the paused tool call.
+// Operator-approval bridge, shared by all three control points: a paused MCP tool (MRTR), the
+// remediation workflow's approval node, and the framework intercepting a protected capability the
+// model selected. The Command Center lists them and posts the decision, which releases the paused
+// work. Each entry carries its own control point, so the surface is not named after one of them.
 var approvals = app.MapGroup("/api/operations-agent/approvals")
-    .WithTags("Interactive Input");
+    .WithTags("Operator Approvals");
 
 approvals.MapGet("/", (PendingApprovalStore store) => TypedResults.Ok(store.GetAll()));
 approvals.MapPost("/{id}", (HttpContext context, string id, OperationsAgentApprovalDecision decision, PendingApprovalStore store, DemoStageGate stageGate) =>
@@ -213,8 +215,8 @@ approvals.MapPost("/{id}", (HttpContext context, string id, OperationsAgentAppro
     {
         return Results.Problem(ProblemDetailsFactory.Create(
             StatusCodes.Status409Conflict,
-            "Interactive input disabled in the current demo stage",
-            $"Approvals require the Interactive Input stage; the current stage is {stageGate.GetCurrent().Name}.",
+            "Operator approvals disabled in the current demo stage",
+            $"Answering an approval requires the Interactive Input stage or later; the current stage is {stageGate.GetCurrent().Name}.",
             context.GetCorrelationId()));
     }
 
@@ -223,7 +225,7 @@ approvals.MapPost("/{id}", (HttpContext context, string id, OperationsAgentAppro
         : Results.NotFound(ProblemDetailsFactory.Create(
             StatusCodes.Status404NotFound,
             "Pending approval not found",
-            $"No interactive-input request with id {id} is awaiting a decision.",
+            $"No approval request with id {id} is awaiting a decision.",
             context.GetCorrelationId()));
 });
 
@@ -451,7 +453,8 @@ static async Task<IResult> AskAsync(
             reply.Skills,
             reply.ToolSource,
             reply.ModelRoundTrips,
-            correlationId));
+            correlationId,
+            reply.Delegations));
     }
     catch (ArgumentException exception)
     {
@@ -482,7 +485,7 @@ static async Task<IResult> AskAsync(
         return TypedResults.Problem(ProblemDetailsFactory.Create(
             StatusCodes.Status409Conflict,
             "Tool approval was not resolved",
-            $"{exception.Message} Ask again, or answer the request when it appears.",
+            $"{exception.Message} Nothing is left pending; start a new request.",
             context.GetCorrelationId()));
     }
     catch (OperationsAgentToolUnavailableException exception)

@@ -8,12 +8,62 @@ namespace OperationsAgent.Contracts;
 public sealed record OperationsAgentRequest(string Question, string? SessionId = null);
 
 /// <summary>
-/// Describes one tool invocation the model chose during an agent run. Safe execution metadata only:
-/// tool name and validated arguments, never hidden reasoning or prompts.
+/// Describes one tool call the model requested during an agent run, and what became of it. Safe
+/// execution metadata only: tool name, validated arguments and outcome, never hidden reasoning or
+/// prompts. A request is not an execution - the whole point of the approval stages is that some
+/// requested calls never run - so the outcome is part of the record rather than assumed.
 /// </summary>
-/// <param name="ToolName">The stable tool name the model invoked.</param>
+/// <param name="ToolName">The stable tool name the model requested.</param>
 /// <param name="Arguments">The validated tool arguments as compact JSON.</param>
-public sealed record OperationsAgentToolCall(string ToolName, string Arguments);
+/// <param name="Status">What the pipeline actually did with the request.</param>
+public sealed record OperationsAgentToolCall(
+    string ToolName,
+    string Arguments,
+    OperationsAgentToolCallStatus Status = OperationsAgentToolCallStatus.Requested);
+
+/// <summary>
+/// What became of a tool call the model requested.
+/// </summary>
+public enum OperationsAgentToolCallStatus
+{
+    /// <summary>The model asked for the call; no outcome was observed for it.</summary>
+    Requested,
+
+    /// <summary>The call ran and returned its result to the model.</summary>
+    Completed,
+
+    /// <summary>The operator declined the protected capability, so it never ran.</summary>
+    Denied,
+
+    /// <summary>The call ran and threw.</summary>
+    Failed
+}
+
+/// <summary>
+/// One consultation of another domain's agent, as it may be shown to the operator. Only the
+/// specialist's sanitized judgment crosses: its identity, its verdict and the advice it gave.
+/// The restricted records behind that judgment never leave the domain that owns them, so this
+/// carries the specialist's typed answer rather than arbitrary tool-result text.
+/// </summary>
+/// <param name="ToolName">The capability through which the specialist was consulted.</param>
+/// <param name="AssessedBy">The consulted agent's name, so the delegation is visible in a trace.</param>
+/// <param name="Area">The area the specialist was asked about.</param>
+/// <param name="RequiresLighting">The specialist's verdict.</param>
+/// <param name="UntilUtc">When the requirement ends, when the specialist stated a deadline.</param>
+/// <param name="ReasonCode">The closed-set classification the specialist selected.</param>
+/// <param name="Recommendation">What the specialist advised the asking domain to do.</param>
+/// <param name="Reason">The specialist's public explanation.</param>
+/// <param name="DetailsWithheld">Whether operational detail exists that was deliberately not disclosed.</param>
+public sealed record OperationsAgentDelegation(
+    string ToolName,
+    string AssessedBy,
+    string Area,
+    bool RequiresLighting,
+    DateTimeOffset? UntilUtc,
+    string ReasonCode,
+    string Recommendation,
+    string Reason,
+    bool DetailsWithheld);
 
 /// <summary>
 /// Well-known tool names the general agent exposes, shared so UI code never hard-codes them.
@@ -74,7 +124,17 @@ public sealed record OperationsAgentPendingApproval(
     string CorrelationId,
     OperationsAgentControlPoint ControlPoint = OperationsAgentControlPoint.InteractiveInput,
     string? ToolName = null,
-    string? ToolArguments = null);
+    IReadOnlyList<OperationsAgentToolArgument>? ToolArguments = null);
+
+/// <summary>
+/// One argument of a capability awaiting approval, carried as a name and a value rather than a
+/// flattened string. Values are model-controlled: a summary containing "fault, assetId: L-999"
+/// reads exactly like a second argument once joined, which would let the display suggest a call
+/// the operator is not actually approving.
+/// </summary>
+/// <param name="Name">The argument name as the capability declares it.</param>
+/// <param name="Value">The value the model supplied, rendered as text.</param>
+public sealed record OperationsAgentToolArgument(string Name, string Value);
 
 /// <summary>
 /// The control point that paused for the operator. Three different mechanisms raise the same
@@ -256,13 +316,14 @@ public sealed record OperationsAgentCaseMemoryStatus(IReadOnlyList<OperationsAge
 /// <param name="AgentName">The stable name of the general operations agent.</param>
 /// <param name="Answer">The agent's natural-language answer.</param>
 /// <param name="SessionId">The conversational session a follow-up question can continue.</param>
-/// <param name="ToolCalls">The tools the model invoked during the run, in order.</param>
+/// <param name="ToolCalls">The tool calls the model requested during the run, in order, each with what became of it.</param>
 /// <param name="Evidence">The work evidence the knowledge search returned during the run, deduplicated by identifier.</param>
 /// <param name="RecalledCases">The closed cases the agent's memory recalled during the run.</param>
 /// <param name="Skills">The skills advertised to the agent during the run and whether each was loaded.</param>
 /// <param name="ToolSource">Where the streetlight tool came from for this run.</param>
 /// <param name="ModelRoundTrips">The number of model round trips the run required.</param>
 /// <param name="CorrelationId">The correlation identifier spanning the request and tool call.</param>
+/// <param name="Delegations">The other-domain agents consulted during the run, with the sanitized judgment each returned.</param>
 public sealed record OperationsAgentResponse(
     string AgentName,
     string Answer,
@@ -273,4 +334,5 @@ public sealed record OperationsAgentResponse(
     IReadOnlyList<OperationsAgentSkill> Skills,
     OperationsAgentToolSource ToolSource,
     int ModelRoundTrips,
-    string CorrelationId);
+    string CorrelationId,
+    IReadOnlyList<OperationsAgentDelegation>? Delegations = null);

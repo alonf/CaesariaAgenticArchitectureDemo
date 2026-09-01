@@ -24,14 +24,22 @@ public sealed class ModelExchangeRecorder(IChatClient innerClient) : DelegatingC
 
     private readonly List<ModelExchange> _exchanges = [];
     private readonly List<RecordedToolCall> _toolCalls = [];
-    private readonly HashSet<string> _completedCallIds = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, RecordedToolResult> _results = new(StringComparer.Ordinal);
 
     /// <summary>
     /// Gets a value indicating whether a tool result was observed for the supplied call: the
-    /// invocation pipeline executed the tool and fed its result back to the model.
+    /// invocation pipeline ran the call and fed its outcome back to the model. A result is not by
+    /// itself proof the tool executed - a declined protected capability also returns one.
     /// </summary>
     /// <param name="callId">The tool call identifier from a recorded call.</param>
-    public bool HasResult(string callId) => _completedCallIds.Contains(callId);
+    public bool HasResult(string callId) => _results.ContainsKey(callId);
+
+    /// <summary>
+    /// Gets the outcome recorded for a tool call, when one was observed.
+    /// </summary>
+    /// <param name="callId">The tool call identifier from a recorded call.</param>
+    /// <returns>The recorded result, or <see langword="null"/> when the call produced none.</returns>
+    public RecordedToolResult? FindResult(string callId) => _results.GetValueOrDefault(callId);
 
     /// <inheritdoc />
     public override async Task<ChatResponse> GetResponseAsync(
@@ -43,10 +51,11 @@ public sealed class ModelExchangeRecorder(IChatClient innerClient) : DelegatingC
         var sent = messageList.Select(Describe).ToList();
 
         // Tool results appear in the NEXT round trip's request messages; correlate them back to
-        // the recorded calls so callers can distinguish requested from executed.
+        // the recorded calls so callers can distinguish requested from executed - and keep the
+        // payload, which is what a delegated specialist's answer travels in.
         foreach (var result in messageList.SelectMany(message => message.Contents).OfType<FunctionResultContent>())
         {
-            _completedCallIds.Add(result.CallId);
+            _results[result.CallId] = new RecordedToolResult(result.Result?.ToString(), result.Exception is not null);
         }
 
         var response = await base.GetResponseAsync(messageList, options, cancellationToken);
@@ -85,6 +94,14 @@ public sealed class ModelExchangeRecorder(IChatClient innerClient) : DelegatingC
 /// <param name="CallId">The tool call identifier used to correlate the eventual result.</param>
 [DebuggerDisplay("{ToolName,nq}({Arguments,nq})")]
 public sealed record RecordedToolCall(string ToolName, string Arguments, string CallId);
+
+/// <summary>
+/// The outcome the invocation pipeline fed back to the model for one tool call.
+/// </summary>
+/// <param name="Text">The result payload as the model saw it, when there was one.</param>
+/// <param name="Failed">Whether the call completed by throwing rather than returning.</param>
+[DebuggerDisplay("{Failed ? \"failed\" : \"ok\",nq}: {Text,nq}")]
+public sealed record RecordedToolResult(string? Text, bool Failed);
 
 /// <summary>
 /// Represents one recorded model round trip: what was sent and what the model returned.

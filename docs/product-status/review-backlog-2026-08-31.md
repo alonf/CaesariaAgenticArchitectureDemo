@@ -299,6 +299,52 @@ All findings from the full working-tree review are now resolved.
    refusal became invisible on stage. `ResolveAsync` takes an `onStandingRefusal` callback and the
    agent wires it back to the log.
 
+## Fixed in the trace-honesty review pass (September 2026)
+
+1. **The capability trace called requests invocations (high)** — every model-produced function call
+   was reported as a tool the agent invoked, so a `create_maintenance_work_item` the operator
+   *declined* still read as invoked: the exact opposite of the ToolApproval lesson. Each call now
+   carries an `OperationsAgentToolCallStatus` (Requested / Completed / Denied / Failed), and the
+   footnote counts what ran instead of how many were asked for. Two premises were confirmed against
+   a live run before building on them: the approval request's `CallId` does match the recorded call,
+   and a declined call *does* come back with a result ("Tool call invocation rejected"), so the
+   operator's decision wins over the presence of a result.
+2. **The consulted agent's answer never reached the trace** — the delegation was visible only as a
+   tool name. The Security Agent's sanitized judgment is now deserialized from its published
+   contract into a typed `OperationsAgentDelegation` (who assessed it, verdict, classification,
+   recommendation, deadline, withheld marker) and rendered as its own step, so the sequence the
+   lecture claims - Operations Agent → Security Agent → supporting answer → conclusion - is
+   structurally represented rather than inferred from prose. Arbitrary tool-result text is never
+   forwarded; an answer that does not match the contract is logged and omitted. The Operations
+   Agent still has no compile-time path into the Security domain, so it declares only the shape
+   that crosses.
+3. **The MultiAgent beat no longer depends on the model volunteering a consult** — the stage has its
+   own "Why is L-417 on during daylight?" button (the documented question; the old button asked
+   "is it on?", which is answerable without leaving the Energy domain), and the instructions now
+   require the agent to carry the specialist's recommendation rather than reach its own. Live walk
+   checks assert the consult ran, the delegation is typed, and the answer uses the recommendation.
+4. **The closed enum was not closed** — `Enum.TryParse` accepts numeric strings and comma-separated
+   combinations, and a combination can even OR onto a defined value
+   ("ContactSecurityDesk, NoActionRequired" → ContactSecurityDesk). The classification and the
+   recommendation are now matched against declared enum names. Found by the reviewer for "999";
+   the comma case was found by the new test and needed a second fix.
+5. **Approval arguments are structured** — a model-authored summary containing "fault, assetId:
+   L-999" read as a further argument once flattened, weakening informed approval for a capability
+   that commits resources. Arguments cross as name/value pairs and render one field per row;
+   adversarial tests cover commas, newlines and quotes.
+6. **"Consulted" is claimed only when it happened** — the Security Hub row reads "Consulted through
+   the Security Agent" only when the last answer carries a completed delegation, "Security Agent
+   available" at the stage, and "Operational context only" below it.
+7. **A missing Security tool is no longer blamed on the Energy Hub** — the discovery helper takes
+   the source name, so an operator is sent to the service that actually lacks the capability.
+8. **The shared approval surface is named for what it is** — the API group is "Operator Approvals",
+   the logs carry the control point, and approval-loop exhaustion tells the caller to start a new
+   request rather than to answer one that is no longer pending.
+9. **Case symptoms describe the snapshot** — closing a case recorded a canned "on during daylight
+   against its schedule" for any answer, polluting memory with anomalies that never happened. The
+   symptom is derived from the authoritative state (anomalous or not, override, operational
+   context) at the moment the case is closed.
+
 ## Deferred (with trigger)
 
 - **Snippet region scan scope** (low, from the demo-anchor review): the region synchronization

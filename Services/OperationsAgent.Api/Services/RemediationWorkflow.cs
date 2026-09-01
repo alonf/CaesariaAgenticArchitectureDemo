@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.Agents.AI.Workflows;
 
 namespace OperationsAgent.Api.Services;
@@ -216,7 +217,10 @@ public sealed class OperatorApprovalExecutor(PendingApprovalStore pendingApprova
             cancellationToken,
             OperationsAgentControlPoint.WorkflowGate,
             OperationsAgentToolNames.RestoreScheduledMode,
-            $"assetId: {input.Request.AssetId}, stateRevision: {input.ValidatedStateRevision}");
+            [
+                new OperationsAgentToolArgument("assetId", input.Request.AssetId),
+                new OperationsAgentToolArgument("stateRevision", input.ValidatedStateRevision.ToString(CultureInfo.InvariantCulture))
+            ]);
         var approved = await decision;
         return input with { OperatorApproved = approved };
     }

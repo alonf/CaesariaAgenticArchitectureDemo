@@ -249,8 +249,15 @@ public static class SecurityAssessmentSanitizer
                 return null;
             }
 
-            return Enum.TryParse<TCode>(value.GetString(), ignoreCase: true, out var parsed)
-                ? parsed
+            // The model is told to choose from a closed set, and this is what makes that true. The
+            // answer must be one of the declared names: Enum.TryParse also accepts any numeric
+            // string ("999") and comma-separated combinations, and a combination can even land on
+            // a defined value - "ContactSecurityDesk, NoActionRequired" ORs to ContactSecurityDesk,
+            // which is a selection the specialist never made.
+            var claimed = value.GetString();
+
+            return Enum.GetNames<TCode>().FirstOrDefault(name => string.Equals(name, claimed, StringComparison.OrdinalIgnoreCase)) is { } match
+                ? Enum.Parse<TCode>(match)
                 : null;
         }
         catch (JsonException)

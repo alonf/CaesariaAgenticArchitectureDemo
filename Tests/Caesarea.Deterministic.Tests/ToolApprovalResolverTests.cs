@@ -27,7 +27,8 @@ public sealed class ToolApprovalResolverTests
             onStandingRefusal: null,
             TestContext.Current.CancellationToken);
 
-        Assert.Same(answer, resolved);
+        Assert.Same(answer, resolved.Response);
+        Assert.Empty(resolved.Decisions);
     }
 
     [Fact]
@@ -47,7 +48,7 @@ public sealed class ToolApprovalResolverTests
             onStandingRefusal: null,
             TestContext.Current.CancellationToken);
 
-        Assert.Equal("Work item WI-1 filed.", resolved.Text);
+        Assert.Equal("Work item WI-1 filed.", resolved.Response.Text);
         var decision = Assert.Single(carried);
         Assert.True(decision.Approved);
     }
@@ -118,8 +119,9 @@ public sealed class ToolApprovalResolverTests
         var (name, arguments) = ToolApprovalResolver.DescribeToolCall(request);
 
         Assert.Equal(ToolName, name);
-        Assert.Contains("assetId: L-417", arguments, StringComparison.Ordinal);
-        Assert.Contains("summary: Controller unresponsive.", arguments, StringComparison.Ordinal);
+        Assert.Equal(
+            [("assetId", "L-417"), ("summary", "Controller unresponsive.")],
+            arguments.Select(argument => (argument.Name, argument.Value)));
     }
 
     [Fact]
@@ -130,7 +132,32 @@ public sealed class ToolApprovalResolverTests
         var (name, arguments) = ToolApprovalResolver.DescribeToolCall(request);
 
         Assert.Equal(ToolName, name);
-        Assert.Equal("no arguments", arguments);
+        Assert.Empty(arguments);
+    }
+
+    [Theory]
+    // A value that reads like a further argument, one that spans lines, and one carrying quotes.
+    [InlineData("fault, assetId: L-999")]
+    [InlineData("fault\nassetId: L-999")]
+    [InlineData("\"assetId\": \"L-999\"")]
+    public void AModelAuthoredValueCannotImpersonateAnotherArgument(string summary)
+    {
+        // Approval is only meaningful if the operator sees the call they are approving. Flattened
+        // into one line, each of these reads as a second argument naming a different asset.
+        var request = new ToolApprovalRequestContent(
+            "req-1",
+            new FunctionCallContent("call-1", ToolName, new Dictionary<string, object?>
+            {
+                ["assetId"] = "L-417",
+                ["summary"] = summary
+            }));
+
+        var (_, arguments) = ToolApprovalResolver.DescribeToolCall(request);
+
+        // Exactly two arguments, and the asset the operator approves is the one the call carries.
+        Assert.Equal(2, arguments.Count);
+        Assert.Equal("L-417", Assert.Single(arguments, argument => argument.Name == "assetId").Value);
+        Assert.Equal(summary, Assert.Single(arguments, argument => argument.Name == "summary").Value);
     }
 
     private static AgentResponse CreateRequestingResponse(string requestId) =>

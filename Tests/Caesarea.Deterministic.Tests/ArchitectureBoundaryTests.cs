@@ -222,7 +222,7 @@ public sealed class ArchitectureBoundaryTests
         Assert.True(workflowToolIndex > workflowGateIndex, "The workflow-start tool must be exposed only behind the Workflow stage gate.");
         // Counted on the registration itself, not on every mention of the name: the approval
         // prompt also names the capability, and that is metadata, not a second exposure.
-        Assert.Equal(1, CountOccurrences(agentText, "FindDiscoveredTool(discoveredTools, OperationsAgentToolNames.RestoreScheduledMode)"));
+        Assert.Equal(1, CountOccurrences(agentText, "FindDiscoveredTool(discoveredTools, OperationsAgentToolNames.RestoreScheduledMode, EnergyHubSourceName)"));
     }
 
     private static string FindRepositoryRoot()

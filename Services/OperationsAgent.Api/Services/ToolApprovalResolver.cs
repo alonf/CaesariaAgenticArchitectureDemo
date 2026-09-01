@@ -22,9 +22,9 @@ public sealed class ToolApprovalResolver(int maxRounds)
     /// <param name="resume">Resumes the same session with the decisions.</param>
     /// <param name="onStandingRefusal">Reports a capability answered from a standing refusal rather than put to the operator again.</param>
     /// <param name="cancellationToken">The token used to cancel the operation.</param>
-    /// <returns>The response once no approval requests remain.</returns>
+    /// <returns>The response once no approval requests remain, with the decision made for each intercepted call.</returns>
     /// <exception cref="OperationsAgentApprovalLoopException">Requests still remained after the bounded rounds.</exception>
-    public async Task<AgentResponse> ResolveAsync(
+    public async Task<ToolApprovalOutcome> ResolveAsync(
         AgentResponse response,
         Func<ToolApprovalRequestContent, CancellationToken, Task<bool>> askOperator,
         Func<ChatMessage, CancellationToken, Task<AgentResponse>> resume,
@@ -41,24 +41,31 @@ public sealed class ToolApprovalResolver(int maxRounds)
         // capability can also be refused by a stage downgrade after they approved it.
         HashSet<string> declined = new(StringComparer.Ordinal);
 
+        // The decision for each intercepted call, keyed by the call it covers. A declined call
+        // still produces a tool result ("invocation rejected"), so a result alone cannot say
+        // whether a capability ran; the decision is what settles it.
+        Dictionary<string, bool> decisions = new(StringComparer.Ordinal);
+
         for (var round = 0; round < _maxRounds; round++)
         {
             var requests = FindRequests(response);
 
             if (requests.Count == 0)
             {
-                return response;
+                return new ToolApprovalOutcome(response, decisions);
             }
 
-            List<AIContent> decisions = [];
+            List<AIContent> replies = [];
 
             foreach (var request in requests)
             {
                 var toolName = DescribeToolCall(request).Name;
+                var callId = (request.ToolCall as FunctionCallContent)?.CallId;
 
                 if (declined.Contains(toolName))
                 {
-                    decisions.Add(request.CreateResponse(false, "This capability was already refused for this request."));
+                    replies.Add(request.CreateResponse(false, "This capability was already refused for this request."));
+                    RecordDecision(decisions, callId, approved: false);
                     onStandingRefusal?.Invoke(toolName);
                     continue;
                 }
@@ -70,10 +77,11 @@ public sealed class ToolApprovalResolver(int maxRounds)
                     declined.Add(toolName);
                 }
 
-                decisions.Add(request.CreateResponse(approved));
+                replies.Add(request.CreateResponse(approved));
+                RecordDecision(decisions, callId, approved);
             }
 
-            response = await resume(new ChatMessage(ChatRole.User, decisions), cancellationToken);
+            response = await resume(new ChatMessage(ChatRole.User, replies), cancellationToken);
         }
 
         // The framework's guidance is to keep resolving until no approval requests remain. Bounded
@@ -85,28 +93,41 @@ public sealed class ToolApprovalResolver(int maxRounds)
             .ToArray();
 
         return unresolved.Length == 0
-            ? response
+            ? new ToolApprovalOutcome(response, decisions)
             : throw new OperationsAgentApprovalLoopException(_maxRounds, string.Join(", ", unresolved));
+    }
+
+    // A refusal is recorded even when it repeats an earlier one: the model asked again, and the
+    // trace shows a second refused request rather than hiding it behind the first.
+    private static void RecordDecision(Dictionary<string, bool> decisions, string? callId, bool approved)
+    {
+        if (!string.IsNullOrEmpty(callId))
+        {
+            decisions[callId] = approved;
+        }
     }
 
     /// <summary>
     /// Describes the tool call a request covers, so the operator is shown which capability and
-    /// which arguments they are approving.
+    /// which arguments they are approving. Arguments stay separate name/value pairs: flattening
+    /// them into one string lets a model-authored value impersonate a further argument, and an
+    /// approval given against a misleading display is not informed approval.
     /// </summary>
     /// <param name="request">The approval request.</param>
-    /// <returns>The capability name and its arguments.</returns>
-    public static (string Name, string Arguments) DescribeToolCall(ToolApprovalRequestContent request)
+    /// <returns>The capability name and its arguments, one entry per declared argument.</returns>
+    public static (string Name, IReadOnlyList<OperationsAgentToolArgument> Arguments) DescribeToolCall(
+        ToolApprovalRequestContent request)
     {
         ArgumentNullException.ThrowIfNull(request);
 
         if (request.ToolCall is not FunctionCallContent call)
         {
-            return ("an unnamed capability", "no arguments");
+            return ("an unnamed capability", []);
         }
 
-        var arguments = call.Arguments is { Count: > 0 } callArguments
-            ? string.Join(", ", callArguments.Select(argument => $"{argument.Key}: {argument.Value}"))
-            : "no arguments";
+        IReadOnlyList<OperationsAgentToolArgument> arguments = call.Arguments is { Count: > 0 } callArguments
+            ? [.. callArguments.Select(argument => new OperationsAgentToolArgument(argument.Key, argument.Value?.ToString() ?? string.Empty))]
+            : [];
 
         return (call.Name, arguments);
     }
@@ -114,3 +135,11 @@ public sealed class ToolApprovalResolver(int maxRounds)
     private static List<ToolApprovalRequestContent> FindRequests(AgentResponse response) =>
         [.. response.Messages.SelectMany(message => message.Contents).OfType<ToolApprovalRequestContent>()];
 }
+
+/// <summary>
+/// The result of resolving a run's tool approvals: the response once no requests remain, and what
+/// the operator decided for each intercepted call.
+/// </summary>
+/// <param name="Response">The response with every approval request answered.</param>
+/// <param name="Decisions">The decision per tool call identifier; absent for calls never intercepted.</param>
+public sealed record ToolApprovalOutcome(AgentResponse Response, IReadOnlyDictionary<string, bool> Decisions);

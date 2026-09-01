@@ -26,6 +26,7 @@ public interface IOperationsAgent
 /// <param name="Skills">The skills advertised to the agent during the run and whether each was loaded.</param>
 /// <param name="ToolSource">Where the streetlight tool came from for this run.</param>
 /// <param name="ModelRoundTrips">The number of model round trips the run required.</param>
+/// <param name="Delegations">The other-domain agents consulted during the run, with their sanitized answers.</param>
 public sealed record OperationsAgentAnswer(
     string Answer,
     string SessionId,
@@ -34,4 +35,5 @@ public sealed record OperationsAgentAnswer(
     IReadOnlyList<OperationsAgentRecalledCase> RecalledCases,
     IReadOnlyList<OperationsAgentSkill> Skills,
     OperationsAgentToolSource ToolSource,
-    int ModelRoundTrips);
+    int ModelRoundTrips,
+    IReadOnlyList<OperationsAgentDelegation> Delegations);

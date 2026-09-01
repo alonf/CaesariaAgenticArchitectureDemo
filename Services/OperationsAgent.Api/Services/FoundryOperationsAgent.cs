@@ -50,8 +50,9 @@ public sealed partial class FoundryOperationsAgent(
         requires it. If a security assessment capability is available, consult it for the asset's
         area first: an asset that is deliberately lit for an active operation is correct, not
         faulty, and must not be reported as an anomaly or corrected. Report the other domain's
-        conclusion and its stated reason; do not ask for or speculate about operational details it
-        withholds.
+        conclusion, its stated reason, and its recommendation, and make your own recommended action
+        consistent with it - the other domain owns that judgment and you do not overrule it. Do not
+        ask for or speculate about operational details it withholds.
         When the operator asks you to change an asset's state and a tool for that change is
         available - either one that performs it or one that starts a governed operation - invoke
         that tool immediately. Confirmation is obtained by the tool or by the operation it starts
@@ -68,6 +69,9 @@ public sealed partial class FoundryOperationsAgent(
     private readonly ToolSourceSwitch _toolSourceSwitch = toolSourceSwitch ?? throw new ArgumentNullException(nameof(toolSourceSwitch));
     private readonly PendingApprovalStore _pendingApprovalStore = pendingApprovalStore ?? throw new ArgumentNullException(nameof(pendingApprovalStore));
     private const int MaxToolApprovalRounds = 3;
+
+    private const string EnergyHubSourceName = "Energy Hub";
+    private const string SecurityAgentSourceName = "Security Operations Agent";
 
     private readonly RemediationWorkflowService _remediationWorkflow = remediationWorkflow ?? throw new ArgumentNullException(nameof(remediationWorkflow));
     private readonly IWorkItemGateway _workItems = workItems ?? throw new ArgumentNullException(nameof(workItems));
@@ -246,14 +250,14 @@ public sealed partial class FoundryOperationsAgent(
                         $"The Energy Hub MCP server could not be used: {exception.Message}", exception);
                 }
 
-                agentTools.Add(FindDiscoveredTool(discoveredTools, EnergyTools.StreetlightStateToolName));
+                agentTools.Add(FindDiscoveredTool(discoveredTools, EnergyTools.StreetlightStateToolName, EnergyHubSourceName));
 
                 // The direct write exists in one stage window only: it joins at InteractiveInput,
                 // where the MRTR approval pause guards it, and is withdrawn again at Workflow,
                 // where the agent must request the governed operation instead of performing it.
                 if (currentStage >= DemoStage.InteractiveInput && currentStage < DemoStage.Workflow)
                 {
-                    agentTools.Add(FindDiscoveredTool(discoveredTools, OperationsAgentToolNames.RestoreScheduledMode));
+                    agentTools.Add(FindDiscoveredTool(discoveredTools, OperationsAgentToolNames.RestoreScheduledMode, EnergyHubSourceName));
                 }
             }
             else
@@ -319,7 +323,7 @@ public sealed partial class FoundryOperationsAgent(
                     securityMcpClient = await McpClient.CreateAsync(
                         securityTransport, loggerFactory: _loggerFactory, cancellationToken: timeoutSource.Token);
                     var securityTools = await securityMcpClient.ListToolsAsync(cancellationToken: timeoutSource.Token);
-                    agentTools.Add(FindDiscoveredTool(securityTools, OperationsAgentToolNames.AssessLightingRequirement));
+                    agentTools.Add(FindDiscoveredTool(securityTools, OperationsAgentToolNames.AssessLightingRequirement, SecurityAgentSourceName));
                 }
                 catch (McpException exception)
                 {
@@ -410,15 +414,27 @@ public sealed partial class FoundryOperationsAgent(
             // The run stops with a request instead of an answer when the model selected a
             // protected capability. Carry each request to the operator and resume the same
             // session with their decision, exactly as the framework's approval flow prescribes.
-            response = await ResolveToolApprovalsAsync(agent, session, response, correlationId, timeoutSource.Token);
+            var approvalOutcome = await ResolveToolApprovalsAsync(agent, session, response, correlationId, timeoutSource.Token);
+            response = approvalOutcome.Response;
+            var approvalDecisions = approvalOutcome.Decisions;
 
             var serializedSession = await agent.SerializeSessionAsync(session, cancellationToken: timeoutSource.Token);
             var resolvedSessionId = _sessionStore.SaveState(sessionId, serializedSession, currentStage);
             OperationsAgentLog.RequestCompleted(_logger, correlationId);
 
+            // What the model asked for is not what ran. A protected capability the operator declined
+            // is still a recorded request, and reporting it as invoked would teach the opposite of
+            // this stage's lesson - so each call carries the outcome the pipeline actually reached.
             IReadOnlyList<OperationsAgentToolCall> toolCalls = modelFlightRecorder is null
                 ? []
-                : [.. modelFlightRecorder.ToolCalls.Select(call => new OperationsAgentToolCall(call.ToolName, call.Arguments))];
+                : AgentTraceProjection.DescribeToolCalls(modelFlightRecorder, approvalDecisions);
+
+            IReadOnlyList<OperationsAgentDelegation> delegations = modelFlightRecorder is null
+                ? []
+                : AgentTraceProjection.DescribeDelegations(
+                    modelFlightRecorder,
+                    approvalDecisions,
+                    (toolName, exception) => OperationsAgentLog.DelegationTraceUnreadable(_logger, toolName, exception));
 
             IReadOnlyList<OperationsAgentEvidence> evidence =
             [
@@ -450,7 +466,9 @@ public sealed partial class FoundryOperationsAgent(
                         && modelFlightRecorder.HasResult(call.CallId))))
             ];
 
-            return new OperationsAgentAnswer(response.Text, resolvedSessionId, toolCalls, evidence, recalled, skillTrace, toolSource, modelFlightRecorder?.Exchanges.Count ?? 0);
+            return new OperationsAgentAnswer(
+                response.Text, resolvedSessionId, toolCalls, evidence, recalled, skillTrace, toolSource,
+                modelFlightRecorder?.Exchanges.Count ?? 0, delegations);
         }
         catch (OperationCanceledException exception) when (!cancellationToken.IsCancellationRequested)
         {
@@ -492,7 +510,7 @@ public sealed partial class FoundryOperationsAgent(
     /// the operator's decisions. Bounded, so a model that keeps re-requesting cannot loop the
     /// operator forever.
     /// </summary>
-    private async Task<AgentResponse> ResolveToolApprovalsAsync(
+    private async Task<ToolApprovalOutcome> ResolveToolApprovalsAsync(
         AIAgent agent,
         AgentSession session,
         AgentResponse response,
@@ -534,10 +552,10 @@ public sealed partial class FoundryOperationsAgent(
         return approved && _stageGate.GetCurrent().Id >= DemoStage.ToolApproval;
     }
 
-    private static McpClientTool FindDiscoveredTool(IList<McpClientTool> discoveredTools, string toolName) =>
+    private static McpClientTool FindDiscoveredTool(IList<McpClientTool> discoveredTools, string toolName, string sourceName) =>
         discoveredTools.FirstOrDefault(tool => tool.Name == toolName)
         ?? throw new OperationsAgentToolUnavailableException(
-            $"The Energy Hub MCP server did not offer the required tool '{toolName}'.");
+            $"The {sourceName} MCP server did not offer the required tool '{toolName}'.");
 
     /// <summary>
     /// Creates the MRTR elicitation handler that bridges a paused remote tool to the operator:
@@ -599,4 +617,10 @@ internal static partial class OperationsAgentLog
         Level = LogLevel.Information,
         Message = "Re-requested capability {ToolName} was refused from the standing decision for this request. CorrelationId: {CorrelationId}.")]
     internal static partial void ToolApprovalRepeated(ILogger logger, string toolName, string correlationId);
+
+    [LoggerMessage(
+        EventId = 2404,
+        Level = LogLevel.Warning,
+        Message = "The consulted agent's answer to {ToolName} could not be read as its published contract; it is omitted from the delegation trace.")]
+    internal static partial void DelegationTraceUnreadable(ILogger logger, string toolName, Exception exception);
 }

@@ -90,11 +90,14 @@
                         @* The Security domain becomes a live participant at the MultiAgent stage,
                            where its own agent is consulted across the boundary. Before that it only
                            contributes the operational context the Energy twin carries. *@
+                        @* "Consulted" is a claim about something that happened, so it is shown only
+                           when the last answer actually carries a completed delegation - the stage
+                           being active, or the presenter's consult toggle, is not the same thing. *@
                         <span class="hub-copy">
                             <strong>Security Hub</strong>
-                            <small>@(IsMultiAgentStage ? "Consulted through the Security Agent" : "Operational context only")</small>
+                            <small>@SecurityHubStatusText</small>
                         </span>
-                        <span class="hub-state @(IsMultiAgentStage ? "healthy" : "muted")"></span>
+                        <span class="hub-state @(SecurityWasConsulted ? "healthy" : "muted")"></span>
                     </button>
 
                     <button class="hub-row">
@@ -382,14 +385,50 @@
                                             <span class="tool-source-badge">MCP remote</span>
                                         }
                                     </small>
-                                    <p>model &rarr; @string.Join(" → ", response.ToolCalls.Select(call => $"{call.ToolName}({call.Arguments})")) &rarr; model</p>
+                                    @* A request is not an execution. The model asked for each of
+                                       these; only some of them ran, and which is the lesson. *@
+                                    <ol class="trace-calls">
+                                        @foreach (var call in response.ToolCalls)
+                                        {
+                                            <li>
+                                                <span class="trace-call">@($"{call.ToolName}({call.Arguments})")</span>
+                                                <span class="trace-status @ToolCallStatusClass(call.Status)">@ToolCallStatusLabel(call.Status)</span>
+                                            </li>
+                                        }
+                                    </ol>
                                     @if (response.ToolSource == OperationsAgentToolSource.Mcp)
                                     {
                                         <p class="agent-footnote">The streetlight tool was discovered at runtime from the Energy Hub's MCP server - same capability, new boundary.</p>
                                     }
                                 </div>
+
+                                @* The delegation is a step of its own: the specialist's identity and
+                                   its sanitized judgment, not a line of generic tool-result text. *@
+                                @foreach (var delegation in response.Delegations ?? [])
+                                {
+                                    <div class="agent-summary delegation-panel">
+                                        <small>Consulted specialist</small>
+                                        <p class="delegation-agent">@delegation.AssessedBy</p>
+                                        <dl class="delegation-fields">
+                                            <div><dt>Area</dt><dd>@delegation.Area</dd></div>
+                                            <div><dt>Verdict</dt><dd>@(delegation.RequiresLighting ? "Lighting required" : "No lighting requirement")</dd></div>
+                                            <div><dt>Classification</dt><dd>@delegation.ReasonCode</dd></div>
+                                            <div><dt>Recommendation</dt><dd>@delegation.Recommendation</dd></div>
+                                            @if (delegation.UntilUtc is { } until)
+                                            {
+                                                <div><dt>Until</dt><dd>@until.ToLocalTime().ToString("dd MMM HH:mm") @LocalZoneLabel</dd></div>
+                                            }
+                                        </dl>
+                                        <p>@delegation.Reason</p>
+                                        @if (delegation.DetailsWithheld)
+                                        {
+                                            <p class="agent-footnote">Operational detail exists and was deliberately not disclosed: the Operations Agent never sees it.</p>
+                                        }
+                                    </div>
+                                }
+
                                 <p class="agent-footnote">
-                                    Tool invoked @(response.ToolCalls.Count)&times; over @(response.ModelRoundTrips) model round trip(s) · CorrelationId @ShortCorrelation(response.CorrelationId)
+                                    @ToolCallSummary(response) over @(response.ModelRoundTrips) model round trip(s) · CorrelationId @ShortCorrelation(response.CorrelationId)
                                 </p>
                             }
                             else
@@ -544,6 +583,17 @@
                             </button>
                         }
 
+                        @* The stage's question is "why is it on?", not "is it on?" - only the
+                           first can require the other domain's judgment, so the beat has its own
+                           button instead of depending on the model volunteering a consult. *@
+                        @if (IsMultiAgentStage)
+                        {
+                            <button class="action-button investigate-button @(_agentBusy ? "busy" : string.Empty)" @onclick="AssessSecuritySituationAsync" disabled="@_agentBusy">
+                                <span>@(_agentBusy ? "Asking..." : $"Why is {_snapshot.AssetId} on during daylight? (new session)")</span>
+                                <svg viewBox="0 0 24 24"><path d="M12 3 4 6v5c0 5 3.4 8.5 8 10 4.6-1.5 8-5 8-10V6l-8-3Z" /></svg>
+                            </button>
+                        }
+
                         @if (_pendingApprovals.Count > 0)
                         {
                             <div class="agent-summary approval-panel">
@@ -555,11 +605,14 @@
                                        the operator sees exactly what they are approving. *@
                                     @if (!string.IsNullOrWhiteSpace(approval.ToolName))
                                     {
+                                        @* One row per argument. Joining them into a sentence would
+                                           let a model-authored value read as another argument, and
+                                           an approval given against that is not informed. *@
                                         <dl class="approval-capability">
                                             <div><dt>Capability</dt><dd>@approval.ToolName</dd></div>
-                                            @if (!string.IsNullOrWhiteSpace(approval.ToolArguments))
+                                            @foreach (var argument in approval.ToolArguments ?? [])
                                             {
-                                                <div><dt>Arguments</dt><dd>@approval.ToolArguments</dd></div>
+                                                <div><dt>@argument.Name</dt><dd>@argument.Value</dd></div>
                                             }
                                         </dl>
                                     }
@@ -750,6 +803,15 @@
 
     private bool IsMultiAgentStage => _snapshot?.CurrentStage.Id >= DemoStage.MultiAgent;
 
+    private bool SecurityWasConsulted => _agentResponse?.Delegations is { Count: > 0 };
+
+    private string SecurityHubStatusText => (IsMultiAgentStage, SecurityWasConsulted) switch
+    {
+        (_, true) => "Consulted through the Security Agent",
+        (true, false) => "Security Agent available",
+        _ => "Operational context only"
+    };
+
     private string IncidentEmptyExplanation => (IsAnomaly, IsAgentStage) switch
     {
         (false, _) => "Nothing is out of order: the asset matches its effective target.",
@@ -879,6 +941,12 @@
     // itself that filing a work item is the right action, and the framework intercepts it.
     private Task RequestMaintenanceAsync() => AskAgentCoreAsync(
         $"The controller on streetlight {_snapshot?.AssetId ?? WebOptions.Value.AssetId} is faulty and needs a technician on site. Handle it.",
+        sessionId: null);
+
+    // The MultiAgent beat's documented question. "Is it on?" is answerable without leaving the
+    // Energy domain; "why is it on?" is the one that has to cross the boundary.
+    private Task AssessSecuritySituationAsync() => AskAgentCoreAsync(
+        $"Why is streetlight {_snapshot?.AssetId ?? WebOptions.Value.AssetId} on during daylight?",
         sessionId: null);
 
     // The workflow definition (diagram + YAML) loads lazily the first time the Workflow stage is
@@ -1172,7 +1240,7 @@
             var resolution = plainAnswer.Length <= 500 ? plainAnswer : $"{plainAnswer[..500]}…";
             var closedCase = await OperationsAgentClient.CloseCaseAsync(
                 assetId,
-                $"Streetlight {assetId} on during daylight against its schedule.",
+                DescribeCaseSymptom(assetId, snapshot),
                 resolution,
                 CancellationToken.None);
             _caseMessage = $"Case {closedCase.CaseId} recorded to the agent's memory for {closedCase.AssetId}.";
@@ -1352,6 +1420,55 @@
 
     private static string FormatTimestamp(DateTimeOffset? value) =>
         value?.ToLocalTime().ToString("HH:mm:ss") ?? "n/a";
+
+    // The symptom describes what the authoritative snapshot actually showed when the case was
+    // closed. A canned anomaly sentence would file "on during daylight against its schedule" for a
+    // lamp that is off, or for one deliberately lit for an operation - which then comes back later
+    // as a recalled hypothesis that never happened.
+    private static string DescribeCaseSymptom(string assetId, CommandCenterSnapshot snapshot)
+    {
+        var state = snapshot.OperationalState;
+        var observed = state.ReportedIsOn ? "on" : "off";
+
+        if (!state.IsAnomalous)
+        {
+            return state.OperationContext.RequiresLighting
+                ? $"Streetlight {assetId} {observed} during daylight as an active operational context required."
+                : $"Streetlight {assetId} {observed}, matching its effective target.";
+        }
+
+        return state.ManualOverride
+            ? $"Streetlight {assetId} {observed} against its effective target under a manual override."
+            : $"Streetlight {assetId} {observed} against its effective target with no manual override.";
+    }
+
+    private static string ToolCallStatusLabel(OperationsAgentToolCallStatus status) => status switch
+    {
+        OperationsAgentToolCallStatus.Completed => "ran",
+        OperationsAgentToolCallStatus.Denied => "denied - did not run",
+        OperationsAgentToolCallStatus.Failed => "failed",
+        _ => "requested - not run"
+    };
+
+    private static string ToolCallStatusClass(OperationsAgentToolCallStatus status) => status switch
+    {
+        OperationsAgentToolCallStatus.Completed => "ran",
+        OperationsAgentToolCallStatus.Denied => "denied",
+        OperationsAgentToolCallStatus.Failed => "failed",
+        _ => "requested"
+    };
+
+    // Counting requests as invocations is exactly the claim this stage disproves, so the summary
+    // counts what ran and names the rest separately.
+    private static string ToolCallSummary(OperationsAgentResponse response)
+    {
+        var ran = response.ToolCalls.Count(call => call.Status == OperationsAgentToolCallStatus.Completed);
+        var notRun = response.ToolCalls.Count - ran;
+
+        return notRun == 0
+            ? $"{ran} tool call(s) ran"
+            : $"{ran} of {response.ToolCalls.Count} tool call(s) ran; {notRun} requested but not executed";
+    }
 
     // An answer goes stale for several different reasons, and the operator is told which one.
     // Reporting a stage advance as an operational change sends the presenter looking at the city
