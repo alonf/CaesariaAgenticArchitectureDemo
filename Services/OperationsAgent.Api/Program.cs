@@ -237,7 +237,13 @@ remediation.MapPost("/", (HttpContext context, OperationsAgentRemediationRequest
             context.GetCorrelationId()));
     }
 
-    return Results.Ok(workflowService.StartRun(request.AssetId.Trim(), context.GetCorrelationId()));
+    return workflowService.TryStartRun(request.AssetId.Trim(), context.GetCorrelationId(), out var report)
+        ? Results.Ok(report)
+        : Results.Problem(ProblemDetailsFactory.Create(
+            StatusCodes.Status409Conflict,
+            "Remediation already in progress",
+            $"A remediation workflow run is already in flight for {request.AssetId.Trim()}; wait for it to finish before starting another.",
+            context.GetCorrelationId()));
 });
 remediation.MapGet("/work-items", (HttpContext context, IWorkItemGateway workItems, DemoStageGate stageGate) =>
     CreateWorkflowStageProblem(context, stageGate) is { } stageProblem

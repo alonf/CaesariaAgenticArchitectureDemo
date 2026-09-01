@@ -31,7 +31,11 @@ public sealed partial class RemediationTools(
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(assetId);
 
-        var report = _workflowService.StartRun(assetId, _correlationId);
+        if (!_workflowService.TryStartRun(assetId, _correlationId, out var report))
+        {
+            return $"A Restore Lighting Operation is already in progress for {assetId}; it must finish before another can start.";
+        }
+
         RemediationToolsLog.WorkflowStarted(_logger, report.RunId, assetId, _correlationId);
 
         return $"Started Restore Lighting Operation {report.RunId} for {assetId}. The workflow is now validating authoritative state, applying policy, requesting operator approval if the policy requires it, executing, and verifying the result; its progress appears in the Command Center workflow panel.";

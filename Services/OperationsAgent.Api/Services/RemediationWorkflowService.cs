@@ -26,6 +26,7 @@ public sealed partial class RemediationWorkflowService
     private readonly ILogger<RemediationWorkflowService> _logger;
     private readonly ConcurrentDictionary<string, RunState> _runs = new(StringComparer.Ordinal);
     private readonly ConcurrentQueue<string> _runOrder = new();
+    private readonly Lock _startGate = new();
     private readonly OperationsAgentWorkflowDefinition _definition;
 
     /// <summary>
@@ -77,13 +78,43 @@ public sealed partial class RemediationWorkflowService
     /// <param name="assetId">The streetlight asset to remediate.</param>
     /// <param name="correlationId">The correlation identifier spanning the run.</param>
     /// <returns>The initial run report carrying the run identifier.</returns>
-    public OperationsAgentWorkflowRunReport StartRun(string assetId, string correlationId)
+    public OperationsAgentWorkflowRunReport StartRun(string assetId, string correlationId) =>
+        TryStartRun(assetId, correlationId, out var report)
+            ? report
+            : throw new InvalidOperationException($"A remediation workflow run is already in progress for {assetId}.");
+
+    /// <summary>
+    /// Starts one remediation run unless the asset already has one in flight. Two concurrent
+    /// corrections of the same asset would race each other's preconditions and confuse the
+    /// operator about which approval belongs to which run, so one asset gets one run.
+    /// </summary>
+    /// <param name="assetId">The streetlight asset to remediate.</param>
+    /// <param name="correlationId">The correlation identifier spanning the run.</param>
+    /// <param name="report">The initial run report when a run was started.</param>
+    /// <returns><see langword="false"/> when a run for this asset is already active.</returns>
+    public bool TryStartRun(string assetId, string correlationId, out OperationsAgentWorkflowRunReport report)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(assetId);
         ArgumentException.ThrowIfNullOrWhiteSpace(correlationId);
 
+        lock (_startGate)
+        {
+            if (_runs.Values.Any(existing => !existing.IsFinished
+                && string.Equals(existing.AssetId, assetId, StringComparison.OrdinalIgnoreCase)))
+            {
+                report = null!;
+                return false;
+            }
+
+            report = StartRunCore(assetId, correlationId);
+            return true;
+        }
+    }
+
+    private OperationsAgentWorkflowRunReport StartRunCore(string assetId, string correlationId)
+    {
         var runId = Guid.NewGuid().ToString("N");
-        var state = new RunState(runId);
+        var state = new RunState(runId, assetId);
         _runs[runId] = state;
         _runOrder.Enqueue(runId);
         PruneRuns();
@@ -276,8 +307,10 @@ public sealed partial class RemediationWorkflowService
         _ => null
     };
 
-    private sealed class RunState(string runId) : IDisposable
+    private sealed class RunState(string runId, string assetId) : IDisposable
     {
+        public string AssetId { get; } = assetId;
+
         private readonly Lock _gate = new();
         private readonly List<OperationsAgentWorkflowStep> _steps = [];
         private readonly CancellationTokenSource _cancellation = new();
