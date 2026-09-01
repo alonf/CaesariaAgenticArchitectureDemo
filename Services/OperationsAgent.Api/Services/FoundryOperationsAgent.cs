@@ -597,6 +597,6 @@ internal static partial class OperationsAgentLog
     [LoggerMessage(
         EventId = 2403,
         Level = LogLevel.Information,
-        Message = "Re-requested capability {ToolName} was refused from the operator's standing decision for this request. CorrelationId: {CorrelationId}.")]
+        Message = "Re-requested capability {ToolName} was refused from the standing decision for this request. CorrelationId: {CorrelationId}.")]
     internal static partial void ToolApprovalRepeated(ILogger logger, string toolName, string correlationId);
 }

@@ -35,9 +35,10 @@ public sealed class ToolApprovalResolver(int maxRounds)
         ArgumentNullException.ThrowIfNull(askOperator);
         ArgumentNullException.ThrowIfNull(resume);
 
-        // A refusal stands for this request: if the model asks again for a capability the operator
-        // just declined, it is answered from the standing decision rather than asking again until
-        // the execution budget runs out.
+        // A refusal stands for this request: if the model asks again for a capability that was
+        // just refused, it is answered from the standing decision rather than asking again until
+        // the execution budget runs out. The refusal is not attributed to the operator, because a
+        // capability can also be refused by a stage downgrade after they approved it.
         HashSet<string> declined = new(StringComparer.Ordinal);
 
         for (var round = 0; round < _maxRounds; round++)
@@ -57,7 +58,7 @@ public sealed class ToolApprovalResolver(int maxRounds)
 
                 if (declined.Contains(toolName))
                 {
-                    decisions.Add(request.CreateResponse(false, "The operator already declined this capability for this request."));
+                    decisions.Add(request.CreateResponse(false, "This capability was already refused for this request."));
                     onStandingRefusal?.Invoke(toolName);
                     continue;
                 }

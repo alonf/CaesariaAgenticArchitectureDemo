@@ -55,9 +55,10 @@ public sealed class ToolApprovalResolverTests
     [Fact]
     public async Task ARefusalStandsForTheRestOfTheRequest()
     {
-        // The model may re-request a capability the operator just declined. Asking again would
-        // spend the round budget on a question already answered, so the standing decision answers
-        // it - and says so, because a decision applied silently is a decision nobody can audit.
+        // The model may re-request a capability that was just refused - by the operator, or by a
+        // stage downgrade after they approved it. Asking again would spend the round budget on a
+        // question already answered, so the standing decision answers it, and says so: a decision
+        // applied silently is a decision nobody can audit.
         var resolver = new ToolApprovalResolver(4);
         var asked = 0;
         List<string> standingRefusals = [];
