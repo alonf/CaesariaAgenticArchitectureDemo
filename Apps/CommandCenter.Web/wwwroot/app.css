@@ -1291,7 +1291,10 @@ svg {
     font-size: 0.82rem;
     font-weight: 700;
     color: var(--cp-accent);
-    white-space: nowrap;
+    /* The track may shrink below the text, so a long identifier has to wrap rather than run under
+       the badge beside it - "streetlight-investigation" overlapped AVAILABLE in a narrow rail. */
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
 
 .evidence-title {

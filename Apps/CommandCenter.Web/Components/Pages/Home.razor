@@ -728,7 +728,10 @@
                             <p class="agent-footnote">@_workflowMessage</p>
                         }
 
-                        @if (IsWorkflowStage && _workflowDefinition is not null)
+                        @* The generated diagram teaches the Workflow stage. Once the demo has moved
+                           on and no run is on screen, it is a large panel describing remediation
+                           that the situation in front of the operator has nothing to do with. *@
+                        @if (WorkflowDefinitionIsRelevant && _workflowDefinition is not null)
                         {
                             <div class="agent-summary wfrun-definition">
                                 <small>Workflow definition</small>
@@ -877,6 +880,11 @@
     private bool IsAnomaly => _snapshot?.OperationalState.IsAnomalous == true;
 
     private bool IsMultiAgentStage => _snapshot?.CurrentStage.Id >= DemoStage.MultiAgent;
+
+    // The definition belongs to the Workflow stage, and to any run still on screen - an agent can
+    // start one from a later stage, and its steps and gate must stay visible while it runs.
+    private bool WorkflowDefinitionIsRelevant =>
+        _snapshot?.CurrentStage.Id == DemoStage.Workflow || _workflowRun is not null;
 
     private bool _showWalkthrough;
 
@@ -1062,11 +1070,12 @@
         $"Why is streetlight {_snapshot?.AssetId ?? WebOptions.Value.AssetId} on during daylight?",
         sessionId: null);
 
-    // The workflow definition (diagram + YAML) loads lazily the first time the Workflow stage is
-    // on screen, and the Mermaid diagram renders once its container exists in the DOM.
+    // The workflow definition (diagram + YAML) loads lazily the first time it is actually relevant,
+    // and the Mermaid diagram renders once its container exists in the DOM. Loading it while the
+    // panel is not shown would also render the diagram into a container with no layout.
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (IsWorkflowStage && _workflowDefinition is null && !_workflowDefinitionLoading)
+        if (WorkflowDefinitionIsRelevant && _workflowDefinition is null && !_workflowDefinitionLoading)
         {
             _workflowDefinitionLoading = true;
 
