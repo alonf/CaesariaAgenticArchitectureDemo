@@ -15,12 +15,26 @@ public sealed partial class StageTransitionEffects(
     ILogger<StageTransitionEffects> logger)
 {
     /// <summary>
-    /// Applies the transition effects when the stage moved backward; forward moves are no-ops.
+    /// Applies the transition effects of a stage change.
     /// </summary>
     /// <param name="previous">The stage before the transition.</param>
     /// <param name="current">The stage after the transition.</param>
     public void Apply(DemoStage previous, DemoStage current)
     {
+        // Moving forward mostly adds capabilities, with one exception: the direct write lives in a
+        // window that Workflow closes, because the governed operation replaces it. A confirmation
+        // parked before the crossing would otherwise still be answerable afterwards and would
+        // perform exactly the write this stage took away.
+        if (previous < DemoStage.Workflow && current >= DemoStage.Workflow)
+        {
+            var refused = pendingApprovals.RefuseByControlPoint(OperationsAgentControlPoint.InteractiveInput);
+
+            if (refused > 0)
+            {
+                StageTransitionLog.InteractiveInputWithdrawn(logger, refused, current);
+            }
+        }
+
         if (current >= previous)
         {
             return;
@@ -64,4 +78,10 @@ internal static partial class StageTransitionLog
         Level = LogLevel.Information,
         Message = "Security consult disabled by the stage downgrade to {Stage}.")]
     internal static partial void SecurityConsultDisabled(ILogger logger, DemoStage stage);
+
+    [LoggerMessage(
+        EventId = 2636,
+        Level = LogLevel.Warning,
+        Message = "{RefusedCount} parked interactive-input confirmation(s) were refused: moving to {Stage} withdrew the direct write.")]
+    internal static partial void InteractiveInputWithdrawn(ILogger logger, int refusedCount, DemoStage stage);
 }

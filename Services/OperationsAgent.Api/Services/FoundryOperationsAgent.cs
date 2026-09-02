@@ -574,9 +574,13 @@ public sealed partial class FoundryOperationsAgent(
                 OperationsAgentToolNames.RestoreScheduledMode);
             var approved = await decision;
 
-            // A stage downgrade while the question was pending withdraws the capability: the
-            // confirmation is refused even if the operator answered approve in the same instant.
-            if (_stageGate.GetCurrent().Id < DemoStage.InteractiveInput)
+            // The direct write exists in one stage window, so the confirmation is checked against
+            // that whole window and not just its floor. Moving forward into Workflow withdraws
+            // this capability exactly as moving backward does: the governed operation replaces it,
+            // and a confirmation parked beforehand must not be able to perform the write anyway.
+            var stageNow = _stageGate.GetCurrent().Id;
+
+            if (stageNow < DemoStage.InteractiveInput || stageNow >= DemoStage.Workflow)
             {
                 approved = false;
             }

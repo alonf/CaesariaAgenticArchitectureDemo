@@ -6,6 +6,72 @@ namespace Caesarea.Deterministic.Tests;
 public sealed class StageTransitionEffectsTests
 {
     [Fact]
+    public async Task MovingForwardIntoWorkflowWithdrawsAParkedDirectWriteConfirmation()
+    {
+        // The direct write exists only below Workflow, where the governed operation replaces it.
+        // A confirmation parked at InteractiveInput and answered after the crossing would perform
+        // exactly the write the stage took away, so the crossing refuses it.
+        var (effects, approvals, _) = CreateEffects();
+        var (id, decision) = approvals.Create(
+            "Restore L-417 to scheduled mode?",
+            "mrtr-corr",
+            CancellationToken.None,
+            OperationsAgentControlPoint.InteractiveInput,
+            OperationsAgentToolNames.RestoreScheduledMode);
+
+        effects.Apply(DemoStage.InteractiveInput, DemoStage.Workflow);
+
+        // Refused, not cancelled: the run is still legitimate, so the tool is told no and the
+        // agent reports it rather than the whole turn failing on a cancelled wait. Bounded, so a
+        // regression that simply leaves the confirmation parked fails here instead of hanging.
+        Assert.False(await decision.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken));
+        Assert.Empty(approvals.GetAll());
+
+        // And the operator can no longer answer it approve after the fact.
+        Assert.False(approvals.TryRespond(id, approved: true));
+    }
+
+    [Fact]
+    public async Task AWorkflowGateIsNotDisturbedByTheSameCrossing()
+    {
+        // Only the interactive-input control point loses its capability at Workflow.
+        var (effects, approvals, _) = CreateEffects();
+        var (_, decision) = approvals.Create(
+            "Remediation workflow: restore L-417?",
+            "wf-corr",
+            CancellationToken.None,
+            OperationsAgentControlPoint.WorkflowGate,
+            OperationsAgentToolNames.RestoreScheduledMode);
+
+        effects.Apply(DemoStage.InteractiveInput, DemoStage.Workflow);
+
+        Assert.Single(approvals.GetAll());
+        Assert.False(decision.IsCompleted);
+
+        Assert.True(approvals.TryRespond(approvals.GetAll()[0].Id, approved: true));
+        Assert.True(await decision);
+    }
+
+    [Fact]
+    public async Task AForwardMoveInsideTheWriteWindowLeavesTheConfirmationStanding()
+    {
+        var (effects, approvals, _) = CreateEffects();
+        var (id, decision) = approvals.Create(
+            "Restore L-417 to scheduled mode?",
+            "mrtr-corr",
+            CancellationToken.None,
+            OperationsAgentControlPoint.InteractiveInput,
+            OperationsAgentToolNames.RestoreScheduledMode);
+
+        // McpTools to InteractiveInput adds the capability; it does not take it away.
+        effects.Apply(DemoStage.McpTools, DemoStage.InteractiveInput);
+
+        Assert.False(decision.IsCompleted);
+        Assert.True(approvals.TryRespond(id, approved: true));
+        Assert.True(await decision);
+    }
+
+    [Fact]
     public async Task DowngradeCancelsPendingApprovalsAndResetsTheToolSource()
     {
         var (effects, approvals, toolSource) = CreateEffects();

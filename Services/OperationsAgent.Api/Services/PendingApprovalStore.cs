@@ -106,6 +106,51 @@ public sealed partial class PendingApprovalStore(TimeProvider timeProvider, ILog
     }
 
     /// <summary>
+    /// Answers every pending approval raised at one control point with a refusal - used when a
+    /// stage change withdraws that control point's capability while a request is still parked.
+    /// <para>
+    /// A refusal rather than a cancellation, because the run itself is still legitimate: only the
+    /// capability went away. The paused tool is told no and the agent reports that honestly,
+    /// instead of the whole turn failing on a cancelled wait.
+    /// </para>
+    /// </summary>
+    /// <param name="controlPoint">The control point whose pending requests are refused.</param>
+    /// <returns>The number of approvals refused.</returns>
+    public int RefuseByControlPoint(OperationsAgentControlPoint controlPoint)
+    {
+        List<PendingEntry> entries;
+
+        lock (_gate)
+        {
+            entries = [.. _pending.Values.Where(entry => entry.Approval.ControlPoint == controlPoint)];
+
+            foreach (var entry in entries)
+            {
+                _pending.Remove(entry.Approval.Id);
+            }
+        }
+
+        var refused = 0;
+
+        foreach (var entry in entries)
+        {
+            entry.Registration.Dispose();
+
+            if (entry.Completion.TrySetResult(false))
+            {
+                refused++;
+            }
+        }
+
+        if (refused > 0)
+        {
+            PendingApprovalLog.ApprovalsRefusedByStage(logger, refused, controlPoint);
+        }
+
+        return refused;
+    }
+
+    /// <summary>
     /// Cancels every pending approval - used when the demo stage moves backward, so a request
     /// composed at a higher stage can never be approved and executed at a lower one.
     /// </summary>
@@ -177,4 +222,10 @@ internal static partial class PendingApprovalLog
         Level = LogLevel.Warning,
         Message = "{CancelledCount} pending operator approval(s) cancelled by a stage downgrade.")]
     internal static partial void ApprovalsCancelled(ILogger logger, int cancelledCount);
+
+    [LoggerMessage(
+        EventId = 2635,
+        Level = LogLevel.Warning,
+        Message = "{RefusedCount} pending approval(s) at control point {ControlPoint} were refused: the stage withdrew that capability.")]
+    internal static partial void ApprovalsRefusedByStage(ILogger logger, int refusedCount, OperationsAgentControlPoint controlPoint);
 }
