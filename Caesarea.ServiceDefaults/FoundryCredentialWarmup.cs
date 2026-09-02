@@ -1,15 +1,22 @@
 using System.Diagnostics;
 using Azure.Core;
 using Azure.Identity;
+using Microsoft.Extensions.Logging;
 
-namespace OperationsAgent.Api.Services;
+namespace Caesarea.ServiceDefaults;
 
 /// <summary>
-/// Warms the Azure credential chain in the background, so the first operator question does not pay
-/// the DefaultAzureCredential discovery cost (managed-identity probe, CLI and PowerShell process
-/// spawns - tens of seconds on a developer machine). The warmup runs at most once per process and is
-/// triggered only when an agent-enabled stage becomes active, so the Deterministic stage keeps its
-/// promise that no AI credential is used.
+/// Warms the Azure credential chain in the background, so the first request that needs a model does
+/// not pay the DefaultAzureCredential discovery cost (managed-identity probe, CLI and PowerShell
+/// process spawns - tens of seconds on a developer machine). The warmup runs at most once per
+/// process and is triggered only when the demo reaches a stage that uses the service, so the
+/// Deterministic stage keeps its promise that no AI credential is used.
+/// <para>
+/// Shared by every service that authenticates to Foundry: the Operations Agent warms on any
+/// agent-enabled stage, and the Security Operations Agent is woken when the demo reaches the stage
+/// that consults it - the first consult is the slowest beat in the lecture, and it should not also
+/// be paying for credential discovery.
+/// </para>
 /// </summary>
 public sealed partial class FoundryCredentialWarmup(
     TokenCredential credential,

@@ -118,9 +118,12 @@ public sealed class StageTransitionEffectsTests
         var approvals = new PendingApprovalStore(new TestTimeProvider(), NullLogger<PendingApprovalStore>.Instance);
         var toolSource = new ToolSourceSwitch();
         var effects = new StageTransitionEffects(
-            approvals, toolSource, CreateWorkflowService(approvals), new SecurityConsultSwitch(), NullLogger<StageTransitionEffects>.Instance);
+            approvals, toolSource, CreateWorkflowService(approvals), new SecurityConsultSwitch(), CreateWarmup(), NullLogger<StageTransitionEffects>.Instance);
         return (effects, approvals, toolSource);
     }
+
+    internal static SecurityAgentWarmup CreateWarmup() =>
+        new(new FakeHttpClientFactory(), NullLogger<SecurityAgentWarmup>.Instance);
 
     internal static RemediationWorkflowService CreateWorkflowService(PendingApprovalStore approvals) =>
         new(

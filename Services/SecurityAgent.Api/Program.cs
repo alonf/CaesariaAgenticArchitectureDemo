@@ -22,6 +22,10 @@ builder.Services.AddHttpClient<ISecurityHubGateway, HttpSecurityHubGateway>((ser
 });
 
 builder.Services.AddSingleton<TokenCredential>(new DefaultAzureCredential());
+// The consult is the slowest beat in the lecture, and the first one would otherwise also pay for
+// DefaultAzureCredential discovery. The Operations Agent wakes this service when the demo reaches
+// the stage that consults it, so the Deterministic stage still acquires no credential.
+builder.Services.AddSingleton<FoundryCredentialWarmup>();
 builder.Services.AddSingleton(serviceProvider =>
 {
     var options = serviceProvider.GetRequiredService<IOptions<SecurityAgentApiOptions>>().Value;
@@ -61,5 +65,13 @@ app.UseHttpsRedirection();
 app.MapDefaultEndpoints();
 app.MapMcp("/mcp");
 app.MapDemoBreakpoints(DemoSnippets.MultiAgent);
+
+// Woken by the Operations Agent when the demo reaches the MultiAgent stage. It starts the
+// credential warmup and nothing else, is idempotent, and runs at most once per process.
+app.MapPost("/api/agent-warmup", (FoundryCredentialWarmup credentialWarmup) =>
+{
+    credentialWarmup.EnsureStarted();
+    return TypedResults.Accepted((string?)null);
+}).WithTags("Security Operations Agent");
 
 await app.RunAsync();

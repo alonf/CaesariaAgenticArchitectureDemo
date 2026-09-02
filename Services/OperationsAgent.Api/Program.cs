@@ -61,6 +61,12 @@ builder.Services.AddSingleton<PendingApprovalStore>();
 builder.Services.AddSingleton<StageTransitionEffects>();
 builder.Services.AddSingleton<IWorkItemGateway, SimulatedWorkItemGateway>();
 builder.Services.AddSingleton<SecurityConsultSwitch>();
+builder.Services.AddSingleton<SecurityAgentWarmup>();
+builder.Services.AddHttpClient(SecurityAgentWarmup.HttpClientName, (serviceProvider, client) =>
+{
+    var options = serviceProvider.GetRequiredService<IOptions<OperationsAgentApiOptions>>().Value;
+    client.BaseAddress = new Uri(options.SecurityAgentBaseUri, UriKind.Absolute);
+});
 // The HTTP client the Security Agent's MCP transport rides on. Note what is absent: this service
 // has no client for the Security Hub itself.
 builder.Services.AddHttpClient("securityagent-mcp", (serviceProvider, client) =>

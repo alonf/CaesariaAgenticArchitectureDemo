@@ -354,6 +354,22 @@ internal sealed class FakeWorkItemGateway : IWorkItemGateway
     public IReadOnlyList<MaintenanceWorkItem> GetAll() => [.. _workItems];
 }
 
+/// <summary>
+/// Serves clients that answer every request locally, so a fire-and-forget warmup call in a unit
+/// test neither reaches the network nor fails the test.
+/// </summary>
+internal sealed class FakeHttpClientFactory : IHttpClientFactory
+{
+    public HttpClient CreateClient(string name) =>
+        new(new AcceptingHandler()) { BaseAddress = new Uri("http://localhost/") };
+
+    private sealed class AcceptingHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+            Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.Accepted));
+    }
+}
+
 internal sealed class FakeOperationsAgentStageClient : IOperationsAgentStageClient
 {
     public int ApplyCalls { get; private set; }

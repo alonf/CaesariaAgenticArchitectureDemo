@@ -12,6 +12,7 @@ public sealed partial class StageTransitionEffects(
     ToolSourceSwitch toolSourceSwitch,
     RemediationWorkflowService remediationWorkflow,
     SecurityConsultSwitch securityConsult,
+    SecurityAgentWarmup securityAgentWarmup,
     ILogger<StageTransitionEffects> logger)
 {
     /// <summary>
@@ -21,6 +22,13 @@ public sealed partial class StageTransitionEffects(
     /// <param name="current">The stage after the transition.</param>
     public void Apply(DemoStage previous, DemoStage current)
     {
+        // The consulted agent runs in its own process and does not know the stage. Waking its
+        // credential here buys the lead time between reaching the stage and the first consult.
+        if (current >= DemoStage.MultiAgent)
+        {
+            securityAgentWarmup.EnsureStarted();
+        }
+
         // Moving forward mostly adds capabilities, with one exception: the direct write lives in a
         // window that Workflow closes, because the governed operation replaces it. A confirmation
         // parked before the crossing would otherwise still be answerable afterwards and would
