@@ -176,10 +176,14 @@ public static class SecurityAssessmentSanitizer
 
         var reasonCode = ResolveReasonCode(ExtractCode<SecurityLightingReason>(answer, "reasonCode"), requiresLighting, status.Operations.Count > 0);
 
-        // The recommendation is the agent's own: any value from the closed set is honored, because
-        // advice cannot switch the lights off. Only an absent or unrecognized value falls back.
-        var recommendation = ExtractCode<SecurityLightingRecommendation>(answer, "recommendation")
-            ?? DefaultRecommendation(requiresLighting);
+        // The recommendation is the agent's own judgment, kept wherever it is compatible with what
+        // the records say. It is not, however, allowed to contradict them: "no action required"
+        // while an operation requires lighting reads to the asking domain as permission to restore
+        // the schedule, and the Operations Agent is instructed not to overrule this advice - so a
+        // contradictory selection would travel all the way to the operator as a recommendation to
+        // switch a light off under an active operation.
+        var recommendation = ResolveRecommendation(
+            ExtractCode<SecurityLightingRecommendation>(answer, "recommendation"), requiresLighting);
 
         return new SecurityLightingAssessment(
             area,
@@ -190,6 +194,29 @@ public static class SecurityAssessmentSanitizer
             RenderReason(reasonCode, untilUtc),
             DetailsWithheld: status.Operations.Count > 0,
             assessedBy);
+    }
+
+    /// <summary>
+    /// Keeps the agent's advice wherever the records permit it, and replaces it where they do not.
+    /// The compatibility rule is derived from the verdict rather than from a hand-written table:
+    /// while lighting is required, advising no action contradicts it; while it is not required,
+    /// advising that the area stay lit until a window ends contradicts a window that is not there.
+    /// Everything else - reassess after the window, contact the desk - is a judgment call the agent
+    /// is entitled to make, which is the part of this answer a model is actually for.
+    /// </summary>
+    private static SecurityLightingRecommendation ResolveRecommendation(
+        SecurityLightingRecommendation? claimed, bool requiresLighting)
+    {
+        if (claimed is not { } recommendation)
+        {
+            return DefaultRecommendation(requiresLighting);
+        }
+
+        var contradictsRecords = requiresLighting
+            ? recommendation == SecurityLightingRecommendation.NoActionRequired
+            : recommendation == SecurityLightingRecommendation.LeaveLitUntilWindowEnds;
+
+        return contradictsRecords ? DefaultRecommendation(requiresLighting) : recommendation;
     }
 
     private static SecurityLightingRecommendation DefaultRecommendation(bool requiresLighting) =>

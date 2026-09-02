@@ -636,7 +636,7 @@
                         {
                             <div class="@RailActionClass(DemoStage.ToolApproval)">
                             <button class="action-button investigate-button @(_agentBusy ? "busy" : string.Empty)" @onclick="RequestMaintenanceAsync" disabled="@_agentBusy">
-                                <span>@(_agentBusy ? "Working..." : $"Ask the agent to handle {_snapshot.AssetId}'s faulty controller")</span>
+                                <span>@(_agentBusy ? "Working..." : $"Investigate the reported controller fault on {_snapshot.AssetId}")</span>
                                 <svg viewBox="0 0 24 24"><path d="M14 7a4 4 0 0 0-5.5 4.9l-4.6 4.6 2.6 2.6 4.6-4.6A4 4 0 0 0 17 9.5L14.5 12 12 9.5 14.5 7Z" /></svg>
                             </button>
                             </div>
@@ -748,12 +748,22 @@
                         @if (IsMemoryStage)
                         {
                             <div class="@RailActionClass(DemoStage.Memory)">
-                                @if (_agentResponse is not null)
+                                @* The symptom is read from the snapshot on screen, so closing a case
+                                   for a different asset than the one displayed would file one
+                                   asset's identifier against another asset's state. *@
+                                @if (_agentResponse is not null && CaseMatchesDisplayedAsset)
                                 {
                                     <button class="action-button investigate-button @CloseCaseStateClass" @onclick="CloseCaseAsync" disabled="@(_agentBusy || _caseBusy || _caseClosed)">
                                         <span>@CloseCaseLabel</span>
                                         <svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4Z" /></svg>
                                     </button>
+                                }
+                                else if (_agentResponse is not null && _snapshot is { } caseSnapshot)
+                                {
+                                    <p class="agent-footnote">
+                                        Closing a case records the state on screen, so it applies to @caseSnapshot.AssetId -
+                                        the last question was about @(QuestionedAssetId ?? "another asset"). Select that asset to close its case.
+                                    </p>
                                 }
 
                                 <button class="action-button investigate-button @(_agentBusy ? "busy" : string.Empty)" @onclick="AskSecondAssetAsync" disabled="@_agentBusy">
@@ -823,6 +833,16 @@
     private bool IsAgentStage => _snapshot?.CurrentStage.Id >= DemoStage.InvestigationAgent;
     private bool IsSessionStage => _snapshot?.CurrentStage.Id >= DemoStage.Session;
     private bool IsMemoryStage => _snapshot?.CurrentStage.Id >= DemoStage.Memory;
+
+    // The asset the last question was about, when it named one.
+    private string? QuestionedAssetId => ExtractAssetId(_lastAgentQuestion);
+
+    // A case pairs an asset identifier with the symptom observed for it. The identifier comes from
+    // the question and the symptom from the displayed snapshot, so the two must be the same asset
+    // or the case records something that never happened.
+    private bool CaseMatchesDisplayedAsset =>
+        _snapshot is { } snapshot
+        && string.Equals(QuestionedAssetId ?? snapshot.AssetId, snapshot.AssetId, StringComparison.OrdinalIgnoreCase);
     private bool IsSkillsStage => _snapshot?.CurrentStage.Id >= DemoStage.Skills;
     private bool IsInteractiveStage => _snapshot?.CurrentStage.Id >= DemoStage.InteractiveInput;
     private bool IsWorkflowStage => _snapshot?.CurrentStage.Id >= DemoStage.Workflow;
@@ -1060,8 +1080,11 @@
 
     // Deliberately does not name a tool: the point of this stage is that the model decides for
     // itself that filing a work item is the right action, and the framework intercepts it.
+    // Phrased as a report to investigate, not as an established fact. Telling the model the
+    // controller is faulty would either contradict authoritative state or show it acting on an
+    // operator assertion it never checked - neither is what this stage is demonstrating.
     private Task RequestMaintenanceAsync() => AskAgentCoreAsync(
-        $"The controller on streetlight {_snapshot?.AssetId ?? WebOptions.Value.AssetId} is faulty and needs a technician on site. Handle it.",
+        $"A controller fault has been reported for streetlight {_snapshot?.AssetId ?? WebOptions.Value.AssetId}. Investigate it and handle it appropriately.",
         sessionId: null);
 
     // The MultiAgent beat's documented question. "Is it on?" is answerable without leaving the
@@ -1346,7 +1369,10 @@
 
     private async Task CloseCaseAsync()
     {
-        if (_caseBusy || _caseClosed || _agentResponse is not { } response || _snapshot is not { } snapshot)
+        // Guarded here as well as in the markup: the symptom below is derived from this snapshot,
+        // so an asset mismatch would record one asset's identifier against another's state.
+        if (_caseBusy || _caseClosed || _agentResponse is not { } response || _snapshot is not { } snapshot
+            || !CaseMatchesDisplayedAsset)
         {
             return;
         }

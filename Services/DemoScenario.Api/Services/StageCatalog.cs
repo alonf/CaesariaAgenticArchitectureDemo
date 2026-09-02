@@ -151,9 +151,9 @@ public sealed class StageCatalog
             "The agent recommends; the workflow decides and acts. Orchestration is explicit and inspectable, not emergent."),
 
         [DemoStage.ToolApproval] = new(
-            ["Scenario: Lights On Reported by a Client"],
+            ["Scenario: Controller Fault - the controller really is faulted, so the agent can verify the report before acting"],
             [
-                new(DemoSurface.CommandCenter, "Click Ask the agent to handle L-417's faulty controller.", "The request never names a tool - the model picks create_maintenance_work_item itself."),
+                new(DemoSurface.CommandCenter, "Click Investigate the reported controller fault on L-417.", "The request never names a tool - the agent checks the state, finds the fault, and picks create_maintenance_work_item itself."),
                 new(DemoSurface.CommandCenter, "Deny first.", "The trace marks the call denied - did not run, and the work-item list stays empty."),
                 new(DemoSurface.CommandCenter, "Ask again and approve.", "The same call runs and exactly one work item appears.")
             ],

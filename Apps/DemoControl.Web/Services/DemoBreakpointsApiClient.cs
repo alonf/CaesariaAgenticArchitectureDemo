@@ -22,6 +22,9 @@ internal sealed class DemoBreakpointsApiClient(IHttpClientFactory httpClientFact
 
     private static readonly JsonSerializerOptions SerializerOptions = CaesareaJsonDefaults.CreateSerializerOptions();
 
+    // Short: this panel polls, and a presenter waiting on it is waiting mid-talk.
+    private static readonly TimeSpan ReadTimeout = TimeSpan.FromSeconds(5);
+
     /// <summary>
     /// Reads every service's breakpoint state. A service that is not running degrades to its own
     /// row carrying the error: one absent service must not blank the whole panel.
@@ -61,22 +64,40 @@ internal sealed class DemoBreakpointsApiClient(IHttpClientFactory httpClientFact
 
     private async Task<DemoBreakpointSource> ReadSourceAsync(DemoBreakpointService service, CancellationToken cancellationToken)
     {
+        // A service that hangs must cost this panel one row, not the whole panel: without its own
+        // deadline the read would sit on the HttpClient's default timeout with every other row
+        // waiting behind it.
+        using var attempt = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        attempt.CancelAfter(ReadTimeout);
+
         try
         {
             using var client = CreateClient(service.ClientName);
             using var request = CreateRequest(HttpMethod.Get, "/api/demo-breakpoints");
-            using var response = await client.SendAsync(request, cancellationToken);
+            using var response = await client.SendAsync(request, attempt.Token);
 
             response.EnsureSuccessStatusCode();
 
-            var status = await response.Content.ReadFromJsonAsync<DemoBreakpointsResponse>(SerializerOptions, cancellationToken)
+            var status = await response.Content.ReadFromJsonAsync<DemoBreakpointsResponse>(SerializerOptions, attempt.Token)
                 ?? throw new InvalidOperationException("Demo breakpoints response was empty.");
 
             return new DemoBreakpointSource(service, status.DebuggerAttached, status.Snippets, Error: null);
         }
-        catch (Exception exception) when (exception is not OperationCanceledException)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            return new DemoBreakpointSource(service, DebuggerAttached: false, Snippets: [], Error: exception.Message);
+            // The caller gave up - the page is going away, so let that propagate.
+            throw;
+        }
+        catch (Exception exception)
+        {
+            // Everything else is this service's problem, including a timeout: an HttpClient
+            // deadline surfaces as a TaskCanceledException, and treating that as cancellation
+            // failed the whole fan-out and blanked every other service's row.
+            var reason = exception is OperationCanceledException
+                ? $"{service.DisplayName} did not respond within {ReadTimeout.TotalSeconds:0} seconds."
+                : exception.Message;
+
+            return new DemoBreakpointSource(service, DebuggerAttached: false, Snippets: [], Error: reason);
         }
     }
 

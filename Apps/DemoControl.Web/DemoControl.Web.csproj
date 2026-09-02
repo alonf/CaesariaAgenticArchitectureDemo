@@ -12,4 +12,8 @@
     <ProjectReference Include="..\..\Contracts\DemoScenario.Contracts\DemoScenario.Contracts.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Caesarea.Deterministic.Tests" />
+  </ItemGroup>
+
 </Project>

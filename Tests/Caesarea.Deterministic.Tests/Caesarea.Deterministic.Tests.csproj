@@ -35,6 +35,7 @@
     <ProjectReference Include="..\..\Services\SecurityHub.Api\SecurityHub.Api.csproj" />
     <ProjectReference Include="..\..\Services\SmartPole.Simulator.Api\SmartPole.Simulator.Api.csproj" />
     <ProjectReference Include="..\..\Apps\CommandCenter.Web\CommandCenter.Web.csproj" />
+    <ProjectReference Include="..\..\Apps\DemoControl.Web\DemoControl.Web.csproj" />
   </ItemGroup>
 
 </Project>

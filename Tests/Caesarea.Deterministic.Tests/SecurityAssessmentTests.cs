@@ -143,13 +143,11 @@ public sealed class SecurityAssessmentTests
     [Theory]
     [InlineData("ContactSecurityDesk", SecurityLightingRecommendation.ContactSecurityDesk)]
     [InlineData("ReassessAfterWindow", SecurityLightingRecommendation.ReassessAfterWindow)]
-    [InlineData("NoActionRequired", SecurityLightingRecommendation.NoActionRequired)]
-    public void TheRecommendationIsTheAgentsOwn(string claimed, SecurityLightingRecommendation expected)
+    public void ACompatibleRecommendationIsTheAgentsOwn(string claimed, SecurityLightingRecommendation expected)
     {
         // What the second model is actually for. The safety decision is deterministic, so if the
         // agent had no say at all it would not be earning its cost: reading overlapping windows and
-        // ambiguous notes to advise what the asking domain should do next is the say it has. Any
-        // value from the closed set is honored, including ones the records would not have chosen.
+        // ambiguous notes to advise what the asking domain should do next is the say it has.
         var status = CreateStatusWithOperation();
 
         var assessment = SecurityAssessmentSanitizer.Sanitize(
@@ -162,6 +160,56 @@ public sealed class SecurityAssessmentTests
         // Advice, never authority: the lights stay on whatever the agent advises.
         Assert.True(assessment.RequiresLighting);
         Assert.Equal(status.Operations[0].EndsAt, assessment.UntilUtc);
+    }
+
+    [Fact]
+    public void AdviceThatContradictsTheRecordsIsReplaced()
+    {
+        // "No action required" while an operation requires lighting reads to the asking domain as
+        // permission to restore the schedule - and the Operations Agent is instructed not to
+        // overrule this advice, so it would reach the operator as a recommendation to switch a
+        // light off under an active operation. The model may judge; it may not contradict.
+        var status = CreateStatusWithOperation();
+
+        var assessment = SecurityAssessmentSanitizer.Sanitize(
+            DemoAssets.NorthPromenadeArea,
+            """{"reasonCode":"ActiveOperationRequiresLighting","recommendation":"NoActionRequired"}""",
+            status,
+            AgentName);
+
+        Assert.True(assessment.RequiresLighting);
+        Assert.Equal(SecurityLightingRecommendation.LeaveLitUntilWindowEnds, assessment.Recommendation);
+    }
+
+    [Fact]
+    public void AdviceToStayLitIsReplacedWhenNoWindowExists()
+    {
+        // The mirror case: there is no lighting window to stay lit until.
+        var status = new SecurityAreaStatus(DemoAssets.NorthPromenadeArea, [], DateTimeOffset.UtcNow);
+
+        var assessment = SecurityAssessmentSanitizer.Sanitize(
+            DemoAssets.NorthPromenadeArea,
+            """{"reasonCode":"NoActiveOperation","recommendation":"LeaveLitUntilWindowEnds"}""",
+            status,
+            AgentName);
+
+        Assert.False(assessment.RequiresLighting);
+        Assert.Equal(SecurityLightingRecommendation.NoActionRequired, assessment.Recommendation);
+    }
+
+    [Fact]
+    public void ContactingTheDeskStaysAvailableWhenNothingIsActive()
+    {
+        // Compatible in both directions: escalating to a human never contradicts the records.
+        var status = new SecurityAreaStatus(DemoAssets.NorthPromenadeArea, [], DateTimeOffset.UtcNow);
+
+        var assessment = SecurityAssessmentSanitizer.Sanitize(
+            DemoAssets.NorthPromenadeArea,
+            """{"reasonCode":"NoActiveOperation","recommendation":"ContactSecurityDesk"}""",
+            status,
+            AgentName);
+
+        Assert.Equal(SecurityLightingRecommendation.ContactSecurityDesk, assessment.Recommendation);
     }
 
     [Theory]
