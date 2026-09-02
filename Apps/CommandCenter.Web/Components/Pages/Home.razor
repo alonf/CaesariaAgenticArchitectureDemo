@@ -932,9 +932,12 @@
     private string RailActionClass(DemoStage stage) =>
         _snapshot?.CurrentStage.Id == stage ? "rail-action current" : "rail-action earlier";
 
+    // Counts exactly what the toggle folds away. Ask agent is deliberately not in this list: it is
+    // the question box's own control, sits above the answer, and stays put - it is also the action
+    // the Knowledge and McpTools beats reuse, so it has no single owning stage. Counting it here
+    // would promise one more hidden button than the toggle actually reveals.
     private int EarlierActionCount => _snapshot is not { } snapshot ? 0 : new[]
     {
-        (DemoStage.InvestigationAgent, IsAgentStage),
         (DemoStage.Session, IsSessionStage && _agentSessionId is not null),
         (DemoStage.Memory, IsMemoryStage),
         (DemoStage.Skills, IsSkillsStage),
@@ -1517,6 +1520,13 @@
             {
                 _workflowRun = null;
                 _workflowMessage = null;
+            }
+
+            // Every stage change starts a new beat, so the rail folds back to that stage's action
+            // rather than staying open from the last time the presenter looked at the history.
+            if (_lastObservedStage != snapshot.CurrentStage.Id)
+            {
+                _showEarlierActions = false;
             }
 
             _lastObservedStage = snapshot.CurrentStage.Id;
