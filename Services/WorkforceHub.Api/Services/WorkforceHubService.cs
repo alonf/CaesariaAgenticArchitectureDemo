@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+using System.Collections.Frozen;
 
 namespace WorkforceHub.Api.Services;
 
@@ -7,10 +7,29 @@ namespace WorkforceHub.Api.Services;
 /// personal detail no other domain may see. Only this domain's own agent may read it, and even
 /// that agent never receives the whole record - it receives what the extraction below selects.
 /// </summary>
-public sealed partial class WorkforceHubService(TimeProvider timeProvider, ILogger<WorkforceHubService> logger)
+public sealed partial class WorkforceHubService
 {
-    private readonly ConcurrentDictionary<string, WorkOrderRecord> _workOrders = new(StringComparer.OrdinalIgnoreCase);
-    private int _seeded;
+    private readonly TimeProvider _timeProvider;
+    private readonly ILogger<WorkforceHubService> _logger;
+
+    // One immutable snapshot, swapped whole. A dictionary that is cleared and refilled is visible
+    // to readers between those two steps, and a reader that catches a reset mid-flight would see
+    // the domain hold no work order for the asset it just asked about - which in this demo reads
+    // as "the peer found nothing" rather than as the race it is.
+    private volatile FrozenDictionary<string, WorkOrderRecord> _workOrders;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="WorkforceHubService"/> class, already holding
+    /// its default fixture: there is no unseeded state a first reader could observe.
+    /// </summary>
+    /// <param name="timeProvider">The clock the fixture is stamped from.</param>
+    /// <param name="logger">The logger used for boundary events.</param>
+    public WorkforceHubService(TimeProvider timeProvider, ILogger<WorkforceHubService> logger)
+    {
+        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _workOrders = CreateDefaults(timeProvider);
+    }
 
     /// <summary>
     /// Finds the work orders raised for an asset, newest first, described only well enough to
@@ -24,8 +43,6 @@ public sealed partial class WorkforceHubService(TimeProvider timeProvider, ILogg
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(assetId);
 
-        EnsureSeeded();
-
         var matches = _workOrders.Values
             .Where(record => string.Equals(record.AssetId, assetId, StringComparison.OrdinalIgnoreCase))
             .OrderByDescending(record => record.RaisedAt)
@@ -33,7 +50,7 @@ public sealed partial class WorkforceHubService(TimeProvider timeProvider, ILogg
                 record.WorkOrderId, record.AssetId, record.Title, record.Status, record.RaisedAt))
             .ToArray();
 
-        WorkforceHubLog.SearchServed(logger, assetId, matches.Length, correlationId);
+        WorkforceHubLog.SearchServed(_logger, assetId, matches.Length, correlationId);
         return matches;
     }
 
@@ -53,15 +70,13 @@ public sealed partial class WorkforceHubService(TimeProvider timeProvider, ILogg
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(workOrderId);
 
-        EnsureSeeded();
-
         if (!_workOrders.TryGetValue(workOrderId, out var record))
         {
-            WorkforceHubLog.DetailsMissing(logger, workOrderId, correlationId);
+            WorkforceHubLog.DetailsMissing(_logger, workOrderId, correlationId);
             return null;
         }
 
-        WorkforceHubLog.DetailsServed(logger, workOrderId, correlationId);
+        WorkforceHubLog.DetailsServed(_logger, workOrderId, correlationId);
 
         return new ShareableWorkOrderDetails(
             record.WorkOrderId,
@@ -80,11 +95,8 @@ public sealed partial class WorkforceHubService(TimeProvider timeProvider, ILogg
     /// halves side by side.
     /// </summary>
     /// <returns>Every work order in full.</returns>
-    public IReadOnlyList<WorkOrderRecord> GetAllInFull()
-    {
-        EnsureSeeded();
-        return [.. _workOrders.Values.OrderByDescending(record => record.RaisedAt)];
-    }
+    public IReadOnlyList<WorkOrderRecord> GetAllInFull() =>
+        [.. _workOrders.Values.OrderByDescending(record => record.RaisedAt)];
 
     /// <summary>
     /// Restores the default work orders.
@@ -93,22 +105,17 @@ public sealed partial class WorkforceHubService(TimeProvider timeProvider, ILogg
     /// <returns>The work orders now held.</returns>
     public IReadOnlyList<WorkOrderRecord> Reset(string correlationId)
     {
-        _workOrders.Clear();
-        Interlocked.Exchange(ref _seeded, 0);
-        EnsureSeeded();
-        WorkforceHubLog.Reset(logger, correlationId);
+        // A whole new snapshot replaces the old one in a single assignment, so no reader ever sees
+        // a half-populated domain.
+        _workOrders = CreateDefaults(_timeProvider);
+        WorkforceHubLog.Reset(_logger, correlationId);
         return GetAllInFull();
     }
 
     // The default fixture: the visit that explains L-417's current state, and an older closed visit
     // so that finding the right one is a real step rather than a foregone conclusion.
-    private void EnsureSeeded()
+    private static FrozenDictionary<string, WorkOrderRecord> CreateDefaults(TimeProvider timeProvider)
     {
-        if (Interlocked.Exchange(ref _seeded, 1) == 1)
-        {
-            return;
-        }
-
         var now = timeProvider.GetUtcNow();
 
         WorkOrderRecord[] defaults =
@@ -146,10 +153,7 @@ public sealed partial class WorkforceHubService(TimeProvider timeProvider, ILogg
                 "Lamp replaced and the schedule confirmed. No override left in place.")
         ];
 
-        foreach (var record in defaults)
-        {
-            _workOrders[record.WorkOrderId] = record;
-        }
+        return defaults.ToFrozenDictionary(record => record.WorkOrderId, StringComparer.OrdinalIgnoreCase);
     }
 }
 

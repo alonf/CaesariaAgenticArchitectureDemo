@@ -30,14 +30,26 @@ workforce.MapGet("/work-orders/{workOrderId}/shareable", GetShareableDetails);
 workforce.MapGroup("/admin").MapPost("/reset", Reset);
 
 // The presenter's own view: the records in full, so the lecture can show what was withheld beside
-// what crossed. Loopback only - this is the payload the whole stage exists to keep inside.
+// what crossed. This is the payload the whole stage exists to keep inside, so it is gated twice and
+// the two gates are not the same gate. The caller must name itself as the switchboard, because in
+// this demo every service is a loopback process and "local" identifies nobody; and the connection
+// must still be loopback, so naming yourself the switchboard from another machine gets you nothing.
 app.MapGet("/api/workforce-records", (HttpContext context, WorkforceHubService hub) =>
 {
+    if (CallerIdentity.Reject(context, CallerIdentity.DemoControl) is { } forbidden)
+    {
+        return forbidden;
+    }
+
     var remoteAddress = context.Connection.RemoteIpAddress;
 
-    return remoteAddress is null || !System.Net.IPAddress.IsLoopback(remoteAddress)
-        ? Results.StatusCode(StatusCodes.Status403Forbidden)
-        : Results.Ok(hub.GetAllInFull());
+    return remoteAddress is not null && System.Net.IPAddress.IsLoopback(remoteAddress)
+        ? Results.Ok(hub.GetAllInFull())
+        : Results.Problem(ProblemDetailsFactory.Create(
+            StatusCodes.Status403Forbidden,
+            "Caller not permitted",
+            "The work orders in full are served to the presenter's own machine only.",
+            context.GetCorrelationId()));
 }).WithTags("Workforce Hub");
 
 await app.RunAsync();

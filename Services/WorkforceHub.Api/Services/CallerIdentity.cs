@@ -22,6 +22,17 @@ public static class CallerIdentity
     public const string DemoScenario = "demo-scenario";
 
     /// <summary>
+    /// The presenter's switchboard: the only caller permitted to read work orders in full.
+    /// <para>
+    /// Loopback alone cannot express this. Every service in the demo runs on the presenter's own
+    /// machine, so "came from localhost" admits the Operations Agent and every other process here -
+    /// it is a network fact, not an identity. The two conditions do different work: the header says
+    /// who is asking, and loopback says the request never crossed a wire.
+    /// </para>
+    /// </summary>
+    public const string DemoControl = "demo-control";
+
+    /// <summary>
     /// Rejects the request unless it names one of the permitted callers.
     /// </summary>
     /// <param name="context">The current HTTP context.</param>

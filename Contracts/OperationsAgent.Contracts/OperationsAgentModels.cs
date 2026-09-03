@@ -51,7 +51,11 @@ public enum OperationsAgentToolCallStatus
 /// </summary>
 /// <param name="AgentName">The consulted agent's published name.</param>
 /// <param name="Provider">The organization that runs it, from its card.</param>
-/// <param name="SkillId">The declared skill the consultation used.</param>
+/// <param name="SkillId">
+/// The skill the peer advertised on its card. A2A does not report which skill actually served a
+/// task, so this is what was declared, not what was observed - the UI says "advertised" for that
+/// reason.
+/// </param>
 /// <param name="SkillDescription">
 /// That skill as the peer describes it - including what it says it will not disclose. This is the
 /// point of discovery: the caller learns the boundary from the card before asking, instead of

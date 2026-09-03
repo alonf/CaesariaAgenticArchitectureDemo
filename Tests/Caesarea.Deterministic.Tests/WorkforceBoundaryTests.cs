@@ -1,7 +1,10 @@
 using System.Net;
 using System.Net.Http.Json;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
 using Workforce.Contracts;
 using WorkforceHub.Api.Services;
 
@@ -107,26 +110,92 @@ public sealed class WorkforceBoundaryTests
     }
 
     [Fact]
-    public async Task TheFullRecordIsNotReachableThroughAnySharedRoute()
+    public async Task AConnectionWithNoAddressAtAllIsNotThePresenter()
     {
-        // The demo shows the withheld half from the presenter's own machine only. If this ever
-        // answers a remote caller, the whole stage is a lie.
+        // The default shape of a request that never touched a socket. It is its own case because
+        // the rule reads the address, and "there is no address" must fail closed rather than being
+        // treated as a local one.
         await using var factory = CreateHub();
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/workforce-records");
+        request.Headers.Add(CallerIdentity.HeaderName, CallerIdentity.DemoControl);
         using var client = factory.CreateClient();
 
-        using var response = await client.GetAsync("/api/workforce-records", TestContext.Current.CancellationToken);
+        using var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(null, true, HttpStatusCode.Forbidden)]
+    [InlineData(CallerIdentity.WorkforceAgent, true, HttpStatusCode.Forbidden)]
+    [InlineData(CallerIdentity.DemoScenario, true, HttpStatusCode.Forbidden)]
+    [InlineData(CallerIdentity.DemoControl, false, HttpStatusCode.Forbidden)]
+    [InlineData(CallerIdentity.DemoControl, true, HttpStatusCode.OK)]
+    public async Task TheFullRecordNeedsBothThePresentersNameAndALoopbackConnection(
+        string? caller, bool fromLoopback, HttpStatusCode expected)
+    {
+        // This is the route that serves technician names, badges, costs and rates, and the two
+        // conditions on it are not the same condition. Loopback alone identifies nobody: every
+        // service in this demo runs on the presenter's machine, so "local" would admit the
+        // Operations Agent as readily as the switchboard. The header alone is a string anyone can
+        // send. Only together do they mean "the presenter, at the keyboard".
+        await using var factory = CreateHub(fromLoopback ? IPAddress.Loopback : IPAddress.Parse("203.0.113.9"));
+        using var client = factory.CreateClient();
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/workforce-records");
+
+        if (caller is not null)
+        {
+            request.Headers.Add(CallerIdentity.HeaderName, caller);
+        }
+
+        using var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        Assert.Equal(expected, response.StatusCode);
+
+        if (expected is not HttpStatusCode.OK)
+        {
+            // A refusal must refuse the payload too, not merely the status line.
+            var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+            Assert.DoesNotContain("4471", body, StringComparison.Ordinal);
+            Assert.DoesNotContain("Cohen", body, StringComparison.Ordinal);
+        }
     }
 
     private static WebApplicationFactory<WorkforceHubService> CreateHub() =>
         new WebApplicationFactory<WorkforceHubService>()
             .WithWebHostBuilder(builder => builder.UseEnvironment("Development"));
 
+    // The test host opens no socket, so a request arrives with no connection address at all and
+    // the loopback branch is unreachable by default - which is why the plain CreateHub() overload
+    // can only ever observe the "nobody" case. Stamping the address the transport would have set
+    // lets both halves of the rule be exercised against the real route.
+    private static WebApplicationFactory<WorkforceHubService> CreateHub(IPAddress remoteAddress) =>
+        new WebApplicationFactory<WorkforceHubService>()
+            .WithWebHostBuilder(builder =>
+            {
+                builder.UseEnvironment("Development");
+                builder.ConfigureTestServices(services =>
+                    services.AddSingleton<IStartupFilter>(new StampConnectionAddress(remoteAddress)));
+            });
+
     private static HttpRequestMessage CreateRequest(HttpMethod method, string relativeUri, string caller)
     {
         var request = new HttpRequestMessage(method, relativeUri);
         request.Headers.Add(CallerIdentity.HeaderName, caller);
         return request;
+    }
+
+    private sealed class StampConnectionAddress(IPAddress address) : IStartupFilter
+    {
+        public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => app =>
+        {
+            app.Use(async (context, following) =>
+            {
+                context.Connection.RemoteIpAddress = address;
+                await following(context);
+            });
+
+            next(app);
+        };
     }
 }

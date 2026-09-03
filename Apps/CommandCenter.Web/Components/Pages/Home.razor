@@ -439,7 +439,7 @@
                                                where the peer states what it will not disclose, and
                                                reading that before asking is the whole point of
                                                discovery - so it has to be on screen. *@
-                                            <div><dt>Skill</dt><dd>@consult.SkillId<span class="a2a-skill-note">@consult.SkillDescription</span></dd></div>
+                                            <div><dt>Advertised skill</dt><dd>@consult.SkillId<span class="a2a-skill-note">@consult.SkillDescription</span></dd></div>
                                             <div><dt>Transport</dt><dd>@consult.Transport</dd></div>
                                             <div><dt>Task sent</dt><dd>@consult.Question</dd></div>
                                         </dl>
@@ -514,13 +514,13 @@
                                 }
 
                                 <p class="agent-footnote">
-                                    @ToolCallSummary(response) over @(response.ModelRoundTrips) model round trip(s) · CorrelationId @ShortCorrelation(response.CorrelationId)
+                                    @ToolCallSummary(response) over @(response.ModelRoundTrips) @RoundTripLabel(response) · CorrelationId @ShortCorrelation(response.CorrelationId)
                                 </p>
                             }
                             else
                             {
                                 <p class="agent-footnote">
-                                    No tool was invoked (@(response.ModelRoundTrips) model round trip(s)) · CorrelationId @ShortCorrelation(response.CorrelationId)
+                                    No tool was invoked (@(response.ModelRoundTrips) @RoundTripLabel(response)) · CorrelationId @ShortCorrelation(response.CorrelationId)
                                 </p>
                             }
 
@@ -1741,6 +1741,12 @@
 
     // Counting requests as invocations is exactly the claim this stage disproves, so the summary
     // counts what ran and names the rest separately.
+    // This service counts its own round trips and nothing else. When a peer contributed, the number
+    // covers only the composing run here - the peer's own investigation ran in another process and
+    // is not observable from this side, so calling it "model round trips" would overclaim.
+    private static string RoundTripLabel(OperationsAgentResponse response) =>
+        response.RemoteConsult is null ? "model round trip(s)" : "local composer round trip(s)";
+
     private static string ToolCallSummary(OperationsAgentResponse response)
     {
         var ran = response.ToolCalls.Count(call => call.Status == OperationsAgentToolCallStatus.Completed);

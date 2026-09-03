@@ -6,6 +6,9 @@ using Microsoft.Agents.AI;
 using Microsoft.Extensions.Options;
 using WorkforceAgent.Api.Configuration;
 
+// Named once so the policy registration and the routes that carry it cannot drift apart.
+const string DelegatedTaskTimeoutPolicy = "delegated-task";
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
@@ -61,6 +64,17 @@ builder.Services.AddKeyedSingleton<AIAgent>(publishedAgentName, (serviceProvider
 // Published for other domains to consult: an agent with a card, not a tool in someone's toolbox.
 builder.Services.AddA2AServer(publishedAgentName);
 
+// This domain bounds its own work rather than relying on whoever consults it to bound it. A caller
+// that walks away, or one that never set a budget at all, must not leave a run here going forever.
+builder.Services.AddRequestTimeouts(timeouts =>
+{
+    var options = builder.Configuration
+        .GetSection(WorkforceAgentApiOptions.SectionName)
+        .Get<WorkforceAgentApiOptions>() ?? new WorkforceAgentApiOptions();
+
+    timeouts.AddPolicy(DelegatedTaskTimeoutPolicy, TimeSpan.FromSeconds(options.RequestTimeoutSeconds));
+});
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -73,7 +87,13 @@ app.UseStatusCodePages();
 app.UseHttpsRedirection();
 app.MapDefaultEndpoints();
 
-app.MapA2AHttpJson(publishedAgentName, "/a2a");
+app.UseRequestTimeouts();
+
+// Mapped inside a group whose only job is to carry the timeout policy onto the protocol's routes.
+// The group prefix is empty, so the published paths are exactly what the card advertises.
+var a2aRoutes = app.MapGroup(string.Empty);
+a2aRoutes.MapA2AHttpJson(publishedAgentName, "/a2a");
+a2aRoutes.WithRequestTimeout(DelegatedTaskTimeoutPolicy);
 
 // The card at the A2A well-known location, so any standard resolver finds it. The framework's own
 // /a2a/card is its protocol-internal default and carries no domain detail; this is the published

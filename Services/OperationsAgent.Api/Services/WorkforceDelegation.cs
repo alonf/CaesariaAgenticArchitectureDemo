@@ -55,6 +55,15 @@ public sealed partial class WorkforceDelegation(
 
         using var httpClient = _httpClientFactory.CreateClient(HttpClientName);
 
+        // The correlation crosses the boundary with the task. Without it the peer starts a
+        // correlation of its own, and the work-order read it makes on the other side cannot be
+        // joined to the operator request that caused it - the delegation would be a hole in the
+        // trace exactly where the lecture claims a chain. It is set on the client rather than per
+        // request because the protocol client composes its own messages: card discovery and the
+        // delegated task both have to carry it, and only one of them is ours to build.
+        httpClient.DefaultRequestHeaders.Remove(CorrelationHeaderNames.XCorrelationId);
+        httpClient.DefaultRequestHeaders.Add(CorrelationHeaderNames.XCorrelationId, correlationId);
+
         try
         {
             #region A2A_DELEGATION

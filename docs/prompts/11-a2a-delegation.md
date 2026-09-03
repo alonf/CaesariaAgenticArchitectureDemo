@@ -71,9 +71,13 @@ should not see.
 
 - **`WorkforceHub.Api`** — the work-order system of record. Two shared reads, both admitting only
   `CallerIdentity.WorkforceAgent`. One admin route (`reset`) admitting only the scenario service.
-  One presenter route, `/api/workforce-records`, returning everything in full and **refusing any
-  non-loopback caller** — it exists so the lecture can show the withheld half, and a remote caller
-  reaching it would make the whole stage a lie.
+  One presenter route, `/api/workforce-records`, returning everything in full behind **two
+  conditions that are not the same condition**: the caller must name itself `demo-control`, and the
+  connection must be loopback. Loopback alone identifies nobody here — every service in this demo
+  runs on the presenter's machine, so "local" would admit the Operations Agent as readily as the
+  switchboard; the header alone is a string anyone can send. Together they mean "the presenter, at
+  the keyboard". The header is demo-grade identification, not authentication, like its Security
+  counterpart.
 - **`WorkforceAgent.Api`** — the Caesarea Workforce Agent: its own instructions, its own two tools,
   its own model call, and the only Workforce Hub client in the system. Published over **A2A**
   (`AddA2AServer` + `MapA2AHttpJson`), with its card served at `/.well-known/agent-card.json`.
@@ -259,6 +263,30 @@ minimisation is the stronger answer wherever you can get it. You cannot always g
 like the Security Agent, the judgment genuinely has to be made over the restricted data. Then you
 sanitise the output and you do it structurally. Know which situation you are in — that is the
 engineering decision. The protocol is the easy part."*
+
+## Two things this stage does not claim
+
+**The peer's reply is untrusted text.** It is another service's model output, and it becomes context
+for a model here. The composer is given it delimited and labelled as data, and told not to follow
+instructions found inside it. That reduces the risk that a manipulated peer steers the answer; it
+does not eliminate it, and the composer having no tools is what bounds the damage. The stronger fix
+— forcing the peer to answer in a typed artifact — is deliberately not taken: answering in its own
+words is the contrast with Stage 10 that this stage exists to make, and constraining it would argue
+the opposite case by accident.
+
+**The trace reports what this service observed, not what happened everywhere.** The round-trip count
+is labelled *local composer round trips* because the peer's own investigation ran in another process
+and is not visible from here. The skill is labelled *advertised* because A2A reports which skills a
+peer declares, not which one served a task.
+
+## Dependency note
+
+The MAF A2A packages are pinned to the `1.19.0-preview` family, matching the rest of the solution.
+A `1.20` preview family exists. **Do not upgrade before the lecture.** The 1.19 pin is verified end
+to end under the AppHost, and the two bugs that stood between "compiles" and "works" were both wire
+-format surprises — the card's trailing slash and the JSON-RPC/HTTP+JSON binding mismatch. An
+upgrade means re-running the full live walk against a new set of those. Upgrade the whole family
+together afterwards, and repeat the walk.
 
 ## Deck note
 

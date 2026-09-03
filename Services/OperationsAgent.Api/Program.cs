@@ -170,38 +170,9 @@ var operationsAgent = app.MapGroup("/api/operations-agent")
 operationsAgent.MapPost("/ask", AskAsync);
 
 // The delegated consult. It is a route of its own precisely because it is not a tool the model may
-// pick: this service decides to give another domain's agent a task.
-operationsAgent.MapPost("/workforce-consult", async (
-    HttpContext context, OperationsAgentRequest request, IOperationsAgent agent,
-    DemoStageGate stageGate, IOptions<OperationsAgentApiOptions> options, CancellationToken cancellationToken) =>
-{
-    var correlationId = context.GetCorrelationId();
-
-    if (stageGate.GetCurrent().Id < DemoStage.A2ADelegation)
-    {
-        return Results.Problem(ProblemDetailsFactory.Create(
-            StatusCodes.Status409Conflict,
-            "Workforce consult disabled in the current demo stage",
-            $"Consulting the workforce domain requires the A2A Delegation stage; the current stage is {stageGate.GetCurrent().Name}.",
-            correlationId));
-    }
-
-    try
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(request.Question);
-        var reply = await agent.ConsultWorkforceAsync(request.Question, correlationId, cancellationToken);
-
-        return Results.Ok(new OperationsAgentResponse(
-            options.Value.AgentName, reply.Answer, reply.SessionId, reply.ToolCalls, reply.Evidence,
-            reply.RecalledCases, reply.Skills, reply.ToolSource, reply.ModelRoundTrips, correlationId,
-            reply.Delegations, reply.RemoteConsult));
-    }
-    catch (ArgumentException exception)
-    {
-        return Results.BadRequest(ProblemDetailsFactory.Create(
-            StatusCodes.Status400BadRequest, "Invalid request", exception.Message, correlationId));
-    }
-});
+// pick: this service decides to give another domain's agent a task. It is still an agent endpoint,
+// so it validates its input and reports failure exactly as /ask does - the two share both.
+operationsAgent.MapPost("/workforce-consult", ConsultWorkforceAsync);
 
 // Stage propagation from the presenter switchboard; the gate blocks agent invocation whenever the
 // authoritative stage it holds (pushed or reconciled) is Deterministic.
@@ -484,16 +455,9 @@ static async Task<IResult> AskAsync(
     credentialWarmup.EnsureStarted();
     try
     {
-        const int maxQuestionLength = 1000;
-        ArgumentException.ThrowIfNullOrWhiteSpace(request.Question);
-
-        if (request.Question.Length > maxQuestionLength)
+        if (RejectInvalidQuestion(request.Question, context) is { } invalid)
         {
-            return TypedResults.BadRequest(ProblemDetailsFactory.Create(
-                StatusCodes.Status400BadRequest,
-                "Invalid request",
-                $"The question must be at most {maxQuestionLength} characters.",
-                context.GetCorrelationId()));
+            return invalid;
         }
 
         var correlationId = context.GetCorrelationId();
@@ -526,80 +490,158 @@ static async Task<IResult> AskAsync(
             reply.Delegations,
             reply.RemoteConsult));
     }
-    catch (ArgumentException exception)
+    catch (Exception exception) when (MapAgentFailure(exception, context, logger) is { } failure)
     {
-        return TypedResults.BadRequest(ProblemDetailsFactory.Create(
-            StatusCodes.Status400BadRequest,
-            "Invalid request",
-            exception.Message,
-            context.GetCorrelationId()));
+        return failure;
     }
-    catch (OperationsAgentSessionExpiredException exception)
-    {
-        return TypedResults.Problem(ProblemDetailsFactory.Create(
-            StatusCodes.Status410Gone,
-            "Conversational session expired",
-            $"{exception.Message} Ask the question again to start a new session.",
-            context.GetCorrelationId()));
-    }
-    catch (HttpRequestException exception)
-    {
-        return TypedResults.Problem(ProblemDetailsFactory.Create(
-            StatusCodes.Status502BadGateway,
-            "Operations Agent tool unavailable",
-            $"The authoritative Energy Hub could not be reached: {exception.Message}",
-            context.GetCorrelationId()));
-    }
-    catch (OperationsAgentApprovalLoopException exception)
+}
+
+// The two agent endpoints fail in the same ways, because behind both is the same model, the same
+// credential and the same execution budget. One mapping keeps them from drifting into two different
+// stories about the same failure - a divergence a caller can only discover in production.
+static IResult? MapAgentFailure(Exception exception, HttpContext context, ILogger logger) => exception switch
+{
+    ArgumentException => TypedResults.BadRequest(ProblemDetailsFactory.Create(
+        StatusCodes.Status400BadRequest,
+        "Invalid request",
+        exception.Message,
+        context.GetCorrelationId())),
+    OperationsAgentSessionExpiredException => TypedResults.Problem(ProblemDetailsFactory.Create(
+        StatusCodes.Status410Gone,
+        "Conversational session expired",
+        $"{exception.Message} Ask the question again to start a new session.",
+        context.GetCorrelationId())),
+    HttpRequestException => TypedResults.Problem(ProblemDetailsFactory.Create(
+        StatusCodes.Status502BadGateway,
+        "Operations Agent tool unavailable",
+        $"The authoritative Energy Hub could not be reached: {exception.Message}",
+        context.GetCorrelationId())),
+    OperationsAgentApprovalLoopException => TypedResults.Problem(ProblemDetailsFactory.Create(
+        StatusCodes.Status409Conflict,
+        "Tool approval was not resolved",
+        $"{exception.Message} Nothing is left pending; start a new request.",
+        context.GetCorrelationId())),
+    OperationsAgentToolUnavailableException => TypedResults.Problem(ProblemDetailsFactory.Create(
+        StatusCodes.Status502BadGateway,
+        "Operations Agent tool unavailable",
+        exception.Message,
+        context.GetCorrelationId())),
+    OperationsAgentTimedOutException => TimedOut(exception, context, logger),
+    CredentialUnavailableException => AuthenticationProblem(
+        exception, context, logger, StatusCodes.Status503ServiceUnavailable,
+        "Operations Agent authentication unavailable",
+        "No supported Azure credential is available to invoke Microsoft Foundry."),
+    AuthenticationFailedException => AuthenticationProblem(
+        exception, context, logger, StatusCodes.Status502BadGateway,
+        "Operations Agent authentication failed",
+        "Microsoft Foundry authentication failed for the Operations Agent."),
+    RequestFailedException failed => TypedResults.Problem(ProblemDetailsFactory.Create(
+        failed.Status is >= 400 and < 600 ? failed.Status : StatusCodes.Status502BadGateway,
+        "Operations Agent invocation failed",
+        $"Microsoft Foundry rejected the Operations Agent request: {failed.Message}",
+        context.GetCorrelationId())),
+    // Anything else is unrecognized, and swallowing it here would turn a real defect into a tidy
+    // status code. Returning null leaves it to escape unchanged.
+    _ => null
+};
+
+static IResult TimedOut(Exception exception, HttpContext context, ILogger logger)
+{
+    OperationsAgentEndpointLog.ExecutionTimedOut(logger, context.GetCorrelationId(), exception);
+    return TypedResults.Problem(ProblemDetailsFactory.Create(
+        StatusCodes.Status504GatewayTimeout,
+        "Operations Agent request timed out",
+        exception.Message,
+        context.GetCorrelationId()));
+}
+
+static IResult AuthenticationProblem(
+    Exception exception, HttpContext context, ILogger logger, int statusCode, string title, string detail)
+{
+    OperationsAgentEndpointLog.AuthenticationFailed(logger, context.GetCorrelationId(), exception);
+    return TypedResults.Problem(ProblemDetailsFactory.Create(statusCode, title, detail, context.GetCorrelationId()));
+}
+
+// The delegated consult, validated and failure-mapped like /ask. What it does not share is the
+// agent-enabled gate: this beat has a stage of its own, and a peer answering below it would show a
+// capability the audience has not been given yet.
+static async Task<IResult> ConsultWorkforceAsync(
+    HttpContext context,
+    OperationsAgentRequest request,
+    IOperationsAgent agent,
+    DemoStageGate stageGate,
+    WorkforceAgentWarmup workforceWarmup,
+    IOptions<OperationsAgentApiOptions> options,
+    ILoggerFactory loggerFactory,
+    CancellationToken cancellationToken)
+{
+    var logger = loggerFactory.CreateLogger("OperationsAgent.Api.WorkforceConsultEndpoint");
+    var correlationId = context.GetCorrelationId();
+
+    if (stageGate.GetCurrent().Id < DemoStage.A2ADelegation)
     {
         return TypedResults.Problem(ProblemDetailsFactory.Create(
             StatusCodes.Status409Conflict,
-            "Tool approval was not resolved",
-            $"{exception.Message} Nothing is left pending; start a new request.",
-            context.GetCorrelationId()));
+            "Workforce consult disabled in the current demo stage",
+            $"Consulting the workforce domain requires the A2A Delegation stage; the current stage is {stageGate.GetCurrent().Name}.",
+            correlationId));
     }
-    catch (OperationsAgentToolUnavailableException exception)
+
+    // Safety net in case no stage propagation woke the peer; a no-op after the first call.
+    workforceWarmup.EnsureStarted();
+
+    try
     {
-        return TypedResults.Problem(ProblemDetailsFactory.Create(
-            StatusCodes.Status502BadGateway,
-            "Operations Agent tool unavailable",
-            exception.Message,
-            context.GetCorrelationId()));
+        if (RejectInvalidQuestion(request.Question, context) is { } invalid)
+        {
+            return invalid;
+        }
+
+        var reply = await agent.ConsultWorkforceAsync(request.Question, correlationId, cancellationToken);
+
+        // A consult the peer contributed nothing to is not an answer to relay: the composed text
+        // would be this agent's own guesswork wearing the peer's attribution.
+        if (reply.RemoteConsult is { Failure: null } consulted && string.IsNullOrWhiteSpace(consulted.Answer))
+        {
+            return TypedResults.Problem(ProblemDetailsFactory.Create(
+                StatusCodes.Status502BadGateway,
+                "The workforce domain returned no answer",
+                "The peer agent was reached but its reply was empty.",
+                correlationId));
+        }
+
+        if (string.IsNullOrWhiteSpace(reply.Answer))
+        {
+            return TypedResults.Problem(ProblemDetailsFactory.Create(
+                StatusCodes.Status502BadGateway,
+                "Operations Agent returned no answer",
+                "The model returned an empty answer.",
+                correlationId));
+        }
+
+        return TypedResults.Ok(new OperationsAgentResponse(
+            options.Value.AgentName, reply.Answer, reply.SessionId, reply.ToolCalls, reply.Evidence,
+            reply.RecalledCases, reply.Skills, reply.ToolSource, reply.ModelRoundTrips, correlationId,
+            reply.Delegations, reply.RemoteConsult));
     }
-    catch (OperationsAgentTimedOutException exception)
+    catch (Exception exception) when (MapAgentFailure(exception, context, logger) is { } failure)
     {
-        OperationsAgentEndpointLog.ExecutionTimedOut(logger, context.GetCorrelationId(), exception);
-        return TypedResults.Problem(ProblemDetailsFactory.Create(
-            StatusCodes.Status504GatewayTimeout,
-            "Operations Agent request timed out",
-            exception.Message,
-            context.GetCorrelationId()));
+        return failure;
     }
-    catch (CredentialUnavailableException exception)
-    {
-        OperationsAgentEndpointLog.AuthenticationFailed(logger, context.GetCorrelationId(), exception);
-        return TypedResults.Problem(ProblemDetailsFactory.Create(
-            StatusCodes.Status503ServiceUnavailable,
-            "Operations Agent authentication unavailable",
-            "No supported Azure credential is available to invoke Microsoft Foundry.",
-            context.GetCorrelationId()));
-    }
-    catch (AuthenticationFailedException exception)
-    {
-        OperationsAgentEndpointLog.AuthenticationFailed(logger, context.GetCorrelationId(), exception);
-        return TypedResults.Problem(ProblemDetailsFactory.Create(
-            StatusCodes.Status502BadGateway,
-            "Operations Agent authentication failed",
-            "Microsoft Foundry authentication failed for the Operations Agent.",
-            context.GetCorrelationId()));
-    }
-    catch (RequestFailedException exception)
-    {
-        var statusCode = exception.Status is >= 400 and < 600 ? exception.Status : StatusCodes.Status502BadGateway;
-        return TypedResults.Problem(ProblemDetailsFactory.Create(
-            statusCode,
-            "Operations Agent invocation failed",
-            $"Microsoft Foundry rejected the Operations Agent request: {exception.Message}",
-            context.GetCorrelationId()));
-    }
+}
+
+// Both endpoints bound the question the same way: an unbounded prompt is a cost and a
+// context-window problem before it is anything else.
+static IResult? RejectInvalidQuestion(string question, HttpContext context)
+{
+    const int maxQuestionLength = 1000;
+    ArgumentException.ThrowIfNullOrWhiteSpace(question);
+
+    return question.Length > maxQuestionLength
+        ? TypedResults.BadRequest(ProblemDetailsFactory.Create(
+            StatusCodes.Status400BadRequest,
+            "Invalid request",
+            $"The question must be at most {maxQuestionLength} characters.",
+            context.GetCorrelationId()))
+        : null;
 }

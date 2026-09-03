@@ -91,4 +91,3 @@ public sealed record WorkOrderSummary(
     string Title,
     string Status,
     DateTimeOffset RaisedAt);
-
