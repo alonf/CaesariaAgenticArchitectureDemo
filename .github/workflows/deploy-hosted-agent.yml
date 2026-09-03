@@ -37,8 +37,12 @@ env:
 
 jobs:
   deploy:
+    # PARKED. Services/OperationsAgent.Hosted does not exist yet - it is Stage 12's only code, and
+    # until it does this workflow fails on its first step. A committed pipeline that cannot run is
+    # worse than an obviously disabled one, so remove this line in the commit that adds the project.
+    if: false
     runs-on: ubuntu-latest
-    environment: lecture-demo
+    environment: ${{ github.event.inputs.environmentName || 'dev' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -82,20 +86,24 @@ jobs:
                 protocol_versions: [{protocol: "responses", version: "1.0.0"}],
                 environment_variables: {MODEL_DEPLOYMENT_NAME: $model}
               }}')
-          VERSION=$(curl -sS -X POST \
+          # --fail-with-body so a 400/401/403 stops the job here, and jq -e so a response that
+          # parses but carries no version stops it too. Without both, an auth failure becomes a
+          # null version and then a polling timeout - a misleading error five minutes downstream.
+          RESPONSE=$(curl -sS --fail-with-body -X POST \
             "${{ vars.FOUNDRY_PROJECT_ENDPOINT }}/agents/${AGENT_NAME}/versions?api-version=v1" \
             -H "Authorization: Bearer $TOKEN" \
             -H "Content-Type: application/json" \
-            -d "$BODY" | jq -r '.version')
+            -d "$BODY")
+          VERSION=$(echo "$RESPONSE" | jq -er '.version')
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Wait for the version to become active
         run: |
           TOKEN=$(az account get-access-token --resource https://ai.azure.com --query accessToken -o tsv)
           for _ in $(seq 1 60); do
-            STATUS=$(curl -sS \
+            STATUS=$(curl -sS --fail-with-body \
               "${{ vars.FOUNDRY_PROJECT_ENDPOINT }}/agents/${AGENT_NAME}/versions/${{ steps.version.outputs.version }}?api-version=v1" \
-              -H "Authorization: Bearer $TOKEN" | jq -r '.status')
+              -H "Authorization: Bearer $TOKEN" | jq -er '.status')
             echo "status: $STATUS"
             [ "$STATUS" = "active" ] && exit 0
             # Fail fast and loudly. A failed provision that is polled to timeout looks like a slow
@@ -115,13 +123,14 @@ jobs:
       - name: Bind the agent identity to downstream resources
         run: |
           TOKEN=$(az account get-access-token --resource https://ai.azure.com --query accessToken -o tsv)
-          PRINCIPAL=$(curl -sS \
+          AGENT=$(curl -sS --fail-with-body \
             "${{ vars.FOUNDRY_PROJECT_ENDPOINT }}/agents/${AGENT_NAME}?api-version=v1" \
-            -H "Authorization: Bearer $TOKEN" | jq -r '.identity.principal_id // empty')
-          if [ -z "$PRINCIPAL" ]; then
-            echo "::warning::No agent principal was returned; skipping downstream role assignments."
-            exit 0
-          fi
+            -H "Authorization: Bearer $TOKEN")
+          # instance_identity is the documented field; .identity is a fallback because neither has
+          # been confirmed against a live response yet. Either way a missing principal fails the
+          # job rather than warning: failing open leaves the agent silently without the access it
+          # needs, and it finds out on its first downstream call in front of an audience.
+          PRINCIPAL=$(echo "$AGENT" | jq -er '.instance_identity.principal_id // .identity.principal_id')
           echo "Agent identity: $PRINCIPAL" >> "$GITHUB_STEP_SUMMARY"
           # Add one `az role assignment create --assignee "$PRINCIPAL" ...` per downstream resource
           # the agent genuinely needs. Model access and session storage are granted by default and

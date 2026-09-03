@@ -37,6 +37,9 @@ param modelDeploymentName string = 'gpt-5.5'
 @description('Set false, and add private endpoints, to take the platform off the public internet.')
 param publicNetworkAccess bool = true
 
+@description('Principal IDs of running services that call the project data plane. Empty until those services have managed identities of their own.')
+param workloadPrincipalIds array = []
+
 @description('Extra tags merged into the standard set.')
 param additionalTags object = {}
 
@@ -103,9 +106,11 @@ module rbac 'modules/rbac.bicep' = {
   params: {
     registryName: registry.outputs.registryName
     foundryAccountName: foundry.outputs.accountName
-    foundryAccountPrincipalId: foundry.outputs.accountPrincipalId
+    foundryProjectName: foundry.outputs.projectName
+    foundryProjectPrincipalId: foundry.outputs.projectPrincipalId
     deploymentPrincipalId: deploymentPrincipalId
     deploymentPrincipalType: deploymentPrincipalType
+    workloadPrincipalIds: workloadPrincipalIds
   }
 }
 

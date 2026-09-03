@@ -53,6 +53,10 @@ resource account 'Microsoft.CognitiveServices/accounts@2025-06-01' = {
   properties: {
     // Required for the data-plane endpoint that agents and SDKs address.
     customSubDomainName: accountName
+    // Azure rejects project creation on an AIServices account without this. The Bicep compiler
+    // cannot see the constraint, so a clean local build says nothing about it - it surfaces at
+    // deployment time, which is why this template is validated with what-if rather than a compile.
+    allowProjectManagement: true
     // Keys off. Every caller authenticates as itself through Entra, so every call has an identity
     // in the audit log rather than a shared secret that anyone could be holding.
     disableLocalAuth: true
@@ -94,6 +98,24 @@ resource modelDeployment 'Microsoft.CognitiveServices/accounts/deployments@2025-
     }
     versionUpgradeOption: 'NoAutoUpgrade'
   }
+}
+
+// The hosted-agent runtime is not implied by the account and project. A capability host of kind
+// Agents is what provisions it, and public hosting has to be asked for by name.
+//
+// The API version here is deliberately a preview one, and deliberately different from its siblings:
+// enablePublicHostingEnvironment does not exist on the stable surface. Do not "tidy" this to match
+// the resources above - hosted agents stop working, and nothing in a compile will tell you.
+resource agentsCapabilityHost 'Microsoft.CognitiveServices/accounts/capabilityHosts@2026-07-15-preview' = {
+  parent: account
+  name: 'agents'
+  properties: {
+    capabilityHostKind: 'Agents'
+    enablePublicHostingEnvironment: true
+  }
+  dependsOn: [
+    project
+  ]
 }
 
 @description('Resource ID of the Foundry account.')

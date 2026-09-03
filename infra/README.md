@@ -6,7 +6,7 @@ Two layers, two workflows, two sets of approvers. The split is the point.
 | --- | --- | --- |
 | What | Foundry account, project, model deployment, registry, observability, RBAC | The hosted agent version: image digest, CPU, environment |
 | How | `infra/main.bicep` via `az deployment sub create` | data-plane `POST /agents/{name}/versions` |
-| Workflow | [`deploy-infra.yml`](../.github/workflows/deploy-infra.yml) | [`deploy-hosted-agent.yml`](../.github/workflows/deploy-hosted-agent.yml) |
+| Workflow | [`deploy-infra.yml`](../.github/workflows/deploy-infra.yml) | [`deploy-hosted-agent.yml`](../.github/workflows/deploy-hosted-agent.yml) — **parked** until `Services/OperationsAgent.Hosted` exists |
 | Changes | rarely, and changes the shape of the estate | every release |
 | Owner | platform team | application team |
 
@@ -72,6 +72,12 @@ knowing before you size anything:
 
 ## What is missing, and named rather than hidden
 
+- **The Application Insights connection to the Foundry project.** The workspace and the component
+  are created, but nothing connects them to the project yet, so the platform's automatic tracing for
+  hosted agents is **not** live. Add a project connection of category `AppInsights` and verify an
+  actual agent trace before believing any claim to the contrary - including one in this file.
+- **Workload identities.** `workloadPrincipalIds` is plumbed end to end but empty: the services run
+  on the presenter's machine, as the presenter. Populating it is what the Governance stage is for.
 - **Private networking.** `publicNetworkAccess: false` is wired through every module, but the
   private endpoints, DNS zones and delegated subnet are not written. Hosted-agent VNet injection
   must be configured when the Foundry account is **first created** — it cannot be added afterwards.
@@ -79,6 +85,22 @@ knowing before you size anything:
 - **Key Vault.** Not needed while nothing holds a secret. Add it when something does.
 - **A second environment.** The parameters file is written for one; promotion between environments
   is a matter of a second parameter file and a second GitHub environment, not a template change.
+
+## Validation status
+
+The templates compile **and pass `az deployment sub what-if`** against a real subscription. That
+second gate matters more than it sounds: two service-level errors survived a clean compile and were
+only caught by preflight - a missing `allowProjectManagement` on the account, without which project
+creation is rejected, and a missing `capabilityHosts` resource, without which there is no hosted
+agent runtime at all.
+
+Nothing here has been **deployed**. what-if validates the template against the resource providers;
+it does not prove a role assignment grants what you meant, or that a policy applies on the SKU you
+chose. Treat anything below that line as reviewed, not proven:
+
+```bash
+az deployment sub what-if   --name caesarea-whatif --location westus3   --template-file infra/main.bicep   --parameters environmentName=dev location=westus3                deploymentPrincipalId=<principal object ID>                modelVersion=<a version from `az cognitiveservices model list`>
+```
 
 ## Running it
 

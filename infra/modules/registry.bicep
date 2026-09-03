@@ -35,10 +35,13 @@ resource registry 'Microsoft.ContainerRegistry/registries@2025-04-01' = {
       azureADAuthenticationAsArmPolicy: {
         status: 'enabled'
       }
-      retentionPolicy: {
+      // Retention is a Premium capability. Setting it on Basic or Standard is at best ignored and
+      // at worst rejected, so it is applied only where it means something. On the cheaper SKUs,
+      // prune untagged manifests yourself - `az acr repository delete --untagged` in a scheduled job.
+      retentionPolicy: sku == 'Premium' ? {
         status: 'enabled'
         days: 30
-      }
+      } : null
     }
   }
 }

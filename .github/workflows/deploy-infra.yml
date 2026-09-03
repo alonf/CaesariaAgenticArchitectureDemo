@@ -35,7 +35,9 @@ jobs:
   validate:
     # On a pull request this is the only job that runs: compile and what-if, never apply.
     runs-on: ubuntu-latest
-    environment: lecture-demo
+    # Bound to the selected environment so dev and prod get their own variables, secrets and
+    # protection rules. A single shared environment would make the input decorative.
+    environment: ${{ github.event.inputs.environmentName || 'dev' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -65,7 +67,7 @@ jobs:
     needs: validate
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.whatIf != 'true'
     runs-on: ubuntu-latest
-    environment: lecture-demo
+    environment: ${{ github.event.inputs.environmentName }}
     steps:
       - uses: actions/checkout@v4
 
