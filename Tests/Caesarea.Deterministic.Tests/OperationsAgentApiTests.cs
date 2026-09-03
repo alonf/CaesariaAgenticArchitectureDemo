@@ -246,11 +246,72 @@ public sealed class OperationsAgentApiTests
     /// The real service with its outside world replaced: no model, no Energy Hub, no Azure
     /// credential chain, and no stage synchronizer polling a Command Center that is not there.
     /// </summary>
+    [Fact]
+    public async Task ADelegationThatExceedsTheBudgetIsReportedAsATimeoutRatherThanAFailure()
+    {
+        // The consult owns a budget of its own, and when it expires the cancellation has to be
+        // translated. Left unmapped it escapes as a bare 500, which tells the operator the service
+        // is broken when what actually happened is that a peer was slow.
+        await using var world = new ApiWorld(DemoStage.A2ADelegation)
+        {
+            Agent =
+            {
+                OnConsultWorkforceAsync = (_, _) => throw new OperationsAgentTimedOutException(
+                    "The Operations Agent request exceeded its 150-second execution budget.",
+                    new OperationCanceledException())
+            }
+        };
+        using var client = world.CreateClient();
+
+        using var response = await client.PostAsJsonAsync(
+            "/api/operations-agent/workforce-consult",
+            new OperationsAgentRequest("Anything on L-417?", null),
+            JsonOptions,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.GatewayTimeout, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task AConsultThatNeverReachedTheComposerReportsNoLocalRoundTrip()
+    {
+        // A failed consult skips composition entirely. Reporting a round trip anyway would put a
+        // model call in the operator's trace that never happened - the exact dishonesty the
+        // capability trace exists to prevent.
+        var unreachable = new OperationsAgentRemoteConsult(
+            "Caesarea Workforce Agent", "unreachable", "unstated", string.Empty, "A2A",
+            "Anything on L-417?", Answer: string.Empty, Failure: "Connection refused.");
+
+        await using var world = new ApiWorld(DemoStage.A2ADelegation)
+        {
+            Agent =
+            {
+                OnConsultWorkforceAsync = (_, _) => Task.FromResult(new OperationsAgentAnswer(
+                    "The workforce domain could not be consulted, so this answer has no maintenance context.",
+                    string.Empty, [], [], [], [], OperationsAgentToolSource.Local, 0, [], unreachable))
+            }
+        };
+        using var client = world.CreateClient();
+
+        using var response = await client.PostAsJsonAsync(
+            "/api/operations-agent/workforce-consult",
+            new OperationsAgentRequest("Anything on L-417?", null),
+            JsonOptions,
+            TestContext.Current.CancellationToken);
+
+        response.EnsureSuccessStatusCode();
+        var body = await response.Content.ReadFromJsonAsync<OperationsAgentResponse>(
+            JsonOptions, TestContext.Current.CancellationToken);
+
+        Assert.Equal(0, body!.ModelRoundTrips);
+        Assert.Equal("Connection refused.", body.RemoteConsult!.Failure);
+    }
+
     private sealed class ApiWorld : IAsyncDisposable
     {
         private readonly WebApplicationFactory<FoundryOperationsAgent> _factory;
 
-        public ApiWorld()
+        public ApiWorld(DemoStage stage = DemoStage.ToolApproval)
         {
             _factory = new WebApplicationFactory<FoundryOperationsAgent>().WithWebHostBuilder(builder =>
             {
@@ -260,7 +321,7 @@ public sealed class OperationsAgentApiTests
                     services.RemoveAll<IOperationsAgent>();
                     services.AddSingleton<IOperationsAgent>(Agent);
                     services.RemoveAll<DemoStageGate>();
-                    services.AddSingleton(new DemoStageGate(DemoStage.ToolApproval));
+                    services.AddSingleton(new DemoStageGate(stage));
                     services.RemoveAll<TokenCredential>();
                     services.AddSingleton<TokenCredential>(new StubTokenCredential());
                     services.RemoveAll<IEnergyReadGateway>();

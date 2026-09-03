@@ -118,20 +118,37 @@ public sealed partial class FoundryOperationsAgent(
 
         OperationsAgentLog.RequestStarted(_logger, _modelDeploymentName, correlationId);
 
-        // The peer is given the task first. This service decided to delegate - the model was not
-        // offered a tool and did not choose one.
-        var consult = await _workforceDelegation.ConsultAsync(question, correlationId, timeoutSource.Token);
+        try
+        {
+            // The peer is given the task first. This service decided to delegate - the model was not
+            // offered a tool and did not choose one.
+            var consult = await _workforceDelegation.ConsultAsync(question, correlationId, timeoutSource.Token);
 
-        // Ownership of the operator-facing answer stays here: the peer's reply is context for this
-        // agent's own answer, not a reply relayed straight through.
-        var composed = consult.Failure is null
-            ? await ComposeFromConsultAsync(question, consult, timeoutSource.Token)
-            : $"The workforce domain could not be consulted, so this answer has no maintenance context: {consult.Failure}";
+            // Ownership of the operator-facing answer stays here: the peer's reply is context for
+            // this agent's own answer, not a reply relayed straight through.
+            var composed = consult.Failure is null
+                ? await ComposeFromConsultAsync(question, consult, timeoutSource.Token)
+                : $"The workforce domain could not be consulted, so this answer has no maintenance context: {consult.Failure}";
 
-        OperationsAgentLog.RequestCompleted(_logger, correlationId);
+            OperationsAgentLog.RequestCompleted(_logger, correlationId);
 
-        return new OperationsAgentAnswer(
-            composed, string.Empty, [], [], [], [], _toolSourceSwitch.Current, 1, [], consult);
+            // Round trips are counted, not assumed. A consult that failed before composition made
+            // no model call here, and reporting one would put a round trip in the operator's trace
+            // that never happened - the same dishonesty the capability trace exists to prevent.
+            var localRoundTrips = consult.Failure is null ? 1 : 0;
+
+            return new OperationsAgentAnswer(
+                composed, string.Empty, [], [], [], [], _toolSourceSwitch.Current, localRoundTrips, [], consult);
+        }
+        catch (OperationCanceledException exception) when (!cancellationToken.IsCancellationRequested)
+        {
+            // The execution budget expired rather than the caller giving up. Without this the
+            // cancellation escapes unmapped and the operator gets a bare 500 for what is a timeout,
+            // which reads as a broken service instead of a slow one.
+            throw new OperationsAgentTimedOutException(
+                $"The Operations Agent request exceeded its {_requestTimeout.TotalSeconds:0}-second execution budget.",
+                exception);
+        }
     }
 
     // One model round trip, no tools: everything needed is already in the peer's answer.
