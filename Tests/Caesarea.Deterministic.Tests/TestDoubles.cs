@@ -195,6 +195,17 @@ internal sealed class FakeEnergyScenarioClient : IEnergyScenarioClient
     }
 }
 
+internal sealed class FakeWorkforceScenarioClient : IWorkforceScenarioClient
+{
+    public int ResetCalls { get; private set; }
+
+    public Task ResetAsync(string correlationId, CancellationToken cancellationToken)
+    {
+        ResetCalls++;
+        return Task.CompletedTask;
+    }
+}
+
 internal sealed class FakeSecurityScenarioClient : ISecurityScenarioClient
 {
     public int ResetCalls { get; private set; }

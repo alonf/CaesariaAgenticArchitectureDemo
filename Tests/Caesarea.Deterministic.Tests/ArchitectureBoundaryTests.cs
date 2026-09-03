@@ -186,6 +186,32 @@ public sealed class ArchitectureBoundaryTests
     }
 
     [Fact]
+    public void OperationsAgentHasNoPathToTheWorkforceHub()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var operationsAgentRoot = Path.Combine(repositoryRoot, "Services", "OperationsAgent.Api");
+        var sourceText = string.Join(
+            Environment.NewLine,
+            Directory.GetFiles(operationsAgentRoot, "*.*", SearchOption.AllDirectories)
+                .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+                .Where(path => !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+                .Where(path => path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase)
+                    || path.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase)
+                    || path.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+                .Select(File.ReadAllText));
+
+        // The A2A claim rests on this. If this service could read the work-order system of record,
+        // delegating to its agent would be theatre - and it would also be holding the commercial
+        // and personal fields the whole stage exists to keep inside the workforce domain.
+        Assert.DoesNotContain("workforcehub", sourceText, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Workforce.Contracts", sourceText, StringComparison.Ordinal);
+        Assert.DoesNotContain("/api/workforce", sourceText, StringComparison.OrdinalIgnoreCase);
+
+        // What it does have is the peer agent's address, and only that.
+        Assert.Contains("WorkforceAgentBaseUri", sourceText, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void SensitiveWorkItemToolIsAlwaysApprovalWrapped()
     {
         var repositoryRoot = FindRepositoryRoot();

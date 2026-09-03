@@ -53,8 +53,15 @@ public static class WorkforceAgentCard
             [
                 new AgentInterface
                 {
-                    Url = new Uri(baseAddress, "a2a").ToString(),
-                    ProtocolBinding = "HTTP+JSON"
+                    // The trailing slash is load-bearing. A client resolves the protocol's method
+                    // paths relatively against this URL, and against ".../a2a" the last segment is
+                    // replaced rather than extended - every call would land one level too high and
+                    // come back 404. Published as a directory, it is what the routes hang off.
+                    Url = new Uri(baseAddress, "a2a/").ToString(),
+                    // Named from the protocol's own constant, because the consulting side reads
+                    // this to decide which transport client to build. A binding written by hand
+                    // that does not match is a peer nobody can talk to.
+                    ProtocolBinding = ProtocolBindingNames.HttpJson
                 }
             ],
             Skills =

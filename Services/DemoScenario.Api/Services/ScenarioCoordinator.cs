@@ -10,6 +10,7 @@ public sealed partial class ScenarioCoordinator : IDisposable
     private readonly ISmartPoleScenarioClient _smartpoleScenarioClient;
     private readonly IEnergyScenarioClient _energyScenarioClient;
     private readonly ISecurityScenarioClient _securityScenarioClient;
+    private readonly IWorkforceScenarioClient _workforceScenarioClient;
     private readonly ICommandCenterScenarioClient _commandCenterScenarioClient;
     private readonly ScenarioCatalog _scenarioCatalog;
     private readonly TimeProvider _timeProvider;
@@ -25,11 +26,13 @@ public sealed partial class ScenarioCoordinator : IDisposable
     /// <param name="scenarioCatalog">The catalog of deterministic scenario recipes.</param>
     /// <param name="timeProvider">The clock used to stamp scenario state changes.</param>
     /// <param name="securityScenarioClient">The Security Hub scenario client.</param>
+    /// <param name="workforceScenarioClient">The Workforce Hub scenario client.</param>
     /// <param name="logger">The logger used for scenario orchestration events.</param>
     public ScenarioCoordinator(
         ISmartPoleScenarioClient smartpoleScenarioClient,
         IEnergyScenarioClient energyScenarioClient,
         ISecurityScenarioClient securityScenarioClient,
+        IWorkforceScenarioClient workforceScenarioClient,
         ICommandCenterScenarioClient commandCenterScenarioClient,
         ScenarioCatalog scenarioCatalog,
         TimeProvider timeProvider,
@@ -38,6 +41,7 @@ public sealed partial class ScenarioCoordinator : IDisposable
         _smartpoleScenarioClient = smartpoleScenarioClient ?? throw new ArgumentNullException(nameof(smartpoleScenarioClient));
         _energyScenarioClient = energyScenarioClient ?? throw new ArgumentNullException(nameof(energyScenarioClient));
         _securityScenarioClient = securityScenarioClient ?? throw new ArgumentNullException(nameof(securityScenarioClient));
+        _workforceScenarioClient = workforceScenarioClient ?? throw new ArgumentNullException(nameof(workforceScenarioClient));
         _commandCenterScenarioClient = commandCenterScenarioClient ?? throw new ArgumentNullException(nameof(commandCenterScenarioClient));
         _scenarioCatalog = scenarioCatalog ?? throw new ArgumentNullException(nameof(scenarioCatalog));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
@@ -116,6 +120,10 @@ public sealed partial class ScenarioCoordinator : IDisposable
             {
                 await _securityScenarioClient.ApplyScenarioAsync(securityState, correlationId, cancellationToken);
             }
+
+            // The workforce domain holds no scenario state of its own, only its fixture. Resetting
+            // it here is what keeps one demo's walk from being visible in the next one's consult.
+            await _workforceScenarioClient.ResetAsync(correlationId, cancellationToken);
 
             await _commandCenterScenarioClient.ResetAsync(correlationId, cancellationToken);
 

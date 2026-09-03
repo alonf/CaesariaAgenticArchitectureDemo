@@ -22,6 +22,13 @@ internal sealed class DemoScenarioApiOptions : IValidatableObject
     [Required]
     public string SecurityHubBaseUri { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Gets or sets the base address of the Workforce Hub, reset between demos so no work-order
+    /// state survives from one walk into the next.
+    /// </summary>
+    [Required]
+    public string WorkforceHubBaseUri { get; set; } = string.Empty;
+
     [Required]
     public string OperationsAgentBaseUri { get; set; } = string.Empty;
 
@@ -53,6 +60,13 @@ internal sealed class DemoScenarioApiOptions : IValidatableObject
             yield return new ValidationResult(
                 "DemoScenarioApi:SecurityHubBaseUri must be a valid absolute or Aspire service-discovery URI.",
                 [nameof(SecurityHubBaseUri)]);
+        }
+
+        if (!ServiceUriValidator.TryValidateAbsoluteOrServiceDiscoveryUri(WorkforceHubBaseUri, out _))
+        {
+            yield return new ValidationResult(
+                "DemoScenarioApi:WorkforceHubBaseUri must be a valid absolute or Aspire service-discovery URI.",
+                [nameof(WorkforceHubBaseUri)]);
         }
 
         if (!ServiceUriValidator.TryValidateAbsoluteOrServiceDiscoveryUri(OperationsAgentBaseUri, out _))

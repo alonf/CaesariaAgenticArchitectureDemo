@@ -40,6 +40,32 @@ public enum OperationsAgentToolCallStatus
 }
 
 /// <summary>
+/// One consultation of another domain's agent across a service boundary, delegated as a task
+/// rather than called as a tool.
+/// <para>
+/// The card fields are here because they are the point: the operator sees which agent was
+/// consulted, who runs it and which declared skill was used - a relationship with a named peer,
+/// not an anonymous endpoint. The answer is that peer's own words, which is safe here precisely
+/// because the peer never held anything it was not allowed to say.
+/// </para>
+/// </summary>
+/// <param name="AgentName">The consulted agent's published name.</param>
+/// <param name="Provider">The organization that runs it, from its card.</param>
+/// <param name="SkillId">The declared skill the consultation used.</param>
+/// <param name="Transport">The boundary the consultation crossed.</param>
+/// <param name="Question">The task the Operations Agent delegated.</param>
+/// <param name="Answer">The peer's answer, in its own words.</param>
+/// <param name="Failure">Why the peer could not be consulted, when it could not.</param>
+public sealed record OperationsAgentRemoteConsult(
+    string AgentName,
+    string Provider,
+    string SkillId,
+    string Transport,
+    string Question,
+    string Answer,
+    string? Failure);
+
+/// <summary>
 /// One consultation of another domain's agent, as it may be shown to the operator. Only the
 /// specialist's sanitized judgment crosses: its identity, its verdict and the advice it gave.
 /// The restricted records behind that judgment never leave the domain that owns them, so this
@@ -324,6 +350,7 @@ public sealed record OperationsAgentCaseMemoryStatus(IReadOnlyList<OperationsAge
 /// <param name="ModelRoundTrips">The number of model round trips the run required.</param>
 /// <param name="CorrelationId">The correlation identifier spanning the request and tool call.</param>
 /// <param name="Delegations">The other-domain agents consulted during the run, with the sanitized judgment each returned.</param>
+/// <param name="RemoteConsult">The peer agent consulted across a service boundary for this request, when one was.</param>
 public sealed record OperationsAgentResponse(
     string AgentName,
     string Answer,
@@ -335,4 +362,5 @@ public sealed record OperationsAgentResponse(
     OperationsAgentToolSource ToolSource,
     int ModelRoundTrips,
     string CorrelationId,
-    IReadOnlyList<OperationsAgentDelegation>? Delegations = null);
+    IReadOnlyList<OperationsAgentDelegation>? Delegations = null,
+    OperationsAgentRemoteConsult? RemoteConsult = null);

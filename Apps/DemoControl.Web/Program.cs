@@ -37,7 +37,17 @@ builder.Services.AddHttpClient("breakpoints-securityagent", (serviceProvider, cl
     var options = serviceProvider.GetRequiredService<IOptions<DemoControlWebOptions>>().Value;
     client.BaseAddress = new Uri(options.SecurityAgentBaseUri, UriKind.Absolute);
 });
+builder.Services.AddHttpClient("breakpoints-workforceagent", (serviceProvider, client) =>
+{
+    var options = serviceProvider.GetRequiredService<IOptions<DemoControlWebOptions>>().Value;
+    client.BaseAddress = new Uri(options.WorkforceAgentBaseUri, UriKind.Absolute);
+});
 builder.Services.AddSingleton<DemoBreakpointsApiClient>();
+builder.Services.AddHttpClient<WorkforceRecordsApiClient>((serviceProvider, client) =>
+{
+    var options = serviceProvider.GetRequiredService<IOptions<DemoControlWebOptions>>().Value;
+    client.BaseAddress = new Uri(options.WorkforceHubBaseUri, UriKind.Absolute);
+});
 builder.Services.AddHttpClient<WorkKnowledgeApiClient>((serviceProvider, client) =>
 {
     var options = serviceProvider.GetRequiredService<IOptions<DemoControlWebOptions>>().Value;

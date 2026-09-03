@@ -74,6 +74,18 @@ builder.Services.AddHttpClient("securityagent-mcp", (serviceProvider, client) =>
     var options = serviceProvider.GetRequiredService<IOptions<OperationsAgentApiOptions>>().Value;
     client.BaseAddress = new Uri(options.SecurityAgentBaseUri, UriKind.Absolute);
 });
+builder.Services.AddSingleton<WorkforceAgentWarmup>();
+builder.Services.AddHttpClient(WorkforceAgentWarmup.HttpClientName, (serviceProvider, client) =>
+{
+    var options = serviceProvider.GetRequiredService<IOptions<OperationsAgentApiOptions>>().Value;
+    client.BaseAddress = new Uri(options.WorkforceAgentBaseUri, UriKind.Absolute);
+});
+builder.Services.AddSingleton<WorkforceDelegation>();
+builder.Services.AddHttpClient(WorkforceDelegation.HttpClientName, (serviceProvider, client) =>
+{
+    var options = serviceProvider.GetRequiredService<IOptions<OperationsAgentApiOptions>>().Value;
+    client.BaseAddress = new Uri(options.WorkforceAgentBaseUri, UriKind.Absolute);
+});
 builder.Services.AddSingleton<RemediationWorkflowService>();
 // The HTTP client the MCP transport rides on; service discovery and the standard resilience
 // pipeline apply like any other outbound client.
@@ -106,6 +118,7 @@ builder.Services.AddSingleton<IOperationsAgent>(serviceProvider =>
         serviceProvider.GetRequiredService<RemediationWorkflowService>(),
         serviceProvider.GetRequiredService<IWorkItemGateway>(),
         serviceProvider.GetRequiredService<SecurityConsultSwitch>(),
+        serviceProvider.GetRequiredService<WorkforceDelegation>(),
         serviceProvider.GetRequiredService<IHttpClientFactory>(),
         McpEndpoint.Create(options.EnergyHubBaseUri),
         McpEndpoint.Create(options.SecurityAgentBaseUri),
@@ -129,7 +142,7 @@ app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.UseHttpsRedirection();
 app.MapDefaultEndpoints();
-app.MapDemoBreakpoints(DemoSnippets.AgentCreation, DemoSnippets.FunctionTool, DemoSnippets.Session, DemoSnippets.Knowledge, DemoSnippets.CaseMemory, DemoSnippets.Skills, DemoSnippets.McpClient, DemoSnippets.Workflow, DemoSnippets.ToolApproval);
+app.MapDemoBreakpoints(DemoSnippets.AgentCreation, DemoSnippets.FunctionTool, DemoSnippets.Session, DemoSnippets.Knowledge, DemoSnippets.CaseMemory, DemoSnippets.Skills, DemoSnippets.McpClient, DemoSnippets.Workflow, DemoSnippets.ToolApproval, DemoSnippets.A2ADelegation);
 
 // Instantiate the workflow service at startup: the definition (diagram + YAML) renders once
 // here, so a wiring or graph error fails the service start instead of the first panel load.
@@ -139,6 +152,40 @@ var operationsAgent = app.MapGroup("/api/operations-agent")
     .WithTags("Operations Agent");
 
 operationsAgent.MapPost("/ask", AskAsync);
+
+// The delegated consult. It is a route of its own precisely because it is not a tool the model may
+// pick: this service decides to give another domain's agent a task.
+operationsAgent.MapPost("/workforce-consult", async (
+    HttpContext context, OperationsAgentRequest request, IOperationsAgent agent,
+    DemoStageGate stageGate, IOptions<OperationsAgentApiOptions> options, CancellationToken cancellationToken) =>
+{
+    var correlationId = context.GetCorrelationId();
+
+    if (stageGate.GetCurrent().Id < DemoStage.A2ADelegation)
+    {
+        return Results.Problem(ProblemDetailsFactory.Create(
+            StatusCodes.Status409Conflict,
+            "Workforce consult disabled in the current demo stage",
+            $"Consulting the workforce domain requires the A2A Delegation stage; the current stage is {stageGate.GetCurrent().Name}.",
+            correlationId));
+    }
+
+    try
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(request.Question);
+        var reply = await agent.ConsultWorkforceAsync(request.Question, correlationId, cancellationToken);
+
+        return Results.Ok(new OperationsAgentResponse(
+            options.Value.AgentName, reply.Answer, reply.SessionId, reply.ToolCalls, reply.Evidence,
+            reply.RecalledCases, reply.Skills, reply.ToolSource, reply.ModelRoundTrips, correlationId,
+            reply.Delegations, reply.RemoteConsult));
+    }
+    catch (ArgumentException exception)
+    {
+        return Results.BadRequest(ProblemDetailsFactory.Create(
+            StatusCodes.Status400BadRequest, "Invalid request", exception.Message, correlationId));
+    }
+});
 
 // Stage propagation from the presenter switchboard; the gate blocks agent invocation whenever the
 // authoritative stage it holds (pushed or reconciled) is Deterministic.
@@ -460,7 +507,8 @@ static async Task<IResult> AskAsync(
             reply.ToolSource,
             reply.ModelRoundTrips,
             correlationId,
-            reply.Delegations));
+            reply.Delegations,
+            reply.RemoteConsult));
     }
     catch (ArgumentException exception)
     {

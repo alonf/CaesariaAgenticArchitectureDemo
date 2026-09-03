@@ -25,6 +25,11 @@ builder.Services.AddHttpClient<ISecurityScenarioClient, HttpSecurityScenarioClie
     var options = serviceProvider.GetRequiredService<IOptions<DemoScenarioApiOptions>>().Value;
     client.BaseAddress = new Uri(options.SecurityHubBaseUri, UriKind.Absolute);
 });
+builder.Services.AddHttpClient<IWorkforceScenarioClient, HttpWorkforceScenarioClient>((serviceProvider, client) =>
+{
+    var options = serviceProvider.GetRequiredService<IOptions<DemoScenarioApiOptions>>().Value;
+    client.BaseAddress = new Uri(options.WorkforceHubBaseUri, UriKind.Absolute);
+});
 builder.Services.AddHttpClient<ICommandCenterScenarioClient, HttpCommandCenterScenarioClient>((serviceProvider, client) =>
 {
     var options = serviceProvider.GetRequiredService<IOptions<DemoScenarioApiOptions>>().Value;

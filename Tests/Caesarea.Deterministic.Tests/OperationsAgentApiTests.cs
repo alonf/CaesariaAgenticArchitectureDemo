@@ -319,6 +319,19 @@ internal sealed class FakeOperationsAgent : IOperationsAgent
 {
     public Func<string, string?, string, Task<OperationsAgentAnswer>>? OnAskAsync { get; set; }
 
+    public Func<string, string, Task<OperationsAgentAnswer>>? OnConsultWorkforceAsync { get; set; }
+
+    public Task<OperationsAgentAnswer> ConsultWorkforceAsync(
+        string question, string correlationId, CancellationToken cancellationToken) =>
+        OnConsultWorkforceAsync is not null
+            ? OnConsultWorkforceAsync(question, correlationId)
+            : Task.FromResult(new OperationsAgentAnswer(
+                "The workforce domain answered.", string.Empty, [], [], [], [],
+                OperationsAgentToolSource.Local, 1, [],
+                new OperationsAgentRemoteConsult(
+                    "Caesarea Workforce Agent", "Caesarea Smart City - Workforce Management",
+                    "asset-maintenance-situation", "A2A (HTTP+JSON)", question, "Answer.", Failure: null)));
+
     public Task<OperationsAgentAnswer> AskAsync(
         string question, string? sessionId, string correlationId, CancellationToken cancellationToken) =>
         OnAskAsync is not null
@@ -332,7 +345,8 @@ internal sealed class FakeOperationsAgent : IOperationsAgent
                 [],
                 OperationsAgentToolSource.Local,
                 1,
-                []));
+                [],
+                null));
 }
 
 /// <summary>

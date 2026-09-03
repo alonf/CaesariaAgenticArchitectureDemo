@@ -12,7 +12,8 @@ public sealed class ScenarioCoordinatorTests
         var energy = new FakeEnergyScenarioClient();
         var commandCenter = new FakeCommandCenterScenarioClient();
         var catalog = new ScenarioCatalog(clock);
-        var coordinator = new ScenarioCoordinator(smartpole, energy, new FakeSecurityScenarioClient(), commandCenter, catalog, clock, NullLogger<ScenarioCoordinator>.Instance);
+        var workforce = new FakeWorkforceScenarioClient();
+        var coordinator = new ScenarioCoordinator(smartpole, energy, new FakeSecurityScenarioClient(), workforce, commandCenter, catalog, clock, NullLogger<ScenarioCoordinator>.Instance);
 
         foreach (var scenario in catalog.GetAll())
         {
@@ -26,6 +27,9 @@ public sealed class ScenarioCoordinatorTests
 
         Assert.Equal(catalog.GetAll().Count, smartpole.ResetCalls);
         Assert.Equal(catalog.GetAll().Count, energy.ResetCalls);
+        // Every scenario resets the workforce domain too, so a consult in one demo cannot be
+        // answered from a work order the previous demo left behind.
+        Assert.Equal(catalog.GetAll().Count, workforce.ResetCalls);
         Assert.Equal(catalog.GetAll().Count, commandCenter.ResetCalls);
         Assert.NotNull(commandCenter.LastScenarioContext);
     }
@@ -39,6 +43,7 @@ public sealed class ScenarioCoordinatorTests
             new FakeSmartPoleScenarioClient(),
             new FakeEnergyScenarioClient(),
             new FakeSecurityScenarioClient(),
+            new FakeWorkforceScenarioClient(),
             commandCenter,
             new ScenarioCatalog(clock),
             clock,
@@ -63,7 +68,8 @@ public sealed class ScenarioCoordinatorTests
             OnApplyScenarioAsync = static (scenarioContext, correlationId, cancellationToken) => throw new HttpRequestException("Command Center unavailable.")
         };
         var catalog = new ScenarioCatalog(clock);
-        var coordinator = new ScenarioCoordinator(smartpole, energy, new FakeSecurityScenarioClient(), commandCenter, catalog, clock, NullLogger<ScenarioCoordinator>.Instance);
+        var workforce = new FakeWorkforceScenarioClient();
+        var coordinator = new ScenarioCoordinator(smartpole, energy, new FakeSecurityScenarioClient(), workforce, commandCenter, catalog, clock, NullLogger<ScenarioCoordinator>.Instance);
 
         await Assert.ThrowsAsync<HttpRequestException>(() => coordinator.ApplyAsync(ScenarioId.ForgottenOverride, "failure-corr", CancellationToken.None));
 

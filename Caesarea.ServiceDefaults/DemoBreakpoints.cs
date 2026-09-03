@@ -81,6 +81,12 @@ public static class DemoSnippets
     /// </summary>
     public const string A2ASpecialist = "A2A_SPECIALIST";
 
+    /// <summary>
+    /// Gets the A2A delegation snippet: resolving another domain's agent card and giving that
+    /// agent a task, rather than calling it as a tool.
+    /// </summary>
+    public const string A2ADelegation = "A2A_DELEGATION";
+
 }
 
 /// <summary>

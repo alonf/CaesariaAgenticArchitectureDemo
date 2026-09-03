@@ -87,28 +87,6 @@ public sealed partial class WorkforceHubService(TimeProvider timeProvider, ILogg
     }
 
     /// <summary>
-    /// Replaces the work orders for a scenario.
-    /// </summary>
-    /// <param name="request">The work orders the domain should hold.</param>
-    /// <param name="correlationId">The correlation identifier spanning the request.</param>
-    /// <returns>The applied summary.</returns>
-    public WorkforceScenarioSyncRequest ApplyScenario(WorkforceScenarioSyncRequest request, string correlationId)
-    {
-        ArgumentNullException.ThrowIfNull(request);
-
-        _workOrders.Clear();
-
-        foreach (var record in request.WorkOrders)
-        {
-            _workOrders[record.WorkOrderId] = record;
-        }
-
-        Interlocked.Exchange(ref _seeded, 1);
-        WorkforceHubLog.ScenarioApplied(logger, request.WorkOrders.Count, correlationId);
-        return request;
-    }
-
-    /// <summary>
     /// Restores the default work orders.
     /// </summary>
     /// <param name="correlationId">The correlation identifier spanning the request.</param>
@@ -194,12 +172,6 @@ internal static partial class WorkforceHubLog
         Level = LogLevel.Warning,
         Message = "Workforce Hub has no work order {WorkOrderId}. CorrelationId: {CorrelationId}.")]
     internal static partial void DetailsMissing(ILogger logger, string workOrderId, string correlationId);
-
-    [LoggerMessage(
-        EventId = 1813,
-        Level = LogLevel.Information,
-        Message = "Workforce Hub synchronized to {WorkOrderCount} work order(s). CorrelationId: {CorrelationId}.")]
-    internal static partial void ScenarioApplied(ILogger logger, int workOrderCount, string correlationId);
 
     [LoggerMessage(
         EventId = 1814,

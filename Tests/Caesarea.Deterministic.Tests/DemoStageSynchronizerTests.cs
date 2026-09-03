@@ -90,6 +90,7 @@ public sealed class DemoStageSynchronizerTests
             StageTransitionEffectsTests.CreateWorkflowService(approvals),
             new SecurityConsultSwitch(),
             StageTransitionEffectsTests.CreateWarmup(),
+            StageTransitionEffectsTests.CreateWorkforceWarmup(),
             NullLogger<StageTransitionEffects>.Instance);
     }
 

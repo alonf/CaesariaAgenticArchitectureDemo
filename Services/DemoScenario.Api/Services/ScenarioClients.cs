@@ -105,6 +105,44 @@ public interface ISecurityScenarioClient
     public Task ApplyScenarioAsync(SecurityScenarioSyncRequest request, string correlationId, CancellationToken cancellationToken);
 }
 
+/// <summary>
+/// Puts the workforce domain back to its own fixture between demos.
+/// <para>
+/// There is no scenario-apply counterpart on purpose. The work orders belong to the workforce
+/// domain, not to a streetlight scenario, and this service could not seed them without holding the
+/// commercial and personal fields the whole stage exists to keep inside that domain.
+/// </para>
+/// </summary>
+public interface IWorkforceScenarioClient
+{
+    /// <summary>
+    /// Restores the workforce domain's default work orders.
+    /// </summary>
+    /// <param name="correlationId">The correlation identifier spanning the scenario orchestration request.</param>
+    /// <param name="cancellationToken">The token used to cancel the operation.</param>
+    public Task ResetAsync(string correlationId, CancellationToken cancellationToken);
+}
+
+/// <inheritdoc cref="IWorkforceScenarioClient"/>
+public sealed partial class HttpWorkforceScenarioClient(HttpClient httpClient, ILogger<HttpWorkforceScenarioClient> logger) : IWorkforceScenarioClient
+{
+    // The Workforce Hub admits this caller on its admin route and nowhere else: it may reset the
+    // domain and may not read a work order.
+    private const string CallerHeaderName = "X-Caesarea-Caller";
+    private const string CallerName = "demo-scenario";
+
+    /// <inheritdoc />
+    public Task ResetAsync(string correlationId, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(correlationId);
+
+        var request = ScenarioHttpRequestFactory.CreateRequest(HttpMethod.Post, "/api/workforce/admin/reset", correlationId);
+        request.Headers.Add(CallerHeaderName, CallerName);
+
+        return ScenarioHttpRequestSender.SendAsync(httpClient, logger, "Workforce Hub", "reset", request, correlationId, cancellationToken);
+    }
+}
+
 /// <inheritdoc cref="ISecurityScenarioClient"/>
 public sealed partial class HttpSecurityScenarioClient(HttpClient httpClient, ILogger<HttpSecurityScenarioClient> logger) : ISecurityScenarioClient
 {

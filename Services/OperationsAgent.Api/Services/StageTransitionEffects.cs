@@ -13,6 +13,7 @@ public sealed partial class StageTransitionEffects(
     RemediationWorkflowService remediationWorkflow,
     SecurityConsultSwitch securityConsult,
     SecurityAgentWarmup securityAgentWarmup,
+    WorkforceAgentWarmup workforceAgentWarmup,
     ILogger<StageTransitionEffects> logger)
 {
     /// <summary>
@@ -27,6 +28,11 @@ public sealed partial class StageTransitionEffects(
         if (current >= DemoStage.MultiAgent)
         {
             securityAgentWarmup.EnsureStarted();
+        }
+
+        if (current >= DemoStage.A2ADelegation)
+        {
+            workforceAgentWarmup.EnsureStarted();
         }
 
         // Moving forward mostly adds capabilities, with one exception: the direct write lives in a

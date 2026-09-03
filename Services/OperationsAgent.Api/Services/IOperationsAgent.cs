@@ -13,6 +13,23 @@ public interface IOperationsAgent
         string? sessionId,
         string correlationId,
         CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Answers a question that belongs to another domain by delegating it to that domain's agent
+    /// over A2A, then composing the operator-facing answer from what came back.
+    /// <para>
+    /// The peer is not a tool: the model never selects it, and this service decides to delegate.
+    /// Ownership of the answer stays here - the peer contributes what only it can know.
+    /// </para>
+    /// </summary>
+    /// <param name="question">The operator's question.</param>
+    /// <param name="correlationId">The correlation identifier spanning the request.</param>
+    /// <param name="cancellationToken">The token used to cancel the operation.</param>
+    /// <returns>The answer, carrying the consultation that produced it.</returns>
+    public Task<OperationsAgentAnswer> ConsultWorkforceAsync(
+        string question,
+        string correlationId,
+        CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -27,6 +44,7 @@ public interface IOperationsAgent
 /// <param name="ToolSource">Where the streetlight tool came from for this run.</param>
 /// <param name="ModelRoundTrips">The number of model round trips the run required.</param>
 /// <param name="Delegations">The other-domain agents consulted during the run, with their sanitized answers.</param>
+/// <param name="RemoteConsult">The peer agent consulted across a service boundary, when one was.</param>
 public sealed record OperationsAgentAnswer(
     string Answer,
     string SessionId,
@@ -36,4 +54,5 @@ public sealed record OperationsAgentAnswer(
     IReadOnlyList<OperationsAgentSkill> Skills,
     OperationsAgentToolSource ToolSource,
     int ModelRoundTrips,
-    IReadOnlyList<OperationsAgentDelegation> Delegations);
+    IReadOnlyList<OperationsAgentDelegation> Delegations,
+    OperationsAgentRemoteConsult? RemoteConsult = null);

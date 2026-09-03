@@ -61,7 +61,12 @@ public sealed class StageCatalog
             DemoStage.MultiAgent,
             "Multi-Agent",
             "A second agent for a real boundary: Security owns records the Operations Agent may not read, so it consults the Security Operations Agent and receives a sanitized judgment while keeping ownership of the answer. Turn the consult off and the same question is answered without attribution - the lamp is intentional, but the reason belongs to a domain that will not disclose it.",
-            ["Deterministic scenarios", "Manual operator actions", "Caesarea Operations Agent", "get_streetlight_state tool", "AgentSession follow-ups", "search_work_knowledge retrieval", "Retrieved-evidence trace with citation badges", "Case-memory recall (hypotheses)", "Skill discovery and load_skill procedure", "Tools: LOCAL / MCP toggle (runtime tool discovery)", "restore_scheduled_mode with MRTR operator approval", "Explicit remediation workflow (validate / policy / approval / execute / verify)", "create_maintenance_work_item behind ApprovalRequiredAIFunction", "Security consult ON / OFF (delegation to a second agent)"])
+            ["Deterministic scenarios", "Manual operator actions", "Caesarea Operations Agent", "get_streetlight_state tool", "AgentSession follow-ups", "search_work_knowledge retrieval", "Retrieved-evidence trace with citation badges", "Case-memory recall (hypotheses)", "Skill discovery and load_skill procedure", "Tools: LOCAL / MCP toggle (runtime tool discovery)", "restore_scheduled_mode with MRTR operator approval", "Explicit remediation workflow (validate / policy / approval / execute / verify)", "create_maintenance_work_item behind ApprovalRequiredAIFunction", "Security consult ON / OFF (delegation to a second agent)"]),
+        new(
+            DemoStage.A2ADelegation,
+            "A2A Delegation",
+            "A peer agent in another domain, discovered by its agent card and given a task over A2A rather than called as a tool. The workforce domain's work orders carry commercial and personal detail that may not cross; its agent is handed only the shareable projection, so it answers freely and cannot disclose what it never held.",
+            ["Deterministic scenarios", "Manual operator actions", "Caesarea Operations Agent", "get_streetlight_state tool", "AgentSession follow-ups", "search_work_knowledge retrieval", "Retrieved-evidence trace with citation badges", "Case-memory recall (hypotheses)", "Skill discovery and load_skill procedure", "Tools: LOCAL / MCP toggle (runtime tool discovery)", "restore_scheduled_mode with MRTR operator approval", "Explicit remediation workflow (validate / policy / approval / execute / verify)", "create_maintenance_work_item behind ApprovalRequiredAIFunction", "Security consult ON / OFF (delegation to a second agent)", "Workforce Agent consulted over A2A (agent card discovery, delegated task)"])
     ];
 
     // The presenter's script per stage, kept beside the capability list it belongs to. The Command
@@ -158,6 +163,16 @@ public sealed class StageCatalog
                 new(DemoSurface.CommandCenter, "Ask again and approve.", "The same call runs and exactly one work item appears.")
             ],
             "Three control points, one operator experience: the tool asked, then a node we drew, now the model chose and policy intercepted."),
+
+        [DemoStage.A2ADelegation] = new(
+            ["Scenario: Lights On Reported by a Client - the open work order explains the override"],
+            [
+                new(DemoSurface.CommandCenter, "Click Ask the workforce domain about L-417.", "The agent card is resolved first, then a task is delegated: the peer searches its work orders, picks the open one and explains the override."),
+                new(DemoSurface.CommandCenter, "Read the Consulted peer block: who answered, who runs them, which declared skill.", "A named agent with a provider - not an anonymous endpoint, and not a tool in this agent's toolbox."),
+                new(DemoSurface.CommandCenter, "Now click Ask the workforce domain for the technician cost.", "It does not refuse on policy - it answers that the cost is not visible in the records it can access, because those fields never entered its context."),
+                new(DemoSurface.Switchboard, "Show the work order in full on the Workforce Hub view.", "Technician name, badge, labour cost and rate - all of it withheld, none of it ever sent to the agent.")
+            ],
+            "Do not ask a model to keep a secret it holds. Hand it only what may cross, and there is nothing left to extract - that is a tool-boundary decision, not a prompt."),
 
         [DemoStage.MultiAgent] = new(
             ["Scenario: Security Operation", "Security consult: OFF to start"],

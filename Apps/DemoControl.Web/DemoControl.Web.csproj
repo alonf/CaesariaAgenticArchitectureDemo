@@ -10,6 +10,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Caesarea.ServiceDefaults\Caesarea.ServiceDefaults.csproj" />
     <ProjectReference Include="..\..\Contracts\DemoScenario.Contracts\DemoScenario.Contracts.csproj" />
+    <ProjectReference Include="..\..\Contracts\Workforce.Contracts\Workforce.Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>

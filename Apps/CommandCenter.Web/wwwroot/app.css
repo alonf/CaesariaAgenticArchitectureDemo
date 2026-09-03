@@ -1621,6 +1621,31 @@ svg {
     overflow-wrap: anywhere;
 }
 
+/* The peer consulted across a service boundary. Prefixed because .delegation-* already belongs to
+   the in-process specialist consult, and the two beats must not look like the same mechanism. */
+.a2a-panel {
+    border-left: 3px solid var(--cp-accent, var(--cp-danger));
+}
+
+.a2a-agent {
+    margin: 2px 0 6px;
+    font-weight: 600;
+}
+
+.a2a-reply {
+    margin: 6px 0 0;
+    font-size: 0.86rem;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.a2a-failure {
+    margin: 2px 0 0;
+    font-size: 0.86rem;
+    color: var(--cp-danger);
+    overflow-wrap: anywhere;
+}
+
 .approval-capability div {
     display: flex;
     flex-wrap: wrap;

@@ -7,6 +7,7 @@
 @inject CaseMemoryApiClient CaseMemoryClient
 @inject ToolSourceApiClient ToolSourceClient
 @inject SecurityConsultApiClient SecurityConsultClient
+@inject WorkforceRecordsApiClient WorkforceRecordsClient
 @inject VsCodeAttachService AttachService
 @inject IConfiguration Configuration
 @inject IOptions<DemoControlWebOptions> WebOptions
@@ -275,6 +276,45 @@
         }
     </section>
 
+    @* The A2A beat's closing move. The peer answered from a projection; this is the record that
+       projection came out of, so the presenter can point at the fields that never left the domain.
+       Hidden until asked for - these are on the projector for one minute of a ninety-minute talk. *@
+    <section class="panel switchboard-panel">
+        <div class="panel-heading">
+            <h2>Workforce Records</h2>
+            <span class="stamp">@WorkforceRecordsStamp</span>
+        </div>
+        <p class="switchboard-note">The work orders as the workforce domain holds them, read straight from the Workforce Hub. The peer agent never received these fields: its tool returns a projection that does not select them.</p>
+        <div class="stage-switch-actions">
+            <button class="button @(_workforceRecords is null ? "primary" : "secondary")" @onclick="ToggleWorkforceRecordsAsync" disabled="@_workforceRecordsBusy">
+                @WorkforceRecordsButtonLabel
+            </button>
+        </div>
+        @if (_workforceRecords is { } records)
+        {
+            @foreach (var record in records)
+            {
+                <div class="wf-record">
+                    <p class="wf-record-head">@record.WorkOrderId - @record.Title (@record.Status)</p>
+                    <dl class="wf-record-fields">
+                        <div class="wf-shared"><dt>Reason</dt><dd>@record.Reason</dd></div>
+                        <div class="wf-shared"><dt>Operational summary</dt><dd>@record.OperationalSummary</dd></div>
+                        <div class="wf-withheld"><dt>Technician</dt><dd>@record.TechnicianName</dd></div>
+                        <div class="wf-withheld"><dt>Badge</dt><dd>@record.TechnicianBadge</dd></div>
+                        <div class="wf-withheld"><dt>Labour cost</dt><dd>@record.LabourCost.ToString("N2", System.Globalization.CultureInfo.InvariantCulture)</dd></div>
+                        <div class="wf-withheld"><dt>Call-out rate</dt><dd>@record.CallOutRate</dd></div>
+                        <div class="wf-withheld"><dt>Technician note</dt><dd>@record.TechnicianNote</dd></div>
+                    </dl>
+                </div>
+            }
+            <p class="switchboard-note">Green crossed the boundary. Red never entered the agent's context - not redacted from a larger payload, never selected into one.</p>
+        }
+        @if (!string.IsNullOrWhiteSpace(_workforceRecordsMessage))
+        {
+            <p class="status-error">@_workforceRecordsMessage</p>
+        }
+    </section>
+
     <section class="panel switchboard-panel">
         <div class="panel-heading">
             <h2>Simulator Behavior</h2>
@@ -369,6 +409,9 @@
     private bool _toolSourceBusy;
     private string? _toolSourceMessage;
     private SecurityConsultState? _securityConsult;
+    private IReadOnlyList<WorkOrderRecord>? _workforceRecords;
+    private bool _workforceRecordsBusy;
+    private string? _workforceRecordsMessage;
     private bool _securityConsultBusy;
     private string? _securityConsultMessage;
     private SimulatorBehaviorSettings? _behavior;
@@ -400,6 +443,15 @@
         { Cases.Count: 0 } => "Empty",
         { Cases.Count: var count } => $"{count} case(s)"
     };
+    private string WorkforceRecordsButtonLabel => (_workforceRecords, _workforceRecordsBusy) switch
+    {
+        (not null, _) => "Hide work orders",
+        (_, true) => "Loading...",
+        _ => "Show work orders in full"
+    };
+
+    private string WorkforceRecordsStamp => _workforceRecords is null ? "Hidden" : $"{_workforceRecords.Count} work order(s) in full";
+
     private string SecurityConsultStamp => _securityConsult switch
     {
         null => "unknown",
@@ -670,6 +722,33 @@
         finally
         {
             _securityConsultBusy = false;
+        }
+    }
+
+    private async Task ToggleWorkforceRecordsAsync()
+    {
+        if (_workforceRecords is not null)
+        {
+            _workforceRecords = null;
+            _workforceRecordsMessage = null;
+            return;
+        }
+
+        _workforceRecordsBusy = true;
+
+        try
+        {
+            _workforceRecords = await WorkforceRecordsClient.GetAllAsync(CancellationToken.None);
+            _workforceRecordsMessage = null;
+        }
+        catch (Exception exception)
+        {
+            _workforceRecords = null;
+            _workforceRecordsMessage = $"Workforce records unavailable: {exception.Message}";
+        }
+        finally
+        {
+            _workforceRecordsBusy = false;
         }
     }
 

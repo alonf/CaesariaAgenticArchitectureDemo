@@ -52,6 +52,7 @@ public sealed class ValidationAndOptionsTests
             EnergyHubBaseUri = "https+http://energyhub-api",
             CommandCenterBaseUri = "https+http://commandcenter-api",
             SecurityHubBaseUri = "https+http://securityhub-api",
+            WorkforceHubBaseUri = "https+http://workforcehub-api",
             OperationsAgentBaseUri = "https+http://operationsagent-api"
         };
 
@@ -87,6 +88,7 @@ public sealed class ValidationAndOptionsTests
             EnergyHubBaseUri = "https+http://energyhub-api",
             CommandCenterBaseUri = "https+http://commandcenter-api",
             SecurityAgentBaseUri = "https+http://securityagent-api",
+            WorkforceAgentBaseUri = "https+http://workforceagent-api",
             FoundryProjectEndpoint = "https://alonlecturedemo-resource.services.ai.azure.com/api/projects/alonlecturedemo",
             ModelDeploymentName = "gpt-5.5",
             AgentName = "Caesarea Operations Agent"
@@ -124,6 +126,7 @@ public sealed class ValidationAndOptionsTests
             EnergyHubBaseUri = "https+http://energyhub-api",
             CommandCenterBaseUri = "https+http://commandcenter-api",
             SecurityAgentBaseUri = "https+http://securityagent-api",
+            WorkforceAgentBaseUri = "https+http://workforceagent-api",
             FoundryProjectEndpoint = "http://insecure-endpoint.example.com/api/projects/demo",
             ModelDeploymentName = "gpt-5.5",
             AgentName = "Caesarea Operations Agent"
@@ -142,6 +145,7 @@ public sealed class ValidationAndOptionsTests
             EnergyHubBaseUri = "not-a-uri",
             CommandCenterBaseUri = "https+http://commandcenter-api",
             SecurityAgentBaseUri = "https+http://securityagent-api",
+            WorkforceAgentBaseUri = "https+http://workforceagent-api",
             FoundryProjectEndpoint = "https://alonlecturedemo-resource.services.ai.azure.com/api/projects/alonlecturedemo",
             ModelDeploymentName = "gpt-5.5",
             AgentName = "Caesarea Operations Agent"

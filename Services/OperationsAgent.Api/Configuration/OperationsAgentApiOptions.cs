@@ -31,6 +31,14 @@ internal sealed class OperationsAgentApiOptions : IValidatableObject
     public string SecurityAgentBaseUri { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets the base address of the Caesarea Workforce Agent, consulted over A2A. This
+    /// service has no address for the workforce system of record itself - the work orders are
+    /// reachable only through that agent.
+    /// </summary>
+    [Required]
+    public string WorkforceAgentBaseUri { get; set; } = string.Empty;
+
+    /// <summary>
     /// Gets or sets the Microsoft Foundry project endpoint used to run the Operations Agent.
     /// This value is a non-secret development default and does not require any key or secret.
     /// </summary>
@@ -91,6 +99,13 @@ internal sealed class OperationsAgentApiOptions : IValidatableObject
             yield return new ValidationResult(
                 "OperationsAgentApi:SecurityAgentBaseUri must be a valid absolute or Aspire service-discovery URI.",
                 [nameof(SecurityAgentBaseUri)]);
+        }
+
+        if (!ServiceUriValidator.TryValidateAbsoluteOrServiceDiscoveryUri(WorkforceAgentBaseUri, out _))
+        {
+            yield return new ValidationResult(
+                "OperationsAgentApi:WorkforceAgentBaseUri must be a valid absolute or Aspire service-discovery URI.",
+                [nameof(WorkforceAgentBaseUri)]);
         }
 
         if (!Uri.TryCreate(FoundryProjectEndpoint, UriKind.Absolute, out var foundryUri) || foundryUri.Scheme != Uri.UriSchemeHttps)

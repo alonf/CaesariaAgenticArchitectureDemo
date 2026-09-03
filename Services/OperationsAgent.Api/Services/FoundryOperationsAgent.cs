@@ -28,6 +28,7 @@ public sealed partial class FoundryOperationsAgent(
     RemediationWorkflowService remediationWorkflow,
     IWorkItemGateway workItems,
     SecurityConsultSwitch securityConsult,
+    WorkforceDelegation workforceDelegation,
     IHttpClientFactory httpClientFactory,
     Uri mcpEndpoint,
     Uri securityAgentEndpoint,
@@ -76,6 +77,7 @@ public sealed partial class FoundryOperationsAgent(
     private readonly RemediationWorkflowService _remediationWorkflow = remediationWorkflow ?? throw new ArgumentNullException(nameof(remediationWorkflow));
     private readonly IWorkItemGateway _workItems = workItems ?? throw new ArgumentNullException(nameof(workItems));
     private readonly SecurityConsultSwitch _securityConsult = securityConsult ?? throw new ArgumentNullException(nameof(securityConsult));
+    private readonly WorkforceDelegation _workforceDelegation = workforceDelegation ?? throw new ArgumentNullException(nameof(workforceDelegation));
     private readonly Uri _securityAgentEndpoint = securityAgentEndpoint ?? throw new ArgumentNullException(nameof(securityAgentEndpoint));
     private readonly IHttpClientFactory _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
     private readonly Uri _mcpEndpoint = mcpEndpoint ?? throw new ArgumentNullException(nameof(mcpEndpoint));
@@ -95,6 +97,76 @@ public sealed partial class FoundryOperationsAgent(
         : throw new ArgumentOutOfRangeException(nameof(requestTimeout));
     private readonly ILoggerFactory _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
     private readonly ILogger<FoundryOperationsAgent> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+
+    /// <inheritdoc />
+    public async Task<OperationsAgentAnswer> ConsultWorkforceAsync(
+        string question, string correlationId, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(question);
+        ArgumentException.ThrowIfNullOrWhiteSpace(correlationId);
+
+        var currentStage = _stageGate.GetCurrent().Id;
+
+        if (currentStage < DemoStage.A2ADelegation)
+        {
+            throw new InvalidOperationException(
+                $"Consulting the workforce domain requires the A2A Delegation stage; the current stage is {currentStage}.");
+        }
+
+        using var timeoutSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeoutSource.CancelAfter(Debugger.IsAttached ? Timeout.InfiniteTimeSpan : _requestTimeout);
+
+        OperationsAgentLog.RequestStarted(_logger, _modelDeploymentName, correlationId);
+
+        // The peer is given the task first. This service decided to delegate - the model was not
+        // offered a tool and did not choose one.
+        var consult = await _workforceDelegation.ConsultAsync(question, correlationId, timeoutSource.Token);
+
+        // Ownership of the operator-facing answer stays here: the peer's reply is context for this
+        // agent's own answer, not a reply relayed straight through.
+        var composed = consult.Failure is null
+            ? await ComposeFromConsultAsync(question, consult, timeoutSource.Token)
+            : $"The workforce domain could not be consulted, so this answer has no maintenance context: {consult.Failure}";
+
+        OperationsAgentLog.RequestCompleted(_logger, correlationId);
+
+        return new OperationsAgentAnswer(
+            composed, string.Empty, [], [], [], [], _toolSourceSwitch.Current, 1, [], consult);
+    }
+
+    // One model round trip, no tools: everything needed is already in the peer's answer.
+    private async Task<string> ComposeFromConsultAsync(
+        string question, OperationsAgentRemoteConsult consult, CancellationToken cancellationToken)
+    {
+        AIAgent composer = _projectClient.AsAIAgent(
+            options: new ChatClientAgentOptions
+            {
+                Name = _agentName,
+                ChatOptions = new()
+                {
+                    ModelId = _modelDeploymentName,
+                    Instructions = """
+                        You are the Caesarea Operations Agent. Another city domain's agent was consulted
+                        on your behalf and its answer is supplied below. Answer the operator's question
+                        using it, attributing the maintenance facts to that domain.
+                        Do not invent detail it did not give you, and if it said something is not
+                        available to it, report that plainly rather than speculating.
+                        """
+                }
+            },
+            loggerFactory: _loggerFactory);
+
+        var session = await composer.CreateSessionAsync(cancellationToken);
+        var prompt = $"""
+            Operator question: {question}
+
+            {consult.AgentName} ({consult.Provider}) answered:
+            {consult.Answer}
+            """;
+
+        var reply = await composer.RunAsync(new ChatMessage(ChatRole.User, prompt), session, cancellationToken: cancellationToken);
+        return reply.Text;
+    }
 
     /// <inheritdoc />
     public async Task<OperationsAgentAnswer> AskAsync(

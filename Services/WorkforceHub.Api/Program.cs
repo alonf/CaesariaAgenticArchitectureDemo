@@ -25,10 +25,9 @@ var workforce = app.MapGroup("/api/workforce")
 workforce.MapGet("/assets/{assetId}/work-orders", FindForAsset);
 workforce.MapGet("/work-orders/{workOrderId}/shareable", GetShareableDetails);
 
-var admin = workforce.MapGroup("/admin");
-admin.MapPost("/reset", Reset);
-admin.MapPost("/scenario", ApplyScenario)
-    .ValidateBody<WorkforceScenarioSyncRequest>();
+// The scenario system's one lever here: put the domain back to its own fixture between demos, so
+// nothing a previous walk did survives into the next one.
+workforce.MapGroup("/admin").MapPost("/reset", Reset);
 
 // The presenter's own view: the records in full, so the lecture can show what was withheld beside
 // what crossed. Loopback only - this is the payload the whole stage exists to keep inside.
@@ -83,10 +82,6 @@ static IResult GetShareableDetails(HttpContext context, string workOrderId, Work
             $"No work order {workOrderId} exists.",
             context.GetCorrelationId()));
 }
-
-static IResult ApplyScenario(HttpContext context, WorkforceScenarioSyncRequest request, WorkforceHubService hub) =>
-    CallerIdentity.Reject(context, CallerIdentity.DemoScenario)
-        ?? TypedResults.Ok(hub.ApplyScenario(request, context.GetCorrelationId()));
 
 static IResult Reset(HttpContext context, WorkforceHubService hub) =>
     CallerIdentity.Reject(context, CallerIdentity.DemoScenario)

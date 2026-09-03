@@ -259,3 +259,63 @@ button {
         grid-template-columns: 1fr;
     }
 }
+
+/* The presenter's view of the workforce domain in full. Two colours and nothing else: what the
+   projection carried out of the domain, and what it never selected. Prefixed wf- because these
+   rows are a feature of this panel only. */
+.wf-record {
+    margin: 12px 0 0;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.wf-record-head {
+    margin: 0 0 8px;
+    font-weight: 600;
+}
+
+.wf-record-fields {
+    margin: 0;
+    display: grid;
+    gap: 6px;
+}
+
+.wf-record-fields div {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 10px;
+    padding-left: 10px;
+    border-left: 3px solid transparent;
+}
+
+.wf-record-fields dt {
+    min-width: 150px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+}
+
+.wf-record-fields dd {
+    margin: 0;
+    flex: 1 1 260px;
+    font-size: 0.85rem;
+    overflow-wrap: anywhere;
+}
+
+/* Qualified by the list, so these beat the transparent border on .wf-record-fields div rather
+   than losing to it on specificity. */
+.wf-record-fields .wf-shared {
+    border-left-color: var(--green);
+}
+
+.wf-record-fields .wf-withheld {
+    border-left-color: var(--error);
+}
+
+.wf-withheld dd {
+    color: var(--error);
+}

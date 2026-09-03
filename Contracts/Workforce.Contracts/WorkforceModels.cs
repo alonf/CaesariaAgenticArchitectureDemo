@@ -92,11 +92,3 @@ public sealed record WorkOrderSummary(
     string Status,
     DateTimeOffset RaisedAt);
 
-/// <summary>
-/// Replaces the workforce domain's work orders for a demo scenario.
-/// </summary>
-/// <param name="WorkOrders">The work orders the domain should hold.</param>
-/// <param name="Summary">The projector-friendly synchronization summary.</param>
-public sealed record WorkforceScenarioSyncRequest(
-    IReadOnlyList<WorkOrderRecord> WorkOrders,
-    string Summary);

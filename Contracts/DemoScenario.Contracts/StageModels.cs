@@ -73,7 +73,15 @@ public enum DemoStage
     /// boundary, so the Operations Agent consults a Security Operations Agent that reads records
     /// it cannot, and receives a sanitized judgment while keeping ownership of the answer.
     /// </summary>
-    MultiAgent
+    MultiAgent,
+
+    /// <summary>
+    /// A peer agent in another domain, discovered by its published card and given a task over A2A
+    /// rather than called as a tool. The workforce domain holds work orders whose commercial and
+    /// personal detail may not cross; its agent never receives those fields, so it can answer
+    /// freely and cannot be talked into disclosing what it never held.
+    /// </summary>
+    A2ADelegation
 }
 
 /// <summary>

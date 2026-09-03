@@ -55,13 +55,17 @@ builder.AddProject<Projects.CommandCenter_Web>("commandcenter-web")
     .WaitFor(commandCenterApi)
     .WithExternalHttpEndpoints();
 
-// The switchboard also addresses the Energy Hub and the Security Agent directly, because demo
-// snippets live in the service whose code they pause and each is armed at its own boundary.
+// The switchboard also addresses the Energy Hub and the two peer agents directly, because demo
+// snippets live in the service whose code they pause and each is armed at its own boundary. Its
+// reference to the Workforce Hub is different in kind: it reads the work orders in full, which is
+// the presenter's own view of what the domain withheld, and is why that route is loopback only.
 builder.AddProject<Projects.DemoControl_Web>("democontrol-web")
     .WithReference(demoScenarioApi)
     .WithReference(operationsAgentApi)
     .WithReference(energyHub)
     .WithReference(securityAgentApi)
+    .WithReference(workforceAgentApi)
+    .WithReference(workforceHub)
     .WaitFor(demoScenarioApi)
     .WithExternalHttpEndpoints();
 

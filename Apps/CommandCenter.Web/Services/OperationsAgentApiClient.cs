@@ -14,14 +14,31 @@ internal sealed class OperationsAgentApiClient
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
     }
 
-    public async Task<OperationsAgentOutcome> AskAsync(
+    public Task<OperationsAgentOutcome> AskAsync(
+        string question,
+        string? sessionId,
+        CancellationToken cancellationToken) =>
+        PostQuestionAsync("/api/operations-agent/ask", question, sessionId, cancellationToken);
+
+    /// <summary>
+    /// Asks the Operations Agent to put a question to the workforce domain's own agent over A2A.
+    /// It is a route of its own because the peer is not a tool: this is the service deciding to
+    /// delegate, not a model picking a capability out of its toolbox.
+    /// </summary>
+    public Task<OperationsAgentOutcome> ConsultWorkforceAsync(
+        string question,
+        CancellationToken cancellationToken) =>
+        PostQuestionAsync("/api/operations-agent/workforce-consult", question, sessionId: null, cancellationToken);
+
+    private async Task<OperationsAgentOutcome> PostQuestionAsync(
+        string route,
         string question,
         string? sessionId,
         CancellationToken cancellationToken)
     {
         var correlationId = CorrelationIds.Create();
         var agentRequest = new OperationsAgentRequest(question, sessionId);
-        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/operations-agent/ask")
+        using var request = new HttpRequestMessage(HttpMethod.Post, route)
         {
             Content = JsonContent.Create(agentRequest, options: SerializerOptions)
         };

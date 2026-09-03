@@ -17,7 +17,8 @@ internal sealed class DemoBreakpointsApiClient(IHttpClientFactory httpClientFact
     [
         new("Operations Agent", "breakpoints-operationsagent", "OperationsAgent.Api.exe"),
         new("Energy Hub", "breakpoints-energyhub", "EnergyHub.Api.exe"),
-        new("Security Agent", "breakpoints-securityagent", "SecurityAgent.Api.exe")
+        new("Security Agent", "breakpoints-securityagent", "SecurityAgent.Api.exe"),
+        new("Workforce Agent", "breakpoints-workforceagent", "WorkforceAgent.Api.exe")
     ];
 
     private static readonly JsonSerializerOptions SerializerOptions = CaesareaJsonDefaults.CreateSerializerOptions();
