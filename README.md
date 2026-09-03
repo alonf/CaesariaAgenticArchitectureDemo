@@ -152,7 +152,9 @@ boundary, so switching stages does not restart the application.
 - `SecurityAgent.Api` hosts the **Security Operations Agent** — the only service that may read the
   Security Hub, published to other domains as a consult capability.
 - `WorkforceHub.Api` owns work orders, including the commercial and personal detail that may never
-  leave the domain. Its full-record route is loopback only, for the presenter's own view.
+  leave the domain. Its full-record route serves the presenter's own view, and needs both the
+  switchboard's caller name and a loopback connection - in a demo where every service is local,
+  neither condition is a boundary on its own.
 - `WorkforceAgent.Api` hosts the **Caesarea Workforce Agent** — the only service that may read the
   Workforce Hub, published to other domains over **A2A** with its own agent card. It receives only
   the shareable projection of a work order, so it cannot disclose what it never held.
