@@ -28,8 +28,10 @@ public sealed partial class WorkforceDelegation(
     public const string HttpClientName = "workforceagent-a2a";
 
     // The delegated task is a peer's whole run - search, choose, read, compose - so it is given
-    // room, but never unbounded: a peer that stops answering must not hold the operator's turn.
-    private static readonly TimeSpan TaskBudget = TimeSpan.FromSeconds(90);
+    // room, but never unbounded: a peer that stops answering must not hold the operator's turn. It
+    // is deliberately shorter than this client's transport budget, so a slow peer trips here and is
+    // reported in this service's own words.
+    private static readonly TimeSpan TaskBudget = TimeSpan.FromSeconds(60);
 
     private readonly IHttpClientFactory _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
     private readonly ILoggerFactory _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));

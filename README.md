@@ -81,6 +81,7 @@ grows one capability at a time, and each stage maps to a concrete MAF concept:
 | Workflow | `Microsoft.Agents.AI.Workflows` — code-built graph (`WorkflowBuilder`), approval-gate node, self-rendered diagram |
 | ToolApproval | `ApprovalRequiredAIFunction` — the model selects a protected capability and the framework intercepts it |
 | MultiAgent | A second agent with its own permission boundary, consulted as a remote capability (`AsAIFunction` over MCP) |
+| A2ADelegation | `Microsoft.Agents.AI.A2A` — a peer agent in another domain, discovered by its agent card and given a task (`A2ACardResolver`, `A2AAgent`) |
 
 Each stage has a build-and-design document under [docs/prompts/](docs/prompts/), the exact
 lecture-slide code lives in named `#region` blocks (see the deck anchors in the docs), and
@@ -121,6 +122,14 @@ The demo runs as one application with a presenter-controlled `DemoStage`:
   decide by itself to file a maintenance work item, and `ApprovalRequiredAIFunction` makes the
   framework intercept that call so a supervisor approves before it runs. MRTR was the tool asking,
   the workflow gate was a node we drew; here the model chooses and policy intercepts.
+- `DemoStage=A2ADelegation` — a peer agent in **another domain**, discovered by its agent card and
+  given a task over A2A rather than called as a tool. The workforce domain's work orders carry
+  commercial and personal detail that may not cross, so its agent's extraction tool returns only a
+  shareable projection — the sensitive fields are never selected into it. Ask the peer for the
+  technician's labour cost and it does not refuse on policy; it answers that the cost is not visible
+  in the records it can access. Stage 10's Security Agent *holds* the secret and must be stopped
+  from saying it; this one was never given it. Context minimisation beats output sanitisation
+  wherever it is achievable.
 - `DemoStage=Workflow` — remediation becomes an **explicit code-built workflow**: validate,
   policy, an operator-approval gate when a manual override would be cleared, execute, verify, and
   a maintenance work item when the correction does not hold. The agent stops writing and starts
@@ -142,6 +151,11 @@ boundary, so switching stages does not restart the application.
 - `SecurityHub.Api` owns active security operations, including restricted detail.
 - `SecurityAgent.Api` hosts the **Security Operations Agent** — the only service that may read the
   Security Hub, published to other domains as a consult capability.
+- `WorkforceHub.Api` owns work orders, including the commercial and personal detail that may never
+  leave the domain. Its full-record route is loopback only, for the presenter's own view.
+- `WorkforceAgent.Api` hosts the **Caesarea Workforce Agent** — the only service that may read the
+  Workforce Hub, published to other domains over **A2A** with its own agent card. It receives only
+  the shareable projection of a work order, so it cannot disclose what it never held.
 
 The agent has no direct SmartPole access and no write capability below the InteractiveInput stage.
 In that stage's window the single write tool (`restore_scheduled_mode`) exists only over MCP and

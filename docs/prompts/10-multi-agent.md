@@ -118,10 +118,14 @@ does not imply group chat. Those are independent axes."* This stage picks one po
 
 ## Deck note
 
-**Slides 41–42 (A2A) are demoable and simply not implemented yet.** `Microsoft.Agents.AI.A2A` and
-`Microsoft.Agents.AI.Hosting.A2A.AspNetCore` are published on nuget.org in the same preview family
-this solution already uses (`1.20.0-preview.*`). An earlier version of this note claimed they were
-unavailable; that was wrong — the package search behind it omitted `--prerelease`. Adding A2A as a
-*second boundary for the same delegation* — flip the Security consult between MCP and A2A while
-the relationship stays "delegate" — is the natural next increment, and is the sharpest possible
-demonstration of slide 39's independent axes.
+**Slides 41–42 (A2A) are now implemented** — see [11-a2a-delegation.md](11-a2a-delegation.md). It
+adds A2A as a *second boundary for the same relationship*: Stage 10 is delegate over MCP, Stage 11
+is delegate over A2A, which is the sharpest demonstration of slide 39's independent axes.
+
+The two stages are not the same argument and should not be told as one. This stage's boundary is a
+**permission** boundary and its technique is **output sanitisation**: the Security Agent holds
+restricted values and is structurally prevented from emitting them. Stage 11's boundary is a
+**domain** boundary between two owners, and its technique is **context minimisation**: the peer
+never receives the sensitive fields, so there is nothing to sanitise. Where minimisation is
+achievable it is the stronger answer; this stage is the case where it is not, because the verdict
+has to be reasoned over the restricted records themselves.

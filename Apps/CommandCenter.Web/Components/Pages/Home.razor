@@ -439,7 +439,10 @@
                                             <div><dt>Transport</dt><dd>@consult.Transport</dd></div>
                                             <div><dt>Task sent</dt><dd>@consult.Question</dd></div>
                                         </dl>
-                                        <p class="a2a-reply">@consult.Answer</p>
+                                        @* The peer writes markdown too, and it goes through the
+                                           same sanitizing renderer. Rendering it as plain text put
+                                           literal asterisks on the projector. *@
+                                        <div class="a2a-reply agent-answer">@((MarkupString)RenderedConsultHtml)</div>
                                         <p class="agent-footnote">
                                             Discovered by its agent card, then given a task. The peer read the work order; this agent never did.
                                         </p>
@@ -928,6 +931,27 @@
             return _answerHtml;
         }
     }
+
+    // The peer's own reply, rendered the same way and memoized the same way: it is model-produced
+    // markdown from another service, and it is untrusted text like any other model output.
+    private string RenderedConsultHtml
+    {
+        get
+        {
+            if (_agentResponse?.RemoteConsult?.Answer is not { } answer)
+            {
+                return string.Empty;
+            }
+
+            if (!ReferenceEquals(_consultHtmlSource, answer))
+            {
+                _consultHtmlSource = answer;
+                _consultHtml = AnswerHtml.ToSafeHtml(answer);
+            }
+
+            return _consultHtml;
+        }
+    }
     private string AgentStatusText => (_agentBusy, _agentResponse) switch
     {
         (true, _) => "Working",
@@ -961,6 +985,9 @@
     // Whether the answer on screen is a claim about the city, and so must go stale when the city
     // moves. A delegated consult is a claim about another domain's records and is not versioned.
     private bool _agentAnswerTracksEvidence = true;
+
+    private string? _consultHtmlSource;
+    private string _consultHtml = string.Empty;
 
     private static string SurfaceLabel(DemoSurface surface) => surface switch
     {
@@ -1547,7 +1574,12 @@
                 if (!tracksEvidence || stillCurrent)
                 {
                     _agentResponse = outcome.Result;
-                    _agentSessionId = outcome.Result?.SessionId;
+                    // A run that opened no conversational session reports an empty one. Adopting
+                    // that would light up the follow-up button with nothing behind it, and the
+                    // "same session" it promises would not exist.
+                    _agentSessionId = string.IsNullOrEmpty(outcome.Result?.SessionId)
+                        ? _agentSessionId
+                        : outcome.Result.SessionId;
                     _agentEvidenceVersion = currentEvidenceVersion;
                     _agentOwnWriteAdopted = adoptedOwnWrite;
                 }

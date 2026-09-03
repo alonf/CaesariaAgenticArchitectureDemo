@@ -2,6 +2,7 @@ using Azure;
 using Azure.AI.Projects;
 using Azure.Core;
 using Azure.Identity;
+using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Options;
 using OperationsAgent.Api.Configuration;
 using OperationsAgent.Api.Services;
@@ -81,11 +82,26 @@ builder.Services.AddHttpClient(WorkforceAgentWarmup.HttpClientName, (serviceProv
     client.BaseAddress = new Uri(options.WorkforceAgentBaseUri, UriKind.Absolute);
 });
 builder.Services.AddSingleton<WorkforceDelegation>();
+#pragma warning disable EXTEXP0001 // RemoveAllResilienceHandlers: replacing the default pipeline per client is this API's purpose.
 builder.Services.AddHttpClient(WorkforceDelegation.HttpClientName, (serviceProvider, client) =>
-{
-    var options = serviceProvider.GetRequiredService<IOptions<OperationsAgentApiOptions>>().Value;
-    client.BaseAddress = new Uri(options.WorkforceAgentBaseUri, UriKind.Absolute);
-});
+    {
+        var options = serviceProvider.GetRequiredService<IOptions<OperationsAgentApiOptions>>().Value;
+        client.BaseAddress = new Uri(options.WorkforceAgentBaseUri, UriKind.Absolute);
+    })
+    // A delegated task is a whole agent run on the other side - search, choose, read, compose - not
+    // an ordinary request, and the default 10 second attempt timeout aborts it every time. Retrying
+    // would be worse than the abort: it would run the peer's entire investigation a second time. The
+    // budget sits just above the delegation's own, so a slow peer is reported by this service in its
+    // own words rather than surfacing as a transport exception.
+    .RemoveAllResilienceHandlers()
+    .AddStandardResilienceHandler(resilience =>
+    {
+        resilience.Retry.DisableForUnsafeHttpMethods();
+        resilience.AttemptTimeout.Timeout = TimeSpan.FromSeconds(70);
+        resilience.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(75);
+        resilience.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(150);
+    });
+#pragma warning restore EXTEXP0001
 builder.Services.AddSingleton<RemediationWorkflowService>();
 // The HTTP client the MCP transport rides on; service discovery and the standard resilience
 // pipeline apply like any other outbound client.
