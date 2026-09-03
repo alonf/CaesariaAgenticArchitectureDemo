@@ -1,0 +1,102 @@
+name: deploy-infra
+
+# The platform layer. Runs rarely, changes the shape of the estate, and is gated by an environment
+# approval. It provisions no agent version on purpose: an image digest is not infrastructure.
+#
+# Authentication is workload identity federation. There is no AZURE_CREDENTIALS secret and no client
+# secret anywhere in this repository - the runner proves who it is with a short-lived OIDC token.
+
+on:
+  workflow_dispatch:
+    inputs:
+      environmentName:
+        description: Environment to provision
+        type: choice
+        options: [dev, prod]
+        default: dev
+      whatIf:
+        description: Preview the change without applying it
+        type: boolean
+        default: true
+  pull_request:
+    paths: ['infra/**', '.github/workflows/deploy-infra.yml']
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  # One deployment per environment at a time. Two concurrent ARM deployments to the same scope is
+  # how templates and reality drift apart.
+  group: infra-${{ github.event.inputs.environmentName || 'dev' }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    # On a pull request this is the only job that runs: compile and what-if, never apply.
+    runs-on: ubuntu-latest
+    environment: lecture-demo
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Lint the templates
+        run: az bicep build --file infra/main.bicep --stdout > /dev/null
+
+      - name: What-if
+        run: |
+          az deployment sub what-if \
+            --name "caesarea-infra-${{ github.run_id }}" \
+            --location "${{ vars.AZURE_LOCATION }}" \
+            --template-file infra/main.bicep \
+            --parameters \
+              environmentName="${{ github.event.inputs.environmentName || 'dev' }}" \
+              location="${{ vars.AZURE_LOCATION }}" \
+              deploymentPrincipalId="${{ vars.AZURE_DEPLOYMENT_PRINCIPAL_ID }}" \
+              modelVersion="${{ vars.AZURE_MODEL_VERSION }}"
+
+  provision:
+    needs: validate
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.whatIf != 'true'
+    runs-on: ubuntu-latest
+    environment: lecture-demo
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Provision
+        id: provision
+        run: |
+          az deployment sub create \
+            --name "caesarea-infra-${{ github.run_id }}" \
+            --location "${{ vars.AZURE_LOCATION }}" \
+            --template-file infra/main.bicep \
+            --parameters \
+              environmentName="${{ github.event.inputs.environmentName }}" \
+              location="${{ vars.AZURE_LOCATION }}" \
+              deploymentPrincipalId="${{ vars.AZURE_DEPLOYMENT_PRINCIPAL_ID }}" \
+              modelVersion="${{ vars.AZURE_MODEL_VERSION }}" \
+            --query properties.outputs -o json > outputs.json
+          # Surface the handoff values the release pipeline needs. They are outputs, not secrets:
+          # an endpoint is not a credential when local auth is disabled on the account.
+          echo "### Platform outputs" >> "$GITHUB_STEP_SUMMARY"
+          jq -r 'to_entries[] | "- `\(.key)` = `\(.value.value)`"' outputs.json >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload outputs
+        uses: actions/upload-artifact@v4
+        with:
+          name: infra-outputs-${{ github.event.inputs.environmentName }}
+          path: outputs.json
+          retention-days: 30
