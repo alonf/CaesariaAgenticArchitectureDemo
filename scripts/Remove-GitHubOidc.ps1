@@ -2,153 +2,250 @@
 
 <#
 .SYNOPSIS
-    Removes the CI identity and repository configuration created by Bootstrap-GitHubOidc.ps1.
+    Removes the CI identities and repository configuration created by Bootstrap-GitHubOidc.ps1.
 
 .DESCRIPTION
-    The inverse of the bootstrap, and idempotent in the same way: anything already gone is reported
-    and skipped. Run it when you are finished with the demo, or before rebuilding from scratch.
+    The inverse of the bootstrap, and deliberately narrower than it. This script deletes things, so
+    it removes only what the bootstrap is known to own:
 
-    It removes, in this order:
-      1. The repository variables and secrets the workflows read.
-      2. The GitHub environments.
-      3. The subscription role assignments held by the CI identity.
-      4. The Entra application registration, which takes its service principal and federated
-         credentials with it.
+      - the six variables it set, on each environment - not the whole environment, and not anything
+        else someone added to it. Pass -RemoveEnvironments to delete the environments themselves;
+      - exactly the two role assignments it created, at exactly the scope it created them - not
+        every assignment the principal happens to hold;
+      - the applications it created, identified unambiguously. A display-name lookup returning zero
+        or several results is an error, never a licence to guess: Entra permits duplicate display
+        names and the application ID is the only unique identifier.
 
-    It does NOT delete Azure resources. Those are a separate concern with a separate blast radius:
+    Every read distinguishes "not found" from "could not read". A 403 or a network failure is a
+    failure, not evidence of absence.
+
+    It does NOT delete Azure resources, and it does not unregister resource providers - those are
+    subscription-wide and other things may depend on them. Resources are a separate blast radius:
 
         az group delete --name rg-caesarea-dev --yes
+        az group delete --name rg-caesarea-prod --yes
 
-    Deleting the resource group leaves the Foundry account recoverable for a period. To reuse the
-    same account name immediately, purge it:
+    A deleted Foundry account stays recoverable for a period, which blocks reusing its name. Purge
+    it to free the name immediately:
 
         az cognitiveservices account purge --name <account> --resource-group <rg> --location <region>
-
-.PARAMETER Repository
-    owner/name of the GitHub repository. Defaults to the origin remote of this working tree.
 
 .PARAMETER SubscriptionId
     Subscription the role assignments live on. Defaults to the current az account.
 
-.PARAMETER ApplicationName
-    Display name of the Entra application to remove.
+.PARAMETER Repository
+    owner/name of the GitHub repository. Defaults to the origin remote of this working tree.
+
+.PARAMETER ApplicationNamePrefix
+    Applications are named <prefix>-<environment>, matching the bootstrap.
+
+.PARAMETER ApplicationId
+    Delete this exact application instead of resolving by name. Use it when a display-name lookup is
+    ambiguous. Only valid with a single environment.
 
 .PARAMETER Environments
-    GitHub environments to remove.
+    Environments to clean up.
+
+.PARAMETER RemoveEnvironments
+    Delete the GitHub environments outright rather than only the variables this bootstrap set.
+    Destroys anything else configured on them, including protection rules and unrelated secrets.
 
 .EXAMPLE
     ./scripts/Remove-GitHubOidc.ps1 -WhatIf
 
 .EXAMPLE
-    ./scripts/Remove-GitHubOidc.ps1
+    ./scripts/Remove-GitHubOidc.ps1 -RemoveEnvironments
 #>
 
-[CmdletBinding(SupportsShouldProcess)]
+[CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
 param(
-    [string] $Repository,
     [string] $SubscriptionId,
-    [string] $ApplicationName = 'caesarea-github-deploy',
-    [string[]] $Environments = @('dev', 'prod')
+    [string] $Repository,
+    [string] $ApplicationNamePrefix = 'caesarea-github-deploy',
+    [string] $ApplicationId,
+    [string[]] $Environments = @('dev', 'prod'),
+    [switch] $RemoveEnvironments
 )
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
+# Exactly the roles the bootstrap assigns. Anything else the principal holds was granted by someone
+# else, for some other reason, and is not this script's to remove.
+$RoleIds = [ordered]@{
+    'Contributor'                             = 'b24988ac-6180-42a0-ab88-20f7382dd24c'
+    'Role Based Access Control Administrator' = 'f58310d9-a9f6-439a-9e8d-f62e7b41a168'
+}
+
+# Exactly the variables the bootstrap sets.
+$OwnedVariables = @(
+    'AZURE_CLIENT_ID'
+    'AZURE_TENANT_ID'
+    'AZURE_SUBSCRIPTION_ID'
+    'AZURE_LOCATION'
+    'AZURE_DEPLOYMENT_PRINCIPAL_ID'
+    'AZURE_MODEL_VERSION'
+)
+
 function Write-Step { param([string] $Message) Write-Host "`n=== $Message" -ForegroundColor Cyan }
 function Write-Gone { param([string] $Message) Write-Host "  [absent] $Message" -ForegroundColor DarkGray }
 function Write-Removed { param([string] $Message) Write-Host "  [removed] $Message" -ForegroundColor Yellow }
+function Write-Note { param([string] $Message) Write-Host "  $Message" -ForegroundColor DarkGray }
+
+function Invoke-Checked {
+    param([Parameter(Mandatory)] [scriptblock] $Command, [Parameter(Mandatory)] [string] $What)
+
+    $output = & $Command 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        throw "$What failed (exit $LASTEXITCODE): $($output -join [Environment]::NewLine)"
+    }
+    return $output
+}
+
+function Test-GitHubResource {
+    <#  True when it exists, false on a genuine 404, throws otherwise. Reporting a 403 as [absent]
+        would let this script claim it had cleaned up something it never saw. #>
+    param([Parameter(Mandatory)] [string] $Path)
+
+    $output = gh api $Path --silent 2>&1
+    if ($LASTEXITCODE -eq 0) { return $true }
+    if ("$output" -match '(?i)HTTP 404|Not Found') { return $false }
+    throw "Reading GitHub resource '$Path' failed: $($output -join [Environment]::NewLine)"
+}
 
 Write-Step 'Checking prerequisites'
 
 foreach ($tool in @('az', 'gh')) {
-    if (-not (Get-Command $tool -ErrorAction SilentlyContinue)) {
-        throw "$tool is not on PATH."
-    }
+    if (-not (Get-Command $tool -ErrorAction SilentlyContinue)) { throw "$tool is not on PATH." }
 }
 
-$accountJson = az account show --output json 2>$null
-if (-not $accountJson) { throw 'Not signed in to Azure. Run: az login' }
-$account = $accountJson | ConvertFrom-Json
-if (-not $SubscriptionId) { $SubscriptionId = $account.id }
+if ($ApplicationId -and $Environments.Count -ne 1) {
+    throw '-ApplicationId identifies one application, so it must be used with exactly one -Environments value.'
+}
+
+if (-not $SubscriptionId) {
+    $SubscriptionId = (Invoke-Checked { az account show --query id --output tsv } 'Reading the current Azure account').Trim()
+}
+
+$account = (Invoke-Checked {
+    az account show --subscription $SubscriptionId --output json
+} "Reading subscription '$SubscriptionId'") | ConvertFrom-Json
 
 if (-not $Repository) {
-    $originUrl = git -C $PSScriptRoot/.. remote get-url origin 2>$null
-    if (-not $originUrl) { throw 'No origin remote found. Pass -Repository owner/name.' }
-    $Repository = ($originUrl -replace '^.*github\.com[:/]', '' -replace '\.git$', '')
+    $originUrl = Invoke-Checked { git -C "$PSScriptRoot/.." remote get-url origin } 'Reading the origin remote'
+    $Repository = ("$originUrl" -replace '^.*github\.com[:/]', '' -replace '\.git$', '').Trim()
 }
 
-Write-Host "  Subscription: $($account.name)" -ForegroundColor DarkGray
-Write-Host "  Repository:   $Repository" -ForegroundColor DarkGray
+Write-Note "Subscription: $($account.name) ($($account.id))"
+Write-Note "Repository:   $Repository"
+$scope = "/subscriptions/$($account.id)"
 
 # ---------------------------------------------------------------------------------------------
-# GitHub environments. Deleting an environment removes the variables and secrets scoped to it, so
-# this is done first: the reverse order would leave orphans behind if the run were interrupted.
+# GitHub first. Removing the identity before the configuration that names it would leave variables
+# pointing at a principal that no longer resolves.
 # ---------------------------------------------------------------------------------------------
 
-Write-Step 'Removing GitHub environments'
+Write-Step 'Removing GitHub configuration'
 
 foreach ($environment in $Environments) {
-    $exists = gh api "repos/$Repository/environments/$environment" --silent 2>$null
-    if ($LASTEXITCODE -ne 0) {
+    if (-not (Test-GitHubResource "repos/$Repository/environments/$environment")) {
         Write-Gone "environment '$environment'"
         continue
     }
 
-    if ($PSCmdlet.ShouldProcess("$Repository/$environment", 'Delete GitHub environment')) {
-        gh api --method DELETE "repos/$Repository/environments/$environment" --silent 2>$null | Out-Null
-        if ($LASTEXITCODE -ne 0) { throw "Deleting environment '$environment' failed." }
-        Write-Removed "environment '$environment' and its configuration"
+    if ($RemoveEnvironments) {
+        if ($PSCmdlet.ShouldProcess("$Repository/$environment", 'Delete GitHub environment and everything on it')) {
+            Invoke-Checked {
+                gh api --method DELETE "repos/$Repository/environments/$environment" --silent
+            } "Deleting environment '$environment'" | Out-Null
+            Write-Removed "environment '$environment' and all of its configuration"
+        }
+        continue
     }
+
+    # Only the variables this bootstrap set. Anything else on the environment belongs to someone.
+    $removed = 0
+    foreach ($name in $OwnedVariables) {
+        if (-not (Test-GitHubResource "repos/$Repository/environments/$environment/variables/$name")) { continue }
+
+        if ($PSCmdlet.ShouldProcess("$environment/$name", 'Delete repository variable')) {
+            Invoke-Checked {
+                gh variable delete $name --env $environment --repo $Repository
+            } "Deleting variable '$name'" | Out-Null
+            $removed++
+        }
+    }
+
+    if ($removed -gt 0) { Write-Removed "${environment}: $removed variable(s)" }
+    else { Write-Gone "${environment}: no owned variables" }
+    Write-Note "environment '$environment' kept (pass -RemoveEnvironments to delete it)"
 }
 
 # ---------------------------------------------------------------------------------------------
-# Role assignments, before the application they are attached to. Deleting the application first
-# leaves assignments pointing at a principal that no longer resolves, which show in the portal as
-# "Identity not found" and are then awkward to clean up.
+# Role assignments, then the applications that hold them. Deleting an application first leaves
+# assignments pointing at a principal that no longer resolves - they show as "Identity not found"
+# and are then awkward to find and remove.
 # ---------------------------------------------------------------------------------------------
 
-Write-Step 'Removing role assignments'
+foreach ($environment in $Environments) {
+    $applicationName = "$ApplicationNamePrefix-$environment"
+    Write-Step "Identity for '$environment' ($applicationName)"
 
-$appId = az ad app list --display-name $ApplicationName --query "[0].appId" --output tsv 2>$null
+    $appId = $ApplicationId
+    if (-not $appId) {
+        $found = @(@(Invoke-Checked {
+            az ad app list --display-name $applicationName --query "[].appId" --output tsv
+    } "Listing applications named '$applicationName'") | ForEach-Object { "$_".Trim() } | Where-Object { $_ })
 
-if (-not $appId) {
-    Write-Gone "application '$ApplicationName' (nothing to unassign)"
-}
-else {
-    $scope = "/subscriptions/$SubscriptionId"
-    $assignments = az role assignment list --assignee $appId --scope $scope --output json 2>$null | ConvertFrom-Json
-
-    if (-not $assignments -or @($assignments).Count -eq 0) {
-        Write-Gone 'subscription role assignments'
+        if ($found.Count -eq 0) {
+            Write-Gone "application '$applicationName'"
+            continue
+        }
+        if ($found.Count -gt 1) {
+            throw "Found $($found.Count) applications named '$applicationName'. Refusing to guess which to delete - re-run with -ApplicationId <appId> and a single -Environments value."
+        }
+        $appId = $found[0]
     }
-    else {
-        foreach ($assignment in @($assignments)) {
-            if ($PSCmdlet.ShouldProcess($assignment.roleDefinitionName, 'Delete role assignment')) {
-                az role assignment delete --ids $assignment.id --output none 2>$null
-                if ($LASTEXITCODE -ne 0) { throw "Deleting role assignment '$($assignment.id)' failed." }
-                Write-Removed "$($assignment.roleDefinitionName) at subscription scope"
+
+    foreach ($roleName in $RoleIds.Keys) {
+        $assignments = @(@(Invoke-Checked {
+            az role assignment list --subscription $SubscriptionId --assignee $appId --scope $scope `
+                --role $RoleIds[$roleName] --query "[].id" --output tsv
+    } "Listing '$roleName' assignments") | ForEach-Object { "$_".Trim() } | Where-Object { $_ })
+
+        if ($assignments.Count -eq 0) {
+            Write-Gone "$roleName at subscription scope"
+            continue
+        }
+
+        foreach ($assignmentId in $assignments) {
+            if ($PSCmdlet.ShouldProcess("$roleName for $applicationName", 'Delete role assignment')) {
+                Invoke-Checked {
+                    az role assignment delete --subscription $SubscriptionId --ids $assignmentId --yes
+                } "Deleting role assignment '$assignmentId'" | Out-Null
+                Write-Removed "$roleName at subscription scope"
             }
         }
     }
 
-    # ---------------------------------------------------------------------------------------------
-    # The application. Its service principal and federated credentials are children and go with it.
-    # ---------------------------------------------------------------------------------------------
-
-    Write-Step 'Removing the CI identity'
-
-    if ($PSCmdlet.ShouldProcess($ApplicationName, 'Delete Entra application')) {
-        az ad app delete --id $appId --output none 2>$null
-        if ($LASTEXITCODE -ne 0) { throw "Deleting application '$ApplicationName' failed." }
-        Write-Removed "application '$ApplicationName' with its service principal and federated credentials"
+    # The application takes its service principal and federated credentials with it.
+    if ($PSCmdlet.ShouldProcess("$applicationName ($appId)", 'Delete Entra application')) {
+        Invoke-Checked { az ad app delete --id $appId } "Deleting application '$applicationName'" | Out-Null
+        Write-Removed "application '$applicationName' with its service principal and federated credential"
     }
 }
 
 Write-Step 'Done'
 Write-Host @"
-  The CI identity and repository configuration are gone. Azure resources are untouched:
+  The CI identities and the variables this bootstrap set are gone.
 
-    az group delete --name rg-caesarea-dev --yes
+  Left alone deliberately:
+    - the GitHub environments themselves, unless -RemoveEnvironments was passed;
+    - resource providers, which are subscription-wide and shared;
+    - all Azure resources:
+
+        az group delete --name rg-caesarea-dev --yes
+        az group delete --name rg-caesarea-prod --yes
 
   Re-create everything with ./scripts/Bootstrap-GitHubOidc.ps1.
 "@ -ForegroundColor Green

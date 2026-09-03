@@ -43,9 +43,9 @@ param applicationInsightsConnectionString string
 @description('Tags applied to the account and project.')
 param tags object = {}
 
-// The account is the security boundary that holds projects. Its system-assigned identity is what the
-// platform uses for infrastructure work such as pulling the hosted agent's image from the registry -
-// it is not the identity the agent itself runs as. That one is created per agent, at deploy time.
+// The account is the security boundary that holds projects. The image pull is done as the PROJECT
+// identity, not this one - see modules/rbac.bicep. Neither is the identity the agent itself runs
+// as: that one is created per agent, by the platform, when its first version is deployed.
 resource account 'Microsoft.CognitiveServices/accounts@2025-06-01' = {
   name: accountName
   location: location
@@ -164,9 +164,6 @@ output projectId string = project.id
 
 @description('Project name.')
 output projectName string = project.name
-
-@description('Principal ID of the account identity, used by the platform to pull the agent image.')
-output accountPrincipalId string = account.identity.principalId
 
 @description('Principal ID of the project identity.')
 output projectPrincipalId string = project.identity.principalId

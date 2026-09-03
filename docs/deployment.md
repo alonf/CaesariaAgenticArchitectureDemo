@@ -13,12 +13,30 @@ The demo also runs entirely on a laptop with no Azure at all beyond a model depl
 
 | Layer | What | How | When it changes |
 | --- | --- | --- | --- |
-| **Identity** | Entra app, federated credentials, subscription roles, GitHub environments and variables | [`scripts/Bootstrap-GitHubOidc.ps1`](../scripts/Bootstrap-GitHubOidc.ps1) | once |
+| **Identity** | One Entra app **per environment**, its federated credential, subscription roles, GitHub environments and variables | [`scripts/Bootstrap-GitHubOidc.ps1`](../scripts/Bootstrap-GitHubOidc.ps1) | once |
 | **Platform** | Foundry account, project, capability host, model deployment, registry, observability, RBAC | [`deploy-infra.yml`](../.github/workflows/deploy-infra.yml) → [`infra/`](../infra/) | rarely |
 | **Application** | The hosted agent version: image digest, CPU, environment | [`deploy-hosted-agent.yml`](../.github/workflows/deploy-hosted-agent.yml) | every release |
 
 Only the first is a script, and only because it cannot be anything else: something has to create the
 identity the workflows authenticate as, before any workflow can run. Everything after it is CI.
+
+### The identity model
+
+**One identity per environment.** `dev` and `prod` each get their own Entra application with exactly
+one federated credential, bound to that environment's OIDC subject alone. A token minted for a dev
+deployment is not accepted by the prod application. That is what makes the prod gate a boundary
+rather than a convention.
+
+**Pull requests get no Azure identity at all.** They run `az bicep build`, which needs no
+credential. Cloud what-if runs on manual dispatch, behind the environment gate. A fork or an edited
+workflow therefore cannot obtain deployment rights by opening a pull request.
+
+**A limitation worth knowing.** Both identities hold Contributor and Role Based Access Control
+Administrator at *subscription* scope, because the platform template creates its own resource group
+and cannot be scoped below one. dev and prod are separated by identity and federation subject, not
+by Azure scope — a compromised dev identity could still reach prod resources. The real fix is a
+subscription per environment; pass `-SubscriptionId` to point the bootstrap at one. Resource-group
+scoping would be a half-measure that reads as isolation without being it.
 
 Why the platform and the application are separate, and why the agent version is not in the Bicep, is
 in [infra/README.md](../infra/README.md).
@@ -74,8 +92,13 @@ Expected output on a clean tenant:
   [exists] Microsoft.CognitiveServices
   ... one line per provider, [exists] or a registration ...
 
-=== Creating the CI identity
-What if: Performing the operation "Create Entra application" on target "caesarea-github-deploy".
+=== Identity for 'dev' (caesarea-github-deploy-dev)
+What if: Performing the operation "Create Entra application" on target "caesarea-github-deploy-dev".
+  Would create the application. The steps below depend on its ID and cannot be previewed.
+
+=== Identity for 'prod' (caesarea-github-deploy-prod)
+What if: Performing the operation "Create Entra application" on target "caesarea-github-deploy-prod".
+  Would create the application. The steps below depend on its ID and cannot be previewed.
 ```
 
 Then run it for real:
@@ -83,6 +106,22 @@ Then run it for real:
 ```powershell
 ./scripts/Bootstrap-GitHubOidc.ps1 -ModelVersion 2026-04-24
 ```
+
+### If your repository is private and personally owned
+
+GitHub does not offer environment protection rules on private repositories outside Enterprise. A
+required-reviewer gate on `prod` is accepted by the API there and enforces nothing.
+
+The bootstrap detects this and **stops**, rather than producing a prod environment you believe is
+gated and is not. Either move the repository to an organisation on a plan that supports protected
+environments, or accept it deliberately:
+
+```powershell
+./scripts/Bootstrap-GitHubOidc.ps1 -ModelVersion 2026-04-24 -AllowUngatedProduction
+```
+
+Where gating is available, prod also gets `prevent_self_review`, so whoever starts a production
+deployment cannot approve their own.
 
 Resolve a current model version rather than copying the one above — versions are retired:
 
@@ -94,11 +133,18 @@ az cognitiveservices model list --location westus3 \
 **It is idempotent.** Run it again and every line reports `[exists]`; nothing is created twice. That
 is the check that it worked, and the check that a later run has not drifted.
 
-**No secret is created.** GitHub proves its identity per run with a short-lived OIDC token. The
-repository holds identifiers only — client ID, tenant ID, subscription ID — which are not
-credentials. Pass `-UseSecrets` if your organisation requires them stored as secrets anyway; the
-only effect is that they are masked in workflow logs, which makes a failed deployment harder to
-read.
+**What `-WhatIf` does and does not cover.** On a clean tenant it stops at the first identity
+dependency: it reports that it would create the application, then says that the service principal,
+federated credential, role assignments and GitHub configuration all need that application's ID and
+cannot be previewed. That is deliberate — inventing a placeholder ID would produce a plan that reads
+as more thorough than it is. Once the identities exist, a second `-WhatIf` covers everything.
+
+**No secret is created, and none can be.** GitHub proves its identity per run with a short-lived
+OIDC token. The repository holds identifiers only — client ID, tenant ID, subscription ID — which
+are not credentials, and which the workflows read from the `vars` context. There is deliberately no
+option to store them as secrets: masking an identifier only makes a failed deployment harder to
+read, and an earlier version of this script offered a `-UseSecrets` switch that wrote configuration
+the workflows could not consume at all.
 
 ### Exit codes
 
@@ -199,10 +245,11 @@ Two independent scopes, deliberately.
 ./scripts/Remove-GitHubOidc.ps1
 ```
 
-**Azure resources:**
+**Azure resources**, one resource group per environment:
 
 ```bash
 az group delete --name rg-caesarea-dev --yes
+az group delete --name rg-caesarea-prod --yes
 ```
 
 A deleted Foundry account is recoverable for a period, which blocks reusing the same name. To free
@@ -212,7 +259,17 @@ it immediately:
 az cognitiveservices account purge --name <account> --resource-group <rg> --location westus3
 ```
 
-Both scripts are safe to re-run. Anything already gone reports `[absent]`.
+`Remove-GitHubOidc.ps1` is deliberately narrower than the bootstrap. It removes only the six
+variables it set and the two role assignments it created, and it leaves the GitHub environments
+themselves alone unless you pass `-RemoveEnvironments`. It also refuses to act on an ambiguous
+application name — Entra permits duplicates, so a display-name lookup returning several results
+stops the script rather than guessing which to delete. Pass `-ApplicationId` to disambiguate.
+
+Resource providers are not unregistered: they are subscription-wide and other things may depend on
+them, so teardown is not literally the inverse of everything bootstrap touches.
+
+Both scripts are safe to re-run. Anything already gone reports `[absent]`, and a read that fails for
+any other reason — a 403, a network error — stops the script rather than being taken for absence.
 
 ---
 
@@ -229,6 +286,21 @@ The point of all this. Given only a clone of this repository and an Azure subscr
 No step depends on state that only exists on one machine.
 
 ---
+
+## A note on OIDC subject formats
+
+The federated credentials use GitHub's legacy subject form,
+`repo:<owner>/<name>:environment:<environment>`. GitHub also supports immutable subjects keyed on
+the repository *ID*, which survive a rename. This repository currently reports
+`use_immutable_subject: false`, so the legacy form is correct for it.
+
+If you enable immutable subjects, or GitHub defaults new repositories to them, the subjects the
+bootstrap writes will no longer match and `azure/login` will fail with an audience or subject error.
+Check with:
+
+```bash
+gh api repos/<owner>/<name>/actions/oidc/customization/sub
+```
 
 ## Break glass: deploying without GitHub
 
@@ -254,7 +326,9 @@ one laptop.
 
 **Verified:**
 
-- Both scripts run, detect real tenant and repository state, and change nothing under `-WhatIf`.
+- Both scripts parse, run, and detect real tenant and repository state under `-WhatIf` without
+  changing anything. On a clean tenant that preview stops at the first identity dependency, as
+  described above — it is not a full plan.
 - `infra/main.bicep` passes `az deployment sub what-if` against a real subscription: 12 creates, no
   errors.
 - The hosted-agent protocol serves `/responses` and `/readiness` on a laptop with no Azure at all

@@ -5,8 +5,8 @@ deploys is a GitHub Actions workflow driving committed Bicep — see [docs/deplo
 
 | Script | Does | Idempotent |
 | --- | --- | --- |
-| [`Bootstrap-GitHubOidc.ps1`](Bootstrap-GitHubOidc.ps1) | Creates the Entra application, its federated credentials, subscription role assignments, and the GitHub environments and variables the workflows read | Yes — a second run reports `[exists]` and changes nothing |
-| [`Remove-GitHubOidc.ps1`](Remove-GitHubOidc.ps1) | Removes all of the above. Does not touch Azure resources | Yes — anything already gone reports `[absent]` |
+| [`Bootstrap-GitHubOidc.ps1`](Bootstrap-GitHubOidc.ps1) | Creates one Entra application **per environment** with a single federated credential each, their role assignments, and the GitHub environments and variables the workflows read | Yes — a second run reports `[exists]` and changes nothing |
+| [`Remove-GitHubOidc.ps1`](Remove-GitHubOidc.ps1) | Removes only what the bootstrap owns. Does not touch Azure resources or resource providers | Yes — anything already gone reports `[absent]` |
 
 Both support `-WhatIf`. **Run that first**; it makes no changes and prints exactly what would happen.
 
@@ -26,5 +26,15 @@ portal clicks that will be stale in a month.
   missing tool fails immediately instead of half way through a tenant change.
 - **Non-zero exit codes are fatal.** A failed `az` call that prints an error and returns nothing
   would otherwise let the script carry on building on the absence.
-- **No secrets.** Workload identity federation means there is nothing to store. `-UseSecrets` exists
-  for organisations whose policy requires the identifiers masked anyway.
+- **Reads distinguish absent from unreadable.** A 404 means absent. A 403 or a network failure is a
+  failure, and stops the script — otherwise a bad token reads as "nothing exists" and the bootstrap
+  creates a duplicate identity, or the teardown reports it cleaned up something it never saw.
+- **Ambiguity is fatal.** Entra permits several applications with the same display name, and the
+  application ID is the only unique identifier. Both scripts refuse to act on a name that resolves
+  to more than one, rather than taking the first.
+- **No secrets.** Workload identity federation means there is nothing to store. The workflows read
+  identifiers from the `vars` context, and there is no option to write them anywhere else.
+- **Least surprise on teardown.** `Remove-GitHubOidc.ps1` deletes the six variables it set and the
+  two role assignments it created — not whole environments, not every role a principal holds.
+  Deleting the environments needs `-RemoveEnvironments`, and the command carries
+  `ConfirmImpact = 'High'`.

@@ -33,9 +33,7 @@ on:
     paths: ['infra/**', '.github/workflows/deploy-infra.yml']
 
 permissions:
-  id-token: write
   contents: read
-  pull-requests: write
 
 concurrency:
   # One deployment per environment at a time. Two concurrent ARM deployments to the same scope is
@@ -44,12 +42,28 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  compile:
+    # Pull requests get NO Azure identity. Bicep compiles locally, which needs no credential, so a
+    # fork or a modified workflow cannot obtain one by opening a PR. Cloud what-if runs on manual
+    # dispatch below, behind the environment gate.
+    name: Compile
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Lint the templates
+        run: az bicep build --file infra/main.bicep --stdout > /dev/null
+
   preview:
     name: Preview (what-if)
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    # Bound to the selected environment so dev and prod carry their own variables and protection
-    # rules. A single shared environment would make the input decorative.
-    environment: ${{ github.event.inputs.environmentName || 'dev' }}
+    # The environment supplies this job's identity. Each one federates to its own Entra application,
+    # so a dev token cannot deploy to prod - that is what makes the prod gate a boundary.
+    environment: ${{ github.event.inputs.environmentName }}
+    permissions:
+      id-token: write
+      contents: read
     outputs:
       changeCount: ${{ steps.whatif.outputs.changeCount }}
     steps:
@@ -62,36 +76,37 @@ jobs:
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Lint the templates
-        run: az bicep build --file infra/main.bicep --stdout > /dev/null
-
       # what-if is a read-only preflight against the real resource providers. It is the gate that
       # catches what compilation cannot: a property the service rejects, a missing prerequisite, a
-      # model version that does not exist in the region.
+      # model version absent from the region.
       - name: What-if
         id: whatif
         run: |
+          # Change types that mean "nothing happens" are excluded by the CLI rather than filtered
+          # afterwards - the ARM value is Ignore, not Ignored, and getting that string wrong makes
+          # a no-op deployment report changes forever.
           az deployment sub what-if \
             --name "caesarea-infra-${{ github.run_id }}" \
             --location "${{ vars.AZURE_LOCATION }}" \
             --template-file infra/main.bicep \
+            --exclude-change-types Ignore NoChange \
             --parameters \
-              environmentName="${{ github.event.inputs.environmentName || 'dev' }}" \
+              environmentName="${{ github.event.inputs.environmentName }}" \
               location="${{ vars.AZURE_LOCATION }}" \
               deploymentPrincipalId="${{ vars.AZURE_DEPLOYMENT_PRINCIPAL_ID }}" \
               deploymentPrincipalType=ServicePrincipal \
               modelVersion="${{ vars.AZURE_MODEL_VERSION }}" \
             --no-pretty-print > whatif.json
 
-          # Ignored means "no change". Unsupported means what-if could not analyse the resource -
-          # role assignments whose names depend on a principal ID that does not exist yet - and is
-          # not evidence either way, so it is reported separately rather than counted as a change.
-          CHANGES=$(jq '[.changes[] | select(.changeType | . != "Ignored" and . != "NoChange" and . != "Unsupported")] | length' whatif.json)
+          # Unsupported means what-if could not analyse the resource - role assignments whose names
+          # depend on a principal ID that does not exist yet - and is evidence of nothing either
+          # way, so it is reported separately rather than counted as a change.
+          CHANGES=$(jq '[.changes[] | select(.changeType != "Unsupported")] | length' whatif.json)
           UNANALYSED=$(jq '[.changes[] | select(.changeType == "Unsupported")] | length' whatif.json)
           echo "changeCount=$CHANGES" >> "$GITHUB_OUTPUT"
 
           {
-            echo "## Platform preview — \`${{ github.event.inputs.environmentName || 'dev' }}\`"
+            echo "## Platform preview — \`${{ github.event.inputs.environmentName }}\`"
             if [ "$CHANGES" -eq 0 ]; then
               echo ""
               echo "**No changes.** The deployed platform already matches this template."
@@ -99,7 +114,7 @@ jobs:
               echo ""
               echo "**$CHANGES change(s):**"
               echo ""
-              jq -r '.changes[] | select(.changeType | . != "Ignored" and . != "NoChange" and . != "Unsupported") | "- `\(.changeType)` \(.resourceId | split("/providers/") | last)"' whatif.json
+              jq -r '.changes[] | select(.changeType != "Unsupported") | "- `\(.changeType)` \(.resourceId | split("/providers/") | last)"' whatif.json
             fi
             if [ "$UNANALYSED" -gt 0 ]; then
               echo ""
@@ -110,17 +125,19 @@ jobs:
       - name: Upload the preview
         uses: actions/upload-artifact@v4
         with:
-          name: whatif-${{ github.event.inputs.environmentName || 'dev' }}-${{ github.run_id }}
+          name: whatif-${{ github.event.inputs.environmentName }}-${{ github.run_id }}
           path: whatif.json
           retention-days: 30
 
   apply:
     name: Apply
     needs: preview
-    # Never on a pull request. A PR gets the preview and nothing else.
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.mode == 'apply'
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.environmentName }}
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - uses: actions/checkout@v4
 

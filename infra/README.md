@@ -27,8 +27,8 @@ draws here is the seam an enterprise release process already has.
 ## Why some RBAC is in the pipeline and not here
 
 [`modules/rbac.bicep`](modules/rbac.bicep) binds every principal that exists at provisioning time:
-the Foundry account identity that pulls the image, and the CI identity that pushes it and creates
-versions.
+the Foundry **project** identity that pulls the image, and the CI identity that builds, pushes and
+creates versions.
 
 The **agent's own Microsoft Entra identity is not one of them**, because the platform creates it
 when the first agent version is created. There is no principal ID to bind until that call returns.
