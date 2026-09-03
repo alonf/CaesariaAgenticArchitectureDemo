@@ -159,20 +159,104 @@ should not see.
 
 Copy-ready. Keep the two halves distinct — the left column is Stage 10, the right is this stage.
 
-### Slide 41 — A2A: consulting an agent you do not own
+### Slide 41 — corrections to the existing "MAF A2A" slide
 
-> **A tool is something you call. An agent is someone you ask.**
+The existing slide is about the **Security** agent over A2A. In this demo Security is Stage 10 and
+it is **MCP**; the A2A peer is the **Workforce** agent. Every identifier on the slide has to move, or
+the deck and the screen disagree at the exact moment the audience is looking for the connection.
+
+| Region | Change | Why |
+| --- | --- | --- |
+| Diagram, "Remote Agent" | Security → **Workforce** | the demo's A2A peer |
+| Agent Card panel | `CaesareaSecurity` → `Caesarea Workforce Agent`; capabilities → **skills** | `capabilities` in `AgentCard` is `{streaming, pushNotifications}`; the list of what an agent does is `skills` |
+| Card panel, `protocols` | → **`supportedInterfaces`** | that is the real field, and it carries the binding |
+| Publish code | `"security-agent"` → the agent's published name; `"/a2a/security"` → `"/a2a"` | matches the demo |
+| Publish code, `MapWellKnownAgentCard(…)` | **delete — this API does not exist** | verified by compiling it against the pinned packages: `CS1061`. There is no well-known card helper in `Microsoft.Agents.AI.Hosting.A2A.AspNetCore` 1.19; you map the route yourself |
+| "When to use A2A", first item | "Independently hosted" → **"You are giving a task, not calling a function"** | the Security Agent is *also* independently hosted and uses MCP, so hosting does not discriminate |
+| Footer note | promote it | *"MCP exposes capabilities. A2A preserves the agent abstraction."* is the best line on the slide and it is currently the smallest text on it |
+
+The consuming code block is **correct** — `A2ACardResolver`, the one-argument constructor,
+`GetAIAgentAsync()` and the string overload of `RunAsync` all compile as shown.
+
+#### Corrected slide text
+
+> **A2A — expose an agent as an agent**
 >
-> - **Discovery, not configuration** — read the agent card: which domain this is and what it owns,
->   who runs it, which skills it declares, and what is not in the records those skills read.
->   *The card states the boundary. It is not the boundary.*
-> - **A task, not a signature** — "Do you have any work order related to L-417?" The peer decides
->   how to answer it.
-> - **Delegate, not handoff** — the answer to the operator is still ours. The peer contributed
->   what only it could know.
+> **MCP exposes capabilities. A2A preserves the agent abstraction.**
 >
-> `A2ACardResolver` → `AgentCard` → `A2AClientFactory` → `A2AAgent`
-> The card names the address *and* the protocol binding. Discovery decides both.
+> Reach for A2A when:
+> - **You are giving a task, not calling a function** — the peer decides how to answer it
+> - **Another owner** — different team, org or contract; you control neither their model nor their data
+> - **They own their context** — tools, memory, execution; their records never enter yours
+> - **Discovered, not configured** — an agent card and declared skills, resolved at runtime
+> - **Interoperable** — cross-framework, cross-language, cross-service
+>
+> *The card states the boundary. It is not the boundary.*
+
+#### Publish (the workforce domain)
+
+```csharp
+// The A2A server resolves the agent by name, so it is registered under that key.
+builder.Services.AddKeyedSingleton<AIAgent>(agentName,
+    (sp, _) => WorkforceAgentFactory.Create(/* project client, tools, model */));
+
+builder.Services.AddA2AServer(agentName);
+
+var app = builder.Build();
+app.MapA2AHttpJson(agentName, "/a2a");
+
+// No well-known-card helper in this version: map it yourself, or no standard
+// resolver can find you. The framework's own /a2a/card is an empty default.
+app.MapGet("/.well-known/agent-card.json", (HttpContext ctx) =>
+    Results.Json(WorkforceAgentCard.Create(agentName, BaseAddress(ctx)),
+                 A2AJsonUtilities.DefaultOptions));
+```
+
+#### Consume (the operations domain)
+
+```csharp
+// Discovery first. This is what makes it a relationship with a named agent
+// rather than a call to a URL - and the card's binding picks the transport.
+var resolver = new A2ACardResolver(peerBaseUri, httpClient);
+var card = await resolver.GetAgentCardAsync(ct);
+
+var peer = new A2AAgent(
+    A2AClientFactory.Create(card, httpClient, new A2AClientOptions()),
+    new A2AAgentOptions { Name = card.Name, Description = card.Description });
+
+var reply = await peer.RunAsync(
+    "Do you have any work order related to L-417?", ct);
+
+// Shorter, when you do not need the card's own fields:
+//   AIAgent peer = await resolver.GetAIAgentAsync(httpClient);
+// The demo takes the long road because the Consulted-peer panel renders
+// card.Provider and card.Skills - reading the card *is* the beat.
+```
+
+#### Agent card (trimmed, and accurate to the real shape)
+
+```json
+{
+  "name": "Caesarea Workforce Agent",
+  "version": "1.0.0",
+  "provider": { "organization": "Caesarea Smart City - Workforce Management" },
+  "supportedInterfaces": [
+    { "url": "https://workforce.caesarea/a2a/", "protocolBinding": "HTTP+JSON" }
+  ],
+  "capabilities": { "streaming": true },
+  "skills": [{
+    "id": "asset-maintenance-situation",
+    "name": "Asset maintenance situation",
+    "description": "Finds the work orders raised for an asset ... Labour cost, contracted
+                    rates and technician identity are not in the records this skill reads."
+  }]
+}
+```
+
+Two details on that JSON are worth leaving visible, because both cost real debugging time:
+`capabilities` is not the list of what the agent does (that is `skills`), and **the interface URL ends
+in a slash** — clients resolve the protocol's method paths relatively against it, so `.../a2a` makes
+every call land one level too high and return 404.
 
 ### Slide 42 — The boundary is where the data is selected, not where it is refused
 
@@ -202,7 +286,59 @@ return new ShareableWorkOrderDetails(
 // never selected, so never in the agent's context.
 ```
 
-## The story (speaker notes)
+## Speaker notes — slide 41 (the mechanism)
+
+Roughly two minutes. This slide is the *how*; slide 42 is the *why it is safe*. Do not merge them.
+
+**Open on the discriminator, not on the protocol.** *"We already have a second agent — the Security
+Agent, from twenty minutes ago. It is independently hosted, it has its own model, its own
+credential, its own restricted database. And we reached it over MCP. So let me kill the obvious
+theory straight away: A2A is not 'the one you use when the other agent is somewhere else.' That was
+already true of the last one."*
+
+*"The difference is one line."* (Point at the subtitle.) ***"MCP exposes capabilities. A2A preserves
+the agent abstraction."*** *"With MCP I published the Security Agent as a function called
+`assess_lighting_requirement`. My Operations Agent saw a tool. It never knew there was an agent on
+the other end. With A2A I publish an agent, and the caller knows it is talking to one — it gets a
+name, an owner, declared skills, and a task-shaped conversation instead of a signature."*
+
+**The publish side — three calls and a fourth you write yourself.** *"Registering it is small.
+Register the agent under a name, hand that name to `AddA2AServer`, map the HTTP+JSON endpoints. Three
+lines."*
+
+*"And then there is the fourth, which is the one I want you to actually remember."* (Point at the
+`MapGet`.) *"There is no `MapWellKnownAgentCard` in this version. I looked, then I compiled it to be
+sure — it does not exist. The framework serves a card at `/a2a/card`, but it is an empty default; it
+does not consult your DI container, and I tried that both keyed and unkeyed before I accepted it. So
+if you want anyone's standard resolver to find you, you map `/.well-known/agent-card.json`
+yourself. Every A2A client in the world looks there. Miss it and you are invisible."*
+
+**The consume side — discovery is the point, not the plumbing.** *"Resolve the card first. That is
+what turns this from 'POST to a URL' into 'consult a named agent': the card tells me who they are,
+which organisation runs them, what they declare they can do."*
+
+*"And it tells me something I did not expect to need: which protocol to speak. The card carries the
+binding, and `A2AClientFactory` builds the right client from it. I learned that the hard way — I
+hand-built a JSON-RPC client against a host serving HTTP+JSON and spent a while staring at 404s.
+Let the card choose."*
+
+*"There is a one-liner — `GetAIAgentAsync` — that does all of it in a single call, and if you do not
+need the card's own fields, use it. The demo takes the long road on purpose, because the panel you
+are about to see renders the provider and the declared skill. Reading the card *is* the beat."*
+
+**One detail that will cost you an afternoon.** (Point at the JSON.) *"The interface URL ends in a
+slash. Clients resolve the protocol's method paths relatively against it. Against `/a2a` the last
+segment gets replaced instead of extended, every call lands one level too high, and everything is a
+404 with nothing in the logs to tell you why. `/a2a/`. One character."*
+
+*"Also: `capabilities` is not the list of what the agent can do. That is `skills`. `capabilities` is
+streaming and push notifications. The naming is unfortunate; the compiler will not save you."*
+
+**Hand off to the demo, not to slide 42 yet.** *"So that is the mechanism. Now the interesting part,
+which is not the protocol at all: what happens when the agent you are consulting holds something it
+must not tell you."*
+
+## Speaker notes — slide 42 and the demo
 
 Told the way it should sound out loud. Roughly four minutes.
 
