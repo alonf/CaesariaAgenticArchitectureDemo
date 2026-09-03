@@ -84,9 +84,18 @@ should not see.
 - **`A2A_SPECIALIST`** region — composing the peer agent, in the service that owns it.
 - **`A2A_DELEGATION`** region — resolving the card and running the peer, in the consulting service.
 - **The card is read before the task is sent.** That is what makes this a relationship with a named
-  agent rather than a call to a URL: the card names who is being consulted, who runs them, which
-  skills they declare, and — in the skill's own description — what they will not disclose. A caller
-  learns the limit at discovery time instead of meeting it as a refusal at runtime.
+  agent rather than a call to a URL: the card names the domain being consulted, what that domain
+  owns, who runs it, which skills it declares, and — in the skill's own description — what is not in
+  the records that skill reads. A caller learns the limit at discovery time instead of meeting it as
+  a refusal at runtime.
+- **The card is documentation, not enforcement.** Every sentence of it could be deleted without
+  weakening the boundary by anything, because what makes the commercial and personal fields
+  unreachable is the projection the tools return, one service away. This is worth saying on stage:
+  it is how the audience can tell the card from the control.
+- **The description names the domain, not just the skill.** An agent card whose identity says
+  "Workforce Management" and whose description only mentions maintenance leaves a reader unable to
+  work out why that domain is answering questions about a streetlight - or that the technician data
+  is held there at all.
 - **The card also chooses the transport.** `A2AClientFactory.Create(card, …)` builds the client for
   the binding the card declares, so discovery decides both the address and the protocol.
 - **Bounded, and budgeted end to end.** The delegated task gets 60 seconds — a whole peer run, but
@@ -108,8 +117,8 @@ should not see.
    delegated: the peer searches its work orders, picks the open WO-8732 over the closed WO-8610,
    and explains the override and its expected clearance.
 2. Read the **Consulted peer (A2A)** block: the agent's name, the organization that runs it, the
-   declared skill *with the peer's own description of it* — including the sentence saying what it
-   will not disclose — and the transport. A named agent with a provider — not an anonymous endpoint,
+   advertised skill *with the peer's own description of it* — including the sentence saying what is
+   not in the records that skill reads — and the transport. A named agent with a provider — not an anonymous endpoint,
    and not a tool in this agent's toolbox. Note the footnote: *"the peer read the work order; this
    agent never did."*
 3. Point at the capability trace, or rather its absence: **"No tool was invoked."** The peer is not
@@ -209,10 +218,18 @@ it: if you only need another capability, add a tool. We need someone who knows t
 So we ask an agent."*
 
 **The card.** *"Watch what happens first — before any question is sent, we read their agent card."*
-(Click. Point at the Consulted peer block.) *"Caesarea Workforce Agent. Run by Workforce Management.
-One declared skill: asset maintenance situation. And read the last line of that skill's own
-description: does not disclose labour cost, contracted rates or technician identity. They told us
-their limit at discovery time. We didn't have to find it by being refused."*
+(Click. Point at the Consulted peer block.) *"Caesarea Workforce Agent. Run by Workforce Management —
+the domain that owns the city's maintenance work orders and the technicians who carry them out. One
+declared skill: asset maintenance situation. And read the last line of that skill's own description:
+labour cost, contracted rates and technician identity are not in the records this skill reads."*
+
+*"Note the wording, because I chose it carefully. Not 'will not disclose' — 'are not in the records
+it reads'. One of those is a promise you can argue with. The other is a fact about the room."*
+
+*"And here is the thing to be honest about: that sentence is a courtesy. It is documentation for a
+caller deciding whether to bother asking. Delete it from the card and nothing leaks — the boundary
+is a service away, in what the tool returns. The card tells you where the boundary is; it is not
+the boundary."*
 
 **The delegation.** *"Then we hand over a task, in the operator's own words, and they run their own
 investigation: they search their work orders, they pick WO-8732 over the closed WO-8610, and they

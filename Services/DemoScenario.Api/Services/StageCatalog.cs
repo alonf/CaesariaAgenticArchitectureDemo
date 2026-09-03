@@ -168,7 +168,7 @@ public sealed class StageCatalog
             ["Scenario: Lights On Reported by a Client - the open work order explains the override"],
             [
                 new(DemoSurface.CommandCenter, "Click Ask the workforce domain about L-417.", "The agent card is resolved first, then a task is delegated: the peer searches its work orders, picks the open one and explains the override."),
-                new(DemoSurface.CommandCenter, "Read the Consulted peer block: who answered, who runs them, which declared skill.", "A named agent with a provider - not an anonymous endpoint, and not a tool in this agent's toolbox."),
+                new(DemoSurface.CommandCenter, "Read the Consulted peer block: who answered, which domain runs them, and the skill's own description of what it does not hold.", "A named agent with a provider - not an anonymous endpoint, and not a tool in this agent's toolbox. The card states the limit; the tool is what enforces it."),
                 new(DemoSurface.CommandCenter, "Now click Ask the workforce domain for the technician cost.", "It does not refuse on policy - it answers that the cost is not visible in the records it can access, because those fields never entered its context."),
                 new(DemoSurface.Switchboard, "Show the work order in full on the Workforce Hub view.", "Technician name, badge, labour cost and rate - all of it withheld, none of it ever sent to the agent.")
             ],

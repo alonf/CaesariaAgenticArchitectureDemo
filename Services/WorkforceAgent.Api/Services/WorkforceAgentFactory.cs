@@ -71,8 +71,9 @@ public static class WorkforceAgentFactory
             options: new ChatClientAgentOptions
             {
                 Name = agentName,
-                Description = "Answers other city domains' questions about an asset's maintenance work orders, "
-                    + "sharing the operational picture and never the commercial or personal detail.",
+                Description = "The Caesarea workforce domain's agent: answers other city domains' questions "
+                    + "about an asset's maintenance situation, from a projection of the work order that carries no "
+                    + "commercial or personal detail.",
                 ChatOptions = new()
                 {
                     ModelId = modelDeploymentName,
