@@ -33,6 +33,13 @@ param modelCapacity int = 50
 @description('Set false together with private endpoints to take the account off the public internet.')
 param publicNetworkAccess bool = true
 
+@description('Resource ID of the Application Insights component the project reports to.')
+param applicationInsightsId string
+
+@description('Connection string of that component.')
+@secure()
+param applicationInsightsConnectionString string
+
 @description('Tags applied to the account and project.')
 param tags object = {}
 
@@ -103,10 +110,15 @@ resource modelDeployment 'Microsoft.CognitiveServices/accounts/deployments@2025-
 // The hosted-agent runtime is not implied by the account and project. A capability host of kind
 // Agents is what provisions it, and public hosting has to be asked for by name.
 //
-// The API version here is deliberately a preview one, and deliberately different from its siblings:
+// The API version is deliberately a preview one, and deliberately different from its siblings:
 // enablePublicHostingEnvironment does not exist on the stable surface. Do not "tidy" this to match
-// the resources above - hosted agents stop working, and nothing in a compile will tell you.
-resource agentsCapabilityHost 'Microsoft.CognitiveServices/accounts/capabilityHosts@2026-07-15-preview' = {
+// the resources above - hosted agents stop working, and nothing in a compile will tell you. This is
+// the version Microsoft's own hosted-agent scaffolding ships, rather than the newest available.
+//
+// It needs no storage, thread-storage or vector-store connections. Those belong to the
+// network-secured standard setup, which brings its own Storage, Cosmos DB and AI Search; a public
+// hosted-agent environment asks for none of them.
+resource agentsCapabilityHost 'Microsoft.CognitiveServices/accounts/capabilityHosts@2025-10-01-preview' = {
   parent: account
   name: 'agents'
   properties: {
@@ -116,6 +128,29 @@ resource agentsCapabilityHost 'Microsoft.CognitiveServices/accounts/capabilityHo
   dependsOn: [
     project
   ]
+}
+
+// Creating Application Insights is not enough: the platform's automatic tracing for hosted agents
+// follows the PROJECT's connection, and without this one there is nothing to follow. The agent still
+// runs, and the traces the lecture points at simply do not appear.
+resource applicationInsightsConnection 'Microsoft.CognitiveServices/accounts/projects/connections@2025-04-01-preview' = {
+  parent: project
+  name: 'application-insights'
+  properties: {
+    category: 'AppInsights'
+    target: applicationInsightsId
+    // The connection string is the credential here, which is why it arrives as a @secure()
+    // parameter and is never an output of this module.
+    authType: 'ApiKey'
+    isSharedToAll: true
+    credentials: {
+      key: applicationInsightsConnectionString
+    }
+    metadata: {
+      ApiType: 'Azure'
+      ResourceId: applicationInsightsId
+    }
+  }
 }
 
 @description('Resource ID of the Foundry account.')

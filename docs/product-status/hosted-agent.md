@@ -87,6 +87,44 @@ the current platform, not deployment truth." Confirmed.
 | Role to deploy | **Foundry Project Manager** at project scope |
 | Tools | Via a project-level **Toolbox MCP endpoint**, not on the agent definition |
 
+## Corrected: the capability host needs no BYO datastores
+
+An earlier draft of this file warned that the Agents capability host might require Bring-Your-Own
+Storage, Cosmos DB and AI Search connections, and that this was the most likely first-deploy
+failure. **That was wrong**, and the error is worth recording because it is easy to repeat.
+
+The BYO requirement is real but belongs to the **network-secured standard setup** - VNet injection,
+no public egress. It does not apply to a public hosted-agent environment. The two live on the same
+documentation page, and the distinction was collapsed.
+
+`Azure-Samples/azd-ai-starter-basic`, the infrastructure `azd ai agent init` scaffolds for hosted
+agents, settles it. There is no Cosmos DB in it anywhere. Storage and AI Search appear only as
+optional tool connections, gated on an opt-in list, for file search and vector grounding. Its
+capability host declares no connections at all:
+
+```bicep
+resource aiFoundryAccountCapabilityHost 'capabilityHosts@2025-10-01-preview' = if (enableHostedAgents && enableCapabilityHost) {
+  name: 'agents'
+  properties: {
+    capabilityHostKind: 'Agents'
+    // IMPORTANT: this is required to enable hosted agents deployment
+    // if no BYO Net is provided
+    enablePublicHostingEnvironment: true
+  }
+}
+```
+
+The same file independently confirms three things this repo had already concluded:
+`allowProjectManagement: true` on the account; the image pull granted to the **project** identity
+rather than the account identity; and `53ca6127-db72-4b80-b1b0-d745d6d5456d` as Foundry User.
+
+It also supplied the shape for the Application Insights project connection, which is now in
+`infra/modules/foundry.bicep` - and a trap with it. That connection authenticates with the
+component's key, so `DisableLocalAuth: true` on Application Insights leaves the connection looking
+valid and produces no traces at all. This repo had set exactly that. It is removed, and the
+connection string is now treated as the credential it is: a `@secure()` parameter, and no longer a
+deployment output.
+
 ## Not yet verified
 
 - **Outbound egress from a deployed sandbox.** The docs state that Standard Setup *with private

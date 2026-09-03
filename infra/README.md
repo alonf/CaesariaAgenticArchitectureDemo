@@ -48,6 +48,10 @@ working demo into something that survives a security review.
   changes agent behaviour with no code change and no deployment — the least debuggable outage there
   is.
 - **Deploy by digest, not tag.** A tag can be moved after it is approved. A digest cannot.
+- **Application Insights keeps local auth on**, unlike the Foundry account. The project's
+  `AppInsights` connection authenticates with that component's key, so disabling it would leave the
+  connection valid-looking and the traces missing - a failure with no error to find. The connection
+  string is handled as the credential it therefore is, and is not a deployment output.
 - **Workload identity federation.** No `AZURE_CREDENTIALS`, no client secret. The runner proves who
   it is with a short-lived OIDC token.
 - **`Foundry User` for workloads, `Foundry Project Manager` only for CI.** A running service that
@@ -72,10 +76,6 @@ knowing before you size anything:
 
 ## What is missing, and named rather than hidden
 
-- **The Application Insights connection to the Foundry project.** The workspace and the component
-  are created, but nothing connects them to the project yet, so the platform's automatic tracing for
-  hosted agents is **not** live. Add a project connection of category `AppInsights` and verify an
-  actual agent trace before believing any claim to the contrary - including one in this file.
 - **Workload identities.** `workloadPrincipalIds` is plumbed end to end but empty: the services run
   on the presenter's machine, as the presenter. Populating it is what the Governance stage is for.
 - **Private networking.** `publicNetworkAccess: false` is wired through every module, but the

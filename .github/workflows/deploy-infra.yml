@@ -1,10 +1,20 @@
 name: deploy-infra
 
 # The platform layer. Runs rarely, changes the shape of the estate, and is gated by an environment
-# approval. It provisions no agent version on purpose: an image digest is not infrastructure.
+# approval before it touches anything.
 #
-# Authentication is workload identity federation. There is no AZURE_CREDENTIALS secret and no client
-# secret anywhere in this repository - the runner proves who it is with a short-lived OIDC token.
+# Authentication is workload identity federation: GitHub mints a short-lived OIDC token per run and
+# exchanges it for an Azure token. There is no client secret in this repository and no
+# AZURE_CREDENTIALS blob - the identifiers below are variables rather than secrets because that is
+# what they are. Nothing here is worth stealing.
+#
+# The deployment is idempotent by construction rather than by convention:
+#   - role assignments are named guid(scope, principal, role), so a re-run addresses the same
+#     assignment instead of creating a second one;
+#   - resource names derive from uniqueString(subscription, environment, location), so they are
+#     stable across runs and distinct across environments.
+# The what-if step below proves it: on a redeploy of unchanged templates it reports zero changes,
+# and that count is printed to the job summary so nobody has to take it on trust.
 
 on:
   workflow_dispatch:
@@ -14,30 +24,34 @@ on:
         type: choice
         options: [dev, prod]
         default: dev
-      whatIf:
-        description: Preview the change without applying it
-        type: boolean
-        default: true
+      mode:
+        description: Preview only, or preview then apply
+        type: choice
+        options: [preview, apply]
+        default: preview
   pull_request:
     paths: ['infra/**', '.github/workflows/deploy-infra.yml']
 
 permissions:
   id-token: write
   contents: read
+  pull-requests: write
 
 concurrency:
   # One deployment per environment at a time. Two concurrent ARM deployments to the same scope is
-  # how templates and reality drift apart.
+  # how a template and reality drift apart.
   group: infra-${{ github.event.inputs.environmentName || 'dev' }}
   cancel-in-progress: false
 
 jobs:
-  validate:
-    # On a pull request this is the only job that runs: compile and what-if, never apply.
+  preview:
+    name: Preview (what-if)
     runs-on: ubuntu-latest
-    # Bound to the selected environment so dev and prod get their own variables, secrets and
-    # protection rules. A single shared environment would make the input decorative.
+    # Bound to the selected environment so dev and prod carry their own variables and protection
+    # rules. A single shared environment would make the input decorative.
     environment: ${{ github.event.inputs.environmentName || 'dev' }}
+    outputs:
+      changeCount: ${{ steps.whatif.outputs.changeCount }}
     steps:
       - uses: actions/checkout@v4
 
@@ -51,7 +65,11 @@ jobs:
       - name: Lint the templates
         run: az bicep build --file infra/main.bicep --stdout > /dev/null
 
+      # what-if is a read-only preflight against the real resource providers. It is the gate that
+      # catches what compilation cannot: a property the service rejects, a missing prerequisite, a
+      # model version that does not exist in the region.
       - name: What-if
+        id: whatif
         run: |
           az deployment sub what-if \
             --name "caesarea-infra-${{ github.run_id }}" \
@@ -61,11 +79,46 @@ jobs:
               environmentName="${{ github.event.inputs.environmentName || 'dev' }}" \
               location="${{ vars.AZURE_LOCATION }}" \
               deploymentPrincipalId="${{ vars.AZURE_DEPLOYMENT_PRINCIPAL_ID }}" \
-              modelVersion="${{ vars.AZURE_MODEL_VERSION }}"
+              deploymentPrincipalType=ServicePrincipal \
+              modelVersion="${{ vars.AZURE_MODEL_VERSION }}" \
+            --no-pretty-print > whatif.json
 
-  provision:
-    needs: validate
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.whatIf != 'true'
+          # Ignored means "no change". Unsupported means what-if could not analyse the resource -
+          # role assignments whose names depend on a principal ID that does not exist yet - and is
+          # not evidence either way, so it is reported separately rather than counted as a change.
+          CHANGES=$(jq '[.changes[] | select(.changeType | . != "Ignored" and . != "NoChange" and . != "Unsupported")] | length' whatif.json)
+          UNANALYSED=$(jq '[.changes[] | select(.changeType == "Unsupported")] | length' whatif.json)
+          echo "changeCount=$CHANGES" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## Platform preview — \`${{ github.event.inputs.environmentName || 'dev' }}\`"
+            if [ "$CHANGES" -eq 0 ]; then
+              echo ""
+              echo "**No changes.** The deployed platform already matches this template."
+            else
+              echo ""
+              echo "**$CHANGES change(s):**"
+              echo ""
+              jq -r '.changes[] | select(.changeType | . != "Ignored" and . != "NoChange" and . != "Unsupported") | "- `\(.changeType)` \(.resourceId | split("/providers/") | last)"' whatif.json
+            fi
+            if [ "$UNANALYSED" -gt 0 ]; then
+              echo ""
+              echo "_$UNANALYSED resource(s) could not be analysed ahead of deployment; their identifiers depend on values that do not exist until the run is under way._"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: whatif-${{ github.event.inputs.environmentName || 'dev' }}-${{ github.run_id }}
+          path: whatif.json
+          retention-days: 30
+
+  apply:
+    name: Apply
+    needs: preview
+    # Never on a pull request. A PR gets the preview and nothing else.
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.mode == 'apply'
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.environmentName }}
     steps:
@@ -78,8 +131,9 @@ jobs:
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
+      # Safe to run when the preview reported no changes: ARM converges rather than recreating, so
+      # this is a no-op that still refreshes the outputs the release pipeline consumes.
       - name: Provision
-        id: provision
         run: |
           az deployment sub create \
             --name "caesarea-infra-${{ github.run_id }}" \
@@ -89,12 +143,17 @@ jobs:
               environmentName="${{ github.event.inputs.environmentName }}" \
               location="${{ vars.AZURE_LOCATION }}" \
               deploymentPrincipalId="${{ vars.AZURE_DEPLOYMENT_PRINCIPAL_ID }}" \
+              deploymentPrincipalType=ServicePrincipal \
               modelVersion="${{ vars.AZURE_MODEL_VERSION }}" \
             --query properties.outputs -o json > outputs.json
-          # Surface the handoff values the release pipeline needs. They are outputs, not secrets:
-          # an endpoint is not a credential when local auth is disabled on the account.
-          echo "### Platform outputs" >> "$GITHUB_STEP_SUMMARY"
-          jq -r 'to_entries[] | "- `\(.key)` = `\(.value.value)`"' outputs.json >> "$GITHUB_STEP_SUMMARY"
+
+          {
+            echo "## Platform outputs"
+            echo ""
+            echo "Set these as environment variables on the \`${{ github.event.inputs.environmentName }}\` environment so deploy-hosted-agent can consume them."
+            echo ""
+            jq -r 'to_entries[] | "- `\(.key)` = `\(.value.value)`"' outputs.json
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload outputs
         uses: actions/upload-artifact@v4

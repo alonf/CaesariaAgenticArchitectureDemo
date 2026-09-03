@@ -73,6 +73,18 @@ module observability 'modules/observability.bicep' = {
   }
 }
 
+// A second pass, because the project must exist before its identity can be granted anything, and
+// the project needs Application Insights to exist before it can connect to it. Splitting the role
+// assignment out is what breaks that circle.
+module observabilityAccess 'modules/observability-access.bicep' = {
+  scope: resourceGroup
+  name: 'observability-access'
+  params: {
+    applicationInsightsName: 'appi-caesarea-${environmentName}'
+    projectPrincipalId: foundry.outputs.projectPrincipalId
+  }
+}
+
 module registry 'modules/registry.bicep' = {
   scope: resourceGroup
   name: 'registry'
@@ -96,6 +108,8 @@ module foundry 'modules/foundry.bicep' = {
     modelName: modelName
     modelVersion: modelVersion
     publicNetworkAccess: publicNetworkAccess
+    applicationInsightsId: observability.outputs.applicationInsightsId
+    applicationInsightsConnectionString: observability.outputs.applicationInsightsConnectionString
     tags: tags
   }
 }
@@ -138,5 +152,6 @@ output AZURE_CONTAINER_REGISTRY_RESOURCE_ID string = registry.outputs.registryId
 @description('Model deployment name.')
 output MODEL_DEPLOYMENT_NAME string = foundry.outputs.modelDeploymentName
 
-@description('Application Insights connection string, for services the platform does not inject into.')
-output APPLICATIONINSIGHTS_CONNECTION_STRING string = observability.outputs.applicationInsightsConnectionString
+// Application Insights is deliberately absent from these outputs. Its connection string carries a
+// usable ingestion key, and a deployment output is readable by anyone with read on the deployment.
+// The platform injects it into hosted agents on its own; nothing else in this system needs it.
