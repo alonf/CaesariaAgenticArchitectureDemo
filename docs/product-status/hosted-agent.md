@@ -102,6 +102,52 @@ the current platform, not deployment truth." Confirmed.
 - **Cold-start time** for a .NET image, which determines whether the on-stage invoke is comfortable
   or awkward.
 
+## Related work: microsoft/AIAgentsforITOps
+
+Checked 2026-09-03, against the git tree API rather than rendered pages - a first pass read from
+GitHub's tree view reported an empty `src/path2` and an "under development" banner, and was wrong.
+Path 2 landed 2026-06-23 and had commits the day this was written.
+
+The workshop's stated scope is *"infrastructure management, not agent development"* - the mirror
+image of H08. Its six labs are Deploy Infrastructure, Managed Identity, Networking, Secrets
+Management, Monitoring, Cost Management. Useful as a place to send deep ops questions.
+
+What it is **not** is a hosted-agent reference. Path 2 deploys a **prompt agent**: the AKS container
+is a chat UI whose project file references `Azure.Identity` and nothing else, and the agent itself is
+declarative configuration in Foundry. Its own source comments say so. No container image, no agent
+SDK, no Agent Framework - and .NET 8 throughout.
+
+The consequence worth recording: its identity lab enumerates the AKS control-plane and kubelet
+identities, the Search identity, the Foundry account and project identities and the signed-in user.
+**Every one is a service-to-service identity.** There is no agent principal, because prompt agents do
+not get one. The per-agent Entra identity is specific to hosted agents, and it is absent from
+Microsoft's own IT/Ops identity material.
+
+Two cross-checks from their working code, which agree with this repo's pipeline:
+
+- endpoint `POST {projectEndpoint}/agents/{name}/endpoint/protocols/openai/responses`
+- token scope `https://ai.azure.com/.default`
+
+One difference to confirm against a live call: they grant the calling workload `Cognitive Services
+User`; `infra/modules/rbac.bicep` grants the narrower `Foundry User`. Both are plausible; only one
+has been exercised.
+
+Also worth borrowing: `previous_response_id` is how the Responses protocol chains multi-turn context
+without the caller holding history. Relevant if the hosted composition needs a Session-stage
+equivalent.
+
+## Cost model
+
+Billing is CPU and memory consumed across **active sessions**, not per agent and not per request.
+
+- `cpu` and `memory` describe **one session**. Sandboxes are per session, so oversizing multiplies
+  cost by concurrency. Available pairs: 0.5 vCPU/1 GiB, 1/2 GiB, 2/4 GiB.
+- Idle compute is deprovisioned after the configured timeout (5-60 minutes, default 15) and session
+  state is restored on resume, so a short timeout costs a cold start rather than the work.
+- Right-size from App Insights Performance under representative load: sustained peaks above ~70% of
+  allocation mean raise it next version, well below means lower it. Versions are immutable, so the
+  comparison is honest.
+
 ## Stage design decision on record
 
 The Hosting stage will host **exactly one** agent — the Operations Agent. Slide 43's claim is that

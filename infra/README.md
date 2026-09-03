@@ -53,6 +53,23 @@ working demo into something that survives a security review.
 - **`Foundry User` for workloads, `Foundry Project Manager` only for CI.** A running service that
   can redefine the agent it is running is a service that can rewrite its own instructions.
 
+## Cost, because it is a design input and not an afterthought
+
+Hosted agents bill on **CPU and memory consumed across active sessions**. Three consequences worth
+knowing before you size anything:
+
+- **`cpu` and `memory` describe one session, not the agent.** A sandbox is created per session, so
+  oversizing multiplies your bill by concurrency rather than adding to it. The available pairs are
+  0.5 vCPU/1 GiB, 1/2 GiB and 2/4 GiB - there is no smaller step to retreat to.
+- **Idle compute is deprovisioned, and that is the scale-to-zero story.** The timeout is
+  configurable from 5 to 60 minutes and defaults to 15. Session state (`$HOME` and `/files`)
+  survives and is restored on resume, so a short timeout costs a cold start rather than the work.
+  Sessions are deleted outright after 30 days idle.
+- **Right-size from evidence, not from a guess.** App Insights is wired up by the platform; look at
+  Performance for CPU, available memory and request duration under a representative load. Sustained
+  peaks above roughly 70% of allocation mean raise it on the next version; well below means lower
+  it. Versions are immutable, so every change is a new one and you can compare them honestly.
+
 ## What is missing, and named rather than hidden
 
 - **Private networking.** `publicNetworkAccess: false` is wired through every module, but the
