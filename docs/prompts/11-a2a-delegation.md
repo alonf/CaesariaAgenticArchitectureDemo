@@ -163,8 +163,9 @@ Copy-ready. Keep the two halves distinct — the left column is Stage 10, the ri
 
 > **A tool is something you call. An agent is someone you ask.**
 >
-> - **Discovery, not configuration** — read the agent card: who they are, who runs them, which
->   skills they declare, and what they will not answer.
+> - **Discovery, not configuration** — read the agent card: which domain this is and what it owns,
+>   who runs it, which skills it declares, and what is not in the records those skills read.
+>   *The card states the boundary. It is not the boundary.*
 > - **A task, not a signature** — "Do you have any work order related to L-417?" The peer decides
 >   how to answer it.
 > - **Delegate, not handoff** — the answer to the operator is still ours. The peer contributed
