@@ -141,6 +141,13 @@ The demo runs as one application with a presenter-controlled `DemoStage`:
 `CommandCenter.Api` owns the selected stage. `DemoScenario.Api` reads and changes it through that authoritative
 boundary, so switching stages does not restart the application.
 
+## Deploying
+
+The demo runs entirely on a laptop under Aspire, needing nothing in Azure but a model deployment.
+For the cloud half — the platform and the Foundry hosted agent — see
+**[docs/deployment.md](docs/deployment.md)**: prerequisites, the one-time bootstrap script, the two
+workflows, expected output at each step, teardown, and how to rebuild the whole thing from a clone.
+
 ## Architecture boundaries
 
 - `EnergyHub.Api` owns authoritative lighting state — and serves its streetlight tool over MCP at `/mcp`.

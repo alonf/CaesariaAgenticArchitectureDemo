@@ -102,7 +102,18 @@ chose. Treat anything below that line as reviewed, not proven:
 az deployment sub what-if   --name caesarea-whatif --location westus3   --template-file infra/main.bicep   --parameters environmentName=dev location=westus3                deploymentPrincipalId=<principal object ID>                modelVersion=<a version from `az cognitiveservices model list`>
 ```
 
-## Running it
+## How this actually gets deployed
+
+Not from a command line. [`deploy-infra.yml`](../.github/workflows/deploy-infra.yml) runs these
+templates, gated by a GitHub environment approval, authenticated with workload identity federation.
+The one-time identity setup is [`scripts/Bootstrap-GitHubOidc.ps1`](../scripts/Bootstrap-GitHubOidc.ps1),
+and the whole walkthrough — prerequisites, expected output, teardown, rebuilding from nothing — is
+[docs/deployment.md](../docs/deployment.md).
+
+The command below is the break-glass path for when GitHub is unavailable. It leaves no approval
+record and no run history, which is exactly why it is not the normal route.
+
+## Running it directly
 
 ```bash
 az deployment sub create \
