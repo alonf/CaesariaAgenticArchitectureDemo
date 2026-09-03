@@ -1632,8 +1632,17 @@ svg {
     font-weight: 600;
 }
 
+.a2a-skill-note {
+    display: block;
+    margin-top: 3px;
+    color: var(--cp-text-muted);
+    font-size: 0.76rem;
+}
+
 .a2a-reply {
-    margin: 6px 0 0;
+    /* The bottom margin separates the peer's own words from the footnote about them; without it
+       the two run together as one paragraph. */
+    margin: 6px 0 10px;
     font-size: 0.86rem;
     overflow-wrap: anywhere;
 }

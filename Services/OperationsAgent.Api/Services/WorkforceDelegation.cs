@@ -86,6 +86,7 @@ public sealed partial class WorkforceDelegation(
                 card.Name,
                 card.Provider?.Organization ?? "unstated",
                 card.Skills.Count > 0 ? card.Skills[0].Id : "unstated",
+                card.Skills.Count > 0 ? card.Skills[0].Description : string.Empty,
                 $"A2A ({card.SupportedInterfaces[0].ProtocolBinding})",
                 question,
                 reply.Text,
@@ -107,7 +108,8 @@ public sealed partial class WorkforceDelegation(
             return new OperationsAgentRemoteConsult(
                 // No card was read, so nothing here is claimed as discovered - not the provider,
                 // not the skill, and not the binding the peer would have declared.
-                "Caesarea Workforce Agent", "unreachable", "unstated", "A2A", question, Answer: string.Empty, Failure: reason);
+                "Caesarea Workforce Agent", "unreachable", "unstated", string.Empty, "A2A",
+                question, Answer: string.Empty, Failure: reason);
         }
     }
 }

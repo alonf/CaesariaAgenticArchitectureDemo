@@ -435,7 +435,11 @@
                                         <p class="a2a-agent">@consult.AgentName</p>
                                         <dl class="delegation-fields">
                                             <div><dt>Provider</dt><dd>@consult.Provider</dd></div>
-                                            <div><dt>Skill</dt><dd>@consult.SkillId</dd></div>
+                                            @* The skill's own description, not only its id. It is
+                                               where the peer states what it will not disclose, and
+                                               reading that before asking is the whole point of
+                                               discovery - so it has to be on screen. *@
+                                            <div><dt>Skill</dt><dd>@consult.SkillId<span class="a2a-skill-note">@consult.SkillDescription</span></dd></div>
                                             <div><dt>Transport</dt><dd>@consult.Transport</dd></div>
                                             <div><dt>Task sent</dt><dd>@consult.Question</dd></div>
                                         </dl>

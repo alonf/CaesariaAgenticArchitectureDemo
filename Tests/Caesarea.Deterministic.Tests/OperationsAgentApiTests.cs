@@ -330,7 +330,8 @@ internal sealed class FakeOperationsAgent : IOperationsAgent
                 OperationsAgentToolSource.Local, 1, [],
                 new OperationsAgentRemoteConsult(
                     "Caesarea Workforce Agent", "Caesarea Smart City - Workforce Management",
-                    "asset-maintenance-situation", "A2A (HTTP+JSON)", question, "Answer.", Failure: null)));
+                    "asset-maintenance-situation", "Does not disclose labour cost.", "A2A (HTTP+JSON)",
+                    question, "Answer.", Failure: null)));
 
     public Task<OperationsAgentAnswer> AskAsync(
         string question, string? sessionId, string correlationId, CancellationToken cancellationToken) =>

@@ -52,6 +52,11 @@ public enum OperationsAgentToolCallStatus
 /// <param name="AgentName">The consulted agent's published name.</param>
 /// <param name="Provider">The organization that runs it, from its card.</param>
 /// <param name="SkillId">The declared skill the consultation used.</param>
+/// <param name="SkillDescription">
+/// That skill as the peer describes it - including what it says it will not disclose. This is the
+/// point of discovery: the caller learns the boundary from the card before asking, instead of
+/// meeting it as a refusal at runtime.
+/// </param>
 /// <param name="Transport">The boundary the consultation crossed.</param>
 /// <param name="Question">The task the Operations Agent delegated.</param>
 /// <param name="Answer">The peer's answer, in its own words.</param>
@@ -60,6 +65,7 @@ public sealed record OperationsAgentRemoteConsult(
     string AgentName,
     string Provider,
     string SkillId,
+    string SkillDescription,
     string Transport,
     string Question,
     string Answer,

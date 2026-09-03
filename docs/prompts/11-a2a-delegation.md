@@ -104,7 +104,8 @@ should not see.
    delegated: the peer searches its work orders, picks the open WO-8732 over the closed WO-8610,
    and explains the override and its expected clearance.
 2. Read the **Consulted peer (A2A)** block: the agent's name, the organization that runs it, the
-   declared skill, and the transport. A named agent with a provider — not an anonymous endpoint,
+   declared skill *with the peer's own description of it* — including the sentence saying what it
+   will not disclose — and the transport. A named agent with a provider — not an anonymous endpoint,
    and not a tool in this agent's toolbox. Note the footnote: *"the peer read the work order; this
    agent never did."*
 3. Point at the capability trace, or rather its absence: **"No tool was invoked."** The peer is not
@@ -239,7 +240,7 @@ the truth. Its extraction tool returns eight fields, and none of them is a cost.
 
 **The reveal.** (Switch to the switchboard, Workforce Records, *Show work orders in full*.)
 *"Here is the actual work order. Green crossed the boundary. Red never left the workforce domain:
-J. Cohen, badge 4471, twelve hundred and forty shekels, premium call-out rate. And look at the
+J. Cohen, badge 4471, one thousand two hundred and forty, premium call-out rate. And look at the
 technician's note as written — 'took three hours beyond the quote, bills at the premium rate agreed
 for J. Cohen, flag it to finance.' Operational fact and commercial fact, in one paragraph, the way
 a real work order actually arrives."*
