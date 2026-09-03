@@ -10,6 +10,7 @@
     <Project Path="Contracts/OperationsAgent.Contracts/OperationsAgent.Contracts.csproj" />
     <Project Path="Contracts/Security.Contracts/Security.Contracts.csproj" />
     <Project Path="Contracts/SmartPole.Contracts/SmartPole.Contracts.csproj" />
+    <Project Path="Contracts/Workforce.Contracts/Workforce.Contracts.csproj" />
   </Folder>
   <Folder Name="/Services/">
     <Project Path="Services/CommandCenter.Api/CommandCenter.Api.csproj" />
@@ -18,6 +19,8 @@
     <Project Path="Services/OperationsAgent.Api/OperationsAgent.Api.csproj" />
     <Project Path="Services/SecurityAgent.Api/SecurityAgent.Api.csproj" />
     <Project Path="Services/SecurityHub.Api/SecurityHub.Api.csproj" />
+    <Project Path="Services/WorkforceAgent.Api/WorkforceAgent.Api.csproj" />
+    <Project Path="Services/WorkforceHub.Api/WorkforceHub.Api.csproj" />
     <Project Path="Services/SmartPole.Simulator.Api/SmartPole.Simulator.Api.csproj" />
   </Folder>
   <Folder Name="/Shared/" />

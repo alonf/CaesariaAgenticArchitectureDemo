@@ -18,6 +18,8 @@
     <ProjectReference Include="..\Services\OperationsAgent.Api\OperationsAgent.Api.csproj" />
     <ProjectReference Include="..\Services\SecurityAgent.Api\SecurityAgent.Api.csproj" />
     <ProjectReference Include="..\Services\SecurityHub.Api\SecurityHub.Api.csproj" />
+    <ProjectReference Include="..\Services\WorkforceAgent.Api\WorkforceAgent.Api.csproj" />
+    <ProjectReference Include="..\Services\WorkforceHub.Api\WorkforceHub.Api.csproj" />
     <ProjectReference Include="..\Services\SmartPole.Simulator.Api\SmartPole.Simulator.Api.csproj" />
   </ItemGroup>
 

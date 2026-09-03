@@ -74,6 +74,13 @@ public static class DemoSnippets
     /// permission boundary, consulted as a tool while the caller keeps ownership of the answer.
     /// </summary>
     public const string MultiAgent = "MULTI_AGENT";
+
+    /// <summary>
+    /// Gets the A2A specialist snippet: a specialist agent published for other domains to consult,
+    /// whose tools hand it only the shareable projection of the records it works from.
+    /// </summary>
+    public const string A2ASpecialist = "A2A_SPECIALIST";
+
 }
 
 /// <summary>

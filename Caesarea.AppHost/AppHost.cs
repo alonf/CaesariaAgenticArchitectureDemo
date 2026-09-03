@@ -18,10 +18,19 @@ var securityAgentApi = builder.AddProject<Projects.SecurityAgent_Api>("securitya
     .WithReference(securityHub)
     .WaitFor(securityHub);
 
+// The workforce domain: the work-order system of record, and the only agent permitted to read it.
+// The Operations Agent has no reference to the hub - it consults the agent over A2A instead.
+var workforceHub = builder.AddProject<Projects.WorkforceHub_Api>("workforcehub-api");
+
+var workforceAgentApi = builder.AddProject<Projects.WorkforceAgent_Api>("workforceagent-api")
+    .WithReference(workforceHub)
+    .WaitFor(workforceHub);
+
 var operationsAgentApi = builder.AddProject<Projects.OperationsAgent_Api>("operationsagent-api")
     .WithReference(energyHub)
     .WithReference(commandCenterApi)
     .WithReference(securityAgentApi)
+    .WithReference(workforceAgentApi)
     .WaitFor(energyHub);
 
 // DemoScenario references the Operations Agent (to propagate stage changes) but does not wait for
@@ -32,6 +41,7 @@ var demoScenarioApi = builder.AddProject<Projects.DemoScenario_Api>("demoscenari
     .WithReference(commandCenterApi)
     .WithReference(operationsAgentApi)
     .WithReference(securityHub)
+    .WithReference(workforceHub)
     .WaitFor(smartpoleSimulator)
     .WaitFor(energyHub)
     .WaitFor(commandCenterApi)
