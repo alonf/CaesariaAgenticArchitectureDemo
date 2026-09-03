@@ -1,0 +1,117 @@
+# Foundry Hosted Agent — verified platform status
+
+Required by requirements §22. This file records what was **verified by running it**, and what is
+still unverified, so the Hosting stage is designed against facts rather than against the deck.
+
+Spike date: 2026-09-03. Verified on the pinned `1.19.0-preview` MAF family.
+
+## Verified by compiling
+
+`Microsoft.Agents.AI.Foundry.Hosting` publishes **`1.19.0-preview.260822.1`** — the same version as
+the rest of the solution. **The hosting path needs no family upgrade.**
+
+Its transitive dependencies at that version:
+
+| Package | Version |
+| --- | --- |
+| `Azure.AI.AgentServer.Core` | 1.0.0-beta.28 |
+| `Azure.AI.AgentServer.Responses` | 1.0.0-beta.8 |
+| `Azure.AI.Projects` | 2.1.0-beta.4 |
+| `Microsoft.Agents.AI.Foundry` | 1.19.0-preview.260822.1 |
+| `ModelContextProtocol` | 2.1.0 |
+
+The deck's slide-43 snippet **compiles verbatim, 0 errors and 0 warnings**. The APIs are split
+across two packages, which the slide does not say:
+
+| API | Assembly |
+| --- | --- |
+| `AgentHost.CreateBuilder(args)` | `Azure.AI.AgentServer.Core` |
+| `AgentHostBuilder.RegisterProtocol(string, Action<IEndpointRouteBuilder>)` | `Azure.AI.AgentServer.Core` |
+| `IServiceCollection.AddFoundryResponses(...)` | `Microsoft.Agents.AI.Foundry.Hosting` |
+| `IEndpointRouteBuilder.MapFoundryResponses(string)` | `Microsoft.Agents.AI.Foundry.Hosting` |
+
+Also present and relevant later: `AddFoundryToolboxes(TokenCredential, params string[])` — the .NET
+entry point for Foundry-managed tools; `InMemoryAgentSessionStore` / `FileSystemAgentSessionStore` /
+`FoundryAgentSessionStore`; `FoundryJsonCheckpointStore` and `ApplyWorkflowCheckpointing`;
+`ConsentAwareMcpClientAIFunction` and the MCP consent types.
+
+One API-shape note: `ChatClientAgentOptions` has no `Instructions` property. Instructions live on
+`ChatClientAgentOptions.ChatOptions.Instructions`, as the rest of this solution already does it.
+
+## Verified by running it locally, with no Azure at all
+
+A minimal host built from the snippet above, over a scripted `IChatClient`:
+
+- listens on **port 8088**
+- serves **`GET /readiness` → 200**, mapped by the protocol library without being asked
+- serves **`POST /responses`** non-streaming, returning a well-formed Responses payload:
+  `object: "response"`, `status: "completed"`, `output[].content[].output_text`, and an
+  `agent_session_id`
+- serves **`POST /responses`** with `stream: true` as SSE: `response.created`,
+  `response.in_progress`, … with `sequence_number` maintained by the library
+
+**This matters for the lecture.** The hosted-agent *protocol* is demonstrable on a laptop with no
+cloud, no credential and no deployment. The local/hosted contrast does not depend on the network in
+the room for its first half.
+
+## Verified stale — the deck's Bicep
+
+Slide 43 shows `minReplicas: 0` / `maxReplicas: 5`. **There is no replica model.** Hosted agents
+scale per *session*, in VM-isolated sandboxes:
+
+- no replica count, no warm pool — the docs say so explicitly
+- sandbox sizes are **0.5 vCPU/1 GiB, 1/2 GiB, 2/4 GiB**, and describe *one session*, so oversizing
+  multiplies cost by concurrency
+- idle timeout is configurable **5–60 minutes, default 15**; compute is then deprovisioned and
+  `$HOME` + `/files` persist, restored when the session resumes
+- sessions are deleted after 30 days idle
+
+That is a better scale-to-zero story than the slide's, and it needs different words.
+
+Requirements §13.15 predicted this: the excerpt is "a lecture artifact requiring validation against
+the current platform, not deployment truth." Confirmed.
+
+## Platform facts gathered from current docs
+
+| Topic | Fact |
+| --- | --- |
+| Languages | Python and **C#** |
+| Protocols | Responses, Invocations, Invocations-WS, **A2A (preview)**, **Activity** (Teams/M365). One container may expose several |
+| Image | **linux/amd64 only** |
+| Docker required | **No** — `azd deploy` builds remotely in ACR; a zip source-code path also exists |
+| Identity | The platform creates a **dedicated Entra agent identity per agent** at deploy time. §22's "no embedded Azure credential" is satisfied by the platform, not by our code |
+| Tracing | App Insights connection string **auto-injected**; OTel traces on by default |
+| Injected env | `FOUNDRY_PROJECT_ENDPOINT`, `FOUNDRY_PROJECT_ARM_ID`, `FOUNDRY_AGENT_NAME`, `FOUNDRY_AGENT_VERSION`, `FOUNDRY_AGENT_SESSION_ID`, `APPLICATIONINSIGHTS_CONNECTION_STRING` |
+| Secrets | `${{connections.<name>.credentials.<field>}}`, resolved from project connections at sandbox start |
+| Versions | Immutable; one version serves 100% of traffic; no traffic splitting |
+| Role to deploy | **Foundry Project Manager** at project scope |
+| Tools | Via a project-level **Toolbox MCP endpoint**, not on the agent definition |
+
+## Not yet verified
+
+- **Outbound egress from a deployed sandbox.** The docs state that Standard Setup *with private
+  networking* has "no public egress", and that default templates create public resources; in BYO-VNet
+  mode the Micro VM has "a dedicated network interface and uses its own IP for outbound
+  communication". Nowhere is egress from the **default, non-isolated** sandbox stated directly. It
+  is very likely open, but it is an inference, and it is the fact underneath any decision about
+  whether a hosted agent could reach a tunnel. **Settle it with one outbound request from inside a
+  deployed container before relying on it.**
+- **`azd` deployment end to end.** Not attempted yet. Blocker found: the `azure.ai.agents` azd
+  extension reports **Incompatible** (installed 1.0.0-beta.11, latest 1.0.0-beta.13) against the
+  installed `azd` 1.31.2, which itself has 1.33.0 available. Upgrading both is a prerequisite.
+- **Cold-start time** for a .NET image, which determines whether the on-stage invoke is comfortable
+  or awkward.
+
+## Stage design decision on record
+
+The Hosting stage will host **exactly one** agent — the Operations Agent. Slide 43's claim is that
+the agent code does not determine where it must run, and moving one agent proves it; a second
+multiplies the ACR/version/identity surface while proving the same thing.
+
+It will run a **reduced hosted composition**: same code, instructions and skills, with a toolset
+that does not require the city hubs on the presenter's laptop. This is a deliberate, recorded
+deviation from §22's presenter step 6 ("compare same scenario behavior"), taken because the
+alternative is an inbound tunnel from Azure to the presenter's machine over conference wi-fi. The
+substitute beat is stronger material anyway: *the hosting decision is about where the agent has to
+live to reach what it needs.* A dev-tunnel variant stays documented as an optional full-fidelity
+path, not the stage path.
