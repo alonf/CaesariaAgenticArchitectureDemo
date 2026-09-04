@@ -147,7 +147,10 @@ resource applicationInsightsConnection 'Microsoft.CognitiveServices/accounts/pro
     // The connection string is the credential here, which is why it arrives as a @secure()
     // parameter and is never an output of this module.
     authType: 'ApiKey'
-    isSharedToAll: true
+    // isSharedToAll is deliberately not set. Setting it to true is accepted and then stored as
+    // false, so the template and the resource disagree permanently and every what-if reports a
+    // change that no apply can ever settle. It governs whether sibling projects may use this
+    // connection, and there is one project.
     credentials: {
       key: applicationInsightsConnectionString
     }

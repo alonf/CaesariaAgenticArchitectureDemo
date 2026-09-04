@@ -232,14 +232,31 @@ Then **run it again with mode `apply`**. The summary ends with the platform outp
 
 ### Confirming idempotency
 
-Run `preview` again after applying. It should report:
+Re-running `apply` against an already-deployed environment is safe and converges: same resources,
+same names, same outputs, nothing duplicated. That is the property that matters, and it is the one to
+check — run `apply` twice and compare the outputs.
 
-```text
-**No changes.** The deployed platform already matches this template.
-```
+**What `preview` will not tell you is "No changes."** Expect it to report roughly six `Modify`
+entries forever, on an environment that is perfectly up to date. They are artefacts of how what-if
+compares, not drift:
 
-That is the proof, not the promise. If it reports changes after an unchanged apply, something in the
-template is non-deterministic and worth finding before you trust the pipeline.
+- **Server-computed properties the template never declares.** What-if diffs the template against the
+  live resource, so anything Azure populates itself — `properties.armFeatures`, `associatedProjects`
+  and `defaultProject` on the account, `currentCapacity` and `raiPolicyName` on the model deployment,
+  `kind`, `endpoints`, `internalId` and `isDefault` on the project, `dataEndpointEnabled` and
+  `encryption` on the registry — is reported as a deletion. An apply does not remove them.
+- **The Application Insights connection's `credentials`,** which shows as a create every time.
+  What-if cannot read a secure value to compare against, so it can only assume it differs.
+
+Two more are reported as `Unsupported` rather than `Modify`: the role assignments whose names derive
+from the project's principal ID, which does not exist until the deployment runs. Also expected.
+
+So read the preview for the shape of the change, not for silence. A `Create` or a `Delete` of a whole
+resource is real and worth understanding. A `Modify` whose delta is entirely server-computed
+properties is what an unchanged environment looks like.
+
+If you want a genuinely quiet diff, that is what the outputs are for: they are derived from the
+deployed resources, and they are stable across applies.
 
 ### Feeding the outputs forward
 
