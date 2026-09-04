@@ -101,7 +101,13 @@ function Test-GitHubResource {
 
     $output = gh api $Path --silent 2>&1
     if ($LASTEXITCODE -eq 0) { return $true }
-    if ("$output" -match '(?i)HTTP 404|Not Found') { return $false }
+    if ("$output" -match '(?i)HTTP 404|Not Found') {
+        # A handled 404 is an answer, not a failure - but it leaves $LASTEXITCODE at 1, and if the
+        # last thing this script does is check for a variable that is absent, the script itself
+        # exits 1 while reporting success. Anything running it in a && chain would stop there.
+        $global:LASTEXITCODE = 0
+        return $false
+    }
     throw "Reading GitHub resource '$Path' failed: $($output -join [Environment]::NewLine)"
 }
 
@@ -224,7 +230,13 @@ if (-not (Test-GitHubResource "repos/$Repository/environments/$Environment")) {
     throw "GitHub environment '$Environment' does not exist on $Repository. Run ./scripts/Bootstrap-GitHubOidc.ps1 first - it creates the environment and the identity that deploys into it."
 }
 
-$changed = 0
+# Counted separately on purpose. Under -WhatIf, ShouldProcess declines every write, so a counter
+# incremented inside it stays zero and the summary would announce that everything already matched -
+# directly contradicting the "What if:" lines above it. $differing is what the comparison found;
+# $written is what was actually done about it.
+$differing = 0
+$written = 0
+
 foreach ($key in $configuration.Keys) {
     $value = $configuration[$key]
 
@@ -242,12 +254,14 @@ foreach ($key in $configuration.Keys) {
         continue
     }
 
+    $differing++
+
     if ($PSCmdlet.ShouldProcess("$Environment/$key", 'Set repository environment variable')) {
         Invoke-Checked {
             gh variable set $key --env $Environment --repo $Repository --body $value
         } "Setting variable '$key' on '$Environment'" | Out-Null
         Write-Created "$key = $value"
-        $changed++
+        $written++
     }
 }
 
@@ -257,12 +271,17 @@ if (-not $configuration.Contains('ENERGYHUB_BASE_URI')) {
 
 Write-Step 'Done'
 
-if ($changed -eq 0) {
+if ($differing -eq 0) {
     Write-Host "  All $($configuration.Count) variables already matched the deployment. Nothing changed." -ForegroundColor Green
 }
-else {
-    Write-Host "  $changed of $($configuration.Count) variable(s) updated on '$Environment'." -ForegroundColor Green
+elseif ($written -eq 0) {
+    Write-Host "  $differing of $($configuration.Count) variable(s) differ from the deployment. Re-run without -WhatIf to write them." -ForegroundColor Yellow
 }
+else {
+    Write-Host "  $written of $($configuration.Count) variable(s) updated on '$Environment'." -ForegroundColor Green
+}
+
+if ($differing -gt 0 -and $written -eq 0) { return }
 
 Write-Host @"
 
