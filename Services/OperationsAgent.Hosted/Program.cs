@@ -200,7 +200,7 @@ AIAgent CreateAgent(IServiceProvider serviceProvider)
             // Advertise, then load on demand - the same two halves the provider implements, carried
             // by an ordinary tool the hosted runtime does not choke on.
             options.ChatOptions.Instructions += skillTools.Catalogue;
-            options.ChatOptions.Tools.Add(skillTools.CreateTool());
+            options.ChatOptions.Tools.Add(AIFunctionFactory.Create(skillTools.LoadSkill, SkillsAsTools.ToolName));
 
             var advertised = string.Join(", ", skillTools.Names);
             HostedAgentLog.SkillsExposedAsTools(logger, advertised);

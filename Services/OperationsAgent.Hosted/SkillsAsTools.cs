@@ -1,6 +1,5 @@
 using System.ComponentModel;
 using System.Text;
-using Microsoft.Extensions.AI;
 
 namespace OperationsAgent.Hosted;
 
@@ -107,8 +106,6 @@ internal sealed class SkillsAsTools
             : $"No skill named '{name}'. Available skills: {string.Join(", ", _skills.Keys)}.";
     }
 
-    /// <summary>Builds the function tool the agent exposes.</summary>
-    public AIFunction CreateTool() => AIFunctionFactory.Create(LoadSkill, ToolName);
 
     /// <summary>
     /// Reads one value out of the YAML frontmatter block, without taking a YAML dependency for two
