@@ -51,6 +51,41 @@ resource deployment 'Microsoft.CognitiveServices/accounts/projects/applications/
 }
 ```
 
+**The `protocols` list is right in spirit and wrong in two details**, both verified against the
+deployed agent.
+
+*The version number is stale.* A container built on `Microsoft.Agents.AI.Foundry.Hosting` 1.20 serves
+Responses **2.0.0**, not 1.0.0. Declaring 1.0.0 produces an agent that goes `active` and then answers
+every call with `unsupported_container_protocol_version` - a failure that looks like a deployment
+problem and is a version-negotiation one.
+
+*Protocols alone do not enable A2A.* If the slide is used to answer "what do I set to support any
+kind of communication, including A2A", it is incomplete: setting `protocols` and nothing else gets
+you `"An agent card is required for A2A protocol support."` Three things are needed, and only the
+first resembles what is on the slide:
+
+| # | What | Where |
+| --- | --- | --- |
+| 1 | `{protocol: "a2a", version: "1.0.0"}` | the agent **version**'s `protocol_versions` |
+| 2 | `a2a` **and** `responses` together | the agent **endpoint**'s `protocols` |
+| 3 | An agent card | `agent_endpoint.protocol_configuration.a2a.agent_card` |
+
+Step 2 refuses A2A on its own - *"Both 'a2a' and 'responses' protocols must be enabled on the
+endpoint"* - because the platform bridges A2A onto the Responses agent rather than offering it as an
+alternative. Step 3 is the one nothing hints at.
+
+The payoff is worth a sentence on stage: **the container never serves A2A.** The platform publishes
+the card, fills its `supportedInterfaces` with absolute URLs to its own endpoint, and translates
+inbound A2A into a Responses invocation. `MapA2AHttpJson` - which the Aspire-hosted Workforce agent
+does use - has no place in a hosted agent.
+
+**A caveat on the excerpt itself.** The Bicep above is the ARM control-plane path,
+`applications/agentDeployments`. This repo's pipeline provisions through the **data plane**
+(`POST /agents/{name}/versions`, `PATCH /agents/{name}`), and the deployed project reports zero
+`applications` at both `2026-05-15-preview` and `2025-10-01-preview`. Everything stated here was
+verified on the data plane; the ARM shape is unverified, and the two may not be the same model.
+Do not present the Bicep as the way it was done.
+
 Add to the bullets, because it is the fact that changes how people size things:
 
 > **Scale-to-zero is per session, not per replica.** A sandbox per session, idle timeout 5–60 minutes
