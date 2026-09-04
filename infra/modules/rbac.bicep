@@ -30,6 +30,9 @@ param deploymentPrincipalType string = 'ServicePrincipal'
 @description('Principal IDs of running services that call the project data plane. Empty until those services have identities.')
 param workloadPrincipalIds array = []
 
+@description('Principal ID of the identity the container apps run as. Empty to skip its assignments.')
+param containerAppsIdentityPrincipalId string = ''
+
 // ---------------------------------------------------------------------------------------------
 // Built-in role definition IDs.
 // ---------------------------------------------------------------------------------------------
@@ -153,6 +156,20 @@ resource foundryUserForWorkloads 'Microsoft.Authorization/roleAssignments@2022-0
 // from them are all properties of a deployed version, and versions are immutable application
 // artifacts. deploy-hosted-agent.yml does that half, and reads the principal back before binding.
 // ---------------------------------------------------------------------------------------------
+
+// The container apps pull their images as this identity. It is user-assigned and created ahead of
+// the apps precisely so this grant can exist before the first pull is attempted - see
+// modules/containerapps.bicep for why a system-assigned identity cannot work here.
+resource registryPullForContainerApps 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(containerAppsIdentityPrincipalId)) {
+  scope: registry
+  name: guid(registry.id, containerAppsIdentityPrincipalId, acrPullRoleId)
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', acrPullRoleId)
+    principalId: containerAppsIdentityPrincipalId
+    principalType: 'ServicePrincipal'
+    description: 'The Caesarea city services pull their images as this identity.'
+  }
+}
 
 @description('Role assignment IDs created here, for smoke tests and drift checks.')
 output assignmentIds array = [

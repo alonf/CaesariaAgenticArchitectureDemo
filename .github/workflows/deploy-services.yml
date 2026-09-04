@@ -1,0 +1,159 @@
+name: deploy-services
+
+# The city services: the SmartPole simulator and the Energy Hub, as container apps.
+#
+# Like deploy-hosted-agent.yml, this touches no infrastructure. The Container Apps environment and
+# the identity the apps run as were provisioned by deploy-infra.yml and outlive any release; what
+# happens here is: build two images, then deploy infra/apps.bicep with their digests.
+#
+# The apps live in their own template rather than in main.bicep because they carry image digests. A
+# template that owns an image cannot also be run to reconcile the platform without reverting whatever
+# was deployed since - the platform apply would quietly roll the services back to whichever image was
+# current when its parameters were written.
+
+on:
+  workflow_dispatch:
+    inputs:
+      environmentName:
+        description: Target environment
+        type: choice
+        options: [dev, prod]
+        default: dev
+  push:
+    tags: ['services-v*']
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: services-${{ github.event.inputs.environmentName || 'dev' }}
+  cancel-in-progress: false
+
+env:
+  IMAGE_PLATFORM: linux/amd64
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environmentName || 'dev' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      # Fail here, with a sentence, rather than three steps later with a Bicep parameter error. These
+      # come from Sync-PlatformVariables.ps1 and Bootstrap-EnergyHubApi.ps1; a missing one means a
+      # step of the documented setup was skipped, and saying which is more useful than a null.
+      - name: Check the environment is configured
+        run: |
+          missing=""
+          for v in AZURE_RESOURCE_GROUP AZURE_CONTAINER_REGISTRY_NAME AZURE_CONTAINER_REGISTRY_ENDPOINT \
+                   AZURE_CONTAINER_APPS_ENVIRONMENT_ID AZURE_SERVICES_IDENTITY_ID \
+                   AZURE_SERVICES_IDENTITY_CLIENT_ID ENERGYHUB_API_CLIENT_ID; do
+            eval "value=\${$v}"
+            [ -z "$value" ] && missing="$missing $v"
+          done
+          if [ -n "$missing" ]; then
+            echo "Missing environment variable(s):$missing"
+            echo "Run ./scripts/Sync-PlatformVariables.ps1 and ./scripts/Bootstrap-EnergyHubApi.ps1 - see docs/deployment.md."
+            exit 1
+          fi
+        env:
+          AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          AZURE_CONTAINER_REGISTRY_NAME: ${{ vars.AZURE_CONTAINER_REGISTRY_NAME }}
+          AZURE_CONTAINER_REGISTRY_ENDPOINT: ${{ vars.AZURE_CONTAINER_REGISTRY_ENDPOINT }}
+          AZURE_CONTAINER_APPS_ENVIRONMENT_ID: ${{ vars.AZURE_CONTAINER_APPS_ENVIRONMENT_ID }}
+          AZURE_SERVICES_IDENTITY_ID: ${{ vars.AZURE_SERVICES_IDENTITY_ID }}
+          AZURE_SERVICES_IDENTITY_CLIENT_ID: ${{ vars.AZURE_SERVICES_IDENTITY_CLIENT_ID }}
+          ENERGYHUB_API_CLIENT_ID: ${{ vars.ENERGYHUB_API_CLIENT_ID }}
+
+      # buildx on the runner rather than `az acr build`: the ACR Tasks builder cannot build these
+      # Dockerfiles, failing at the first COPY of a whole directory with "failed to get layer
+      # sha256:...: layer does not exist". See the same note in deploy-hosted-agent.yml.
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build and push the images
+        id: build
+        run: |
+          TAG="${GITHUB_SHA::12}"
+          REGISTRY="${{ vars.AZURE_CONTAINER_REGISTRY_ENDPOINT }}"
+          az acr login --name "${{ vars.AZURE_CONTAINER_REGISTRY_NAME }}"
+
+          for svc in smartpole-simulator-api:SmartPole.Simulator.Api energyhub-api:EnergyHub.Api; do
+            name="${svc%%:*}"
+            project="${svc##*:}"
+            # --provenance=false keeps the result a plain single-platform manifest rather than an
+            # OCI index wrapping an attestation.
+            docker buildx build \
+              --platform "${{ env.IMAGE_PLATFORM }}" \
+              --file "Services/${project}/Dockerfile" \
+              --tag "${REGISTRY}/${name}:${TAG}" \
+              --provenance=false \
+              --push \
+              .
+            # Deploy by digest, never by tag. A tag can be moved after it is approved; a digest cannot.
+            digest=$(az acr repository show \
+              --name "${{ vars.AZURE_CONTAINER_REGISTRY_NAME }}" \
+              --image "${name}:${TAG}" \
+              --query digest -o tsv)
+            echo "${name//-/_}=${REGISTRY}/${name}@${digest}" >> "$GITHUB_OUTPUT"
+          done
+
+      - name: Deploy the container apps
+        id: apps
+        run: |
+          az deployment group create \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --name "caesarea-services-${GITHUB_RUN_ID}" \
+            --template-file infra/apps.bicep \
+            --parameters \
+              containerAppsEnvironmentId="${{ vars.AZURE_CONTAINER_APPS_ENVIRONMENT_ID }}" \
+              workloadIdentityId="${{ vars.AZURE_SERVICES_IDENTITY_ID }}" \
+              workloadIdentityClientId="${{ vars.AZURE_SERVICES_IDENTITY_CLIENT_ID }}" \
+              registryLoginServer="${{ vars.AZURE_CONTAINER_REGISTRY_ENDPOINT }}" \
+              smartPoleImage="${{ steps.build.outputs.smartpole_simulator_api }}" \
+              energyHubImage="${{ steps.build.outputs.energyhub_api }}" \
+              energyHubApiClientId="${{ vars.ENERGYHUB_API_CLIENT_ID }}" \
+            --output none
+
+          BASE_URI=$(az deployment group show \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --name "caesarea-services-${GITHUB_RUN_ID}" \
+            --query properties.outputs.energyHubBaseUri.value -o tsv)
+          echo "baseUri=${BASE_URI}" >> "$GITHUB_OUTPUT"
+
+      # The gate, verified rather than assumed. An ingress that is meant to reject anonymous callers
+      # and does not is the kind of thing that deploys green and is discovered by someone else.
+      - name: Verify the Energy Hub rejects anonymous callers
+        run: |
+          BASE_URI="${{ steps.apps.outputs.baseUri }}"
+          for attempt in $(seq 1 30); do
+            STATUS=$(curl -sS -o /dev/null -w "%{http_code}" "${BASE_URI}/api/energy/assets/L-417" || echo "000")
+            # 000 means the ingress is not answering yet; a first revision takes a moment.
+            [ "$STATUS" != "000" ] && break
+            sleep 5
+          done
+          echo "anonymous GET -> HTTP $STATUS"
+          if [ "$STATUS" != "401" ]; then
+            echo "Expected 401 from an anonymous request. Got $STATUS - the ingress is not enforcing authentication."
+            exit 1
+          fi
+
+      - name: Summary
+        run: |
+          {
+            echo "## Caesarea city services"
+            echo "- Energy Hub: \`${{ steps.apps.outputs.baseUri }}\` (Entra-protected, anonymous requests get 401)"
+            echo "- SmartPole simulator: internal ingress only"
+            echo ""
+            echo "Point the agent at the Hub and redeploy it:"
+            echo '```powershell'
+            echo "./scripts/Sync-PlatformVariables.ps1 -Environment ${{ github.event.inputs.environmentName || 'dev' }} -EnergyHubBaseUri ${{ steps.apps.outputs.baseUri }}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -76,6 +76,10 @@ $SyncedOutputs = @(
     'AZURE_CONTAINER_REGISTRY_NAME'
     'FOUNDRY_PROJECT_ENDPOINT'
     'MODEL_DEPLOYMENT_NAME'
+    'AZURE_CONTAINER_APPS_ENVIRONMENT'
+    'AZURE_CONTAINER_APPS_ENVIRONMENT_ID'
+    'AZURE_SERVICES_IDENTITY_ID'
+    'AZURE_SERVICES_IDENTITY_CLIENT_ID'
 )
 
 function Write-Step { param([string] $Message) Write-Host "`n=== $Message" -ForegroundColor Cyan }

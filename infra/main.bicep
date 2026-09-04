@@ -96,6 +96,22 @@ module registry 'modules/registry.bicep' = {
   }
 }
 
+// The habitat for the city services the agent reads from. Provisioned here rather than with the
+// apps themselves because an environment and an identity outlive any particular release, and because
+// the identity must hold AcrPull before the first app tries to pull. The apps are infra/apps.bicep,
+// deployed by the release pipeline.
+module containerApps 'modules/containerapps.bicep' = {
+  scope: resourceGroup
+  name: 'container-apps'
+  params: {
+    location: location
+    environmentName: 'cae-caesarea-${environmentName}'
+    workloadIdentityName: 'id-caesarea-services-${environmentName}'
+    logAnalyticsWorkspaceId: observability.outputs.workspaceId
+    tags: tags
+  }
+}
+
 module foundry 'modules/foundry.bicep' = {
   scope: resourceGroup
   name: 'foundry'
@@ -125,6 +141,7 @@ module rbac 'modules/rbac.bicep' = {
     deploymentPrincipalId: deploymentPrincipalId
     deploymentPrincipalType: deploymentPrincipalType
     workloadPrincipalIds: workloadPrincipalIds
+    containerAppsIdentityPrincipalId: containerApps.outputs.workloadIdentityPrincipalId
   }
 }
 
@@ -161,3 +178,18 @@ output MODEL_DEPLOYMENT_NAME string = foundry.outputs.modelDeploymentName
 // Application Insights is deliberately absent from these outputs. Its connection string carries a
 // usable ingestion key, and a deployment output is readable by anyone with read on the deployment.
 // The platform injects it into hosted agents on its own; nothing else in this system needs it.
+
+@description('Container Apps environment the city services run in.')
+output AZURE_CONTAINER_APPS_ENVIRONMENT_ID string = containerApps.outputs.environmentId
+
+@description('Container Apps environment name.')
+output AZURE_CONTAINER_APPS_ENVIRONMENT string = containerApps.outputs.environmentName
+
+@description('Resource ID of the identity the city services run as.')
+output AZURE_SERVICES_IDENTITY_ID string = containerApps.outputs.workloadIdentityId
+
+@description('Client ID of that identity, used for the registry pull configuration.')
+output AZURE_SERVICES_IDENTITY_CLIENT_ID string = containerApps.outputs.workloadIdentityClientId
+
+@description('Principal ID of that identity, for role assignments made outside this template.')
+output AZURE_SERVICES_IDENTITY_PRINCIPAL_ID string = containerApps.outputs.workloadIdentityPrincipalId
