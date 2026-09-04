@@ -239,6 +239,37 @@ For a lecture whose whole argument is that an agent is not a function, the secon
 and the first is worth a slide: the managed option is genuinely easier, and what it costs is the
 boundary you spent an hour establishing.
 
+### The calling user's identity reaches the container
+
+Verified by logging inbound headers on the deployed agent and calling it as two different callers.
+
+```text
+Inbound /responses: user identity present (ba1e5c6e…, 36 chars).
+  Platform headers: x-agent-foundry-call-id, x-agent-response-id, x-agent-user-id, x-ms-client-request-id
+Inbound /responses: user identity present (a5e76e44…, 36 chars).
+Inbound /readiness: user identity absent. Platform headers: (none).
+```
+
+The two values are different callers and both match exactly: `ba1e5c6e…` is the signed-in user's
+object id, `a5e76e44…` is the CI deployment principal that ran the release smoke test. So
+**`x-agent-user-id` carries whoever is asking**, per request, injected by the platform. Health probes
+carry no user, which is right.
+
+**Why this matters.** It means a demo can read *the presenter's own* data without any identity in the
+code, the configuration or the repository: whoever runs it is who the agent sees. A reader cloning
+this repo gets their own identity, not someone else's, with nothing to edit.
+
+**What it does not prove.** `x-agent-user-id` is an identifier, not a token. Knowing who called is not
+the same as being able to act as them. Delegated access to that user's Microsoft 365 data needs a
+token minted for them, which is what the Foundry Toolbox machinery describes: a tool source needing
+"a per-user delegated identity, which is only available on a user request's egress", resolved through
+"the platform-injected per-user isolation key", with an explicit OAuth consent state
+(`CONSENT_REQUIRED`) when the user has not yet agreed.
+
+So the open question is narrower than it was: not *does identity flow* - it does - but *can a Toolbox
+with a Microsoft Graph connection turn that identity into a delegated token*. That is the next thing
+to settle before building on it.
+
 ## Verified stale — the deck's Bicep
 
 Slide 43 shows `minReplicas: 0` / `maxReplicas: 5`. **There is no replica model.** Hosted agents
