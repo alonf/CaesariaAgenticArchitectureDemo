@@ -272,9 +272,13 @@ public sealed class ArchitectureBoundaryTests
             var projectName = Path.GetFileName(projectDirectory);
             var launchSettingsPath = Path.Combine(projectDirectory, "Properties", "launchSettings.json");
 
+            // Not every project is composed by the AppHost. OperationsAgent.Hosted is a container
+            // the Foundry platform runs, so nothing here allocates its port - but it still declares
+            // one, because a local `dotnet run` and the platform have to agree on where it listens.
+            // The uniqueness check below applies to it either way.
             Assert.True(
                 File.Exists(launchSettingsPath),
-                $"{projectName} has no launch profile, so the AppHost gives it no endpoint and it falls back to the default Kestrel port.");
+                $"{projectName} declares no port. Aspire-composed projects then get no endpoint and fall back to the default Kestrel port; platform-hosted ones become impossible to run locally in the same way they run deployed.");
 
             // A project lists the same URL in both its http and https profiles, so the comparison
             // is between projects, not within one.

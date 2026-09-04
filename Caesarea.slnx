@@ -17,6 +17,7 @@
     <Project Path="Services/DemoScenario.Api/DemoScenario.Api.csproj" />
     <Project Path="Services/EnergyHub.Api/EnergyHub.Api.csproj" />
     <Project Path="Services/OperationsAgent.Api/OperationsAgent.Api.csproj" />
+    <Project Path="Services/OperationsAgent.Hosted/OperationsAgent.Hosted.csproj" />
     <Project Path="Services/SecurityAgent.Api/SecurityAgent.Api.csproj" />
     <Project Path="Services/SecurityHub.Api/SecurityHub.Api.csproj" />
     <Project Path="Services/WorkforceAgent.Api/WorkforceAgent.Api.csproj" />

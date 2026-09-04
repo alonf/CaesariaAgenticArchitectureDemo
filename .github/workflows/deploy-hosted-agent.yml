@@ -37,10 +37,6 @@ env:
 
 jobs:
   deploy:
-    # PARKED. Services/OperationsAgent.Hosted does not exist yet - it is Stage 12's only code, and
-    # until it does this workflow fails on its first step. A committed pipeline that cannot run is
-    # worse than an obviously disabled one, so remove this line in the commit that adds the project.
-    if: false
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.environmentName || 'dev' }}
     steps:
@@ -78,13 +74,17 @@ jobs:
           BODY=$(jq -n \
             --arg image "${{ steps.build.outputs.image }}" \
             --arg model "${{ vars.MODEL_DEPLOYMENT_NAME }}" \
+            --arg energyHub "${{ vars.ENERGYHUB_BASE_URI }}" \
             '{definition: {
                 kind: "hosted",
                 container_configuration: {image: $image},
                 cpu: "1",
                 memory: "2Gi",
                 protocol_versions: [{protocol: "responses", version: "1.0.0"}],
-                environment_variables: {MODEL_DEPLOYMENT_NAME: $model}
+                environment_variables: {
+                  MODEL_DEPLOYMENT_NAME: $model,
+                  ENERGYHUB_BASE_URI: $energyHub
+                }
               }}')
           # --fail-with-body so a 400/401/403 stops the job here, and jq -e so a response that
           # parses but carries no version stops it too. Without both, an auth failure becomes a

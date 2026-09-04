@@ -16,7 +16,12 @@ public sealed record SkillDescriptor(string Name, string Description);
 /// so what the response reports is exactly what the <c>AgentSkillsProvider</c> would advertise -
 /// same parsing, same validation, same skips.
 /// </summary>
-internal static class SkillCatalog
+/// <remarks>
+/// Public rather than internal because the Foundry hosted composition resolves the same skills
+/// directory. Note <see cref="ResolveDirectory"/>'s relative-path branch walks up looking for the
+/// solution file, which no container has - hosted callers pass an absolute path.
+/// </remarks>
+public static class SkillCatalog
 {
     /// <summary>
     /// Resolves the skills directory: an absolute configured path is used as-is; a relative one is
