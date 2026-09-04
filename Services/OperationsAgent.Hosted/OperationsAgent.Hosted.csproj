@@ -21,4 +21,23 @@
     <ProjectReference Include="..\OperationsAgent.Api\OperationsAgent.Api.csproj" />
   </ItemGroup>
 
+  <!-- Publishing a web project also collects the content of every web project it references, so
+       OperationsAgent.Api's appsettings.json arrives at the same relative path as this project's and
+       the SDK stops with NETSDK1152.
+
+       The tempting one-line fix, ErrorOnDuplicatePublishOutputFiles=false, is the wrong one: it does
+       not choose, it just stops complaining, and if the Api's file wins then this container boots
+       with another habitat's configuration - an Energy Hub address and a model deployment that mean
+       nothing here. Drop the referenced project's copies and keep our own, which is deterministic
+       and says out loud which file is meant to survive. -->
+  <Target Name="RemoveReferencedProjectSettingsFromPublish"
+          AfterTargets="ComputeResolvedFilesToPublishList">
+    <ItemGroup>
+      <ResolvedFileToPublish
+        Remove="@(ResolvedFileToPublish)"
+        Condition="$([System.String]::Copy('%(ResolvedFileToPublish.RelativePath)').StartsWith('appsettings')) And
+                   $([System.String]::Copy('%(ResolvedFileToPublish.Identity)').Replace('\', '/').Contains('/OperationsAgent.Api/'))" />
+    </ItemGroup>
+  </Target>
+
 </Project>

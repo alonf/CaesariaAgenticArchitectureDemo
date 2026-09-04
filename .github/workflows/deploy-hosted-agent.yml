@@ -49,23 +49,44 @@ jobs:
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
-      # Built in ACR rather than on the runner: the runner then needs no Docker, and the image never
-      # transits a machine that is not in the boundary.
-      - name: Build the image in the registry
+      # Buildx on the runner, not `az acr build`.
+      #
+      # Building inside the registry is the nicer story - no Docker on the runner, and the image
+      # never transits a machine outside the boundary - and it is what this step used to do. ACR
+      # Tasks' builder cannot build this Dockerfile: it fails at the first COPY of a whole directory
+      # with "failed to export image: failed to create image: failed to get layer sha256:...: layer
+      # does not exist", reproducibly, naming a different layer every run and never reaching the
+      # compile. The identical Dockerfile builds clean under buildx. Nothing in the message points at
+      # a cause, and there is no knob to make ACR Tasks use BuildKit, so the builder is the thing
+      # that had to change.
+      #
+      # The runner still never holds a registry credential: `az acr login` exchanges the federated
+      # token this job already has for a short-lived one, so the image is pushed as the same identity
+      # that authenticated at the top of the job.
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build and push the image
         id: build
         run: |
           TAG="${GITHUB_SHA::12}"
-          az acr build \
-            --registry "${{ vars.AZURE_CONTAINER_REGISTRY_NAME }}" \
+          IMAGE="${{ vars.AZURE_CONTAINER_REGISTRY_ENDPOINT }}/${AGENT_NAME}"
+          az acr login --name "${{ vars.AZURE_CONTAINER_REGISTRY_NAME }}"
+          # --provenance=false keeps the result a plain single-platform manifest. Buildx otherwise
+          # pushes an OCI image index wrapping the image and an attestation, and a runtime that
+          # expects a manifest finds a list where it wanted a config.
+          docker buildx build \
             --platform "${{ env.IMAGE_PLATFORM }}" \
-            --image "${AGENT_NAME}:${TAG}" \
-            --file Services/OperationsAgent.Hosted/Dockerfile .
+            --file Services/OperationsAgent.Hosted/Dockerfile \
+            --tag "${IMAGE}:${TAG}" \
+            --provenance=false \
+            --push \
+            .
           # Deploy by digest, never by tag. A tag can be moved after it is approved; a digest cannot.
           DIGEST=$(az acr repository show \
             --name "${{ vars.AZURE_CONTAINER_REGISTRY_NAME }}" \
             --image "${AGENT_NAME}:${TAG}" \
             --query digest -o tsv)
-          echo "image=${{ vars.AZURE_CONTAINER_REGISTRY_ENDPOINT }}/${AGENT_NAME}@${DIGEST}" >> "$GITHUB_OUTPUT"
+          echo "image=${IMAGE}@${DIGEST}" >> "$GITHUB_OUTPUT"
 
       - name: Create the agent version
         id: version
