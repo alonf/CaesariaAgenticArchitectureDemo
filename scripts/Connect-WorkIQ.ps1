@@ -62,7 +62,11 @@ param(
     [string] $ToolboxName = 'caesarea-workiq',
     [string] $ApplicationName,
     [string] $SubscriptionId,
-    [string] $ResourceGroupName
+    [string] $ResourceGroupName,
+    # Mint a fresh client secret and print it, for pasting into the Foundry portal's connection
+    # dialog. Off by default: a secret that is printed is a secret that ends up in scrollback, a
+    # terminal log and someone's screen recording. Use it only when the portal path is needed.
+    [switch] $ShowClientSecret
 )
 
 $ErrorActionPreference = 'Stop'
@@ -376,6 +380,24 @@ if ($PSCmdlet.ShouldProcess($ToolboxName, 'Create a toolbox version carrying the
 
     Write-Created "toolbox '$ToolboxName' version $($version.version)"
     Write-Note "MCP endpoint: $projectEndpoint/toolboxes/$ToolboxName/versions/$($version.version)/mcp?api-version=v1"
+}
+
+if ($ShowClientSecret) {
+    Write-Step 'Client secret'
+
+    if ($PSCmdlet.ShouldProcess($ApplicationName, 'Mint a new client secret and print it')) {
+        $shown = Invoke-Json -Method post -Url "$GraphBase/applications/$appObjectId/addPassword" -What 'Creating a client secret' -Body @{
+            passwordCredential = @{ displayName = "portal-$ConnectionName" }
+        }
+
+        Write-Host ''
+        Write-Host "  Client ID:     $appId" -ForegroundColor Yellow
+        Write-Host "  Client secret: $($shown.secretText)" -ForegroundColor Yellow
+        Write-Host ''
+        Write-Warn 'Shown once and never stored. Paste it into the portal now; if you lose it, re-run'
+        Write-Warn 'with -ShowClientSecret to mint another rather than trying to recover this one.'
+        Write-Warn 'Delete unused secrets afterwards - every one that outlives its use is a live credential.'
+    }
 }
 
 Write-Step 'Done'
