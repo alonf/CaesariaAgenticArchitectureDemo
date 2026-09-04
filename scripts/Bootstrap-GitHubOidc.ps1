@@ -202,6 +202,26 @@ $repositoryInfo = (Invoke-Checked {
 
 $protectionAvailable = -not ($repositoryInfo.private -and $repositoryInfo.ownerType -eq 'User')
 
+# The OIDC subject prefix, read from GitHub rather than assembled from the repository name.
+#
+# GitHub supports an immutable subject form keyed on numeric owner and repository IDs, which
+# survives a rename: repo:<owner>@<ownerId>/<repo>@<repoId>. Do NOT decide this from
+# use_immutable_subject - this repository reports that as false while nonetheless presenting the
+# immutable form, because sub_claim_prefix is what actually goes into the token. Reading the wrong
+# field produces credentials that look right in the portal and fail every login with AADSTS700213.
+$subjectPrefix = "repo:$Repository"
+$customization = gh api "repos/$Repository/actions/oidc/customization/sub" 2>&1
+if ($LASTEXITCODE -eq 0) {
+    $parsed = "$customization" | ConvertFrom-Json
+    if ($parsed.PSObject.Properties.Name -contains 'sub_claim_prefix' -and $parsed.sub_claim_prefix) {
+        $subjectPrefix = $parsed.sub_claim_prefix
+    }
+}
+elseif ("$customization" -notmatch '(?i)HTTP 404|Not Found') {
+    throw "Reading the OIDC subject customization failed: $customization"
+}
+Write-Note "OIDC subject: ${subjectPrefix}:environment:<name>"
+
 if (('prod' -in $Environments) -and -not $protectionAvailable) {
     if (-not $AllowUngatedProduction) {
         throw @"
@@ -296,17 +316,35 @@ foreach ($environment in $Environments) {
 
     # Exactly one federated credential, for this environment only. This is the boundary: a token
     # minted for dev carries subject environment:dev, and no other application will accept it.
-    $subject = "repo:${Repository}:environment:$environment"
+    $subject = "${subjectPrefix}:environment:$environment"
     $existingSubjects = @(@(Invoke-Checked {
         az ad app federated-credential list --id $appId --query "[].subject" --output tsv
     } 'Listing federated credentials') | ForEach-Object { "$_".Trim() } | Where-Object { $_ })
+
+    $credentialName = "caesarea-$environment"
+
+    # A credential of ours carrying a different subject is stale - GitHub changed the format, or the
+    # repository was renamed. Left in place it never matches a token and the failure reads as a
+    # missing credential rather than a wrong one, so it is replaced rather than accumulated.
+    $stale = @(@(Invoke-Checked {
+        az ad app federated-credential list --id $appId --query "[?name=='$credentialName' && subject!='$subject'].id" --output tsv
+    } 'Listing stale federated credentials') | ForEach-Object { "$_".Trim() } | Where-Object { $_ })
+
+    foreach ($staleId in $stale) {
+        if ($PSCmdlet.ShouldProcess("$credentialName on $applicationName", 'Replace federated credential with the wrong subject')) {
+            Invoke-Checked {
+                az ad app federated-credential delete --id $appId --federated-credential-id $staleId
+            } 'Deleting the stale federated credential' | Out-Null
+            Write-Created "removed a federated credential with an outdated subject"
+        }
+    }
 
     if ($subject -in $existingSubjects) {
         Write-Exists "federated credential -> $subject"
     }
     elseif ($PSCmdlet.ShouldProcess($subject, 'Create federated credential')) {
         $parameters = @{
-            name        = "caesarea-$environment"
+            name        = $credentialName
             issuer      = 'https://token.actions.githubusercontent.com'
             subject     = $subject
             description = "Caesarea $environment deployment from GitHub Actions"
