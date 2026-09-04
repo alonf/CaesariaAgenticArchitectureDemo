@@ -22,7 +22,7 @@ internal static partial class HostedAgentLog
 
     [LoggerMessage(
         EventId = 2703,
-        Level = LogLevel.Debug,
-        Message = "Could not enumerate the sandbox's TCP listeners.")]
-    internal static partial void ActiveListenersUnavailable(ILogger logger, Exception exception);
+        Level = LogLevel.Error,
+        Message = "The agent host failed to start. TCP listeners at the moment of failure: {Listeners}.")]
+    internal static partial void StartupFailed(ILogger logger, string listeners, Exception exception);
 }

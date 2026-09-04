@@ -28,30 +28,37 @@ internal sealed class HostingDiagnostics(ILogger<HostingDiagnostics> logger, str
             ", ",
             Environment.GetEnvironmentVariables().Keys.Cast<string>().Order(StringComparer.Ordinal));
 
-        HostedAgentLog.HostingEnvironment(logger, injectedPort ?? "(not set)", names);
+        var listeners = DescribeListeners();
 
-        // Who else is listening in this sandbox, read from the network namespace this process shares.
-        // The container failed to bind both the injected port and the obvious alternative, which
-        // means something was there first - and from inside a sandbox with no shell, this is the only
-        // way to find out what. It runs before the server binds, so it still reports the ports that
-        // are about to collide.
-        try
-        {
-            var listeners = IPGlobalProperties.GetIPGlobalProperties().GetActiveTcpListeners();
-            HostedAgentLog.ActiveListeners(
-                logger,
-                listeners.Length == 0
-                    ? "(none)"
-                    : string.Join(", ", listeners.Select(endpoint => endpoint.ToString()).Order(StringComparer.Ordinal)));
-        }
-        catch (Exception exception)
-        {
-            // Diagnostics must never be the reason a container does not start.
-            HostedAgentLog.ActiveListenersUnavailable(logger, exception);
-        }
+        HostedAgentLog.HostingEnvironment(logger, injectedPort ?? "(not set)", names);
+        HostedAgentLog.ActiveListeners(logger, listeners);
 
         return Task.CompletedTask;
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+    /// <summary>
+    /// Every TCP endpoint listening in this process's network namespace, as a single line.
+    /// </summary>
+    /// <remarks>
+    /// From inside a sandbox with no shell, this is the only way to see what already holds a port.
+    /// It never throws: a diagnostic must not be the reason a container fails to start, and it is
+    /// called from a catch block where a second exception would replace the first.
+    /// </remarks>
+    internal static string DescribeListeners()
+    {
+        try
+        {
+            var listeners = IPGlobalProperties.GetIPGlobalProperties().GetActiveTcpListeners();
+
+            return listeners.Length == 0
+                ? "(none)"
+                : string.Join(", ", listeners.Select(endpoint => endpoint.ToString()).Order(StringComparer.Ordinal));
+        }
+        catch (Exception exception)
+        {
+            return $"(unavailable: {exception.GetType().Name})";
+        }
+    }
 }

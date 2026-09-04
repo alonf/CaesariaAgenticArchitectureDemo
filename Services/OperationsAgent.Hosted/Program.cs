@@ -56,10 +56,16 @@ var energyHubBaseUri = builder.Configuration["ENERGYHUB_BASE_URI"]
 // Dockerfile puts the directory there.
 var skillsDirectory = builder.Configuration["SKILLS_DIRECTORY"] ?? "/app/skills";
 
-// Reports what the platform handed this container, once the server is up and logging is real.
-builder.Services.AddSingleton<IHostedService>(serviceProvider => new HostingDiagnostics(
-    serviceProvider.GetRequiredService<ILogger<HostingDiagnostics>>(),
-    injectedPort));
+// Reports what the platform handed this container, once the server is up and logging is real. The
+// provider is captured on the way past so a startup failure further down still has a logger: by the
+// time RunAsync throws there is no other way to reach one, and a container that dies without saying
+// why is what made this whole class necessary.
+IServiceProvider? hostServices = null;
+builder.Services.AddSingleton<IHostedService>(serviceProvider =>
+{
+    hostServices = serviceProvider;
+    return new HostingDiagnostics(serviceProvider.GetRequiredService<ILogger<HostingDiagnostics>>(), injectedPort);
+});
 
 builder.Services.AddHttpClient<IEnergyReadGateway, HttpEnergyReadGateway>(client =>
 {
@@ -135,4 +141,22 @@ builder.Services.AddFoundryResponses();
 builder.RegisterProtocol("responses", endpoints => endpoints.MapFoundryResponses());
 
 var app = builder.Build();
-await app.RunAsync();
+
+try
+{
+    await app.RunAsync();
+}
+catch (Exception exception) when (hostServices is not null)
+{
+    // The startup failure that mattered here was a port collision, and the one question worth
+    // answering was who held the port at the moment of the clash - which is knowable only now, not
+    // when the host started. Logged, flushed, and rethrown: this reports, it does not recover.
+    var logger = hostServices.GetRequiredService<ILoggerFactory>().CreateLogger("OperationsAgent.Hosted");
+
+    var listenersAtFailure = HostingDiagnostics.DescribeListeners();
+    HostedAgentLog.StartupFailed(logger, listenersAtFailure, exception);
+
+    // Application Insights batches, and a crashing process usually takes the batch with it.
+    await Task.Delay(TimeSpan.FromSeconds(5));
+    throw;
+}
