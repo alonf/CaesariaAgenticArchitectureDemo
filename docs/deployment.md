@@ -283,6 +283,14 @@ of the platform, so its address is passed in rather than read:
 Until it is supplied the script says so and leaves the variable alone, because an empty value would
 let the release workflow succeed and the agent fail on its first tool call.
 
+> **`dev` currently holds a placeholder.** `ENERGYHUB_BASE_URI` is set to `https://example.com` — it
+> was used to prove that a hosted agent can make outbound calls at all, before the Energy Hub existed
+> in Azure. It looks like a real value in the GitHub UI and it is not. Until the Energy Hub is
+> deployed and the variable re-synced, the agent will answer questions about a streetlight
+> confidently, load its investigation skill, call its tool, receive a 404 and have nothing to report.
+> That is the worst failure to discover in front of an audience, which is why it is written down here
+> rather than left to be remembered.
+
 **Why this is a script and not a step in `deploy-infra.yml`.** Writing environment variables needs a
 GitHub credential with administration rights, and the workflow's built-in `GITHUB_TOKEN` cannot be
 granted it — `permissions:` has no environments scope. Automating it inside the pipeline would mean

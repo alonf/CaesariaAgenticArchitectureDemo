@@ -10,6 +10,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- 1.20, deliberately ahead of the 1.19 family the rest of the solution pins. Do NOT "align" it
+         back: 1.20 fixes a bug that makes 1.19 unable to start in a Foundry hosted sandbox at all -
+         it binds PORT twice and the container dies with "address already in use", which then surfaces
+         as `session_not_ready` blaming the /readiness endpoint. It compiles and runs perfectly on a
+         laptop either way, so nothing local will catch the regression.
+         docs/product-status/hosted-agent.md, "The 1.19 port collision". -->
     <PackageReference Include="Microsoft.Agents.AI.Foundry.Hosting" Version="1.20.0-preview.260831.1" />
     <PackageReference Include="Azure.Identity" Version="1.21.0" />
   </ItemGroup>
