@@ -54,11 +54,10 @@ var skillsDirectory = builder.Configuration["SKILLS_DIRECTORY"] ?? "/app/skills"
 // an ordinary function call.
 //
 // The tool path exists because of a wrong diagnosis, and is kept because it is independently useful:
-// it needs no files in the image and no SKILLS_DIRECTORY. It does NOT work around the hosted
-// runtime's real defect, which is that a response calling more than one distinct tool fails about
-// half the time with HTTP 400 invalid_payload. Skills are not implicated in that - the first four
-// probes that said otherwise were single samples of an intermittent fault. See
-// docs/product-status/hosted-agent.md.
+// it needs no files in the image and no SKILLS_DIRECTORY. The defect it was once believed to dodge -
+// HTTP 400 invalid_payload on tool-calling turns - is real but was never about skills: the hosted
+// runtime replays reasoning items the service then rejects, and ReasoningReplaySanitizingChatClient
+// is the actual fix. See docs/product-status/hosted-agent.md.
 var skillsMode = builder.Configuration["SKILLS_MODE"] ?? "provider";
 
 // Reports what the platform handed this container, once logging is real. Everything AgentHost says
@@ -114,9 +113,28 @@ if (!string.IsNullOrWhiteSpace(workIqToolbox))
         workIqToolbox);
 }
 
-builder.Services.AddSingleton(serviceProvider => new AIProjectClient(
-    new Uri(projectEndpoint, UriKind.Absolute),
-    serviceProvider.GetRequiredService<TokenCredential>()));
+// DUMP_MODEL_TRAFFIC: when set to a directory path, every outbound project request body is written
+// there. This is how the invalid_payload defect was finally read - the service names no parameter,
+// so the only evidence is the request itself. Local diagnosis only; never set it deployed, because
+// the dumps contain full prompts and tool outputs. See ModelTrafficDumpPolicy.
+var dumpModelTraffic = builder.Configuration["DUMP_MODEL_TRAFFIC"];
+
+builder.Services.AddSingleton(serviceProvider =>
+{
+    var clientOptions = new AIProjectClientOptions();
+
+    if (!string.IsNullOrWhiteSpace(dumpModelTraffic))
+    {
+        clientOptions.AddPolicy(
+            new ModelTrafficDumpPolicy(dumpModelTraffic),
+            System.ClientModel.Primitives.PipelinePosition.PerCall);
+    }
+
+    return new AIProjectClient(
+        new Uri(projectEndpoint, UriKind.Absolute),
+        serviceProvider.GetRequiredService<TokenCredential>(),
+        clientOptions);
+});
 
 AIAgent CreateAgent(IServiceProvider serviceProvider)
 {
@@ -194,7 +212,15 @@ AIAgent CreateAgent(IServiceProvider serviceProvider)
         }
     }
 
-    return serviceProvider.GetRequiredService<AIProjectClient>().AsAIAgent(options, loggerFactory: loggerFactory);
+    // The clientFactory wraps the model client BENEATH the function-invocation loop, which is the
+    // only place the fix works: without it, every turn in which the model calls ANY tool fails with
+    // HTTP 400 invalid_payload on the follow-up request, because the loop replays the reasoning
+    // item's encrypted_content blob and the service rejects it - a deterministic defect that spent a
+    // while dressed up as an intermittent one. See ReasoningReplaySanitizingChatClient.
+    return serviceProvider.GetRequiredService<AIProjectClient>().AsAIAgent(
+        options,
+        clientFactory: innerClient => new ReasoningReplaySanitizingChatClient(innerClient),
+        loggerFactory: loggerFactory);
 }
 
 builder.Services.AddSingleton(CreateAgent);

@@ -118,9 +118,9 @@ The same trace settles two other things at once: **skills work in the hosted hab
 pulled `streetlight-investigation` through progressive disclosure, unprompted), and **the tool path
 is intact end to end**, from model to `AIFunctionFactory` tool to outbound HTTP.
 
-### Open: multi-tool responses fail intermittently in the hosted runtime
+### Resolved: tool-calling turns fail with invalid_payload in the hosted runtime
 
-A hosted response that calls **more than one distinct tool** fails about half the time with:
+A hosted turn in which the model calls a tool fails with:
 
 ```text
 status: failed
@@ -128,36 +128,56 @@ HTTP 400 (ServiceError: invalid_payload)
 The provided data does not match the expected schema
 ```
 
-The error names no field. Measured against the deployed agent, five runs of each shape, twice:
+The error names no field, and for a while this file recorded it as intermittent - "the second
+distinct tool fails about half the time". Both characterisations were wrong, and the path from each
+wrong story to the true one is preserved below because it is the most instructive thing in this file.
 
-| Response shape | Result |
-| --- | --- |
-| No tools | 10/10 completed |
-| One tool call | 10/10 completed |
-| Two distinct tools, identical prompt | ~5/10 completed |
+**Root cause, proven on 2026-09-05 by reading the rejected request.** `ModelTrafficDumpPolicy`
+(enabled with `DUMP_MODEL_TRAFFIC`, a directory path) captures every outbound model request body.
+The rejected one shows the chain:
 
-A full investigation chains three or more tools, so the per-response failure compounds and it fails
-nearly every time - which is exactly why it first looked deterministic.
+1. The hosted runtime drives the model with `store: false` and
+   `include: ["reasoning.encrypted_content"]` - it keeps history in Foundry storage itself, so it
+   does not chain responses server-side, and a reasoning model returns its chain-of-thought as an
+   opaque `encrypted_content` blob.
+2. When the model calls a tool, the function-invocation loop sends a follow-up request replaying the
+   turn's items - user message, **reasoning item with the blob**, function_call, function_call_output.
+3. Azure Foundry's `/openai/v1/responses` rejects `encrypted_content` on an *input* reasoning item
+   with `invalid_payload`. The service refuses the very field the SDK asked it to emit.
 
-**A correction worth reading before trusting any isolation in this file.** This was first recorded
-here as "AgentSkillsProvider breaks the hosted reply", on the strength of four probes: tool-only
-passed, search-only passed, both-together passed, and adding a skill failed. Every one of those was a
-**single sample**. Against an intermittent fault, single samples produce a clean, confident and wrong
-story - and the story survived a package upgrade, a workaround and a commit before five repeats of one
-prompt returned one pass and four failures.
+Replaying the captured body verbatim with `curl` reproduces the 400 with no SDK in the loop. Deleting
+the reasoning item from the same body returns 200 - this endpoint, unlike openai.com, does not
+require a function_call to be preceded by its reasoning item. Patching `summary: []` into the item
+instead does not help; `encrypted_content` itself is what the validator refuses.
 
-Skills are not implicated. `load_skill` works; so does a code-defined `AgentInlineSkill`; so does a
-file-backed one. What fails is the second distinct tool in a response, whatever it is.
+**Why it masqueraded as intermittent.** The failure is deterministic *given a reasoning item
+alongside a function call in an earlier leg of the same turn*. Whether the model emits one is the
+model's choice per leg - so measured rates ("one tool 10/10, two tools ~5/10") were measuring
+gpt-5.5's propensity to reason before its second tool call, not a runtime coin-flip. Single samples
+produced a clean wrong story ("skills break it"); repeated samples produced a subtler wrong story
+("it is random"). Only the request body told the truth.
 
-**Mitigation.** There is no configuration that avoids it, and no newer package to move to -
-`Microsoft.Agents.AI` and `Microsoft.Agents.AI.Foundry.Hosting` are both at 1.20. A caller can retry:
-the failure is per-response, and the same prompt succeeds on a later attempt. For a lecture, the
-honest options are to keep multi-tool work in the Aspire habitat, or to retry visibly and say why.
+**Fix.** `ReasoningReplaySanitizingChatClient` - a `DelegatingChatClient` that strips
+`TextReasoningContent` from outgoing messages - wired through `AsAIAgent`'s `clientFactory` so it
+sits *beneath* the function-invocation loop and sees the replayed legs. Applied in
+`OperationsAgent.Hosted` and in `WorkforceAgentFactory` (whose two-tool procedure would otherwise
+fail nearly every time hosted; under Aspire the session chains by `previous_response_id`, nothing is
+replayed, and the filter is a no-op). Cost: the model re-reasons after each tool result instead of
+resuming its chain-of-thought. Verified locally: a three-tool turn (load_skill +
+get_streetlight_state twice) completes, with the dumps showing every leg free of reasoning items.
 
-`SKILLS_MODE` remains in `OperationsAgent.Hosted` as a result of the wrong diagnosis: `provider` (the
-default, and the real `AgentSkillsProvider`) or `tool`, which advertises the same skills and serves
-their bodies through an ordinary function. The `tool` path works and needs no files in the image, so
-it is kept as an option - but it does not fix this, and it was never needed for it.
+The local reproduction recipe, for when a future preview claims to fix it: run
+`OperationsAgent.Hosted` with `DUMP_MODEL_TRAFFIC` set and POST to `/responses` with headers
+`x-agent-foundry-call-id: <any>` and `x-agent-user-id: <caller oid>` - the first is how the platform
+signals responses protocol v2, without it the container answers 501; the second satisfies the
+per-user isolation key. Do not set `FOUNDRY_HOSTING_ENVIRONMENT` for this: that switches task
+storage to the hosted store, which refuses to write without the platform-minted agent credential.
+
+`SKILLS_MODE` remains in `OperationsAgent.Hosted` as a result of the first wrong diagnosis:
+`provider` (the default, and the real `AgentSkillsProvider`) or `tool`, which advertises the same
+skills and serves their bodies through an ordinary function. The `tool` path is kept because it is
+independently useful - no files in the image, no `SKILLS_DIRECTORY` - not because skills were ever
+implicated.
 
 ### A2A on a hosted agent: the platform fronts it, the container does not
 

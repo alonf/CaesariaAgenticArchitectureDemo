@@ -321,9 +321,17 @@ elseif ($PSCmdlet.ShouldProcess($ConnectionName, 'Create the Work IQ connection'
             TokenUrl         = "https://login.microsoftonline.com/$tenantId/oauth2/v2.0/token"
             AuthorizationUrl = "https://login.microsoftonline.com/$tenantId/oauth2/v2.0/authorize"
             RefreshUrl       = "https://login.microsoftonline.com/$tenantId/oauth2/v2.0/token"
-            Scopes           = @("api://workiq.svc.cloud.microsoft/$WorkIqScopeName", 'offline_access')
+            # Order matches what the portal writes. Probably cosmetic, kept identical so a future
+            # diff against a portal-made connection shows nothing and means it.
+            Scopes           = @('offline_access', "api://workiq.svc.cloud.microsoft/$WorkIqScopeName")
             Credentials      = @{ ClientId = $appId; ClientSecret = $secret.secretText }
-            metadata         = @{ ApiType = 'Azure' }
+            # This is the field that decides whether the connection works, and the documented REST
+            # example gets it wrong: it says @{ ApiType = 'Azure' }, which produces a connection whose
+            # every visible property is correct and whose API Hub connector is never provisioned. The
+            # first call then fails with "ApiHub CreateConnection failed ... StatusCode=404 Not Found"
+            # and an HTML error page, naming nothing useful. `type` is what selects the connector.
+            # Established by creating one through the portal and diffing the two records.
+            metadata         = @{ oAuthProvider = 'custom'; type = 'work_iq_preview' }
         }
     }
 

@@ -67,7 +67,13 @@ public static class WorkforceAgentFactory
         // The agent is ordinary. What makes the boundary hold is one level down, in the tools: they
         // return the shareable projection of a work order, so the commercial and personal fields
         // are never selected and never reach this context.
+        //
+        // The clientFactory is not part of the boundary; it works around the hosted runtime's
+        // invalid_payload defect, which would otherwise kill every turn in which this agent uses a
+        // tool - and its instructions prescribe two. Harmless under Aspire, where nothing is
+        // replayed. See ReasoningReplaySanitizingChatClient.
         return projectClient.AsAIAgent(
+            clientFactory: innerClient => new ReasoningReplaySanitizingChatClient(innerClient),
             options: new ChatClientAgentOptions
             {
                 Name = agentName,
@@ -95,3 +101,5 @@ public static class WorkforceAgentFactory
         #endregion
     }
 }
+
+
