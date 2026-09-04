@@ -88,10 +88,15 @@ resource project 'Microsoft.CognitiveServices/accounts/projects@2025-06-01' = {
   }
 }
 
-// Deployments are serialized rather than parallel when you add more: the account rejects concurrent
-// deployment writes. Chain any second model off this one with a dependsOn.
+// The account rejects concurrent writes to its children with RequestConflict, and ARM parallelises
+// anything without an explicit dependency. So every child below is chained to the previous one even
+// where nothing about the data requires it. This is invisible to both a compile and a what-if -
+// the first deployment is where it shows up, as "Another operation is in progress on the resource".
 resource modelDeployment 'Microsoft.CognitiveServices/accounts/deployments@2025-06-01' = {
   parent: account
+  dependsOn: [
+    project
+  ]
   name: modelDeploymentName
   sku: {
     name: modelSkuName
@@ -126,7 +131,7 @@ resource agentsCapabilityHost 'Microsoft.CognitiveServices/accounts/capabilityHo
     enablePublicHostingEnvironment: true
   }
   dependsOn: [
-    project
+    modelDeployment
   ]
 }
 
@@ -151,6 +156,9 @@ resource applicationInsightsConnection 'Microsoft.CognitiveServices/accounts/pro
       ResourceId: applicationInsightsId
     }
   }
+  dependsOn: [
+    agentsCapabilityHost
+  ]
 }
 
 @description('Resource ID of the Foundry account.')
@@ -168,8 +176,14 @@ output projectName string = project.name
 @description('Principal ID of the project identity.')
 output projectPrincipalId string = project.identity.principalId
 
+// Read from the project rather than assembled from the account. An AIServices account publishes
+// several endpoints on different hosts, and `account.properties.endpoint` is the Cognitive Services
+// one - https://<name>.cognitiveservices.azure.com/. Building the project URL on that host produces
+// a string that looks entirely correct and resolves to the wrong service; the agent data plane lives
+// on https://<name>.services.ai.azure.com/. The project publishes the finished URL itself, so take
+// it from there instead of reconstructing it and being right by luck.
 @description('Project data-plane endpoint. This is FOUNDRY_PROJECT_ENDPOINT.')
-output projectEndpoint string = '${account.properties.endpoint}api/projects/${project.name}'
+output projectEndpoint string = project.properties.endpoints['AI Foundry API']
 
 @description('Model deployment name, for service configuration.')
 output modelDeploymentName string = modelDeployment.name
