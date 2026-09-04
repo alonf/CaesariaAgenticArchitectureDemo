@@ -42,7 +42,11 @@ One API-shape note: `ChatClientAgentOptions` has no `Instructions` property. Ins
 
 A minimal host built from the snippet above, over a scripted `IChatClient`:
 
-- listens on **port 8088**
+- listens on **port 8088** — the `AgentHost` default, overridable with the `PORT` environment
+  variable, and **wrong for the hosted sandbox**: 8088 is already bound there, so a container that
+  takes the default dies at startup with `Failed to bind to address http://0.0.0.0:8088: address
+  already in use`. The session then fails with `session_not_ready` and a message recommending you
+  check `/readiness` — which is fine, and never got the chance to answer. Set `PORT=8080`.
 - serves **`GET /readiness` → 200**, mapped by the protocol library without being asked
 - serves **`POST /responses`** non-streaming, returning a well-formed Responses payload:
   `object: "response"`, `status: "completed"`, `output[].content[].output_text`, and an

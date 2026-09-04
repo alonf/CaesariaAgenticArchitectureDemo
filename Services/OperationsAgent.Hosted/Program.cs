@@ -19,6 +19,20 @@ using OperationsAgent.Hosted;
 // need the Command Center and the peer agents; a hosted agent that carried them would be a worse
 // example of hosting and a confusing example of everything else.
 
+// The port has to be settled before the host is built, because AgentHost binds during Build().
+//
+// AgentHost listens on PORT, defaulting to 8088 - and in the Foundry sandbox 8088 is already taken
+// by the platform, so the default makes the container die at startup with "Failed to bind to address
+// http://0.0.0.0:8088: address already in use". The session then fails with `session_not_ready` and
+// a message about the /readiness endpoint, which points at the one thing that was not wrong.
+//
+// 8080 is the port the aspnet base image already declares and the one the platform routes to. Set it
+// only when the platform has not: an explicit PORT from the environment always wins.
+if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("PORT")))
+{
+    Environment.SetEnvironmentVariable("PORT", "8080");
+}
+
 var builder = AgentHost.CreateBuilder(args);
 
 // No credential in the image and none in configuration. The platform mints a dedicated Microsoft
@@ -44,6 +58,19 @@ var energyHubBaseUri = builder.Configuration["ENERGYHUB_BASE_URI"]
 // Dockerfile puts the directory there.
 var skillsDirectory = builder.Configuration["SKILLS_DIRECTORY"] ?? "/app/skills";
 
+// Computed here and logged from inside CreateAgent, where a real logger exists. Everything AgentHost
+// writes about the platform during construction goes to a bootstrap logger that is gone before
+// Application Insights is wired, so those lines survive only in a console nobody can reach.
+//
+// Names only, never values. Which variables the platform injects is precisely what you need to know
+// when running a container you did not configure, and also the last place you want to discover that
+// you have written a connection string into a trace.
+var platformVariableNames = string.Join(
+    ", ",
+    Environment.GetEnvironmentVariables().Keys.Cast<string>().Order(StringComparer.Ordinal));
+
+var listeningPort = Environment.GetEnvironmentVariable("PORT") ?? "(not set)";
+
 builder.Services.AddHttpClient<IEnergyReadGateway, HttpEnergyReadGateway>(client =>
 {
     client.BaseAddress = new Uri(energyHubBaseUri, UriKind.Absolute);
@@ -57,13 +84,17 @@ builder.Services.AddSingleton(serviceProvider => new AIProjectClient(
 AIAgent CreateAgent(IServiceProvider serviceProvider)
 {
     var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
+    var logger = loggerFactory.CreateLogger("OperationsAgent.Hosted");
+
+    HostedAgentLog.HostingEnvironment(logger, listeningPort, platformVariableNames);
+
     var resolvedSkills = SkillCatalog.ResolveDirectory(skillsDirectory);
 
     if (resolvedSkills is null)
     {
         // Loud, not silent. An agent that quietly lost its procedures still answers, just worse -
         // and the difference is invisible until someone reads a transcript on a projector.
-        HostedAgentLog.SkillsDirectoryMissing(loggerFactory.CreateLogger("OperationsAgent.Hosted"), skillsDirectory);
+        HostedAgentLog.SkillsDirectoryMissing(logger, skillsDirectory);
     }
 
     // One session-scoped correlation is not available here the way it is behind an ASP.NET request,
