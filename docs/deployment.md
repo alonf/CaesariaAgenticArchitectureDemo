@@ -320,6 +320,37 @@ The workflow touches no infrastructure. Everything a platform team owns was prov
 
 ---
 
+## Step 5 — License Agent 365
+
+Agent 365 governs the per-agent Entra identities the hosted runtime mints. It needs **at least one
+assigned licence in the tenant** before it shows anything, and with none assigned it does not fail
+loudly: the portal loads, the agent runs, and telemetry is quietly dropped. That reads as a broken
+integration rather than a missing licence, which is why this step comes before any Agent 365 work
+rather than after it.
+
+```powershell
+./scripts/Assign-Agent365License.ps1 -WhatIf   # preview
+./scripts/Assign-Agent365License.ps1
+```
+
+It defaults to the **signed-in user**, so nobody's identity is written into this repository and a
+reader can run it against their own tenant unchanged. Pass `-UserPrincipalName` to target someone
+else.
+
+**What you need before it will work:**
+
+| Requirement | Why |
+| --- | --- |
+| An Agent 365 subscription in the tenant | The script names the SKUs it can see when it cannot find yours |
+| A directory role that can assign licences — User Administrator, License Administrator or Global Administrator | A plain member gets `Authorization_RequestDenied` |
+| A `usageLocation` on the target user | Licence assignment fails without one, and the Graph error does not say so. Pass `-UsageLocation IL` (or your country code) and the script sets it, but only when the user has none |
+| `az login` to **the tenant that holds the Foundry project** | A licence in another tenant governs nothing here |
+
+That last row is the one worth checking twice. The agents, the registry and the licences must all be
+in the same tenant; a licence bought against a different directory looks assigned and governs nothing.
+
+Re-running is free — an already-licensed user is reported and left alone.
+
 ## Tearing down
 
 Two independent scopes, deliberately.
