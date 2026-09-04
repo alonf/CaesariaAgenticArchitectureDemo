@@ -79,8 +79,22 @@ public sealed partial class WorkforceDelegation(
             // peer declared, so the address and the protocol both come from discovery rather than
             // from an assumption compiled in here. The peer is then an agent this service can run,
             // not a capability it can call.
+            //
+            // PreferredBindings is an order of preference, not a choice - the card still decides what
+            // is actually available, and the factory takes the first preference it can satisfy. This
+            // order is what lets one consumer serve two habitats without branching:
+            //
+            //   the Aspire-hosted peer publishes HTTP+JSON only        -> falls through to HTTP+JSON
+            //   a Foundry-hosted peer publishes JSON-RPC 1.0 and 0.3,
+            //   and HTTP+JSON only at 0.3                              -> selects JSON-RPC 1.0
+            //
+            // Leaving the default (HTTP+JSON first) would silently pin a Foundry-hosted peer to
+            // A2A 0.3, which works and is a version behind for no reason anyone would remember.
             var remoteAgent = new A2AAgent(
-                A2AClientFactory.Create(card, httpClient, new A2AClientOptions()),
+                A2AClientFactory.Create(card, httpClient, new A2AClientOptions
+                {
+                    PreferredBindings = [ProtocolBindingNames.JsonRpc, ProtocolBindingNames.HttpJson]
+                }),
                 new A2AAgentOptions { Name = card.Name, Description = card.Description },
                 _loggerFactory);
 

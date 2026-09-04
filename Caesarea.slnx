@@ -21,6 +21,7 @@
     <Project Path="Services/SecurityAgent.Api/SecurityAgent.Api.csproj" />
     <Project Path="Services/SecurityHub.Api/SecurityHub.Api.csproj" />
     <Project Path="Services/WorkforceAgent.Api/WorkforceAgent.Api.csproj" />
+    <Project Path="Services/WorkforceAgent.Hosted/WorkforceAgent.Hosted.csproj" />
     <Project Path="Services/WorkforceHub.Api/WorkforceHub.Api.csproj" />
     <Project Path="Services/SmartPole.Simulator.Api/SmartPole.Simulator.Api.csproj" />
   </Folder>

@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>caesarea-workforce-hosted</UserSecretsId>
+    <!-- The hosting platform runs linux/amd64 only. -->
+    <ContainerFamily>noble</ContainerFamily>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 1.20, deliberately ahead of the 1.19 family the rest of the solution pins. Do NOT "align" it
+         back: 1.20 fixes a bug that makes 1.19 unable to start in a Foundry hosted sandbox at all -
+         it binds PORT twice and the container dies with "address already in use", which then surfaces
+         as `session_not_ready` blaming the /readiness endpoint. It compiles and runs perfectly on a
+         laptop either way, so nothing local will catch the regression.
+         docs/product-status/hosted-agent.md, "The 1.19 port collision". -->
+    <PackageReference Include="Microsoft.Agents.AI.Foundry.Hosting" Version="1.20.0-preview.260831.1" />
+    <PackageReference Include="Azure.Identity" Version="1.21.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The same agent definition, the same tools, the same shareable projection. Sharing the code
+         rather than copying it is what makes "the application implements Responses, Foundry exposes
+         A2A around it" a claim about hosting rather than about a rewrite. -->
+    <ProjectReference Include="..\WorkforceAgent.Api\WorkforceAgent.Api.csproj" />
+  </ItemGroup>
+
+  <!-- Publishing a web project also collects the content of every web project it references, so
+       WorkforceAgent.Api's appsettings.json arrives at the same relative path as this project's and
+       the SDK stops with NETSDK1152. ErrorOnDuplicatePublishOutputFiles=false would silence it
+       without choosing, and if the Api's file won this container would boot with another habitat's
+       Workforce Hub address. Drop the referenced project's copies and keep our own. -->
+  <Target Name="RemoveReferencedProjectSettingsFromPublish"
+          AfterTargets="ComputeResolvedFilesToPublishList">
+    <ItemGroup>
+      <ResolvedFileToPublish
+        Remove="@(ResolvedFileToPublish)"
+        Condition="$([System.String]::Copy('%(ResolvedFileToPublish.RelativePath)').StartsWith('appsettings')) And
+                   $([System.String]::Copy('%(ResolvedFileToPublish.Identity)').Replace('\', '/').Contains('/WorkforceAgent.Api/'))" />
+    </ItemGroup>
+  </Target>
+
+</Project>

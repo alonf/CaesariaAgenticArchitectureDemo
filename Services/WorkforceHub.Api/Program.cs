@@ -27,7 +27,19 @@ workforce.MapGet("/work-orders/{workOrderId}/shareable", GetShareableDetails);
 
 // The scenario system's one lever here: put the domain back to its own fixture between demos, so
 // nothing a previous walk did survives into the next one.
-workforce.MapGroup("/admin").MapPost("/reset", Reset);
+//
+// Mapped only where a presenter is driving. Deployed to Azure this service has public ingress -
+// the Workforce agent runs in a Foundry sandbox outside its VNet and cannot reach it otherwise -
+// and that ingress authenticates callers without checking which application role they hold. "Erase
+// the running scenario" would then be one valid token away. The two reads above are what the agent
+// needs; this is not.
+//
+// /api/workforce-records below needs no such switch: it already requires the caller to name itself
+// the switchboard AND to connect over loopback, and nothing in a container app is loopback.
+if (builder.Configuration.GetValue("WorkforceHubApi:EnableDemoControlSurface", true))
+{
+    workforce.MapGroup("/admin").MapPost("/reset", Reset);
+}
 
 // The presenter's own view: the records in full, so the lecture can show what was withheld beside
 // what crossed. This is the payload the whole stage exists to keep inside, so it is gated twice and
