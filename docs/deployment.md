@@ -351,6 +351,47 @@ in the same tenant; a licence bought against a different directory looks assigne
 
 Re-running is free — an already-licensed user is reported and left alone.
 
+## Step 6 — The one manual step: the Foundry Toolbox
+
+Everything else in this file is a script or a workflow. This is not, and it is worth knowing why
+before assuming it was laziness.
+
+Foundry Toolboxes are **readable** through the project data plane and **creatable nowhere reachable**:
+
+```text
+GET  {projectEndpoint}/toolboxes?api-version=v1         200   lists toolboxes
+GET  {projectEndpoint}/toolboxes/{name}?api-version=v1  200   or a clear 404
+POST {projectEndpoint}/toolboxes                        405   Method Not Allowed
+PUT  {projectEndpoint}/toolboxes/{name}                 405   Method Not Allowed
+```
+
+Both `v1` and `2025-05-15-preview` answer **405**, not "API version not supported" — so this is a
+deliberate read-only surface, not a wrong guess at the URL. There is no
+`Microsoft.CognitiveServices/.../toolboxes` ARM type, and `Azure.AI.Projects` 2.1.0-beta.4 exposes no
+create. It is a portal step, once per tenant, until the API catches up.
+
+So instead of pretending, verify:
+
+```powershell
+./scripts/Test-FoundryToolbox.ps1 -ToolboxName caesarea-workiq -Environment dev
+```
+
+It lists what exists, reports whether the toolbox is there and what it advertises, and **exits
+non-zero when it is missing** — printing the portal steps. A rehearsal or a pipeline then fails on the
+missing prerequisite with an explanation, rather than on a confusing symptom an hour later.
+
+### Why this deployment crosses three control planes
+
+It is worth being explicit, because it is the thing that makes real deployments unlike demos:
+
+| Plane | What lives there | Tool |
+| --- | --- | --- |
+| **ARM** | Foundry account, project, model, registry, Container Apps, RBAC, observability | Bicep — [`infra/`](../infra/) |
+| **Microsoft Graph** | app registrations, federated credentials, app roles, licences | Scripts here. Note that [Microsoft Graph Bicep](https://learn.microsoft.com/graph/templates/overview-bicep-templates-for-graph) exists and compiles — the bootstrap stays a script because it creates the identity CI authenticates *as*, and also configures GitHub, which no Azure IaC reaches |
+| **Foundry data plane** | agent versions, endpoint protocols, agent cards | Workflows. Deliberately not IaC: a version carries an image digest that changes every release, and infrastructure should not own per-commit state |
+
+Toolboxes sit outside all three, which is why they are the exception rather than the rule.
+
 ## Tearing down
 
 Two independent scopes, deliberately.
