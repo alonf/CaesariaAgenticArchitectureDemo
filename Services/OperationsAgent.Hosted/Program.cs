@@ -1,4 +1,3 @@
-using A2A;
 using Azure.AI.Projects;
 using Azure.Core;
 using Azure.Identity;
@@ -25,9 +24,6 @@ using OperationsAgent.Hosted;
 // rejects any attempt to set it with "Environment variable 'PORT' is reserved for platform use".
 // Overriding it in code only moved the failure to a different port number.
 var injectedPort = Environment.GetEnvironmentVariable("PORT");
-
-// The name the A2A server resolves the agent by, and the name its card publishes.
-const string PublishedAgentName = "Caesarea Operations Agent (hosted)";
 
 var builder = AgentHost.CreateBuilder(args);
 
@@ -198,50 +194,6 @@ builder.Services.AddFoundryResponses();
 // binds, so a container that looks hung at fifteen seconds is often just waiting.
 builder.RegisterProtocol("responses", endpoints => endpoints.MapFoundryResponses());
 
-// A2A alongside Responses, on the same host. One container may expose several protocols, and the
-// version definition declares both.
-//
-// This is currently a PROBE, and it is here rather than in a new project on purpose. A2A discovery
-// is specified at the origin root - /.well-known/agent-card.json - while the platform serves
-// protocols under a prefix: /agents/{name}/endpoint/protocols/a2a/... Those are structurally
-// incompatible unless the platform forwards a prefix hint, and a published card that advertises the
-// wrong base address parses perfectly and points nowhere. That question cannot be answered on a
-// laptop, because FOUNDRY_HOSTING_ENVIRONMENT changes this SDK's behaviour and not the platform's
-// proxy - so it is answered by deploying a new version of an agent that already works.
-builder.Services.AddKeyedSingleton<AIAgent>(
-    PublishedAgentName,
-    (serviceProvider, _) => serviceProvider.GetRequiredService<AIAgent>());
-builder.Services.AddA2AServer(PublishedAgentName);
-
 var app = builder.Build();
-
-app.App.MapA2AHttpJson(PublishedAgentName, "/a2a");
-
-// Reports what the platform actually delivered: the path the container saw, and any prefix hint that
-// came with it. The answer decides whether a published agent card can advertise a reachable URL, or
-// whether callers have to be handed a direct one instead.
-app.App.MapGet("/a2a-routing-probe", (HttpContext context, ILoggerFactory factory) =>
-{
-    var forwarded = string.Join(
-        ", ",
-        context.Request.Headers
-            .Where(header => header.Key.StartsWith("X-Forwarded", StringComparison.OrdinalIgnoreCase))
-            .Select(header => $"{header.Key}={header.Value}"));
-
-    var logger = factory.CreateLogger("OperationsAgent.Hosted");
-    var path = context.Request.Path.Value ?? "(none)";
-    var pathBase = context.Request.PathBase.Value is { Length: > 0 } value ? value : "(empty)";
-    var forwardedOrNone = string.IsNullOrEmpty(forwarded) ? "(none)" : forwarded;
-
-    HostedAgentLog.RoutingProbe(logger, path, pathBase, forwardedOrNone);
-
-    return Results.Ok(new
-    {
-        path = context.Request.Path.Value,
-        pathBase = context.Request.PathBase.Value,
-        host = context.Request.Host.Value,
-        forwarded
-    });
-});
 
 await app.RunAsync();

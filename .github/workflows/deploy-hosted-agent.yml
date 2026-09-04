@@ -133,7 +133,7 @@ jobs:
                 container_configuration: {image: $image},
                 cpu: "1",
                 memory: "2Gi",
-                protocol_versions: [{protocol: "responses", version: "2.0.0"}, {protocol: "a2a", version: "1.0.0"}],
+                protocol_versions: [{protocol: "responses", version: "2.0.0"}],
                 environment_variables: {
                   MODEL_DEPLOYMENT_NAME: $model,
                   ENERGYHUB_BASE_URI: $energyHub,

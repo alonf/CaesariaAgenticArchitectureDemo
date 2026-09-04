@@ -156,6 +156,52 @@ cannot currently complete a skill-driven investigation.
 Unresolved. Worth re-testing on the next `Microsoft.Agents.AI.Foundry.Hosting` preview before
 investing in a workaround, given that 1.19 to 1.20 fixed a comparable hosted-only defect.
 
+### A2A on a hosted agent: the platform fronts it, the container does not
+
+Verified by enabling it on a deployed agent and reading what came back. This changes the design of
+any hosted A2A work, so it is worth stating plainly: **a hosted agent does not serve A2A itself.**
+
+The pieces, and the order they have to happen in:
+
+1. **Declare the protocol on the version** — `protocol_versions: [{protocol: "a2a", version: "1.0.0"}]`
+   alongside `responses`. The platform validates the version: `0.3.0` is rejected with "please use
+   version '1.0.0'". Note that an unknown protocol name is accepted silently (a definition naming
+   `bogus` succeeds), so acceptance alone proves nothing.
+2. **Enable it on the agent endpoint**, which is separate configuration and the step that is easy to
+   miss. `PATCH /agents/{name}` with
+   `agent_endpoint.protocols: ["responses", "a2a"]`. Until this is set, every A2A call returns
+   `endpoint-protocol-not-enabled`: *"Both 'a2a' and 'responses' protocols must be enabled on the
+   endpoint"* — A2A is layered over the Responses agent, not an alternative to it.
+3. **Declare an agent card** at `agent_endpoint.protocol_configuration.a2a.agent_card`. Without one:
+   `agent-card-not-defined` — *"An agent card is required for A2A protocol support."* The card is
+   configuration on the agent, not something the container publishes.
+
+The card is then served from **versioned** URLs, not the well-known path. Asking for
+`/.well-known/agent-card.json` returns a helpful 404 that names them:
+
+```text
+.../agents/{name}/endpoint/protocols/a2a/agentCard/v1.0
+.../agents/{name}/endpoint/protocols/a2a/agentCard/v0.3
+```
+
+**What this settles.** The obvious worry — that A2A discovery is specified at the origin root while
+the platform serves protocols under a prefix, so a container-published card would advertise an
+unreachable base address — does not arise. The platform builds the card itself and fills in
+`supportedInterfaces` with absolute URLs pointing at its own endpoint. `MapA2AHttpJson` in the
+container is unnecessary.
+
+**One constraint for callers.** The published interfaces are:
+
+| Binding | Protocol versions |
+| --- | --- |
+| `JSONRPC` | 1.0, 0.3 |
+| `HTTP+JSON` | 0.3 only |
+
+`WorkforceDelegation` currently selects `ProtocolBindingNames.HttpJson`, which was the right choice
+against the Aspire-hosted peer. Against a Foundry-hosted peer it constrains you to A2A 0.3, or means
+moving to JSON-RPC. Decide that before porting, not after — the last time a binding assumption went
+unchecked here it cost a live 404 that only a real client against a real host revealed.
+
 ## Verified stale — the deck's Bicep
 
 Slide 43 shows `minReplicas: 0` / `maxReplicas: 5`. **There is no replica model.** Hosted agents
