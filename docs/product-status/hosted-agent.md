@@ -202,6 +202,40 @@ against the Aspire-hosted peer. Against a Foundry-hosted peer it constrains you 
 moving to JSON-RPC. Decide that before porting, not after — the last time a binding assumption went
 unchecked here it cost a live 404 that only a real client against a real host revealed.
 
+### A2A limitations, and the two ways to make the outgoing call
+
+Reviewer-supplied and consistent with what was measured here. Two of these were confirmed directly:
+`Foundry Agent Consumer` is a real role (`eed3b665-ab3a-47b6-8f48-c9382fb1dad6`), and the A2A client
+library exposes `JsonRpc` and `Grpc` bindings alongside `HttpJson`.
+
+- Public preview, no SLA.
+- **Incoming A2A requires the Responses protocol** - which is why the endpoint refuses `a2a` alone.
+- Only A2A **1.0 and 0.3**. **1.0 is JSON-RPC only**; **HTTP+JSON exists only at 0.3**; gRPC is not
+  supported.
+- **Text only** - no files or other modalities - and **no streaming/SSE**.
+- Entra authentication is required for the A2A endpoint *and for the agent card itself*.
+- Not configurable end to end through the portal; REST/API automation is still needed.
+- The calling agent's identity needs **`Foundry Agent Consumer`** on the target agent or project.
+
+**Two ways for a hosted agent to make the call, and they are not equivalent.**
+
+*Foundry's managed A2A tool, via a Toolbox.* The platform owns discovery, auth, routing and protocol
+negotiation, so no binding decision has to be made. But `FoundryToolboxService` connects to the
+**Foundry Toolboxes MCP proxy**, discovers tools through `tools/list`, and injects them as
+`McpClientTool` instances. The peer therefore arrives as *a tool in a toolbox* - which is exactly the
+distinction Stage 11 is built to teach against. `WorkforceAgentCard` puts it plainly: a caller
+"discovers a named agent with a provider, a version and declared skills, and decides whether to
+consult it - it does not receive a function signature to invoke."
+
+*The Stage 11 client, ported.* `A2ACardResolver` (which takes an `agentCardPath`, so it can be
+pointed at the platform's `/agentCard/v1.0`) then `A2AClientFactory` and `A2AAgent` - the same code
+path the Aspire-hosted agent uses, with `ProtocolBindingNames.HttpJson` changed to `JsonRpc` for
+A2A 1.0. The peer stays an agent.
+
+For a lecture whose whole argument is that an agent is not a function, the second is the demo path
+and the first is worth a slide: the managed option is genuinely easier, and what it costs is the
+boundary you spent an hour establishing.
+
 ## Verified stale — the deck's Bicep
 
 Slide 43 shows `minReplicas: 0` / `maxReplicas: 5`. **There is no replica model.** Hosted agents
