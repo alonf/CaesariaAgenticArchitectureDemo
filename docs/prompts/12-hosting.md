@@ -79,12 +79,25 @@ the card, fills its `supportedInterfaces` with absolute URLs to its own endpoint
 inbound A2A into a Responses invocation. `MapA2AHttpJson` - which the Aspire-hosted Workforce agent
 does use - has no place in a hosted agent.
 
-**A caveat on the excerpt itself.** The Bicep above is the ARM control-plane path,
-`applications/agentDeployments`. This repo's pipeline provisions through the **data plane**
-(`POST /agents/{name}/versions`, `PATCH /agents/{name}`), and the deployed project reports zero
-`applications` at both `2026-05-15-preview` and `2025-10-01-preview`. Everything stated here was
-verified on the data plane; the ARM shape is unverified, and the two may not be the same model.
-Do not present the Bicep as the way it was done.
+**A caveat on the excerpt itself, now partly resolved.** The Bicep above is the ARM control-plane
+path, `applications/agentDeployments`, while this repo's pipeline provisions through the **data
+plane** (`POST /agents/{name}/versions`, `PATCH /agents/{name}`).
+
+Probing ARM directly settles two things and leaves one open:
+
+- **The ARM path is real.** `PUT .../projects/{project}/applications/{name}` is accepted at
+  `2026-05-15-preview` and `2025-10-01-preview` - it fails on *schema* ("Agents cannot be null or
+  empty"), not on method, so the resource type exists and is creatable.
+- **The slide's API version is wrong.** `2026-03-01` returns `NoRegisteredProviderFound` for this type
+  in `westus3`.
+- **The exact body is undetermined.** `properties.agents` must be non-empty; a bare string is
+  rejected as malformed and an object is answered with an unhelpful `SystemError`. Working it out was
+  stopped as schema archaeology on a path this repo does not use.
+
+So the accurate line is not "agent deployment cannot be IaC". It is: an ARM path exists, this repo
+deploys through the data plane because a version carries an image digest that changes every release,
+and the Bicep on the slide has never been run here. Present it as an alternative, with a corrected
+API version, or replace it with the data-plane call that was actually used.
 
 Add to the bullets, because it is the fact that changes how people size things:
 
