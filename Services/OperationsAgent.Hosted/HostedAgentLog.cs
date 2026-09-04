@@ -31,4 +31,10 @@ internal static partial class HostedAgentLog
         Level = LogLevel.Error,
         Message = "Could not acquire a token for the Energy Hub ({Scope}). The agent has an identity but not this access.")]
     internal static partial void EnergyHubTokenFailed(ILogger logger, string scope, Exception exception);
+
+    [LoggerMessage(
+        EventId = 2705,
+        Level = LogLevel.Information,
+        Message = "Routing probe: path={Path} pathBase={PathBase} forwarded={Forwarded}.")]
+    internal static partial void RoutingProbe(ILogger logger, string path, string pathBase, string forwarded);
 }
