@@ -13,4 +13,16 @@ internal static partial class HostedAgentLog
         Level = LogLevel.Information,
         Message = "Hosting environment: platform injected PORT={Port}. Variables supplied by the platform: {VariableNames}.")]
     internal static partial void HostingEnvironment(ILogger logger, string port, string variableNames);
+
+    [LoggerMessage(
+        EventId = 2702,
+        Level = LogLevel.Information,
+        Message = "Sandbox TCP listeners already bound before this host started: {Listeners}.")]
+    internal static partial void ActiveListeners(ILogger logger, string listeners);
+
+    [LoggerMessage(
+        EventId = 2703,
+        Level = LogLevel.Debug,
+        Message = "Could not enumerate the sandbox's TCP listeners.")]
+    internal static partial void ActiveListenersUnavailable(ILogger logger, Exception exception);
 }
