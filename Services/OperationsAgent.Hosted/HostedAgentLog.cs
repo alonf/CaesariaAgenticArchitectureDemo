@@ -25,4 +25,10 @@ internal static partial class HostedAgentLog
         Level = LogLevel.Error,
         Message = "The agent host failed to start. TCP listeners at the moment of failure: {Listeners}.")]
     internal static partial void StartupFailed(ILogger logger, string listeners, Exception exception);
+
+    [LoggerMessage(
+        EventId = 2704,
+        Level = LogLevel.Error,
+        Message = "Could not acquire a token for the Energy Hub ({Scope}). The agent has an identity but not this access.")]
+    internal static partial void EnergyHubTokenFailed(ILogger logger, string scope, Exception exception);
 }

@@ -56,11 +56,28 @@ builder.Services.AddSingleton<IHostedService>(serviceProvider => new HostingDiag
     serviceProvider.GetRequiredService<ILogger<HostingDiagnostics>>(),
     injectedPort));
 
-builder.Services.AddHttpClient<IEnergyReadGateway, HttpEnergyReadGateway>(client =>
+// The Energy Hub's ingress rejects anonymous callers, so in this habitat every call carries the
+// agent's own Entra token. ENERGYHUB_SCOPE is what selects that behaviour: set, and the handler is
+// composed around the gateway; absent, and the gateway calls exactly as it does under Aspire, where
+// the Energy Hub is a neighbour on a private network. The gateway itself is unchanged either way -
+// see EnergyHubAuthorizationHandler for why that matters more than it looks.
+var energyHubScope = builder.Configuration["ENERGYHUB_SCOPE"];
+
+var energyHubClient = builder.Services.AddHttpClient<IEnergyReadGateway, HttpEnergyReadGateway>(client =>
 {
     client.BaseAddress = new Uri(energyHubBaseUri, UriKind.Absolute);
     client.Timeout = TimeSpan.FromSeconds(30);
 });
+
+if (!string.IsNullOrWhiteSpace(energyHubScope))
+{
+    builder.Services.AddTransient(serviceProvider => new EnergyHubAuthorizationHandler(
+        serviceProvider.GetRequiredService<TokenCredential>(),
+        energyHubScope,
+        serviceProvider.GetRequiredService<ILogger<EnergyHubAuthorizationHandler>>()));
+
+    energyHubClient.AddHttpMessageHandler<EnergyHubAuthorizationHandler>();
+}
 
 builder.Services.AddSingleton(serviceProvider => new AIProjectClient(
     new Uri(projectEndpoint, UriKind.Absolute),

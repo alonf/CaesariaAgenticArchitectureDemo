@@ -103,6 +103,7 @@ jobs:
             --arg image "${{ steps.build.outputs.image }}" \
             --arg model "${{ vars.MODEL_DEPLOYMENT_NAME }}" \
             --arg energyHub "${{ vars.ENERGYHUB_BASE_URI }}" \
+            --arg energyHubScope "${{ vars.ENERGYHUB_API_SCOPE }}" \
             '{definition: {
                 kind: "hosted",
                 container_configuration: {image: $image},
@@ -111,7 +112,8 @@ jobs:
                 protocol_versions: [{protocol: "responses", version: "2.0.0"}],
                 environment_variables: {
                   MODEL_DEPLOYMENT_NAME: $model,
-                  ENERGYHUB_BASE_URI: $energyHub
+                  ENERGYHUB_BASE_URI: $energyHub,
+                  ENERGYHUB_SCOPE: $energyHubScope
                 }
               }}')
           # --fail-with-body so a 400/401/403 stops the job here, and jq -e so a response that
@@ -146,23 +148,38 @@ jobs:
           echo "Timed out waiting for the agent version to become active." && exit 1
 
       # The platform creates a dedicated Entra identity for the agent when the version is created.
-      # It cannot be bound in Bicep because it does not exist at provisioning time. Anything the
-      # agent must reach beyond models and its own session storage is granted here, by principal.
-      - name: Bind the agent identity to downstream resources
+      # It cannot be bound in Bicep because it does not exist at provisioning time.
+      #
+      # This step reports rather than grants, and that is deliberate. The one grant the agent needs -
+      # the EnergyHub.Read application role - is a Microsoft Graph write, and giving this pipeline
+      # AppRoleAssignment.ReadWrite.All would let it grant any application any role in the tenant,
+      # forever, to make one assignment. ./scripts/Grant-AgentEnergyHubAccess.ps1 does it instead, run
+      # by someone who already holds that authority.
+      - name: Report the agent identity and its access
         run: |
           TOKEN=$(az account get-access-token --resource https://ai.azure.com --query accessToken -o tsv)
           AGENT=$(curl -sS --fail-with-body \
             "${{ vars.FOUNDRY_PROJECT_ENDPOINT }}/agents/${AGENT_NAME}?api-version=v1" \
             -H "Authorization: Bearer $TOKEN")
-          # instance_identity is the documented field; .identity is a fallback because neither has
-          # been confirmed against a live response yet. Either way a missing principal fails the
-          # job rather than warning: failing open leaves the agent silently without the access it
-          # needs, and it finds out on its first downstream call in front of an audience.
-          PRINCIPAL=$(echo "$AGENT" | jq -er '.instance_identity.principal_id // .identity.principal_id')
+          # instance_identity.principal_id, confirmed against a live response. A missing principal
+          # fails the job rather than warning: failing open leaves the agent without the access it
+          # needs, and it finds out on its first tool call in front of an audience.
+          PRINCIPAL=$(echo "$AGENT" | jq -er '.instance_identity.principal_id')
           echo "Agent identity: $PRINCIPAL" >> "$GITHUB_STEP_SUMMARY"
-          # Add one `az role assignment create --assignee "$PRINCIPAL" ...` per downstream resource
-          # the agent genuinely needs. Model access and session storage are granted by default and
-          # must not be re-granted here.
+
+          GRANTED=$(az rest --method get \
+            --url "https://graph.microsoft.com/v1.0/servicePrincipals/${PRINCIPAL}/appRoleAssignments" \
+            --query "length(value)" -o tsv 2>/dev/null || echo "unknown")
+          if [ "$GRANTED" = "unknown" ]; then
+            {
+              echo ""
+              echo "> This pipeline cannot read directory role assignments, by design. Grant the agent"
+              echo "> access to the Energy Hub with:"
+              echo "> \`./scripts/Grant-AgentEnergyHubAccess.ps1 -Environment ${{ github.event.inputs.environmentName || 'dev' }}\`"
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "App role assignments held: $GRANTED" >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Smoke test the deployed agent
         run: |
