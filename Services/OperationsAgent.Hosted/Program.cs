@@ -92,6 +92,29 @@ if (!string.IsNullOrWhiteSpace(energyHubScope))
     energyHubClient.AddHttpMessageHandler<EnergyHubAuthorizationHandler>();
 }
 
+// Work IQ, reached through a Foundry toolbox.
+//
+// This is the one capability that only exists in this habitat, and it is deliberate rather than an
+// oversight in the Aspire composition: the toolbox is where the platform performs an OAuth
+// on-behalf-of exchange for the CALLING USER. The agent never holds a user token. Microsoft 365
+// decides what comes back - permissions, sensitivity labels and all - so the same question asked by
+// two people can honestly return two different answers.
+//
+// x-agent-user-id is what carries the caller into the container, and the toolbox proxy turns it into
+// a delegated token on the request's own egress. That is why the SDK describes such a toolbox as
+// deferred at startup and resolved per request: at container start there is no user to be.
+//
+// Absent WORKIQ_TOOLBOX, none of this is registered and the agent behaves exactly as it does under
+// Aspire, which keeps one composition honest across both habitats.
+var workIqToolbox = builder.Configuration["WORKIQ_TOOLBOX"];
+
+if (!string.IsNullOrWhiteSpace(workIqToolbox))
+{
+    builder.Services.AddFoundryToolboxes(
+        new DefaultAzureCredential(),
+        workIqToolbox);
+}
+
 builder.Services.AddSingleton(serviceProvider => new AIProjectClient(
     new Uri(projectEndpoint, UriKind.Absolute),
     serviceProvider.GetRequiredService<TokenCredential>()));

@@ -129,6 +129,7 @@ jobs:
             --arg energyHub "${{ vars.ENERGYHUB_BASE_URI }}" \
             --arg energyHubScope "${{ vars.ENERGYHUB_API_SCOPE }}" \
             --arg skillsMode "${{ vars.SKILLS_MODE }}" \
+            --arg workIqToolbox "${{ vars.WORKIQ_TOOLBOX }}" \
             '{definition: {
                 kind: "hosted",
                 container_configuration: {image: $image},
@@ -139,7 +140,8 @@ jobs:
                   MODEL_DEPLOYMENT_NAME: $model,
                   ENERGYHUB_BASE_URI: $energyHub,
                   ENERGYHUB_SCOPE: $energyHubScope,
-                  SKILLS_MODE: (if $skillsMode == "" then "file" else $skillsMode end)
+                  SKILLS_MODE: (if $skillsMode == "" then "provider" else $skillsMode end),
+                  WORKIQ_TOOLBOX: $workIqToolbox
                 }
               }}')
           # --fail-with-body so a 400/401/403 stops the job here, and jq -e so a response that
