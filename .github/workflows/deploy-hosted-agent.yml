@@ -88,11 +88,13 @@ jobs:
             --query digest -o tsv)
           echo "image=${IMAGE}@${DIGEST}" >> "$GITHUB_OUTPUT"
 
-      # PORT is deliberately absent below. The sandbox injects PORT=8088 and something in it already
-      # holds 8088, so a container that obeys dies at startup with "address already in use" - but the
-      # variable cannot be overridden here either: the API rejects it with "Environment variable
-      # 'PORT' is reserved for platform use. All FOUNDRY_* and AGENT_* variables are reserved". The
-      # override therefore happens in Program.cs, which is the only place left that can make it.
+      # PORT is deliberately absent from environment_variables below, and so is anything named
+      # FOUNDRY_* or AGENT_*: the API rejects all of them with "reserved for platform use". The
+      # platform injects PORT=8088 and the container is expected to take it.
+      #
+      # The protocol version is 2.0.0 and must match what the image serves. Declare 1.0.0 against a
+      # container built on Microsoft.Agents.AI.Foundry.Hosting 1.20 and every call comes back
+      # "unsupported_container_protocol_version", after the version has already gone active.
       - name: Create the agent version
         id: version
         run: |
@@ -106,7 +108,7 @@ jobs:
                 container_configuration: {image: $image},
                 cpu: "1",
                 memory: "2Gi",
-                protocol_versions: [{protocol: "responses", version: "1.0.0"}],
+                protocol_versions: [{protocol: "responses", version: "2.0.0"}],
                 environment_variables: {
                   MODEL_DEPLOYMENT_NAME: $model,
                   ENERGYHUB_BASE_URI: $energyHub

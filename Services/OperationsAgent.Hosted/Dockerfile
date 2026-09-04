@@ -5,10 +5,8 @@
 # pins against them.
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble AS base
 WORKDIR /app
-# 8080, not 8088. AgentHost defaults to PORT=8088, and in the Foundry sandbox 8088 is already taken -
-# the container dies with "address already in use" and the session reports `session_not_ready`,
-# blaming the /readiness endpoint. Program.cs defaults PORT to 8080 unless the platform sets it.
-EXPOSE 8080
+# The port AgentHost listens on: PORT, which the platform injects and reserves, defaulting to 8088.
+EXPOSE 8088
 
 # The build tag does NOT float, and must stay in step with global.json. That file asks for 10.0.103
 # with rollForward: latestPatch, which accepts 10.0.1xx and rejects everything else - so the moment

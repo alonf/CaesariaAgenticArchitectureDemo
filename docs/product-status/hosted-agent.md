@@ -42,17 +42,49 @@ One API-shape note: `ChatClientAgentOptions` has no `Instructions` property. Ins
 
 A minimal host built from the snippet above, over a scripted `IChatClient`:
 
-- listens on **port 8088** — the `AgentHost` default, overridable with the `PORT` environment
-  variable, and **wrong for the hosted sandbox**: 8088 is already bound there, so a container that
-  takes the default dies at startup with `Failed to bind to address http://0.0.0.0:8088: address
-  already in use`. The session then fails with `session_not_ready` and a message recommending you
-  check `/readiness` — which is fine, and never got the chance to answer. Set `PORT=8080`.
+- listens on **port 8088** — `FoundryEnvironment.Port`, sourced from `PORT`, which the hosted
+  platform injects and **reserves**: the version API rejects `PORT` (and anything named `FOUNDRY_*`
+  or `AGENT_*`) in `environment_variables` with "reserved for platform use". Take the port it gives
+  you; there is no supported way to change it, and `AgentHostOptions` exposes no port despite what
+  its `Configure` summary says.
 - serves **`GET /readiness` → 200**, mapped by the protocol library without being asked
 - serves **`POST /responses`** non-streaming, returning a well-formed Responses payload:
   `object: "response"`, `status: "completed"`, `output[].content[].output_text`, and an
   `agent_session_id`
 - serves **`POST /responses`** with `stream: true` as SSE: `response.created`,
   `response.in_progress`, … with `sequence_number` maintained by the library
+
+### The 1.19 port collision, and how to reproduce the sandbox on a laptop
+
+On `Microsoft.Agents.AI.Foundry.Hosting` **1.19.0-preview.260822.1**, a hosted container binds `PORT`
+twice and dies at startup:
+
+```text
+Failed to bind to address http://[::]:8088: address already in use.
+```
+
+In an empty container, with nothing else running — the process competes with itself. The session then
+fails with `session_not_ready` and a message recommending you check that `/readiness` returns 200,
+which points at the one component that was working. **Fixed in 1.20.0-preview.260831.1**; the upgrade
+is the whole fix, and no change of port, composition or infrastructure substitutes for it.
+
+The reason this cost so much to find: it does not happen outside the hosted runtime. Locally the two
+listeners land on different ports and both come up, so every local test passes. The switch is
+`FoundryEnvironment.IsHosted`, which is true whenever **`FOUNDRY_HOSTING_ENVIRONMENT`** is set to a
+non-empty value — so the sandbox reproduces on a laptop in seconds:
+
+```bash
+docker run -e FOUNDRY_HOSTING_ENVIRONMENT=Production -e PORT=8088 \
+  -e FOUNDRY_PROJECT_ENDPOINT=... -e ENERGYHUB_BASE_URI=... <image>
+```
+
+Allow a minute before concluding anything: `TaskManager` retries its storage calls before Kestrel
+binds, so a container that looks hung at fifteen seconds is usually just waiting. Judging it too early
+produced two confident, wrong diagnoses here.
+
+**The protocol version must match the image.** A container built on 1.20 serves Responses `2.0.0`;
+declare `1.0.0` in the version definition and the agent goes `active` and then answers every call with
+`unsupported_container_protocol_version`.
 
 **This matters for the lecture.** The hosted-agent *protocol* is demonstrable on a laptop with no
 cloud, no credential and no deployment. The local/hosted contrast does not depend on the network in
