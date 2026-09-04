@@ -50,18 +50,24 @@ var energyHubBaseUri = builder.Configuration["ENERGYHUB_BASE_URI"]
 // Dockerfile puts the directory there.
 var skillsDirectory = builder.Configuration["SKILLS_DIRECTORY"] ?? "/app/skills";
 
-// Where skills come from: "file" (the directory above) or "inline" (defined in code).
+// How the agent's procedures reach the model: "tool" (the default here) or "provider".
 //
-// This is a diagnostic seam, and it is here because a hosted response that loads a skill fails with
-// HTTP 400 invalid_payload while the same agent answers tool-only questions perfectly. The failure
-// names no field, so the only way to find it is to change one variable at a time. Inline mode swaps
-// a small code-defined skill in for the file-backed one: if that also fails, the provider itself is
-// at fault in this runtime and the workaround is to stop using skills here; if it succeeds, the
-// cause is the file source or the skill's own content, and the search narrows to those.
+// AgentSkillsProvider does not work in the Foundry hosted runtime. Any reply that goes through
+// load_skill comes back `failed` with HTTP 400 invalid_payload, naming no field, while the same
+// agent answers tool-only questions perfectly. That was narrowed by changing one variable at a time
+// against the deployed agent: a file-backed skill fails, and a three-line skill defined in code
+// fails identically - so it is neither the source nor the content, but the provider. Neither package
+// has a newer version to try; Microsoft.Agents.AI and Foundry.Hosting are both at 1.20.
 //
-// It earns its place beyond the investigation: a code-defined skill needs no files in the image and
-// no SKILLS_DIRECTORY, which is a legitimate thing to want from a container.
-var skillsMode = builder.Configuration["SKILLS_MODE"] ?? "file";
+// "tool" is the workaround, and it is a small one because progressive disclosure is a pattern rather
+// than an API. The skills are still discovered from disk and still advertised by name and
+// description; the model still asks for a body by name and gets it only then. What changes is that
+// the body arrives through an ordinary function call instead of through the provider's own
+// load_skill. The agent behaves the same and the lecture's point survives intact.
+//
+// "provider" keeps the real AgentSkillsProvider, for running this container against a runtime where
+// it works and for re-testing the defect on a future preview.
+var skillsMode = builder.Configuration["SKILLS_MODE"] ?? "tool";
 
 // Reports what the platform handed this container, once logging is real. Everything AgentHost says
 // about its environment during construction goes to a bootstrap logger that is gone before
@@ -171,37 +177,35 @@ AIAgent CreateAgent(IServiceProvider serviceProvider)
 
     // Progressive disclosure, exactly as the local agent does it: names and descriptions are
     // advertised, and the model pulls a full procedure through load_skill when it wants one.
-    var skillsProviderOptions = new AgentSkillsProviderOptions { DisableLoadSkillApproval = true };
-
-    AgentSkillsProvider? skills;
-
-    if (skillsMode.Equals("inline", StringComparison.OrdinalIgnoreCase))
+    // Two ways to reach the same behaviour. "tool" works in the hosted runtime; "provider" is the
+    // real AgentSkillsProvider, kept so the defect can be re-tested on a future preview.
+    if (skillsMode.Equals("provider", StringComparison.OrdinalIgnoreCase))
     {
-        skills = new AgentSkillsProvider(
-            [
-                new AgentInlineSkill(
-                    "hosted-skill-probe",
-                    "A minimal skill used to test whether the hosted runtime can return a skill-driven reply.",
-                    "When you use this skill, include the word BANANA somewhere in your reply.")
-            ],
-            options: skillsProviderOptions,
-            loggerFactory: loggerFactory);
-    }
-    else if (resolvedSkills is null)
-    {
-        skills = null;
+        AgentSkillsProvider? skills = resolvedSkills is null
+            ? null
+            : new AgentSkillsProvider(
+                resolvedSkills,
+                options: new AgentSkillsProviderOptions { DisableLoadSkillApproval = true },
+                loggerFactory: loggerFactory);
+
+        options.AIContextProviders = skills is null ? [workKnowledge] : [workKnowledge, skills];
     }
     else
     {
-        skills = new AgentSkillsProvider(
-            resolvedSkills,
-            options: skillsProviderOptions,
-            loggerFactory: loggerFactory);
-    }
+        options.AIContextProviders = [workKnowledge];
 
-    options.AIContextProviders = skills is null
-        ? [workKnowledge]
-        : [workKnowledge, skills];
+        var skillTools = resolvedSkills is null ? null : SkillsAsTools.Load(resolvedSkills);
+        if (skillTools is not null)
+        {
+            // Advertise, then load on demand - the same two halves the provider implements, carried
+            // by an ordinary tool the hosted runtime does not choke on.
+            options.ChatOptions.Instructions += skillTools.Catalogue;
+            options.ChatOptions.Tools.Add(skillTools.CreateTool());
+
+            var advertised = string.Join(", ", skillTools.Names);
+            HostedAgentLog.SkillsExposedAsTools(logger, advertised);
+        }
+    }
 
     return serviceProvider.GetRequiredService<AIProjectClient>().AsAIAgent(options, loggerFactory: loggerFactory);
 }

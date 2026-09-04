@@ -32,4 +32,9 @@ internal static partial class HostedAgentLog
         Message = "Could not acquire a token for the Energy Hub ({Scope}). The agent has an identity but not this access.")]
     internal static partial void EnergyHubTokenFailed(ILogger logger, string scope, Exception exception);
 
+    [LoggerMessage(
+        EventId = 2706,
+        Level = LogLevel.Information,
+        Message = "Skills exposed as a load_skill tool rather than through AgentSkillsProvider: {Names}.")]
+    internal static partial void SkillsExposedAsTools(ILogger logger, string names);
 }
