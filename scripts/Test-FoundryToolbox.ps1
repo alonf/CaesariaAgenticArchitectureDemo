@@ -6,24 +6,18 @@
     not.
 
 .DESCRIPTION
-    This is the one part of the Caesarea deployment that cannot be automated, and this script exists
-    to make that honest rather than invisible.
+    Reports whether a toolbox exists and what its current version carries, and exits non-zero when it
+    does not - so a pipeline or a rehearsal fails on the missing prerequisite with an explanation
+    rather than on a confusing symptom an hour later.
 
-    Foundry Toolboxes are readable through the project data plane and creatable nowhere reachable:
+    A correction is embedded in this file's history and worth stating, because the wrong version of it
+    was committed. Toolboxes ARE creatable through the data plane:
 
-      GET  {projectEndpoint}/toolboxes?api-version=v1        200, lists toolboxes
-      GET  {projectEndpoint}/toolboxes/{name}?api-version=v1 200, or 404 with a clear message
-      POST {projectEndpoint}/toolboxes                       405 Method Not Allowed
-      PUT  {projectEndpoint}/toolboxes/{name}                405 Method Not Allowed
+      POST {projectEndpoint}/toolboxes/{name}/versions?api-version=v1
 
-    Both `v1` and `2025-05-15-preview` are supported api-versions - they answer 405, not "API version
-    not supported" - so this is a deliberate read-only surface rather than a wrong guess at the URL.
-    There is no `Microsoft.CognitiveServices/.../toolboxes` ARM type either, and Azure.AI.Projects
-    2.1.0-beta.4 exposes no create. So a Toolbox is a one-time portal step per tenant.
-
-    What this script does instead is verify. It reports whether the toolbox exists, what tools it
-    advertises, and exits non-zero when it does not - so a pipeline or a rehearsal fails on the
-    missing prerequisite with an explanation, rather than on a confusing symptom an hour later.
+    An earlier probe tried POST on the collection and PUT on the named resource, got 405 from both,
+    and concluded "portal only". It never tried the versions sub-resource, which is where creation
+    lives. ./scripts/Connect-WorkIQ.ps1 uses it, and there is no portal step.
 
 .PARAMETER ToolboxName
     The toolbox to look for.
@@ -137,15 +131,23 @@ if ($response.StatusCode -eq 200) {
     $toolbox = $response.Content | ConvertFrom-Json
     Write-Found "'$ToolboxName' exists"
 
-    if ($toolbox.PSObject.Properties.Name -contains 'tools' -and $toolbox.tools) {
-        foreach ($tool in $toolbox.tools) {
-            $label = if ($tool.PSObject.Properties.Name -contains 'name') { $tool.name } else { $tool }
-            Write-Note "tool: $label"
+    # Tools live on a VERSION, not on the toolbox record, so reading the record alone always looks
+    # empty - which an earlier version of this script reported as "advertises no tools".
+    $versions = Invoke-WebRequest -Uri "$ProjectEndpoint/toolboxes/$ToolboxName/versions`?api-version=v1" `
+        -Headers $headers -SkipHttpErrorCheck
+
+    if ($versions.StatusCode -eq 200) {
+        $all = @(($versions.Content | ConvertFrom-Json).data)
+        if ($all.Count -eq 0) {
+            Write-Note 'No versions yet. A toolbox with no version carries no tools; run ./scripts/Connect-WorkIQ.ps1.'
+        }
+        foreach ($version in $all) {
+            $tools = @($version.tools | ForEach-Object { $_.type })
+            Write-Note "version $($version.version): $(if ($tools.Count) { $tools -join ', ' } else { '(no tools)' })"
         }
     }
     else {
-        Write-Note 'It advertises no tools yet. A toolbox with no tool source connected is reachable and useless;'
-        Write-Note 'add the connection in the portal before expecting the agent to discover anything.'
+        Write-Note "Could not read versions (HTTP $($versions.StatusCode))."
     }
 
     Write-Step 'Done'
@@ -159,28 +161,16 @@ if ($response.StatusCode -ne 404) {
 
 Write-Missing "'$ToolboxName' does not exist"
 
-Write-Step 'Create it in the Foundry portal'
+Write-Step 'Create it'
+
 Write-Host @"
-  This is the one step in this repository that cannot be scripted. It is not an oversight:
+  Toolboxes are created through the data plane, so this is scripted:
 
-    GET  {projectEndpoint}/toolboxes        200   - listing works
-    POST {projectEndpoint}/toolboxes        405   - creating does not
-    PUT  {projectEndpoint}/toolboxes/{name} 405
+      ./scripts/Connect-WorkIQ.ps1 -Environment $Environment
 
-  Both supported api-versions answer 405 rather than "API version not supported", there is no ARM
-  resource type for toolboxes, and Azure.AI.Projects exposes no create. So it is a portal step, once
-  per tenant, until the API catches up.
-
-  In https://ai.azure.com, open this project and:
-
-    1. Go to Toolboxes and create one named exactly:  $ToolboxName
-    2. Add the tool source the agent needs - for the Work IQ scenario, a Microsoft Graph
-       connection with delegated (per-user) access, not application access. The distinction is the
-       whole point: the agent should read the caller's own files, not everyone's.
-    3. Consent to the connection as yourself when prompted. Until someone consents, the toolbox
-       enumerates nothing and the container reports it as consent-pending rather than failing.
-
-  Then run this script again. It exits 0 when the toolbox is there.
+  That provisions the Work IQ service principal, registers the client app, grants admin consent,
+  creates the connection, registers its OAuth redirect URI and creates the toolbox version. Then run
+  this script again; it exits 0 when the toolbox is there.
 "@ -ForegroundColor Yellow
 
 exit 1

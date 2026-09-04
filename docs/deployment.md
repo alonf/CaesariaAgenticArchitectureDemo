@@ -351,46 +351,65 @@ in the same tenant; a licence bought against a different directory looks assigne
 
 Re-running is free — an already-licensed user is reported and left alone.
 
-## Step 6 — The one manual step: the Foundry Toolbox
+## Step 6 — Connect Work IQ
 
-Everything else in this file is a script or a workflow. This is not, and it is worth knowing why
-before assuming it was laziness.
-
-Foundry Toolboxes are **readable** through the project data plane and **creatable nowhere reachable**:
-
-```text
-GET  {projectEndpoint}/toolboxes?api-version=v1         200   lists toolboxes
-GET  {projectEndpoint}/toolboxes/{name}?api-version=v1  200   or a clear 404
-POST {projectEndpoint}/toolboxes                        405   Method Not Allowed
-PUT  {projectEndpoint}/toolboxes/{name}                 405   Method Not Allowed
-```
-
-Both `v1` and `2025-05-15-preview` answer **405**, not "API version not supported" — so this is a
-deliberate read-only surface, not a wrong guess at the URL. There is no
-`Microsoft.CognitiveServices/.../toolboxes` ARM type, and `Azure.AI.Projects` 2.1.0-beta.4 exposes no
-create. It is a portal step, once per tenant, until the API catches up.
-
-So instead of pretending, verify:
+Work IQ is the Microsoft 365 intelligence layer. Connected this way, the agent asks it questions **as
+the signed-in user**: Foundry performs the OAuth on-behalf-of exchange, the agent never holds a user
+token, and Microsoft 365 decides what comes back — permissions and sensitivity labels included.
+Application-only access is not supported, and that is the point. An agent that could read everyone's
+mail would be a weaker governance demonstration, not a stronger one.
 
 ```powershell
-./scripts/Test-FoundryToolbox.ps1 -ToolboxName caesarea-workiq -Environment dev
+./scripts/Connect-WorkIQ.ps1 -Environment dev -WhatIf   # preview
+./scripts/Connect-WorkIQ.ps1 -Environment dev
+./scripts/Test-FoundryToolbox.ps1 -ToolboxName caesarea-workiq   # verify
 ```
 
-It lists what exists, reports whether the toolbox is there and what it advertises, and **exits
-non-zero when it is missing** — printing the portal steps. A rehearsal or a pipeline then fails on the
-missing prerequisite with an explanation, rather than on a confusing symptom an hour later.
+Seven steps, all API calls, no portal step:
+
+1. Provision the Work IQ service principal (`fdcc1f02-fc51-4226-8753-f668596af7f7`). Skip it and the
+   permission is not findable.
+2. Register a single-tenant confidential client app — the app an admin authorises.
+3. Add delegated `WorkIQAgent.Ask` and grant tenant-wide consent.
+4. Mint a client secret, handed straight to the connection and never printed.
+5. Create the project connection — `RemoteA2A`, because **Work IQ is itself an A2A agent**.
+6. Read the OAuth redirect URL the connection returns and register it on the app. The ordering is
+   forced: the URL does not exist until the connection does.
+7. Create a toolbox version carrying `work_iq_preview` — what a hosted agent reaches through
+   `AddFoundryToolboxes`.
+
+Steps 1 and 3 need **Global Administrator**; activate it just-in-time through PIM and deactivate
+after. Everything else needs only the Foundry roles from Step 1 of this document.
+
+**Two prerequisites this script cannot give you**, both of which fail at runtime rather than at setup:
+
+| Symptom | Cause |
+| --- | --- |
+| `403 Forbidden` | Work IQ API calls need usage-based billing with Copilot Credits |
+| `Principal does not have access to API/Operation` | The agent's runtime identity needs **Foundry User** on the project |
+
+A Foundry connection's fields **cannot be edited after creation**. The script reports an existing one
+and leaves it alone rather than pretending to update it; to change it, delete and re-run.
+
+### A correction worth keeping
+
+An earlier version of this document said a toolbox was "the one manual step" that could not be
+scripted. That was wrong, and the way it was wrong is instructive: the probe tried `POST /toolboxes`
+and `PUT /toolboxes/{name}`, got 405 from both, and generalised. It never tried
+`POST /toolboxes/{name}/versions`, which is where creation actually lives. Two probes of a plausible
+shape are not a survey of an API.
 
 ### Why this deployment crosses three control planes
 
-It is worth being explicit, because it is the thing that makes real deployments unlike demos:
-
 | Plane | What lives there | Tool |
 | --- | --- | --- |
-| **ARM** | Foundry account, project, model, registry, Container Apps, RBAC, observability | Bicep — [`infra/`](../infra/) |
-| **Microsoft Graph** | app registrations, federated credentials, app roles, licences | Scripts here. Note that [Microsoft Graph Bicep](https://learn.microsoft.com/graph/templates/overview-bicep-templates-for-graph) exists and compiles — the bootstrap stays a script because it creates the identity CI authenticates *as*, and also configures GitHub, which no Azure IaC reaches |
-| **Foundry data plane** | agent versions, endpoint protocols, agent cards | Workflows. Deliberately not IaC: a version carries an image digest that changes every release, and infrastructure should not own per-commit state |
+| **ARM** | Foundry account, project, model, registry, Container Apps, RBAC, observability, **connections** | Bicep — [`infra/`](../infra/) |
+| **Microsoft Graph** | app registrations, federated credentials, app roles, consent, licences | Scripts. [Microsoft Graph Bicep](https://learn.microsoft.com/graph/templates/overview-bicep-templates-for-graph) exists and compiles; the bootstrap stays a script because it creates the identity CI authenticates *as*, and configures GitHub, which no Azure IaC reaches |
+| **Foundry data plane** | agent versions, endpoint protocols, agent cards, **toolboxes** | Workflows and scripts. Deliberately not IaC for versions: an image digest changes every release, and infrastructure should not own per-commit state |
 
-Toolboxes sit outside all three, which is why they are the exception rather than the rule.
+An ARM path for agent applications does exist — `PUT .../projects/{project}/applications/{name}` is
+accepted at `2026-05-15-preview` and fails on schema rather than method. This repo uses the data plane
+for the reason in the third row, not because the other path is absent.
 
 ## Tearing down
 
