@@ -118,6 +118,44 @@ The same trace settles two other things at once: **skills work in the hosted hab
 pulled `streetlight-investigation` through progressive disclosure, unprompted), and **the tool path
 is intact end to end**, from model to `AIFunctionFactory` tool to outbound HTTP.
 
+### Open: AgentSkillsProvider breaks the Responses reply in the hosted runtime
+
+A hosted response that involves `load_skill` fails. The skill loads - the container logs
+`Loaded skill: streetlight-investigation` - and the reply then comes back as:
+
+```text
+status: failed
+HTTP 400 (ServiceError: invalid_payload)
+The provided data does not match the expected schema
+```
+
+The error names no parameter, and reproduces on every attempt.
+
+Isolated by asking the deployed agent four things:
+
+| Probe | Composition | Result |
+| --- | --- | --- |
+| A | `get_streetlight_state` only | **completed** |
+| B | `search_work_knowledge` only | **completed** |
+| C | `load_skill` + `get_streetlight_state` | **failed** |
+| D | `get_streetlight_state` + `search_work_knowledge`, no skill | **completed** |
+
+So tools work, two `AIContextProvider`s work, the authenticated Energy Hub path works, and the model
+works. `AgentSkillsProvider` is the one component that turns a good response into an invalid payload,
+and D rules out the text-search provider added alongside it.
+
+This is not new: the very first hosted probe in this environment also logged `Loaded skill` and
+returned `status: failed`, which was attributed at the time to the placeholder Energy Hub returning
+404. It was this.
+
+**What it costs.** Progressive disclosure is demonstrable in the hosted runtime only as far as the
+log line: the skill is discovered and loaded, and the answer built on it cannot be returned. The
+Aspire-hosted agent is unaffected, so the Skills stage is intact - it is the hosted habitat that
+cannot currently complete a skill-driven investigation.
+
+Unresolved. Worth re-testing on the next `Microsoft.Agents.AI.Foundry.Hosting` preview before
+investing in a workaround, given that 1.19 to 1.20 fixed a comparable hosted-only defect.
+
 ## Verified stale — the deck's Bicep
 
 Slide 43 shows `minReplicas: 0` / `maxReplicas: 5`. **There is no replica model.** Hosted agents
