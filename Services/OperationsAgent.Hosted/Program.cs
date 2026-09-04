@@ -50,6 +50,19 @@ var energyHubBaseUri = builder.Configuration["ENERGYHUB_BASE_URI"]
 // Dockerfile puts the directory there.
 var skillsDirectory = builder.Configuration["SKILLS_DIRECTORY"] ?? "/app/skills";
 
+// Where skills come from: "file" (the directory above) or "inline" (defined in code).
+//
+// This is a diagnostic seam, and it is here because a hosted response that loads a skill fails with
+// HTTP 400 invalid_payload while the same agent answers tool-only questions perfectly. The failure
+// names no field, so the only way to find it is to change one variable at a time. Inline mode swaps
+// a small code-defined skill in for the file-backed one: if that also fails, the provider itself is
+// at fault in this runtime and the workaround is to stop using skills here; if it succeeds, the
+// cause is the file source or the skill's own content, and the search narrows to those.
+//
+// It earns its place beyond the investigation: a code-defined skill needs no files in the image and
+// no SKILLS_DIRECTORY, which is a legitimate thing to want from a container.
+var skillsMode = builder.Configuration["SKILLS_MODE"] ?? "file";
+
 // Reports what the platform handed this container, once logging is real. Everything AgentHost says
 // about its environment during construction goes to a bootstrap logger that is gone before
 // Application Insights exists, which is why the first hosted failures were invisible.
@@ -158,15 +171,37 @@ AIAgent CreateAgent(IServiceProvider serviceProvider)
 
     // Progressive disclosure, exactly as the local agent does it: names and descriptions are
     // advertised, and the model pulls a full procedure through load_skill when it wants one.
-    options.AIContextProviders = resolvedSkills is null
+    var skillsProviderOptions = new AgentSkillsProviderOptions { DisableLoadSkillApproval = true };
+
+    AgentSkillsProvider? skills;
+
+    if (skillsMode.Equals("inline", StringComparison.OrdinalIgnoreCase))
+    {
+        skills = new AgentSkillsProvider(
+            [
+                new AgentInlineSkill(
+                    "hosted-skill-probe",
+                    "A minimal skill used to test whether the hosted runtime can return a skill-driven reply.",
+                    "When you use this skill, include the word BANANA somewhere in your reply.")
+            ],
+            options: skillsProviderOptions,
+            loggerFactory: loggerFactory);
+    }
+    else if (resolvedSkills is null)
+    {
+        skills = null;
+    }
+    else
+    {
+        skills = new AgentSkillsProvider(
+            resolvedSkills,
+            options: skillsProviderOptions,
+            loggerFactory: loggerFactory);
+    }
+
+    options.AIContextProviders = skills is null
         ? [workKnowledge]
-        : [
-            workKnowledge,
-            new AgentSkillsProvider(
-                resolvedSkills,
-                options: new AgentSkillsProviderOptions { DisableLoadSkillApproval = true },
-                loggerFactory: loggerFactory)
-        ];
+        : [workKnowledge, skills];
 
     return serviceProvider.GetRequiredService<AIProjectClient>().AsAIAgent(options, loggerFactory: loggerFactory);
 }
