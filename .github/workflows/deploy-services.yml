@@ -133,11 +133,16 @@ jobs:
       - name: Verify the Energy Hub rejects anonymous callers
         run: |
           BASE_URI="${{ steps.apps.outputs.baseUri }}"
-          for attempt in $(seq 1 30); do
+          for attempt in $(seq 1 40); do
             STATUS=$(curl -sS -o /dev/null -w "%{http_code}" "${BASE_URI}/api/energy/assets/L-417" || echo "000")
-            # 000 means the ingress is not answering yet; a first revision takes a moment.
-            [ "$STATUS" != "000" ] && break
-            sleep 5
+            # A first revision takes a while to come up, and it is not silent while it does: 000 is
+            # the ingress not answering, and 502 is the ingress answering while the container behind
+            # it is still starting. Treating 502 as a verdict fails the gate check on a healthy
+            # deployment - which it did, the first time this ran.
+            case "$STATUS" in
+              000|502|503|504) sleep 5 ;;
+              *) break ;;
+            esac
           done
           echo "anonymous GET -> HTTP $STATUS"
           if [ "$STATUS" != "401" ]; then
