@@ -50,24 +50,17 @@ var energyHubBaseUri = builder.Configuration["ENERGYHUB_BASE_URI"]
 // Dockerfile puts the directory there.
 var skillsDirectory = builder.Configuration["SKILLS_DIRECTORY"] ?? "/app/skills";
 
-// How the agent's procedures reach the model: "tool" (the default here) or "provider".
+// How the agent's procedures reach the model: "provider" (the default, and the real
+// AgentSkillsProvider) or "tool", which advertises the same skills and serves their bodies through
+// an ordinary function call.
 //
-// AgentSkillsProvider does not work in the Foundry hosted runtime. Any reply that goes through
-// load_skill comes back `failed` with HTTP 400 invalid_payload, naming no field, while the same
-// agent answers tool-only questions perfectly. That was narrowed by changing one variable at a time
-// against the deployed agent: a file-backed skill fails, and a three-line skill defined in code
-// fails identically - so it is neither the source nor the content, but the provider. Neither package
-// has a newer version to try; Microsoft.Agents.AI and Foundry.Hosting are both at 1.20.
-//
-// "tool" is the workaround, and it is a small one because progressive disclosure is a pattern rather
-// than an API. The skills are still discovered from disk and still advertised by name and
-// description; the model still asks for a body by name and gets it only then. What changes is that
-// the body arrives through an ordinary function call instead of through the provider's own
-// load_skill. The agent behaves the same and the lecture's point survives intact.
-//
-// "provider" keeps the real AgentSkillsProvider, for running this container against a runtime where
-// it works and for re-testing the defect on a future preview.
-var skillsMode = builder.Configuration["SKILLS_MODE"] ?? "tool";
+// The tool path exists because of a wrong diagnosis, and is kept because it is independently useful:
+// it needs no files in the image and no SKILLS_DIRECTORY. It does NOT work around the hosted
+// runtime's real defect, which is that a response calling more than one distinct tool fails about
+// half the time with HTTP 400 invalid_payload. Skills are not implicated in that - the first four
+// probes that said otherwise were single samples of an intermittent fault. See
+// docs/product-status/hosted-agent.md.
+var skillsMode = builder.Configuration["SKILLS_MODE"] ?? "provider";
 
 // Reports what the platform handed this container, once logging is real. Everything AgentHost says
 // about its environment during construction goes to a bootstrap logger that is gone before

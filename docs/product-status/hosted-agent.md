@@ -118,10 +118,9 @@ The same trace settles two other things at once: **skills work in the hosted hab
 pulled `streetlight-investigation` through progressive disclosure, unprompted), and **the tool path
 is intact end to end**, from model to `AIFunctionFactory` tool to outbound HTTP.
 
-### Open: AgentSkillsProvider breaks the Responses reply in the hosted runtime
+### Open: multi-tool responses fail intermittently in the hosted runtime
 
-A hosted response that involves `load_skill` fails. The skill loads - the container logs
-`Loaded skill: streetlight-investigation` - and the reply then comes back as:
+A hosted response that calls **more than one distinct tool** fails about half the time with:
 
 ```text
 status: failed
@@ -129,32 +128,36 @@ HTTP 400 (ServiceError: invalid_payload)
 The provided data does not match the expected schema
 ```
 
-The error names no parameter, and reproduces on every attempt.
+The error names no field. Measured against the deployed agent, five runs of each shape, twice:
 
-Isolated by asking the deployed agent four things:
+| Response shape | Result |
+| --- | --- |
+| No tools | 10/10 completed |
+| One tool call | 10/10 completed |
+| Two distinct tools, identical prompt | ~5/10 completed |
 
-| Probe | Composition | Result |
-| --- | --- | --- |
-| A | `get_streetlight_state` only | **completed** |
-| B | `search_work_knowledge` only | **completed** |
-| C | `load_skill` + `get_streetlight_state` | **failed** |
-| D | `get_streetlight_state` + `search_work_knowledge`, no skill | **completed** |
+A full investigation chains three or more tools, so the per-response failure compounds and it fails
+nearly every time - which is exactly why it first looked deterministic.
 
-So tools work, two `AIContextProvider`s work, the authenticated Energy Hub path works, and the model
-works. `AgentSkillsProvider` is the one component that turns a good response into an invalid payload,
-and D rules out the text-search provider added alongside it.
+**A correction worth reading before trusting any isolation in this file.** This was first recorded
+here as "AgentSkillsProvider breaks the hosted reply", on the strength of four probes: tool-only
+passed, search-only passed, both-together passed, and adding a skill failed. Every one of those was a
+**single sample**. Against an intermittent fault, single samples produce a clean, confident and wrong
+story - and the story survived a package upgrade, a workaround and a commit before five repeats of one
+prompt returned one pass and four failures.
 
-This is not new: the very first hosted probe in this environment also logged `Loaded skill` and
-returned `status: failed`, which was attributed at the time to the placeholder Energy Hub returning
-404. It was this.
+Skills are not implicated. `load_skill` works; so does a code-defined `AgentInlineSkill`; so does a
+file-backed one. What fails is the second distinct tool in a response, whatever it is.
 
-**What it costs.** Progressive disclosure is demonstrable in the hosted runtime only as far as the
-log line: the skill is discovered and loaded, and the answer built on it cannot be returned. The
-Aspire-hosted agent is unaffected, so the Skills stage is intact - it is the hosted habitat that
-cannot currently complete a skill-driven investigation.
+**Mitigation.** There is no configuration that avoids it, and no newer package to move to -
+`Microsoft.Agents.AI` and `Microsoft.Agents.AI.Foundry.Hosting` are both at 1.20. A caller can retry:
+the failure is per-response, and the same prompt succeeds on a later attempt. For a lecture, the
+honest options are to keep multi-tool work in the Aspire habitat, or to retry visibly and say why.
 
-Unresolved. Worth re-testing on the next `Microsoft.Agents.AI.Foundry.Hosting` preview before
-investing in a workaround, given that 1.19 to 1.20 fixed a comparable hosted-only defect.
+`SKILLS_MODE` remains in `OperationsAgent.Hosted` as a result of the wrong diagnosis: `provider` (the
+default, and the real `AgentSkillsProvider`) or `tool`, which advertises the same skills and serves
+their bodies through an ordinary function. The `tool` path works and needs no files in the image, so
+it is kept as an option - but it does not fix this, and it was never needed for it.
 
 ### A2A on a hosted agent: the platform fronts it, the container does not
 
