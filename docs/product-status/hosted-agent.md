@@ -90,6 +90,29 @@ declare `1.0.0` in the version definition and the agent goes `active` and then a
 cloud, no credential and no deployment. The local/hosted contrast does not depend on the network in
 the room for its first half.
 
+## Verified in a deployed sandbox
+
+**Outbound public egress: open.** This was the open question underneath every decision about what a
+hosted agent can reach, and the docs never state it for the default, non-isolated sandbox. Settled by
+asking the deployed agent for a streetlight's state with `ENERGYHUB_BASE_URI` pointed at a placeholder
+host, and reading the trace it produced:
+
+```text
+Loaded skill: streetlight-investigation
+Operations Agent invoked tool get_streetlight_state for asset SL-1042. CorrelationId: hosted.
+Sending HTTP request GET https://example.com/api/energy/assets/SL-1042
+Energy Hub state read for asset SL-1042 failed with status 404. Detail: <!doctype html>...Example Domain...
+```
+
+A 404 carrying the origin's own HTML is proof the request left the sandbox and was answered by the
+public internet. A blocked sandbox fails earlier and differently, with no status code at all - which
+the gateway distinguishes, logging `StateRequestHttpError` when `HttpRequestException.StatusCode` is
+null. So an Energy Hub behind public HTTPS ingress is reachable from a hosted agent.
+
+The same trace settles two other things at once: **skills work in the hosted habitat** (the agent
+pulled `streetlight-investigation` through progressive disclosure, unprompted), and **the tool path
+is intact end to end**, from model to `AIFunctionFactory` tool to outbound HTTP.
+
 ## Verified stale — the deck's Bicep
 
 Slide 43 shows `minReplicas: 0` / `maxReplicas: 5`. **There is no replica model.** Hosted agents
@@ -163,13 +186,6 @@ deployment output.
 
 ## Not yet verified
 
-- **Outbound egress from a deployed sandbox.** The docs state that Standard Setup *with private
-  networking* has "no public egress", and that default templates create public resources; in BYO-VNet
-  mode the Micro VM has "a dedicated network interface and uses its own IP for outbound
-  communication". Nowhere is egress from the **default, non-isolated** sandbox stated directly. It
-  is very likely open, but it is an inference, and it is the fact underneath any decision about
-  whether a hosted agent could reach a tunnel. **Settle it with one outbound request from inside a
-  deployed container before relying on it.**
 - **`azd` deployment end to end.** Not attempted yet. Blocker found: the `azure.ai.agents` azd
   extension reports **Incompatible** (installed 1.0.0-beta.11, latest 1.0.0-beta.13) against the
   installed `azd` 1.31.2, which itself has 1.33.0 available. Upgrading both is a prerequisite.
