@@ -88,6 +88,11 @@ jobs:
             --query digest -o tsv)
           echo "image=${IMAGE}@${DIGEST}" >> "$GITHUB_OUTPUT"
 
+      # PORT is pinned in the definition below rather than left to the platform. The sandbox injects
+      # PORT=8088 and something in it already holds 8088, so a container that obeys dies at startup
+      # with "address already in use" and the session reports `session_not_ready`, recommending you
+      # check a /readiness endpoint that never got the chance to answer. Setting it here overrides
+      # the injected value, and keeps the override somewhere a reader will find it.
       - name: Create the agent version
         id: version
         run: |
@@ -104,7 +109,8 @@ jobs:
                 protocol_versions: [{protocol: "responses", version: "1.0.0"}],
                 environment_variables: {
                   MODEL_DEPLOYMENT_NAME: $model,
-                  ENERGYHUB_BASE_URI: $energyHub
+                  ENERGYHUB_BASE_URI: $energyHub,
+                  PORT: "8080"
                 }
               }}')
           # --fail-with-body so a 400/401/403 stops the job here, and jq -e so a response that

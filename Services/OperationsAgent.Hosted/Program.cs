@@ -19,15 +19,14 @@ using OperationsAgent.Hosted;
 // need the Command Center and the peer agents; a hosted agent that carried them would be a worse
 // example of hosting and a confusing example of everything else.
 
-// The port has to be settled before the host is built, because AgentHost binds during Build().
+// AgentHost binds during Build(), reading PORT and defaulting to 8088. In the Foundry sandbox 8088
+// is already held by something else, so a container that takes 8088 dies at startup with "Failed to
+// bind to address http://0.0.0.0:8088: address already in use" - and the session then reports
+// `session_not_ready`, pointing at the /readiness endpoint, which is the one part that was fine.
 //
-// AgentHost listens on PORT, defaulting to 8088 - and in the Foundry sandbox 8088 is already taken
-// by the platform, so the default makes the container die at startup with "Failed to bind to address
-// http://0.0.0.0:8088: address already in use". The session then fails with `session_not_ready` and
-// a message about the /readiness endpoint, which points at the one thing that was not wrong.
-//
-// 8080 is the port the aspnet base image already declares and the one the platform routes to. Set it
-// only when the platform has not: an explicit PORT from the environment always wins.
+// The sandbox sets PORT=8088 itself, so this default only covers the case where nothing set it at
+// all. The deployment pins PORT=8080 in the agent version definition, which is the layer that can
+// actually override the platform - see .github/workflows/deploy-hosted-agent.yml.
 if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("PORT")))
 {
     Environment.SetEnvironmentVariable("PORT", "8080");
