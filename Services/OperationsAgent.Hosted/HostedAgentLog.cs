@@ -11,6 +11,6 @@ internal static partial class HostedAgentLog
     [LoggerMessage(
         EventId = 2701,
         Level = LogLevel.Information,
-        Message = "Hosting environment: listening on port {Port}. Variables supplied by the platform: {VariableNames}.")]
+        Message = "Hosting environment: platform injected PORT={Port}. Variables supplied by the platform: {VariableNames}.")]
     internal static partial void HostingEnvironment(ILogger logger, string port, string variableNames);
 }

@@ -19,18 +19,17 @@ using OperationsAgent.Hosted;
 // need the Command Center and the peer agents; a hosted agent that carried them would be a worse
 // example of hosting and a confusing example of everything else.
 
-// AgentHost binds during Build(), reading PORT and defaulting to 8088. In the Foundry sandbox 8088
-// is already held by something else, so a container that takes 8088 dies at startup with "Failed to
-// bind to address http://0.0.0.0:8088: address already in use" - and the session then reports
-// `session_not_ready`, pointing at the /readiness endpoint, which is the one part that was fine.
+// AgentHost binds during Build(), reading PORT. The Foundry sandbox injects PORT=8088 - the variable
+// is reserved, so it cannot be overridden in the agent version definition; the API rejects it with
+// "Environment variable 'PORT' is reserved for platform use" - and in that sandbox something already
+// holds 8088. A container that obeys dies at startup with "Failed to bind to address
+// http://0.0.0.0:8088: address already in use", and the session then reports `session_not_ready`,
+// pointing at the /readiness endpoint, which is the one part that was working.
 //
-// The sandbox sets PORT=8088 itself, so this default only covers the case where nothing set it at
-// all. The deployment pins PORT=8080 in the agent version definition, which is the layer that can
-// actually override the platform - see .github/workflows/deploy-hosted-agent.yml.
-if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("PORT")))
-{
-    Environment.SetEnvironmentVariable("PORT", "8080");
-}
+// So the port is overridden here, in the only place left. 8080 is what the aspnet base image
+// declares and what the Dockerfile EXPOSEs.
+var injectedPort = Environment.GetEnvironmentVariable("PORT");
+Environment.SetEnvironmentVariable("PORT", "8080");
 
 var builder = AgentHost.CreateBuilder(args);
 
@@ -57,18 +56,10 @@ var energyHubBaseUri = builder.Configuration["ENERGYHUB_BASE_URI"]
 // Dockerfile puts the directory there.
 var skillsDirectory = builder.Configuration["SKILLS_DIRECTORY"] ?? "/app/skills";
 
-// Computed here and logged from inside CreateAgent, where a real logger exists. Everything AgentHost
-// writes about the platform during construction goes to a bootstrap logger that is gone before
-// Application Insights is wired, so those lines survive only in a console nobody can reach.
-//
-// Names only, never values. Which variables the platform injects is precisely what you need to know
-// when running a container you did not configure, and also the last place you want to discover that
-// you have written a connection string into a trace.
-var platformVariableNames = string.Join(
-    ", ",
-    Environment.GetEnvironmentVariables().Keys.Cast<string>().Order(StringComparer.Ordinal));
-
-var listeningPort = Environment.GetEnvironmentVariable("PORT") ?? "(not set)";
+// Reports what the platform handed this container, once the server is up and logging is real.
+builder.Services.AddSingleton<IHostedService>(serviceProvider => new HostingDiagnostics(
+    serviceProvider.GetRequiredService<ILogger<HostingDiagnostics>>(),
+    injectedPort));
 
 builder.Services.AddHttpClient<IEnergyReadGateway, HttpEnergyReadGateway>(client =>
 {
@@ -84,9 +75,6 @@ AIAgent CreateAgent(IServiceProvider serviceProvider)
 {
     var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
     var logger = loggerFactory.CreateLogger("OperationsAgent.Hosted");
-
-    HostedAgentLog.HostingEnvironment(logger, listeningPort, platformVariableNames);
-
     var resolvedSkills = SkillCatalog.ResolveDirectory(skillsDirectory);
 
     if (resolvedSkills is null)

@@ -88,11 +88,11 @@ jobs:
             --query digest -o tsv)
           echo "image=${IMAGE}@${DIGEST}" >> "$GITHUB_OUTPUT"
 
-      # PORT is pinned in the definition below rather than left to the platform. The sandbox injects
-      # PORT=8088 and something in it already holds 8088, so a container that obeys dies at startup
-      # with "address already in use" and the session reports `session_not_ready`, recommending you
-      # check a /readiness endpoint that never got the chance to answer. Setting it here overrides
-      # the injected value, and keeps the override somewhere a reader will find it.
+      # PORT is deliberately absent below. The sandbox injects PORT=8088 and something in it already
+      # holds 8088, so a container that obeys dies at startup with "address already in use" - but the
+      # variable cannot be overridden here either: the API rejects it with "Environment variable
+      # 'PORT' is reserved for platform use. All FOUNDRY_* and AGENT_* variables are reserved". The
+      # override therefore happens in Program.cs, which is the only place left that can make it.
       - name: Create the agent version
         id: version
         run: |
@@ -109,8 +109,7 @@ jobs:
                 protocol_versions: [{protocol: "responses", version: "1.0.0"}],
                 environment_variables: {
                   MODEL_DEPLOYMENT_NAME: $model,
-                  ENERGYHUB_BASE_URI: $energyHub,
-                  PORT: "8080"
+                  ENERGYHUB_BASE_URI: $energyHub
                 }
               }}')
           # --fail-with-body so a 400/401/403 stops the job here, and jq -e so a response that
