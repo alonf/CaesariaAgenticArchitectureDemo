@@ -356,6 +356,11 @@ Write-Step 'Configuring GitHub environments'
 foreach ($environment in $Environments) {
     if (-not $PSCmdlet.ShouldProcess("$Repository/$environment", 'Configure GitHub environment')) { continue }
 
+    # The PUT below converges either way, but saying [created] about something that already existed
+    # makes the idempotency claim in docs/deployment.md untrue on a re-run - and a report you cannot
+    # trust is worse than no report.
+    $environmentExisted = Test-GitHubResource "repos/$Repository/environments/$environment"
+
     # A named branch policy, never null. Null permits every branch and every tag to deploy, which
     # makes the environment a label rather than a control.
     $body = @{
@@ -389,7 +394,8 @@ foreach ($environment in $Environments) {
         if ($LASTEXITCODE -ne 0) { throw "Adding the branch policy for '$environment' failed." }
     }
 
-    Write-Created "environment '$environment' (branch: $DeploymentBranch$(if ($gated) { ', review required' } else { ', UNGATED' }))"
+    $summary = "environment '$environment' (branch: $DeploymentBranch$(if ($gated) { ', review required' } else { ', UNGATED' }))"
+    if ($environmentExisted) { Write-Exists $summary } else { Write-Created $summary }
 
     if (-not $identities.ContainsKey($environment)) {
         Write-Note 'Skipping variables: this environment has no identity yet.'
@@ -408,12 +414,27 @@ foreach ($environment in $Environments) {
         AZURE_MODEL_VERSION           = $ModelVersion
     }
 
+    $changed = 0
     foreach ($key in $configuration.Keys) {
+        # Compare before writing, so the report distinguishes "already correct" from "set". Both
+        # converge; only one of them is a change.
+        $current = $null
+        if (Test-GitHubResource "repos/$Repository/environments/$environment/variables/$key") {
+            $current = (Invoke-Checked {
+                gh api "repos/$Repository/environments/$environment/variables/$key" --jq '.value'
+            } "Reading variable '$key'").Trim()
+        }
+
+        if ($current -eq $configuration[$key]) { continue }
+
         Invoke-Checked {
             gh variable set $key --env $environment --repo $Repository --body $configuration[$key]
         } "Setting variable '$key' on '$environment'" | Out-Null
+        $changed++
     }
-    Write-Created "${environment}: $($configuration.Count) variables"
+
+    if ($changed -gt 0) { Write-Created "${environment}: $changed of $($configuration.Count) variables set" }
+    else { Write-Exists "${environment}: $($configuration.Count) variables already correct" }
 }
 
 # ---------------------------------------------------------------------------------------------

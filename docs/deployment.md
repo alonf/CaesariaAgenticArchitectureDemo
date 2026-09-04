@@ -79,27 +79,39 @@ Run the preview first. It changes nothing and tells you what it would do:
 ./scripts/Bootstrap-GitHubOidc.ps1 -ModelVersion 2026-04-24 -WhatIf
 ```
 
-Expected output on a clean tenant:
+Expected output on a clean tenant, abridged — this is a real run, not an illustration:
 
 ```text
 === Checking prerequisites
   az and gh are present.
   Subscription: <your subscription> (<id>)
-  Repository: <owner>/<repo>
-  Model version 2026-04-24 is available in westus3.
+  Tenant:       <tenant id>
+  Repository:   <owner>/<repo>
+  Model:        gpt-5.5 2026-04-24 is available in westus3.
 
 === Registering resource providers
   [exists] Microsoft.CognitiveServices
-  ... one line per provider, [exists] or a registration ...
+  ... one line per provider ...
 
 === Identity for 'dev' (caesarea-github-deploy-dev)
-What if: Performing the operation "Create Entra application" on target "caesarea-github-deploy-dev".
-  Would create the application. The steps below depend on its ID and cannot be previewed.
+  [created] application (<app id>)
+  [created] service principal (<object id>)
+  [created] federated credential -> repo:<owner>/<repo>:environment:dev
+  [created] Contributor at subscription scope
+  [created] Role Based Access Control Administrator at subscription scope
 
 === Identity for 'prod' (caesarea-github-deploy-prod)
-What if: Performing the operation "Create Entra application" on target "caesarea-github-deploy-prod".
-  Would create the application. The steps below depend on its ID and cannot be previewed.
+  ... the same five lines, with different identifiers ...
+
+=== Configuring GitHub environments
+  [created] environment 'dev' (branch: main, UNGATED)
+  [created] dev: 6 of 6 variables set
+  [created] environment 'prod' (branch: main, UNGATED)
+  [created] prod: 6 of 6 variables set
 ```
+
+The two applications having **different** identifiers is the thing to check. `AZURE_CLIENT_ID` on
+`dev` and on `prod` must not match — if they do, the prod gate is not a boundary.
 
 Then run it for real:
 
@@ -130,8 +142,27 @@ az cognitiveservices model list --location westus3 \
   --query "[?model.name=='gpt-5.5'].model.version" -o tsv
 ```
 
-**It is idempotent.** Run it again and every line reports `[exists]`; nothing is created twice. That
+**It is idempotent.** Run it again and every line reports `[exists]`, including the GitHub half —
+variables are compared before being written, so "already correct" is distinguished from "set". That
 is the check that it worked, and the check that a later run has not drifted.
+
+```text
+=== Identity for 'dev' (caesarea-github-deploy-dev)
+  [exists] application (<app id>)
+  [exists] service principal (<object id>)
+  [exists] federated credential -> repo:<owner>/<repo>:environment:dev
+  [exists] Contributor at subscription scope
+  [exists] Role Based Access Control Administrator at subscription scope
+...
+  [exists] dev: 6 variables already correct
+```
+
+Verify it independently rather than trusting the report:
+
+```bash
+gh api repos/<owner>/<repo>/environments/dev/variables  --jq '.variables[] | "\(.name)=\(.value)"'
+gh api repos/<owner>/<repo>/environments/prod/variables --jq '.variables[] | "\(.name)=\(.value)"'
+```
 
 **What `-WhatIf` does and does not cover.** On a clean tenant it stops at the first identity
 dependency: it reports that it would create the application, then says that the service principal,
