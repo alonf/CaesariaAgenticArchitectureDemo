@@ -38,8 +38,6 @@ app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.UseHttpsRedirection();
 app.MapDefaultEndpoints();
-app.MapMcp("/mcp");
-app.MapDemoBreakpoints(DemoSnippets.McpServer, DemoSnippets.InteractiveInput);
 
 var energy = app.MapGroup("/api/energy")
     .WithTags("Energy Hub");
@@ -48,10 +46,24 @@ energy.MapGet("/assets/{assetId}", GetState);
 energy.MapGet("/assets/{assetId}/activity", GetActivity);
 energy.MapPost("/assets/{assetId}/restore-scheduled-mode", RestoreScheduledModeAsync);
 
-var admin = energy.MapGroup("/admin");
-admin.MapPost("/reset", ResetAsync);
-admin.MapPost("/scenario", ApplyScenarioAsync)
-    .ValidateBody<EnergyScenarioSyncRequest>();
+// The presenter-facing surface, and only where a presenter is driving.
+//
+// Deployed to Azure this service has public ingress, because the hosted agent runs outside its VNet
+// and cannot reach it any other way. That ingress authenticates every caller, but authentication is
+// not authorization: it checks that a token is valid and meant for this service, not which
+// application role it carries. Mapping admin/reset behind it would put "erase the running scenario"
+// one valid token away, and the MCP server alongside it. The reads above are what a hosted agent
+// needs; nothing here is.
+if (app.Services.GetRequiredService<IOptions<EnergyHubApiOptions>>().Value.EnableDemoControlSurface)
+{
+    app.MapMcp("/mcp");
+    app.MapDemoBreakpoints(DemoSnippets.McpServer, DemoSnippets.InteractiveInput);
+
+    var admin = energy.MapGroup("/admin");
+    admin.MapPost("/reset", ResetAsync);
+    admin.MapPost("/scenario", ApplyScenarioAsync)
+        .ValidateBody<EnergyScenarioSyncRequest>();
+}
 
 await app.RunAsync();
 

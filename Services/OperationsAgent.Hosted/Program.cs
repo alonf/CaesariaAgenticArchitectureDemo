@@ -5,6 +5,7 @@ using Microsoft.Agents.AI;
 using Microsoft.Agents.AI.Foundry.Hosting;
 using Microsoft.Extensions.AI;
 using OperationsAgent.Api.Services;
+using OperationsAgent.Contracts;
 using OperationsAgent.Hosted;
 
 // The Caesarea Operations Agent, hosted by Microsoft Foundry instead of by us.
@@ -121,18 +122,51 @@ AIAgent CreateAgent(IServiceProvider serviceProvider)
         }
     };
 
-    if (resolvedSkills is not null)
-    {
-        // Progressive disclosure, exactly as the local agent does it: names and descriptions are
-        // advertised, and the model pulls a full procedure through load_skill when it wants one.
-        options.AIContextProviders =
-        [
+    // Work-knowledge search, and it is not optional here.
+    //
+    // The streetlight skill's step 2 is "search work knowledge... if nothing is found, state that
+    // explicitly", and its triage table then turns that statement into a classification: an override
+    // with maintenance evidence is a forgotten override, an override with no evidence anywhere is an
+    // *unexplained* override that must be escalated. An agent that loads the skill without this tool
+    // does not fail - it reports no evidence, because from where it stands there is none, and
+    // silently returns the wrong classification with full confidence. Loading a skill proves
+    // progressive disclosure works; it does not prove the skill can be followed.
+    //
+    // The search is deterministic and in-process, so this costs the hosted agent no dependency.
+    var workKnowledge = new TextSearchProvider(
+        async (query, searchCancellationToken) =>
+        {
+            var evidence = await new SimulatedWorkKnowledgeSearch(
+                TimeProvider.System,
+                loggerFactory.CreateLogger<SimulatedWorkKnowledgeSearch>())
+                .SearchAsync(query, "hosted", searchCancellationToken);
+
+            return evidence.Select(item => new TextSearchProvider.TextSearchResult
+            {
+                SourceName = $"{item.SourceType} {item.Id} ({item.SourceLabel})",
+                Text = $"{item.Title} - {item.Summary} (recorded {item.OccurredAt:u})"
+            });
+        },
+        new TextSearchProviderOptions
+        {
+            SearchTime = TextSearchProviderOptions.TextSearchBehavior.OnDemandFunctionCalling,
+            FunctionToolName = OperationsAgentToolNames.SearchWorkKnowledge,
+            FunctionToolDescription =
+                "Searches organizational work knowledge such as work orders, technician notes, and maintenance records."
+        },
+        loggerFactory);
+
+    // Progressive disclosure, exactly as the local agent does it: names and descriptions are
+    // advertised, and the model pulls a full procedure through load_skill when it wants one.
+    options.AIContextProviders = resolvedSkills is null
+        ? [workKnowledge]
+        : [
+            workKnowledge,
             new AgentSkillsProvider(
                 resolvedSkills,
                 options: new AgentSkillsProviderOptions { DisableLoadSkillApproval = true },
                 loggerFactory: loggerFactory)
         ];
-    }
 
     return serviceProvider.GetRequiredService<AIProjectClient>().AsAIAgent(options, loggerFactory: loggerFactory);
 }

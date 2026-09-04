@@ -153,6 +153,20 @@ if ($DeploymentName) {
     if ($deployment.properties.provisioningState -ne 'Succeeded') {
         throw "Deployment '$DeploymentName' is '$($deployment.properties.provisioningState)', not 'Succeeded'. Its outputs may be absent or stale; re-run the apply before syncing."
     }
+
+    # The same resource-group check discovery makes, because naming a deployment explicitly is not a
+    # claim about which environment produced it. Without this, passing a successful prod deployment
+    # while -Environment says dev copies prod's endpoints into the dev environment, and both then
+    # look entirely correct.
+    $namedOutputs = $deployment.properties.outputs
+    $namedResourceGroup = if ($namedOutputs -and $namedOutputs.PSObject.Properties.Name -contains 'AZURE_RESOURCE_GROUP') {
+        $namedOutputs.AZURE_RESOURCE_GROUP.value
+    }
+    else { $null }
+
+    if ($namedResourceGroup -ne $expectedResourceGroup) {
+        throw "Deployment '$DeploymentName' produced resource group '$namedResourceGroup', not '$expectedResourceGroup'. It belongs to a different environment than -Environment $Environment."
+    }
 }
 else {
     # Newest first, so the first match is the most recent successful deployment of this environment.

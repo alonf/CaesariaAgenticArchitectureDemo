@@ -159,6 +159,14 @@ resource energyHub 'Microsoft.App/containerApps@2025-01-01' = {
               name: 'EnergyHubApi__SmartPoleBaseUri'
               value: 'https://${smartPoleAppName}.internal.${managedEnvironment.properties.defaultDomain}'
             }
+            {
+              // No admin reset, no scenario control, no MCP server, no demo breakpoints. The ingress
+              // below authenticates callers but does not check which application role they hold, so
+              // any valid token would otherwise reach "erase the running scenario". The hosted agent
+              // needs the two reads and nothing else.
+              name: 'EnergyHubApi__EnableDemoControlSurface'
+              value: 'false'
+            }
           ]
         }
       ]

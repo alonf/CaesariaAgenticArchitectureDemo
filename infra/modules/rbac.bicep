@@ -46,11 +46,6 @@ var acrPullRoleId = '7f951dda-4ed3-4680-a7ca-43fe172d538d'
 // Push images.
 var acrPushRoleId = '8311e382-0749-4cb8-b61a-304f252e45ec'
 
-// Queue an ACR Task, which is what `az acr build` does. Neither AcrPush nor Contributor-by-accident:
-// the action is Microsoft.ContainerRegistry/registries/scheduleRun/action, and this is the only
-// built-in role that carries it.
-var containerRegistryTasksContributorRoleId = 'fb382eab-e894-4461-af04-94435c366c3f'
-
 // Create and update agents and their versions, and assign roles to the agent identity the platform
 // mints. Scoped to the project, because that is the blast radius CI needs and no more.
 var foundryProjectManagerRoleId = 'eadc314b-1a2d-4efa-be10-5d325db5065e'
@@ -84,19 +79,16 @@ resource registryPullForProject 'Microsoft.Authorization/roleAssignments@2022-04
   }
 }
 
-// CI queues the remote build...
-resource registryBuildForDeployment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  scope: registry
-  name: guid(registry.id, deploymentPrincipalId, containerRegistryTasksContributorRoleId)
-  properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', containerRegistryTasksContributorRoleId)
-    principalId: deploymentPrincipalId
-    principalType: deploymentPrincipalType
-    description: 'CI runs az acr build, which schedules an ACR Task.'
-  }
-}
+// Container Registry Tasks Contributor used to be granted here, when CI built images with
+// `az acr build`. It no longer does - ACR Tasks cannot build these Dockerfiles - so permission to
+// create, run and cancel registry tasks is no longer needed, and no longer granted.
+//
+// Removing it from this template does NOT remove it from a subscription it was already deployed to:
+// ARM incremental mode leaves behind resources it no longer sees. Delete it once, per environment:
+//
+//   az role assignment delete --assignee <AZURE_DEPLOYMENT_PRINCIPAL_ID> //     --role fb382eab-e894-4461-af04-94435c366c3f //     --scope <registry resource id>
 
-// ...and needs push for the resulting image, plus pull to resolve the digest it deploys by.
+// CI needs push for the image it builds on the runner, plus pull to resolve the digest it deploys by.
 resource registryPushForDeployment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   scope: registry
   name: guid(registry.id, deploymentPrincipalId, acrPushRoleId)
@@ -174,7 +166,6 @@ resource registryPullForContainerApps 'Microsoft.Authorization/roleAssignments@2
 @description('Role assignment IDs created here, for smoke tests and drift checks.')
 output assignmentIds array = [
   registryPullForProject.id
-  registryBuildForDeployment.id
   registryPushForDeployment.id
   foundryManagerForDeployment.id
 ]

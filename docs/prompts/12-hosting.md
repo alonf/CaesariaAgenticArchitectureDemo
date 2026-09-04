@@ -2,9 +2,14 @@
 
 Deck anchor: MAF Hosting, slides 43–44.
 
-**Status: pre-design.** The spike is partly done ([hosted-agent.md](../product-status/hosted-agent.md)
-records what is verified). This file holds the slide corrections and the notes, which are settled;
-the stage design follows once the deployment half of the spike runs.
+**Status: deployed and verified.** The spike is finished and the deployment half has run
+([hosted-agent.md](../product-status/hosted-agent.md) records what was verified, and what it cost).
+The agent runs on the Foundry hosted runtime with its own Entra identity, reads from an Energy Hub
+container app behind Entra-authenticated ingress, and is released by
+[deploy-hosted-agent.yml](../../.github/workflows/deploy-hosted-agent.yml). See
+[deployment.md](../deployment.md) for the reproducible path.
+
+This file holds the slide corrections and the presenter notes.
 
 ## Decisions on record
 

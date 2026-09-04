@@ -63,6 +63,30 @@ jobs:
       # The runner still never holds a registry credential: `az acr login` exchanges the federated
       # token this job already has for a short-lived one, so the image is pushed as the same identity
       # that authenticated at the top of the job.
+      # The agent's only authoritative dependency. An unset or placeholder address does not fail the
+      # deployment on its own - the agent starts, answers questions, and returns 404 for every asset -
+      # so it is rejected here rather than discovered on stage.
+      - name: Check the Energy Hub address
+        run: |
+          URI="${{ vars.ENERGYHUB_BASE_URI }}"
+          if [ -z "$URI" ]; then
+            echo "ENERGYHUB_BASE_URI is not set. Deploy the services and sync it:"
+            echo "  gh workflow run deploy-services.yml -f environmentName=${{ github.event.inputs.environmentName || 'dev' }}"
+            echo "  ./scripts/Sync-PlatformVariables.ps1 -Environment ${{ github.event.inputs.environmentName || 'dev' }} -EnergyHubBaseUri <fqdn>"
+            exit 1
+          fi
+          case "$URI" in
+            https://*) ;;
+            *) echo "ENERGYHUB_BASE_URI must be https. Got: $URI"; exit 1 ;;
+          esac
+          case "$URI" in
+            *example.com*|*localhost*|*127.0.0.1*|*.invalid*)
+              echo "ENERGYHUB_BASE_URI is a placeholder: $URI"
+              echo "It was probably left over from an egress probe. Point it at the deployed Energy Hub."
+              exit 1 ;;
+          esac
+          echo "Energy Hub: $URI"
+
       - uses: docker/setup-buildx-action@v3
 
       - name: Build and push the image
@@ -181,13 +205,33 @@ jobs:
             echo "App role assignments held: $GRANTED" >> "$GITHUB_STEP_SUMMARY"
           fi
 
-      - name: Smoke test the deployed agent
+      # Exercises the authoritative tool, not just the model.
+      #
+      # This used to ask the agent to reply "ready", which it can do with every downstream dependency
+      # broken - and did: a deployment stayed green while ENERGYHUB_BASE_URI pointed at a placeholder
+      # and every Energy Hub read returned 404. A smoke test that cannot fail when the system is
+      # broken is not a test.
+      #
+      # L-417 is a seeded asset and "North Promenade" is its area - a string that exists only in the
+      # twin the Energy Hub returns. The model cannot produce it from the prompt, the instructions or
+      # the skill, so its presence is evidence that the whole path ran: model, tool, token, ingress,
+      # container, SmartPole.
+      - name: Smoke test the agent against the Energy Hub
         run: |
           TOKEN=$(az account get-access-token --resource https://ai.azure.com --query accessToken -o tsv)
           ANSWER=$(curl -sS -X POST \
             "${{ vars.FOUNDRY_PROJECT_ENDPOINT }}/agents/${AGENT_NAME}/endpoint/protocols/openai/responses?api-version=v1" \
             -H "Authorization: Bearer $TOKEN" \
             -H "Content-Type: application/json" \
-            -d '{"input":"Reply with the single word: ready","store":false}')
-          echo "$ANSWER" | jq -r '.output[]?.content[]?.text // empty'
+            -d '{"input":"Call get_streetlight_state for asset L-417 and reply with only the value of its area field, nothing else.","store":false}')
+
+          echo "$ANSWER" | jq -r '.output[]?.content[]?.text // empty' | tee answer.txt
           echo "$ANSWER" | jq -e '.status == "completed"' > /dev/null
+
+          if ! grep -qi "North Promenade" answer.txt; then
+            echo ""
+            echo "The agent did not return L-417's area. The model is reachable but the Energy Hub path is not."
+            echo "Check, in order: ENERGYHUB_BASE_URI, the EnergyHub.Read role assignment"
+            echo "(./scripts/Grant-AgentEnergyHubAccess.ps1), and the Energy Hub container app's logs."
+            exit 1
+          fi
