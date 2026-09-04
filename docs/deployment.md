@@ -243,25 +243,55 @@ template is non-deterministic and worth finding before you trust the pipeline.
 
 ### Feeding the outputs forward
 
-Copy these from the apply summary into the environment's variables, for the application workflow:
+The apply prints the platform outputs; the application workflow reads them from the environment's
+variables. One script joins the two:
 
-- `AZURE_CONTAINER_REGISTRY_ENDPOINT`
-- `AZURE_CONTAINER_REGISTRY_NAME`
-- `FOUNDRY_PROJECT_ENDPOINT`
-- `MODEL_DEPLOYMENT_NAME`
+```powershell
+./scripts/Sync-PlatformVariables.ps1 -Environment dev -WhatIf   # preview
+./scripts/Sync-PlatformVariables.ps1 -Environment dev
+```
+
+It finds the most recent successful deployment that produced `rg-caesarea-dev`, reads its outputs and
+writes `AZURE_RESOURCE_GROUP`, `AZURE_CONTAINER_REGISTRY_ENDPOINT`, `AZURE_CONTAINER_REGISTRY_NAME`,
+`FOUNDRY_PROJECT_ENDPOINT` and `MODEL_DEPLOYMENT_NAME`. Every value is compared before it is written,
+so a second run against an unchanged deployment reports `[exists]` for each and changes nothing.
+
+`ENERGYHUB_BASE_URI` is not among them. The Energy Hub is an application deployment rather than part
+of the platform, so its address is passed in rather than read:
+
+```powershell
+./scripts/Sync-PlatformVariables.ps1 -Environment dev -EnergyHubBaseUri https://energyhub.<...>.azurecontainerapps.io
+```
+
+Until it is supplied the script says so and leaves the variable alone, because an empty value would
+let the release workflow succeed and the agent fail on its first tool call.
+
+**Why this is a script and not a step in `deploy-infra.yml`.** Writing environment variables needs a
+GitHub credential with administration rights, and the workflow's built-in `GITHUB_TOKEN` cannot be
+granted it — `permissions:` has no environments scope. Automating it inside the pipeline would mean
+storing a long-lived personal access token as a secret. Running one idempotent script as yourself
+after a deployment is the better trade.
 
 ---
 
 ## Step 4 — Deploy the agent
 
-**Not yet possible.** `Services/OperationsAgent.Hosted` does not exist — it is Stage 12's code, and
-[`deploy-hosted-agent.yml`](../.github/workflows/deploy-hosted-agent.yml) is parked behind `if:
-false` until it does. A committed pipeline that fails on its first step is worse than one that is
-visibly disabled.
+```bash
+gh workflow run deploy-hosted-agent.yml -f environmentName=dev
+```
 
-When the project exists, the workflow: builds the image in ACR for `linux/amd64`, resolves its
-digest, creates an immutable agent version, waits for `active`, reads back the agent's own Entra
-identity and binds any downstream access it needs, then smoke-tests the deployed endpoint.
+[`deploy-hosted-agent.yml`](../.github/workflows/deploy-hosted-agent.yml) builds
+`Services/OperationsAgent.Hosted` into an image **in ACR** rather than on the runner — so the runner
+needs no Docker and the image never transits a machine outside the boundary — resolves the image
+digest, creates an immutable agent version **by digest rather than by tag**, waits for it to become
+`active`, reads back the agent's own Entra identity and binds any downstream access it needs, then
+smoke-tests the deployed endpoint.
+
+The identity step is last for a reason: the platform mints a dedicated Entra identity for the agent
+when its first version is created, so that principal does not exist at provisioning time and cannot
+be bound in Bicep. This is the one piece of access control that has to happen after deployment.
+
+The workflow touches no infrastructure. Everything a platform team owns was provisioned in step 3.
 
 ---
 

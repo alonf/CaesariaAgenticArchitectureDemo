@@ -149,6 +149,12 @@ output AZURE_CONTAINER_REGISTRY_ENDPOINT string = registry.outputs.loginServer
 @description('Container registry resource ID, for reusing this registry from azd.')
 output AZURE_CONTAINER_REGISTRY_RESOURCE_ID string = registry.outputs.registryId
 
+// `az acr build` addresses the registry by name, not by login server, so the release workflow needs
+// this as well as the endpoint. Deriving it by trimming '.azurecr.io' off the endpoint would work
+// today and break in any cloud with a different suffix.
+@description('Container registry name.')
+output AZURE_CONTAINER_REGISTRY_NAME string = registry.outputs.registryName
+
 @description('Model deployment name.')
 output MODEL_DEPLOYMENT_NAME string = foundry.outputs.modelDeploymentName
 
