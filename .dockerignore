@@ -1,0 +1,40 @@
+# Keeps the host's build output out of the image.
+#
+# This file is not an optimisation. Without it, `COPY <project>/ <project>/` overwrites the obj/
+# directory that `dotnet restore` just produced inside the container with the one from the developer's
+# machine - whose project.assets.json and *.nuget.g.props hold absolute Windows paths to a NuGet cache
+# that does not exist in a Linux container. The restore layer above it is then worthless, and what the
+# publish does next is anyone's guess.
+#
+# ACR Tasks also fails to export the image outright when these directories are in the context, with
+# "failed to get layer sha256:...: layer does not exist" - a message that says nothing about its cause
+# and reappears with a different hash on every retry.
+
+**/bin/
+**/obj/
+
+# Source control and editor state: large, changes constantly, and busts the context cache for no
+# reason. .git in particular is most of the upload.
+.git/
+.gitignore
+.gitattributes
+.github/
+.vs/
+.vscode/
+.idea/
+
+# Test and tooling output.
+**/TestResults/
+artifacts/
+**/*.user
+**/*.suo
+
+# Local configuration and anything that could carry a secret into a layer. Configuration reaches the
+# container through the platform's environment variables, never through the image.
+**/appsettings.Development.json
+**/*.env
+.env
+
+# Container definitions themselves are not build inputs.
+**/Dockerfile
+.dockerignore
