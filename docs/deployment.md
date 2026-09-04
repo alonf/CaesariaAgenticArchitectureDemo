@@ -318,20 +318,41 @@ No step depends on state that only exists on one machine.
 
 ---
 
-## A note on OIDC subject formats
+## OIDC subject formats — the one that will bite you
 
-The federated credentials use GitHub's legacy subject form,
-`repo:<owner>/<name>:environment:<environment>`. GitHub also supports immutable subjects keyed on
-the repository *ID*, which survive a rename. This repository currently reports
-`use_immutable_subject: false`, so the legacy form is correct for it.
+GitHub has two subject formats for the federated credential:
 
-If you enable immutable subjects, or GitHub defaults new repositories to them, the subjects the
-bootstrap writes will no longer match and `azure/login` will fail with an audience or subject error.
-Check with:
+| Form | Looks like |
+| --- | --- |
+| Legacy | `repo:<owner>/<name>:environment:<env>` |
+| Immutable | `repo:<owner>@<ownerId>/<name>@<repoId>:environment:<env>` |
+
+**Do not decide which you have from `use_immutable_subject`.** This repository reports that field as
+`false` and nonetheless presents the immutable form, because the field that actually goes into the
+token is `sub_claim_prefix`:
 
 ```bash
 gh api repos/<owner>/<name>/actions/oidc/customization/sub
 ```
+
+```json
+{ "use_default": true,
+  "use_immutable_subject": false,
+  "sub_claim_prefix": "repo:alonf@554150/CaesariaAgenticArchitectureDemo@1352569832" }
+```
+
+The bootstrap reads `sub_claim_prefix` and falls back to the legacy shape only on a 404, so you do
+not have to think about this. It matters when something goes wrong, because the failure is
+misleading:
+
+```text
+##[error]AADSTS700213: No matching federated identity record found for presented assertion
+subject 'repo:alonf@554150/CaesariaAgenticArchitectureDemo@1352569832:environment:dev'.
+```
+
+That reads as a *missing* credential. It is a credential with the *wrong subject* — which looks
+entirely correct in the Entra portal. Re-running the bootstrap fixes it: a credential of its own
+whose subject no longer matches is replaced rather than left beside a new one.
 
 ## Break glass: deploying without GitHub
 
@@ -355,13 +376,15 @@ az deployment sub create \
 Honesty about this matters more than confidence, because the failure mode is a demo that works on
 one laptop.
 
-**Verified:**
+**Verified, by running it:**
 
-- Both scripts parse, run, and detect real tenant and repository state under `-WhatIf` without
-  changing anything. On a clean tenant that preview stops at the first identity dependency, as
-  described above — it is not a full plan.
-- `infra/main.bicep` passes `az deployment sub what-if` against a real subscription: 12 creates, no
-  errors.
+- The bootstrap has been run against a real tenant and repository. It created two applications with
+  one federated credential each, assigned the roles, and configured both environments. A second run
+  reports `[exists]` on every line.
+- `deploy-infra` has run on GitHub Actions, authenticated by workload identity federation as the
+  dev identity, and produced a what-if of **12 creates, 2 unanalysable, no errors** — matching what
+  this document says to expect.
+- `infra/main.bicep` also passes `what-if` locally.
 - The hosted-agent protocol serves `/responses` and `/readiness` on a laptop with no Azure at all
   (see [hosted-agent.md](product-status/hosted-agent.md)).
 
