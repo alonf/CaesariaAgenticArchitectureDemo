@@ -3,14 +3,19 @@
 Required by requirements §22. This file records what was **verified by running it**, and what is
 still unverified, so the Hosting stage is designed against facts rather than against the deck.
 
-Spike date: 2026-09-03. Verified on the pinned `1.19.0-preview` MAF family.
+Spike date: 2026-09-03; deployed and verified end to end 2026-09-04.
+
+The hosted project runs on **`Microsoft.Agents.AI.Foundry.Hosting 1.20.0-preview.260831.1`**, ahead of
+the `1.19.0-preview` family the rest of the solution pins. That is not drift for its own sake: 1.19 is
+unusable in the hosted runtime (see the port collision below).
 
 ## Verified by compiling
 
-`Microsoft.Agents.AI.Foundry.Hosting` publishes **`1.19.0-preview.260822.1`** — the same version as
-the rest of the solution. **The hosting path needs no family upgrade.**
+`Microsoft.Agents.AI.Foundry.Hosting` publishes **`1.19.0-preview.260822.1`**, matching the rest of
+the solution — so the *compile* needs no family upgrade. The **runtime does**: 1.19 cannot start in a
+hosted sandbox, and `OperationsAgent.Hosted` therefore references 1.20.
 
-Its transitive dependencies at that version:
+Its transitive dependencies at 1.19:
 
 | Package | Version |
 | --- | --- |
