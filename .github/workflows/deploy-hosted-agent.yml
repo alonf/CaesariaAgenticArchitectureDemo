@@ -220,22 +220,38 @@ jobs:
       # twin the Energy Hub returns. The model cannot produce it from the prompt, the instructions or
       # the skill, so its presence is evidence that the whole path ran: model, tool, token, ingress,
       # container, SmartPole.
+      #
+      # Retried, because "active" is the version's state, not the session's: the platform provisions
+      # a VM-isolated sandbox for the FIRST session on demand, and asking seven seconds after
+      # activation gets a not-ready answer, not a verdict. A run failed exactly that way while the
+      # very same question, asked minutes later, answered perfectly - the same lesson the
+      # deploy-services gate already carries for a container's cold start.
       - name: Smoke test the agent against the Energy Hub
         run: |
           TOKEN=$(az account get-access-token --resource https://ai.azure.com --query accessToken -o tsv)
-          ANSWER=$(curl -sS -X POST \
-            "${{ vars.FOUNDRY_PROJECT_ENDPOINT }}/agents/${AGENT_NAME}/endpoint/protocols/openai/responses?api-version=v1" \
-            -H "Authorization: Bearer $TOKEN" \
-            -H "Content-Type: application/json" \
-            -d '{"input":"Call get_streetlight_state for asset L-417 and reply with only the value of its area field, nothing else.","store":false}')
 
-          echo "$ANSWER" | jq -r '.output[]?.content[]?.text // empty' | tee answer.txt
-          echo "$ANSWER" | jq -e '.status == "completed"' > /dev/null
+          for attempt in $(seq 1 6); do
+            ANSWER=$(curl -sS -X POST \
+              "${{ vars.FOUNDRY_PROJECT_ENDPOINT }}/agents/${AGENT_NAME}/endpoint/protocols/openai/responses?api-version=v1" \
+              -H "Authorization: Bearer $TOKEN" \
+              -H "Content-Type: application/json" \
+              -d '{"input":"Call get_streetlight_state for asset L-417 and reply with only the value of its area field, nothing else.","store":false}')
 
-          if ! grep -qi "North Promenade" answer.txt; then
-            echo ""
-            echo "The agent did not return L-417's area. The model is reachable but the Energy Hub path is not."
-            echo "Check, in order: ENERGYHUB_BASE_URI, the EnergyHub.Read role assignment"
-            echo "(./scripts/Grant-AgentEnergyHubAccess.ps1), and the Energy Hub container app's logs."
-            exit 1
-          fi
+            echo "$ANSWER" | jq -r '.output[]?.content[]?.text // empty' | tee answer.txt
+
+            if echo "$ANSWER" | jq -e '.status == "completed"' > /dev/null && grep -qi "North Promenade" answer.txt; then
+              echo "Smoke test passed on attempt ${attempt}."
+              exit 0
+            fi
+
+            echo "Attempt ${attempt}: status $(echo "$ANSWER" | jq -r '.status // "unknown"'), waiting for the first session to warm..."
+            sleep 30
+          done
+
+          echo ""
+          echo "The agent did not return L-417's area after $(($attempt)) attempts. The model may be reachable while the Energy Hub path is not."
+          echo "Check, in order: ENERGYHUB_BASE_URI, the EnergyHub.Read role assignment"
+          echo "(./scripts/Grant-AgentEnergyHubAccess.ps1), and the Energy Hub container app's logs."
+          echo "Last answer:"
+          echo "$ANSWER" | jq . || echo "$ANSWER"
+          exit 1
