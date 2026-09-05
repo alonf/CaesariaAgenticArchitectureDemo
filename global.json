@@ -1,6 +1,7 @@
 {
   "sdk": {
     "rollForward": "latestFeature",
+    "allowPrerelease": false,
     "version": "10.0.103"
   },
   "test": {
