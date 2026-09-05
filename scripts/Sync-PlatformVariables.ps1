@@ -47,7 +47,7 @@
     ./scripts/Sync-PlatformVariables.ps1 -Environment dev
 
 .EXAMPLE
-    ./scripts/Sync-PlatformVariables.ps1 -Environment dev -DeploymentName caesarea-infra-33878263447
+    ./scripts/Sync-PlatformVariables.ps1 -Environment dev -DeploymentName 'caesarea-infra-<your-github-run-id>'
 #>
 
 [CmdletBinding(SupportsShouldProcess)]
@@ -309,8 +309,12 @@ Write-Host @"
     - AZURE_RESOURCE_GROUP, AZURE_CONTAINER_REGISTRY_*,
       FOUNDRY_PROJECT_ENDPOINT, MODEL_DEPLOYMENT_NAME           (from this script)
 
-  Next: deploy the agent into it.
+  Next: bootstrap the Energy Hub API and deploy the city services if not already deployed, then
+  sync the Energy Hub URL from the deploy-services summary before deploying the agent.
 
+      ./scripts/Bootstrap-EnergyHubApi.ps1 -Environment $Environment
+      gh workflow run deploy-services.yml -f environmentName=$Environment
+      ./scripts/Sync-PlatformVariables.ps1 -Environment $Environment -EnergyHubBaseUri <deployed-hub-url>
       gh workflow run deploy-hosted-agent.yml -f environmentName=$Environment
 
   Re-run this script after any infrastructure apply that changes an address. It is idempotent, so

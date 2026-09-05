@@ -24,12 +24,53 @@ GitHub Actions workflow driving committed Bicep — see [docs/deployment.md](../
 | [`Capture-AgentChannelState.ps1`](Capture-AgentChannelState.ps1) | Snapshots the resource group's ARM resources, any Azure Bot services/channels, and the agent record — run before/after a portal channel-add to reverse-engineer it into Bicep | Read-only |
 | [`Publish-AgentToTeams.ps1`](Publish-AgentToTeams.ps1) | Deploys the messaging half of the Teams publish as code: declares the Activity protocol, then deploys [`infra/modules/teams-channel.bicep`](../infra/modules/teams-channel.bicep) — the Azure Bot + Teams channel that front the agent, authenticating as its own identity | Yes — the Bicep converges |
 
-All mutating scripts support `-WhatIf`. **Run that first**; it makes no changes and prints exactly
-what would happen.
+Setup and deployment scripts support `-WhatIf`. **Run that first** to preview the changes their
+available dependency IDs allow. The Teams relay posts messages while running and has no `-WhatIf`.
 
 ```powershell
 ./scripts/Bootstrap-GitHubOidc.ps1 -ModelVersion 2026-04-24 -WhatIf
 ```
+
+## Running from your own account or a fresh clone
+
+Use PowerShell 7, Git, Azure CLI and GitHub CLI. Local builds also need the .NET SDK from
+[`global.json`](../global.json). Run examples from the repository root. Fork or copy the repository
+to a GitHub repository you administer, enable Actions, and make sure `origin` points to that copy;
+scripts derive the repository from `origin` unless you pass `-Repository owner/repo`.
+
+```powershell
+az login --tenant '<your-tenant-id>'
+az account set --subscription '<your-subscription-id>'
+gh auth login
+git remote get-url origin
+Install-Module Microsoft.Graph.Authentication -Scope CurrentUser
+```
+
+The Graph module is needed for the OneDrive work-order and Teams relay scripts. Azure CLI and
+Microsoft Graph PowerShell have separate sign-ins: use the intended tenant and user in each.
+The licence and owner scripts default to the Azure CLI user; the work-order script writes to the
+Graph user's OneDrive. Each presenter needs their own Foundry access, Microsoft 365 entitlements
+and Work IQ consent. See [the deployment guide](../docs/deployment.md) for roles and deployment order.
+
+The optional relay requires an existing team and channel; supply their actual display names:
+
+```powershell
+./scripts/Start-TeamsOperatorRelay.ps1 -TeamName 'Your demo team' -ChannelName 'Your channel'
+# Optional separate Graph identity (requires user creation/licensing/consent permissions):
+./scripts/New-CaesareaOperator.ps1 -TeamName 'Your demo team' -UsageLocation '<country-code>' -WhatIf
+./scripts/New-CaesareaOperator.ps1 -TeamName 'Your demo team' -UsageLocation '<country-code>'
+./scripts/Start-TeamsOperatorRelay.ps1 -TeamName 'Your demo team' -ChannelName 'Your channel' -Account 'caesarea-operator@contoso.com'
+```
+
+Replace the example names, country code and UPN. The admin and relay account must have joined the
+team. A guest admin must pass an operator `-UserPrincipalName` in a verified domain of the target
+tenant. Check the tenant has the requested licence SKU and the Teams/OneDrive entitlements needed
+by the operator. Initialise the Microsoft Graph Command Line Tools service principal with an
+admin-approved `Connect-MgGraph` session before provisioning the operator's relay consent.
+
+`-Account` verifies the Graph identity selected during sign-in; the Foundry call still uses the
+Azure CLI identity. Every channel participant's question therefore uses the relay runner's Foundry
+and Work IQ access. The relay is a separate demo path from native Teams/Copilot publishing.
 
 ## Why this exists as a script rather than instructions
 

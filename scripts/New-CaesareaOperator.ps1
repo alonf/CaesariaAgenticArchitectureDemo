@@ -35,23 +35,25 @@
     Display name shown in Teams.
 
 .PARAMETER TeamName
-    The demo team to join.
+    Required display name of an existing team the signed-in admin has joined.
 
 .PARAMETER UsageLocation
     Two-letter country code for licensing. Defaults to the signed-in admin's own usageLocation.
 
 .EXAMPLE
-    ./scripts/New-CaesareaOperator.ps1 -WhatIf
+    ./scripts/New-CaesareaOperator.ps1 -TeamName 'Your demo team' -WhatIf
 
 .EXAMPLE
-    ./scripts/New-CaesareaOperator.ps1
+    ./scripts/New-CaesareaOperator.ps1 -TeamName 'Your demo team'
 #>
 
 [CmdletBinding(SupportsShouldProcess)]
 param(
     [string] $UserPrincipalName,
     [string] $DisplayName = 'Caesarea Operator',
-    [string] $TeamName = "Alon's Demos",
+    [Parameter(Mandatory)]
+    [ValidateNotNullOrEmpty()]
+    [string] $TeamName,
     [string] $UsageLocation
 )
 
@@ -127,6 +129,9 @@ if (-not (Get-Command az -ErrorAction SilentlyContinue)) { throw 'az is not on P
 $admin = Invoke-GraphJson -Method get -Url "$GraphBase/me?`$select=id,userPrincipalName,usageLocation" -What 'Reading the signed-in admin'
 
 if (-not $UserPrincipalName) {
+    if ("$($admin.userPrincipalName)" -match '#EXT#') {
+        throw 'For a guest admin, pass -UserPrincipalName with a verified domain in the target tenant.'
+    }
     $domain = ("$($admin.userPrincipalName)" -split '@', 2)[1]
     $UserPrincipalName = "caesarea-operator@$domain"
 }
@@ -140,6 +145,13 @@ if (-not $UsageLocation) {
 Write-Note "Operator: $UserPrincipalName ($DisplayName)"
 Write-Note "Team:     $TeamName"
 Write-Note "Location: $UsageLocation"
+
+# Resolve the target before creating or licensing a user in this tenant.
+$teams = @((Invoke-GraphJson -Method get -Url "$GraphBase/me/joinedTeams" -What 'Listing joined teams').value | Where-Object { $_.displayName -eq $TeamName })
+if ($teams.Count -ne 1) {
+    throw "Expected exactly one joined team named '$TeamName'; found $($teams.Count)."
+}
+$teamId = $teams[0].id
 
 # ---------------------------------------------------------------------------------------------
 # 1. The user.
@@ -198,12 +210,6 @@ if ($LASTEXITCODE -ne 0) {
 # ---------------------------------------------------------------------------------------------
 
 Write-Step "Membership in '$TeamName'"
-
-$teams = @((Invoke-GraphJson -Method get -Url "$GraphBase/me/joinedTeams" -What 'Listing joined teams').value | Where-Object { $_.displayName -eq $TeamName })
-if ($teams.Count -ne 1) {
-    throw "Expected exactly one joined team named '$TeamName'; found $($teams.Count)."
-}
-$teamId = $teams[0].id
 
 # Through the GROUP that backs the team, not the Teams member API: the az-minted token carries
 # directory permissions (it just created a user) but not TeamMember.*, and group membership is
@@ -270,7 +276,7 @@ Write-Host @"
   the relay. To make the channel speak with its face:
 
     1. Disconnect-MgGraph            # drop the presenter's cached Graph session
-    2. ./scripts/Start-TeamsOperatorRelay.ps1
+    2. ./scripts/Start-TeamsOperatorRelay.ps1 -TeamName <your-team-name> -ChannelName <your-channel-name> -Account $UserPrincipalName
        - sign in as $UserPrincipalName when the browser asks (one-time password above, change it)
        - the hosted-agent call still runs as YOUR az login - the identity split is the demo
 

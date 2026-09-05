@@ -189,7 +189,7 @@ which.
 {
   "OperationsAgentApi": {
     "EnergyHubBaseUri": "https+http://energyhub-api",
-    "FoundryProjectEndpoint": "https://alonlecturedemo-resource.services.ai.azure.com/api/projects/alonlecturedemo",
+    "FoundryProjectEndpoint": "https://<your-account>.services.ai.azure.com/api/projects/<your-project>",
     "ModelDeploymentName": "gpt-5.5",
     "AgentName": "Caesarea Operations Agent"
   }
@@ -198,8 +198,30 @@ which.
 
 Authentication uses `DefaultAzureCredential`; no key is stored. The agent is created in code with
 `AIProjectClient.AsAIAgent(...)`. The API can start without an Azure credential; authentication is
-required only when the operator asks the agent a question. To run against your own Foundry
-project, change `FoundryProjectEndpoint` and `ModelDeploymentName`.
+required only when the operator asks the agent a question. Committed agent settings use a reserved
+`example.invalid` endpoint so a clone never calls another developer's project. Set your own endpoint
+and model deployment in the PowerShell session that starts Aspire; all three local agents need them:
+
+```powershell
+az login --tenant '<your-tenant-id>'
+az account set --subscription '<your-subscription-id>'
+$projectEndpoint = 'https://<your-account>.services.ai.azure.com/api/projects/<your-project>'
+$modelDeployment = '<your-model-deployment-name>'
+$env:OperationsAgentApi__FoundryProjectEndpoint = $projectEndpoint
+$env:SecurityAgentApi__FoundryProjectEndpoint = $projectEndpoint
+$env:WorkforceAgentApi__FoundryProjectEndpoint = $projectEndpoint
+$env:OperationsAgentApi__ModelDeploymentName = $modelDeployment
+$env:SecurityAgentApi__ModelDeploymentName = $modelDeployment
+$env:WorkforceAgentApi__ModelDeploymentName = $modelDeployment
+./scripts/Start-CaesareaDemo.ps1 -ProjectEndpoint $projectEndpoint
+```
+
+Replace every `<...>` value before running. Your signed-in identity needs access to that Foundry
+project. If running `OperationsAgent.Hosted` directly on the laptop, also set
+`$env:FOUNDRY_PROJECT_ENDPOINT = $projectEndpoint` and
+`$env:MODEL_DEPLOYMENT_NAME = $modelDeployment`. The cloud release gets its configuration from your
+GitHub environment and the Foundry runtime. Keep personal values in environment variables or .NET
+user secrets, outside committed appsettings files.
 
 ## Run locally
 
@@ -211,7 +233,9 @@ One command, safe to run every time: it checks the per-machine setup - the hoste
 endpoint in user secrets (resolved automatically from the GitHub environment or the Azure resource
 group when missing) and the Azure sign-in the hosted call runs as - repairs what it can, reports
 what it cannot as a warning naming the fix, and starts the Aspire AppHost. Nothing cloud-side is
-required for the local demo; unresolved checks only cost the Hosting stage's FOUNDRY HOSTED beat.
+required for the Deterministic stage. Agent stages need the model configuration above; the Hosting
+stage's FOUNDRY HOSTED beat additionally needs the cloud deployment. An explicit `-ProjectEndpoint`
+replaces a previously stored hosted endpoint, for example when switching deployments.
 `dotnet run --project .\Caesarea.AppHost` still works when the machine is already set up.
 
 Use `DemoControl.Web` (the presenter switchboard) to pick a scenario and stage, then open

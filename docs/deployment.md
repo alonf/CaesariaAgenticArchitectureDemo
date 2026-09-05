@@ -17,8 +17,8 @@ The demo also runs entirely on a laptop with no Azure at all beyond a model depl
 | **Platform** | Foundry account, project, capability host, model deployment, registry, observability, RBAC | [`deploy-infra.yml`](../.github/workflows/deploy-infra.yml) → [`infra/`](../infra/) | rarely |
 | **Application** | The hosted agent version: image digest, CPU, environment | [`deploy-hosted-agent.yml`](../.github/workflows/deploy-hosted-agent.yml) | every release |
 
-Only the first is a script, and only because it cannot be anything else: something has to create the
-identity the workflows authenticate as, before any workflow can run. Everything after it is CI.
+The bootstrap creates the identity the workflows authenticate as. Additional scripts configure
+directory grants, Work IQ, Agent 365 and the Teams channel using the deploying user's permissions.
 
 ### The identity model
 
@@ -52,6 +52,31 @@ in [infra/README.md](../infra/README.md).
 | GitHub CLI | 2.0 | `gh --version` |
 | Azure sign-in | — | `az account show` |
 | GitHub sign-in | scopes `repo`, `workflow` | `gh auth status` |
+
+Start from a fork or copy that **you administer**, with Actions enabled and `origin` pointing to
+your repository. The scripts resolve `owner/repo` from `origin`; pass `-Repository` where supported
+if you intentionally use another repository. Run commands from the repository root. Blocks marked
+`bash` use Bash continuation syntax; the `.ps1` scripts run in PowerShell 7.
+
+```powershell
+az login --tenant '<your-tenant-id>'
+az account set --subscription '<your-subscription-id>'
+gh auth login
+git remote get-url origin
+```
+
+All `<...>` values are placeholders for your deployment. Azure CLI commands use the selected
+subscription and tenant unless a script explicitly accepts an override. Use the tenant containing
+your Foundry project for directory grants and licensing too. Work-order and Teams relay scripts
+also need `Microsoft.Graph.Authentication` (`Install-Module Microsoft.Graph.Authentication -Scope CurrentUser`),
+with a separate Graph sign-in to the intended Microsoft 365 account. Local builds need the .NET SDK
+selected by `global.json`.
+
+Each new user needs their own Foundry data-plane access; CI's role assignments do not grant access
+to the person running the demo. Have your administrator grant the appropriate Foundry role for
+invocation or project management, and the script-specific directory roles described below. These
+scripts target Azure public cloud and the repository's `dev`/`prod` naming conventions. An existing
+deployment with different resource names needs the relevant endpoint/resource-group overrides.
 
 **Permissions.** In the Entra tenant you need to be able to create application registrations —
 *Application Developer* is enough, *Global Administrator* obviously is. On the subscription you need
@@ -269,8 +294,8 @@ variables. One script joins the two:
 ```
 
 It finds the most recent successful deployment that produced `rg-caesarea-dev`, reads its outputs and
-writes `AZURE_RESOURCE_GROUP`, `AZURE_CONTAINER_REGISTRY_ENDPOINT`, `AZURE_CONTAINER_REGISTRY_NAME`,
-`FOUNDRY_PROJECT_ENDPOINT` and `MODEL_DEPLOYMENT_NAME`. Every value is compared before it is written,
+writes the resource group, registry, Container Apps environment, services identity, Foundry endpoint
+and model variables. Every value is compared before it is written,
 so a second run against an unchanged deployment reports `[exists]` for each and changes nothing.
 
 `ENERGYHUB_BASE_URI` is not among them. The Energy Hub is an application deployment rather than part
@@ -283,13 +308,20 @@ of the platform, so its address is passed in rather than read:
 Until it is supplied the script says so and leaves the variable alone, because an empty value would
 let the release workflow succeed and the agent fail on its first tool call.
 
-> **`dev` currently holds a placeholder.** `ENERGYHUB_BASE_URI` is set to `https://example.com` — it
-> was used to prove that a hosted agent can make outbound calls at all, before the Energy Hub existed
-> in Azure. It looks like a real value in the GitHub UI and it is not. Until the Energy Hub is
-> deployed and the variable re-synced, the agent will answer questions about a streetlight
-> confidently, load its investigation skill, call its tool, receive a 404 and have nothing to report.
-> That is the worst failure to discover in front of an audience, which is why it is written down here
-> rather than left to be remembered.
+### Deploy the Energy Hub before the agent
+
+The hosted agent needs the deployed city services and their API registration. After syncing the
+platform outputs, run:
+
+```powershell
+./scripts/Bootstrap-EnergyHubApi.ps1 -Environment dev -WhatIf
+./scripts/Bootstrap-EnergyHubApi.ps1 -Environment dev
+gh workflow run deploy-services.yml -f environmentName=dev
+```
+
+Wait for `deploy-services` to succeed. Its summary supplies the actual Energy Hub URL and the
+`Sync-PlatformVariables.ps1 -EnergyHubBaseUri ...` command to run. Copy that command and run it
+before releasing the agent. The agent workflow rejects missing or placeholder Hub addresses.
 
 **Why this is a script and not a step in `deploy-infra.yml`.** Writing environment variables needs a
 GitHub credential with administration rights, and the workflow's built-in `GITHUB_TOKEN` cannot be
@@ -306,15 +338,27 @@ gh workflow run deploy-hosted-agent.yml -f environmentName=dev
 ```
 
 [`deploy-hosted-agent.yml`](../.github/workflows/deploy-hosted-agent.yml) builds
-`Services/OperationsAgent.Hosted` into an image **in ACR** rather than on the runner — so the runner
-needs no Docker and the image never transits a machine outside the boundary — resolves the image
+`Services/OperationsAgent.Hosted` into an image using Docker Buildx on the GitHub runner and pushes
+it to ACR, resolves the image
 digest, creates an immutable agent version **by digest rather than by tag**, waits for it to become
-`active`, reads back the agent's own Entra identity and binds any downstream access it needs, then
+`active`, reads back the agent's own Entra identity and reports its access, then
 smoke-tests the deployed endpoint.
 
 The identity step is last for a reason: the platform mints a dedicated Entra identity for the agent
 when its first version is created, so that principal does not exist at provisioning time and cannot
-be bound in Bicep. This is the one piece of access control that has to happen after deployment.
+be bound in Bicep. Grant its downstream access after that first identity exists:
+
+```powershell
+./scripts/Grant-AgentEnergyHubAccess.ps1 -Environment dev -WhatIf
+./scripts/Grant-AgentEnergyHubAccess.ps1 -Environment dev
+./scripts/Grant-AgentProjectAccess.ps1 -Environment dev -WhatIf
+./scripts/Grant-AgentProjectAccess.ps1 -Environment dev
+```
+
+On a fresh deployment the first workflow can reach `active` and then fail its Energy Hub smoke
+test because `EnergyHub.Read` has not yet been granted. Once the grants have propagated, rerun the
+workflow and require the smoke test to pass before continuing. The pipeline deliberately cannot
+grant tenant-wide Graph app roles; a directory administrator performs that step through the script.
 
 The workflow touches no infrastructure. Everything a platform team owns was provisioned in step 3.
 
@@ -364,6 +408,16 @@ mail would be a weaker governance demonstration, not a stronger one.
 ./scripts/Connect-WorkIQ.ps1 -Environment dev
 ./scripts/Test-FoundryToolbox.ps1 -ToolboxName caesarea-workiq   # verify
 ```
+
+After the toolbox gate passes, enable it for the hosted agent and release a new version:
+
+```powershell
+gh variable set WORKIQ_TOOLBOX --env dev --repo '<owner>/<repo>' --body 'caesarea-workiq'
+gh workflow run deploy-hosted-agent.yml -f environmentName=dev
+```
+
+Use your toolbox name if you changed it. Creating a toolbox does not set this GitHub variable;
+without it the hosted composition has no Work IQ tool.
 
 Seven steps, all API calls, no portal step:
 
@@ -461,6 +515,37 @@ FOUNDRY HOSTED**, and the same records question answers from the simulated store
 presenter's own OneDrive depending on the flip. The hosted call is made with the presenter's own
 `az login` credential — whoever runs the demo is who the agent sees.
 
+## Step 8 — Agent 365 ownership and Teams/Copilot distribution
+
+With the agent deployed and the tenant licensed, assign an accountable owner and check readiness:
+
+```powershell
+./scripts/Set-AgentOwner.ps1 -Environment dev -WhatIf
+./scripts/Set-AgentOwner.ps1 -Environment dev
+./scripts/Test-Agent365Readiness.ps1 -Environment dev -RequireHumanOwner
+./scripts/Publish-AgentToTeams.ps1 -Environment dev -WhatIf
+./scripts/Publish-AgentToTeams.ps1 -Environment dev
+```
+
+The owner defaults to the signed-in Azure CLI user; pass `-OwnerUserPrincipalName` to choose another
+accountable person. Agent 365 readiness checks identity, ownership and tenant licensing; it does
+not prove the agent is available or responding in Teams/Copilot.
+
+`Publish-AgentToTeams.ps1` creates the bot/channel bridge. This repository does not yet automate
+the store-registration call. Complete publishing in Foundry with your own developer metadata and
+the appropriate audience. **Just you** initially lists the agent for the publisher; shared Teams
+participants need the required Foundry access. **People in your organization** requires Microsoft
+365 admin approval and is the route for tenant-wide discovery. Microsoft also documents a REST
+publish API, which can automate that remaining step. See [Microsoft's publishing guide](https://learn.microsoft.com/azure/foundry/agents/how-to/publish-copilot).
+
+There is a recorded runtime limitation in this demo: the Work IQ toolbox fails on the native
+bot/Activity channel's delegated-user path. The Command Center's Responses path is the verified
+Work IQ route. Do not treat a successful bot deployment as proof that Work IQ works in Teams;
+rehearse live-state and work-record questions separately with another user's account. See
+[the dated channel findings](prompts/13-agent365.md). The optional
+[Teams relay](../scripts/README.md#running-from-your-own-account-or-a-fresh-clone) uses explicit team
+and channel names and the relay runner's Foundry identity.
+
 ### Why this deployment crosses three control planes
 
 | Plane | What lives there | Tool |
@@ -514,15 +599,24 @@ any other reason — a 403, a network error — stops the script rather than bei
 
 ## Rebuilding from nothing
 
-The point of all this. Given only a clone of this repository and an Azure subscription:
+Use your own repository, subscription and tenant, with the prerequisites above:
 
-1. `gh repo create <owner>/<name> --private --source . --push`
-2. `./scripts/Bootstrap-GitHubOidc.ps1 -ModelVersion <version>`
-3. Actions → deploy-infra → `dev` / `preview`, then `dev` / `apply`
-4. Copy the outputs into the environment variables
-5. Actions → deploy-hosted-agent *(once Stage 12 exists)*
+1. Fork/copy the repository, point `origin` at your copy, enable Actions and push `main`.
+2. Sign in to Azure/GitHub and run `Bootstrap-GitHubOidc.ps1` with an available model version.
+3. Run `deploy-infra`: `dev` / `preview`, then `dev` / `apply`; wait for completion.
+4. Run `Sync-PlatformVariables.ps1`, then `Bootstrap-EnergyHubApi.ps1` for `dev`.
+5. Run `deploy-services`, wait for success, then sync its Energy Hub URL from the summary.
+6. Run `deploy-hosted-agent` to create the identity, grant Energy Hub and Foundry access, and rerun
+   until the smoke test passes.
+7. Assign the tenant's Agent 365 licence, connect and test Work IQ, set `WORKIQ_TOOLBOX`, and redeploy.
+8. As each demo user, create the OneDrive work order, configure the local model endpoints, run
+   `Start-CaesareaDemo.ps1`, and complete that user's Work IQ consent.
+9. Assign the agent owner, run the Agent 365 readiness gate, deploy the Teams bridge, and complete
+   store publishing for your intended audience. Verify with another user; observe the Work IQ
+   channel limitation above.
 
-No step depends on state that only exists on one machine.
+Your tenant's roles, licences, billing, consent and publishing policies are prerequisites; none
+are inherited from the repository author's account.
 
 ---
 
@@ -546,7 +640,7 @@ gh api repos/<owner>/<name>/actions/oidc/customization/sub
 ```json
 { "use_default": true,
   "use_immutable_subject": false,
-  "sub_claim_prefix": "repo:alonf@554150/CaesariaAgenticArchitectureDemo@1352569832" }
+  "sub_claim_prefix": "repo:<owner>@<owner-id>/<repo>@<repo-id>" }
 ```
 
 The bootstrap reads `sub_claim_prefix` and falls back to the legacy shape only on a 404, so you do
@@ -555,7 +649,7 @@ misleading:
 
 ```text
 ##[error]AADSTS700213: No matching federated identity record found for presented assertion
-subject 'repo:alonf@554150/CaesariaAgenticArchitectureDemo@1352569832:environment:dev'.
+subject 'repo:<owner>@<owner-id>/<repo>@<repo-id>:environment:dev'.
 ```
 
 That reads as a *missing* credential. It is a credential with the *wrong subject* — which looks

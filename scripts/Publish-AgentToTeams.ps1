@@ -19,9 +19,9 @@
     then - the same ordering as the agent's RBAC grants.
 
     What it does NOT do: the M365 Copilot agent-store registration the portal also performs (the
-    "Direct publish / Just you" step that flips publish_approval_status). No confirmed ARM or
-    data-plane route for that has been found; it remains a one-time portal step, documented in
-    docs/prompts/13-agent365.md. The bot + Teams channel is the reproducible messaging bridge.
+    publish step that sets the audience and publish_approval_status). Microsoft documents a REST
+    publish API, but this script does not yet implement it. Complete that step in the portal with
+    your intended audience; see docs/deployment.md. The bot + Teams channel is the messaging bridge.
 
     Idempotent: the Bicep converges, and re-running reports the same bot.
 
@@ -173,8 +173,8 @@ Write-Host @"
   Teams, authenticating as the agent's own identity, forwarding to its Activity endpoint. This half
   is now IaC and rebuilds with the platform.
 
-  One portal step remains, once per agent, and has no confirmed API: making the agent available in
-  the M365 Copilot agent store (Foundry portal -> the agent -> Publish -> Direct publish -> Just
-  you). It flips publish_approval_status and registers the store entry. See
-  docs/prompts/13-agent365.md; capture it for the CAPTURED / NOT LIVE fallback.
+  Store registration remains: Foundry portal -> the agent -> Publish -> Direct publish. Choose
+  Just you for a personal pilot, or People in your organization for admin-approved distribution.
+  Microsoft's REST publish API can automate this step, but this script does not yet call it.
+  See docs/deployment.md for audience permissions and the recorded Work IQ channel limitation.
 "@ -ForegroundColor Green

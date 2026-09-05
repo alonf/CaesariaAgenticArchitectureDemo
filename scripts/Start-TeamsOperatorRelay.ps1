@@ -27,10 +27,10 @@
     admin-restricted) and the machine's token cache makes every later run silent.
 
 .PARAMETER TeamName
-    Display name of the team.
+    Required display name of an existing team the Graph user has joined.
 
 .PARAMETER ChannelName
-    Display name of the channel inside it.
+    Required display name of an existing channel inside that team.
 
 .PARAMETER Environment
     Environment whose FOUNDRY_PROJECT_ENDPOINT to read, when one is not supplied directly.
@@ -65,16 +65,20 @@
     sign-in prompted; the hosted-agent call still runs as the az login, which is the identity split.
 
 .EXAMPLE
-    ./scripts/Start-TeamsOperatorRelay.ps1
+    ./scripts/Start-TeamsOperatorRelay.ps1 -TeamName 'Your demo team' -ChannelName 'Your channel'
 
 .EXAMPLE
-    ./scripts/Start-TeamsOperatorRelay.ps1 -Once -LookbackMinutes 5
+    ./scripts/Start-TeamsOperatorRelay.ps1 -TeamName 'Your demo team' -ChannelName 'Your channel' -Once -LookbackMinutes 5
 #>
 
 [CmdletBinding()]
 param(
-    [string] $TeamName = "Alon's Demos",
-    [string] $ChannelName = 'Demo',
+    [Parameter(Mandatory)]
+    [ValidateNotNullOrEmpty()]
+    [string] $TeamName,
+    [Parameter(Mandatory)]
+    [ValidateNotNullOrEmpty()]
+    [string] $ChannelName,
     [ValidateSet('dev', 'prod')]
     [string] $Environment = 'dev',
     [string] $ProjectEndpoint,
@@ -156,11 +160,16 @@ $missing = if ($context) { @($RequiredScopes | Where-Object { $context.Scopes -n
 if ($missing.Count -gt 0) {
     Write-Note "Connecting to Microsoft Graph$(if ($Account) { " as $Account" }) for: $($RequiredScopes -join ', ')"
     $connectArgs = @{ Scopes = $RequiredScopes; NoWelcome = $true; ErrorAction = 'Stop' }
-    if ($Account) { $connectArgs.LoginHint = $Account }
+    # Connect-MgGraph has no LoginHint parameter. Select the account interactively and verify it
+    # below before reading channel messages or posting anything.
+    if ($Account) { $connectArgs.ContextScope = 'Process' }
     Connect-MgGraph @connectArgs
 }
 
 $me = Invoke-GraphJson -Method GET -Url "$GraphBase/me?`$select=id,userPrincipalName,displayName" -What 'Reading the signed-in user'
+if ($Account -and "$($me.userPrincipalName)" -ne $Account) {
+    throw "Signed in to Graph as '$($me.userPrincipalName)', but -Account requested '$Account'. Run Disconnect-MgGraph and retry with the requested account."
+}
 Write-Note "Relaying as: $($me.userPrincipalName)"
 
 # ---------------------------------------------------------------------------------------------

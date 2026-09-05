@@ -40,7 +40,7 @@ internal sealed class OperationsAgentApiOptions : IValidatableObject
 
     /// <summary>
     /// Gets or sets the Microsoft Foundry project endpoint used to run the Operations Agent.
-    /// This value is a non-secret development default and does not require any key or secret.
+    /// Configure this for the developer's own project; the committed value is a placeholder.
     /// </summary>
     [Required]
     public string FoundryProjectEndpoint { get; set; } = string.Empty;

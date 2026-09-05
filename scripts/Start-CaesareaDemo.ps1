@@ -110,7 +110,7 @@ if ($LASTEXITCODE -eq 0) {
 }
 $global:LASTEXITCODE = 0
 
-if ($currentEndpoint) {
+if ($currentEndpoint -and (-not $ProjectEndpoint -or $ProjectEndpoint -eq $currentEndpoint)) {
     Write-Exists "$SecretName = $currentEndpoint"
 }
 else {
