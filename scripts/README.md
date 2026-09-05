@@ -15,7 +15,7 @@ GitHub Actions workflow driving committed Bicep — see [docs/deployment.md](../
 | [`Connect-WorkIQ.ps1`](Connect-WorkIQ.ps1) | Wires Work IQ end to end: service principal, client app, admin consent, Foundry connection, redirect URI, and a toolbox whose **default version** carries the tool | Yes — the default version is compared before any new one is created; connection drift stops the run |
 | [`Test-FoundryToolbox.ps1`](Test-FoundryToolbox.ps1) | Gate: verifies the toolbox's default version carries exactly the expected tool on the expected connection, and fails non-zero on anything less | Read-only |
 | [`New-CaesareaWorkOrder.ps1`](New-CaesareaWorkOrder.ps1) | Creates the demo work order in the **signed-in user's own OneDrive** — the document the hosted agent finds through Work IQ, as that person | Yes — an existing file is left alone without `-Force`, and every write is conditional (ETag) |
-| [`Start-CaesareaDemo.ps1`](Start-CaesareaDemo.ps1) | The presenter's one command: checks the per-machine setup (hosted-agent endpoint in user secrets, Azure sign-in), repairs what it can, warns about the rest, and starts the AppHost | Yes — a configured machine reports `[exists]` and just starts |
+| [`Start-CaesareaDemo.ps1`](Start-CaesareaDemo.ps1) | The presenter's one command: checks the per-machine setup (hosted-agent endpoint in user secrets, Azure sign-in, and that the OneDrive work order is current — refreshing a stale one), repairs what it can, warns about the rest, starts the AppHost and opens the dashboard | Yes — a configured machine reports `[exists]` and just starts |
 
 All mutating scripts support `-WhatIf`. **Run that first**; it makes no changes and prints exactly
 what would happen.

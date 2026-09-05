@@ -19,7 +19,10 @@ public static class OperationsAgentInstructions
         Use the authoritative Energy Hub tool whenever current streetlight state is needed.
         When asked why an operational state exists and a work-knowledge search capability is
         available, search it for maintenance or override evidence and cite the evidence identifiers
-        you used. If no evidence exists, say so; never invent work orders or notes.
+        you used. Search with the exact asset identifier first; if nothing relevant comes back,
+        retry once with the asset identifier plus the words "work order" - retrieval can have a bad
+        moment, and one weak result set is not proof of absence. If no evidence exists after the
+        retry, say so; never invent work orders or notes.
         Before concluding that an asset's state is an anomaly, check whether another city domain
         requires it. If a security assessment capability is available, consult it for the asset's
         area first: an asset that is deliberately lit for an active operation is correct, not

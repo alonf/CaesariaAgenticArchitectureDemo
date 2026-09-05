@@ -17,10 +17,16 @@
          from the GitHub environment's FOUNDRY_PROJECT_ENDPOINT variable, or failing that from the
          Foundry account in the environment's resource group, and stored.
       2. An Azure sign-in exists for the hosted call to mint the presenter's token with.
+      3. The work order in the presenter's OneDrive is current: it carries the source-of-record
+         line and its expected-clearance date has not passed. The document's dates are stamped
+         relative to the day it is written, so a copy from last week reads as an expired ticket -
+         and a stale copy is refreshed by re-running New-CaesareaWorkOrder.ps1 -Force, using the
+         Microsoft Graph session already cached on this machine. With no cached session the check
+         degrades to a warning (pass -RefreshWorkOrder to sign in here and now).
 
-    Neither check is fatal. The local demo needs no cloud at all, so anything unresolved is
-    reported as a warning naming its fix, and the system starts anyway - the Hosting stage is then
-    the only beat that will not work.
+    No check is fatal. The local demo needs no cloud at all, so anything unresolved is reported as
+    a warning naming its fix, and the system starts anyway - the Hosting stage is then the only
+    beat that will not work.
 
     Then it starts the Aspire AppHost in the foreground; Ctrl+C stops the whole system.
 
@@ -39,6 +45,10 @@
 .PARAMETER NoBrowser
     Do not open the Aspire dashboard in the browser when the system comes up.
 
+.PARAMETER RefreshWorkOrder
+    Sign in to Microsoft Graph interactively when no cached session exists, so the work-order
+    check can run on a machine that has never run New-CaesareaWorkOrder.ps1.
+
 .EXAMPLE
     ./scripts/Start-CaesareaDemo.ps1
 
@@ -53,7 +63,8 @@ param(
     [string] $ProjectEndpoint,
     [string] $Repository,
     [switch] $SetupOnly,
-    [switch] $NoBrowser
+    [switch] $NoBrowser,
+    [switch] $RefreshWorkOrder
 )
 
 $ErrorActionPreference = 'Stop'
@@ -181,7 +192,81 @@ else {
 }
 
 # ---------------------------------------------------------------------------------------------
-# 3. Up.
+# 3. The work order the hosted agent finds through Work IQ. Its dates are stamped relative to the
+#    day it was written (raised three days back, clearance one day ahead), so a copy from last
+#    week reads as an expired ticket on stage. Checked here because this is exactly the per-machine,
+#    per-person state that is done once and forgotten.
+# ---------------------------------------------------------------------------------------------
+
+Write-Step 'The work order in your OneDrive (the Hosting stage''s evidence)'
+
+# Folder and file match New-CaesareaWorkOrder.ps1's defaults - the one place they are defined.
+$workOrderPath = 'Caesarea Smart City/WO-8732 Streetlight L-417 maintenance.md'
+
+if (-not (Get-Module -ListAvailable Microsoft.Graph.Authentication)) {
+    Write-Warn 'Microsoft.Graph.Authentication is not installed, so the work order cannot be checked.'
+    Write-Warn 'The local demo is unaffected. For the hosted records beat: Install-Module Microsoft.Graph.Authentication, then ./scripts/New-CaesareaWorkOrder.ps1.'
+}
+else {
+    Import-Module Microsoft.Graph.Authentication -ErrorAction Stop
+
+    if (-not (Get-MgContext) -and $RefreshWorkOrder) {
+        Connect-MgGraph -Scopes 'Files.ReadWrite' -NoWelcome -ErrorAction Stop
+    }
+
+    if (-not (Get-MgContext)) {
+        # Deliberately no sign-in attempt by default: this script must be able to run unattended,
+        # and Connect-MgGraph goes interactive whenever the machine's token cache cannot answer -
+        # a login prompt nobody is watching is a hang, not a check.
+        Write-Warn 'No Microsoft Graph session, so the work order cannot be checked.'
+        Write-Warn 'Re-run with -RefreshWorkOrder (instant when this machine has signed in before; a browser prompt the first time),'
+        Write-Warn 'or run ./scripts/New-CaesareaWorkOrder.ps1 yourself. The local demo is unaffected either way.'
+    }
+    else {
+        $encodedPath = ($workOrderPath -split '/' | ForEach-Object { [uri]::EscapeDataString($_) }) -join '/'
+        $content = $null
+
+        try {
+            $file = New-TemporaryFile
+            try {
+                Invoke-MgGraphRequest -Method GET -Uri "https://graph.microsoft.com/v1.0/me/drive/root:/$encodedPath`:/content" -OutputFilePath $file
+                $content = Get-Content $file -Raw
+            }
+            finally {
+                Remove-Item $file -ErrorAction SilentlyContinue
+            }
+        }
+        catch {
+            if ($_.ErrorDetails -and $_.ErrorDetails.Message -match '"code"\s*:\s*"itemNotFound"') {
+                $content = $null
+            }
+            else {
+                Write-Warn "The work order could not be read: $($_.Exception.Message)"
+                Write-Warn 'Check it manually with ./scripts/New-CaesareaWorkOrder.ps1 -WhatIf.'
+                $content = ''
+            }
+        }
+
+        if ($null -eq $content -or ($content -ne '' -and (
+            $content -notmatch 'Source of record' -or
+            -not ($content -match '\*\*Expected clearance:\*\*\s*(\d{4}-\d{2}-\d{2})') -or
+            [DateTime]::ParseExact($Matches[1], 'yyyy-MM-dd', $null) -lt (Get-Date).Date))) {
+
+            $reason = if ($null -eq $content) { 'missing' } else { 'stale (old version or past its clearance date)' }
+
+            if ($PSCmdlet.ShouldProcess($workOrderPath, "Refresh the $reason work order in OneDrive")) {
+                & "$PSScriptRoot/New-CaesareaWorkOrder.ps1" -Force
+                Write-Note 'Refreshed. Microsoft 365 needs a few minutes to re-index before Work IQ serves the new copy.'
+            }
+        }
+        elseif ($content -ne '') {
+            Write-Exists "work order is current (clearance $($Matches[1]))"
+        }
+    }
+}
+
+# ---------------------------------------------------------------------------------------------
+# 4. Up.
 # ---------------------------------------------------------------------------------------------
 
 if ($SetupOnly) {
