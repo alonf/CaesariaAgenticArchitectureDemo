@@ -19,6 +19,7 @@ GitHub Actions workflow driving committed Bicep — see [docs/deployment.md](../
 | [`Test-Agent365Readiness.ps1`](Test-Agent365Readiness.ps1) | Gate for the Agent 365 segment: the agent's Entra **agent identity**, its owners (flagging a pipeline-only owner), the tenant licence, and the agent-identity inventory | Read-only |
 | [`Set-AgentOwner.ps1`](Set-AgentOwner.ps1) | Adds an accountable human owner (default: the signed-in user) to the hosted agent's identity, alongside the pipeline that created it | Yes — an existing owner reports `[exists]` |
 | [`Start-TeamsOperatorRelay.ps1`](Start-TeamsOperatorRelay.ps1) | Presenter-run relay that answers a Teams channel's new messages with the hosted agent, honestly labeled ("relayed as \<presenter\>"). First run prompts once for Microsoft Graph consent (admin-restricted read scope); silent afterwards | The relay answers each message once per run |
+| [`New-CaesareaOperator.ps1`](New-CaesareaOperator.ps1) | Mints the "Caesarea Operator" identity the relay can post as: Entra user, an Agent 365 seat from the pool the tenant already owns (Teams + mailbox + OneDrive + agent-governance plans), team membership, and the relay's Graph consent for that user alone | Yes — everything reports `[exists]` on a re-run |
 
 All mutating scripts support `-WhatIf`. **Run that first**; it makes no changes and prints exactly
 what would happen.
