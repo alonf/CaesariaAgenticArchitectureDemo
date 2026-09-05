@@ -90,6 +90,16 @@ public sealed class EnergyCommandGatewayIntegrationTests
             {
                 services.RemoveAll<ISmartPoleGateway>();
                 services.AddSingleton(gateway);
+
+                // Same removal as the MCP server tests: the startup hydration's background read
+                // would spin retries against the deliberately failing gateway and muddy what these
+                // tests pin about the command path.
+                var hydration = services.FirstOrDefault(descriptor =>
+                    descriptor.ImplementationType == typeof(TwinHydration));
+                if (hydration is not null)
+                {
+                    services.Remove(hydration);
+                }
             });
         });
     }

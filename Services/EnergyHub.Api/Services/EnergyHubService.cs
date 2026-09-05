@@ -126,6 +126,57 @@ public sealed partial class EnergyHubService
     }
 
     /// <summary>
+    /// Projects the twin from the authoritative SmartPole state at startup, and only while the
+    /// twin is still the constructor's untouched baseline.
+    /// </summary>
+    /// <remarks>
+    /// The constructor seeds a baseline twin so the hub can answer before its device layer does -
+    /// and in the habitat WITH a switchboard that baseline never survives long, because the first
+    /// scenario reshapes it. The habitat WITHOUT one is where this method earns its place: the
+    /// deployed hub's demo surface is deliberately off, so nothing would ever ask the device, and
+    /// the hub served its constructor's quiet baseline forever while the deployed SmartPole sat in
+    /// the forgotten-override state. Found live, by the hosted agent answering "off" about a lamp
+    /// its own device layer reported on.
+    /// <para>
+    /// Anything that already shaped the twin wins: the guard is checked before the read and again
+    /// under the gate, so a scenario applied while the device was being read is never clobbered.
+    /// </para>
+    /// </remarks>
+    /// <param name="correlationId">The correlation identifier spanning the hydration.</param>
+    /// <param name="cancellationToken">The token used to cancel the operation.</param>
+    public async Task HydrateFromDeviceAsync(string correlationId, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(correlationId);
+
+        lock (_gate)
+        {
+            if (_revision != 0)
+            {
+                EnergyHubServiceLog.HydrationSuperseded(_logger, DemoAssets.StreetlightAssetId, correlationId);
+                return;
+            }
+        }
+
+        var physicalState = await _smartpoleGateway.GetStateAsync(DemoAssets.StreetlightAssetId, correlationId, cancellationToken);
+        var desiredIsOn = ComputeScheduledTarget(physicalState);
+
+        lock (_gate)
+        {
+            if (_revision != 0)
+            {
+                EnergyHubServiceLog.HydrationSuperseded(_logger, DemoAssets.StreetlightAssetId, correlationId);
+                return;
+            }
+
+            _revision++;
+            _twin = CreateTwinFromPhysical(physicalState, desiredIsOn, null, null);
+            AddActivity("Energy Hub hydrated from the authoritative SmartPole state at startup.", correlationId, ActivityKind.Synchronization, true, null);
+        }
+
+        EnergyHubServiceLog.Hydrated(_logger, DemoAssets.StreetlightAssetId, physicalState.IsOn, physicalState.ManualOverride, correlationId);
+    }
+
+    /// <summary>
     /// Synchronizes the Energy Hub twin after the SmartPole simulator has already applied a deterministic scenario.
     /// </summary>
     /// <param name="request">The synchronization request projected from the scenario recipe.</param>
@@ -686,6 +737,18 @@ internal static partial class EnergyHubServiceLog
         Level = LogLevel.Information,
         Message = "Energy Hub reset completed for asset {AssetId}. DesiredIsOn: {DesiredIsOn}. CorrelationId: {CorrelationId}.")]
     internal static partial void ResetCompleted(ILogger logger, string assetId, string correlationId, bool desiredIsOn);
+
+    [LoggerMessage(
+        EventId = 1560,
+        Level = LogLevel.Information,
+        Message = "Energy Hub twin hydrated from SmartPole for asset {AssetId}. IsOn: {IsOn}, ManualOverride: {ManualOverride}. CorrelationId: {CorrelationId}.")]
+    internal static partial void Hydrated(ILogger logger, string assetId, bool isOn, bool manualOverride, string correlationId);
+
+    [LoggerMessage(
+        EventId = 1561,
+        Level = LogLevel.Information,
+        Message = "Energy Hub twin hydration skipped for asset {AssetId}: the twin was already shaped. CorrelationId: {CorrelationId}.")]
+    internal static partial void HydrationSuperseded(ILogger logger, string assetId, string correlationId);
 
     [LoggerMessage(
         EventId = 1502,

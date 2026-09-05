@@ -137,6 +137,17 @@ public sealed class EnergyMcpServerIntegrationTests
             {
                 services.RemoveAll<ISmartPoleGateway>();
                 services.AddSingleton<ISmartPoleGateway>(gateway);
+
+                // These tests pin what the TOOLS do to the gateway, and several assert it was
+                // never touched at all. The startup hydration performs a legitimate background
+                // read that would trip those assertions (and race the correlation-id checks), so
+                // it is removed here rather than weakening what the assertions say.
+                var hydration = services.FirstOrDefault(descriptor =>
+                    descriptor.ImplementationType == typeof(TwinHydration));
+                if (hydration is not null)
+                {
+                    services.Remove(hydration);
+                }
             });
         });
         return (factory, gateway);

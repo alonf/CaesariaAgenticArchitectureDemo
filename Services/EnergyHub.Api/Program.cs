@@ -17,6 +17,9 @@ builder.Services.AddHttpClient<ISmartPoleGateway, HttpSmartPoleGateway>((service
     client.BaseAddress = new Uri(options.SmartPoleBaseUri, UriKind.Absolute);
 });
 builder.Services.AddSingleton<EnergyHubService>();
+// Hydrates the twin from the authoritative SmartPole at startup. Decisive only where no
+// switchboard ever will: the deployed hub otherwise serves its constructor baseline forever.
+builder.Services.AddHostedService<TwinHydration>();
 builder.Services.AddSingleton<MrtrRequestStateStore>();
 builder.Services.AddHttpContextAccessor();
 
