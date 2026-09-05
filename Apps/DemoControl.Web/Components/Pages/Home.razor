@@ -6,6 +6,7 @@
 @inject WorkKnowledgeApiClient WorkKnowledgeClient
 @inject CaseMemoryApiClient CaseMemoryClient
 @inject ToolSourceApiClient ToolSourceClient
+@inject AgentHabitatApiClient AgentHabitatClient
 @inject SecurityConsultApiClient SecurityConsultClient
 @inject WorkforceRecordsApiClient WorkforceRecordsClient
 @inject VsCodeAttachService AttachService
@@ -251,6 +252,41 @@
 
     <section class="panel switchboard-panel">
         <div class="panel-heading">
+            <h2>Agent Habitat</h2>
+            <span class="stamp">@AgentHabitatStamp</span>
+        </div>
+        @if (_agentHabitat is null)
+        {
+            <p>@(_agentHabitatMessage ?? "Loading agent habitat...")</p>
+        }
+        else
+        {
+            <p class="switchboard-note">
+                Which habitat answers the Command Center's questions. FOUNDRY HOSTED is the same agent
+                code on Microsoft Foundry's runtime: it reads the CLOUD Energy Hub and reaches the work
+                order in the presenter's own OneDrive through Work IQ, asking as the signed-in person.
+                The cloud city is NOT controlled from this switchboard - its demo surface is
+                deliberately off, and it permanently shows the forgotten-override situation that work
+                order WO-8732 explains. First hosted use per person shows a consent link in the
+                Command Center - open it, consent, ask again. Requires the Hosting stage.
+            </p>
+            <div class="stage-switch-actions">
+                <button class="button @(_agentHabitat.Habitat == "Local" ? "primary" : "secondary")" @onclick='() => SetAgentHabitatAsync("Local")' disabled="@_agentHabitatBusy">
+                    LOCAL (Aspire)
+                </button>
+                <button class="button @(_agentHabitat.Habitat == "FoundryHosted" ? "primary" : "secondary")" @onclick='() => SetAgentHabitatAsync("FoundryHosted")' disabled="@_agentHabitatBusy">
+                    FOUNDRY HOSTED
+                </button>
+            </div>
+            @if (!string.IsNullOrWhiteSpace(_agentHabitatMessage))
+            {
+                <p class="status-error">@_agentHabitatMessage</p>
+            }
+        }
+    </section>
+
+    <section class="panel switchboard-panel">
+        <div class="panel-heading">
             <h2>Security Consult</h2>
             <span class="stamp">@SecurityConsultStamp</span>
         </div>
@@ -408,6 +444,9 @@
     private ToolSourceState? _toolSource;
     private bool _toolSourceBusy;
     private string? _toolSourceMessage;
+    private AgentHabitatState? _agentHabitat;
+    private bool _agentHabitatBusy;
+    private string? _agentHabitatMessage;
     private SecurityConsultState? _securityConsult;
     private IReadOnlyList<WorkOrderRecord>? _workforceRecords;
     private bool _workforceRecordsBusy;
@@ -464,6 +503,12 @@
         { Source: "Mcp" } => "MCP remote",
         _ => "Local function"
     };
+    private string AgentHabitatStamp => _agentHabitat switch
+    {
+        null => "Unavailable",
+        { Habitat: "FoundryHosted" } => "Foundry hosted",
+        _ => "Local (Aspire)"
+    };
     // Each service is debugged separately, so the panel stamp counts how many are attached rather
     // than claiming a single answer for all of them.
     private string BreakpointStamp => _breakpoints switch
@@ -491,6 +536,7 @@
         await LoadWorkKnowledgeAsync(CancellationToken.None);
         await LoadCaseMemoryAsync(CancellationToken.None);
         await LoadToolSourceAsync(CancellationToken.None);
+        await LoadAgentHabitatAsync(CancellationToken.None);
         await LoadSecurityConsultAsync(CancellationToken.None);
 
         _pollingTokenSource = new CancellationTokenSource();
@@ -517,6 +563,12 @@
                     if (!_toolSourceBusy)
                     {
                         await LoadToolSourceAsync(cancellationToken);
+                    }
+
+                    // The habitat resets to Local on a stage downgrade for the same reason.
+                    if (!_agentHabitatBusy)
+                    {
+                        await LoadAgentHabitatAsync(cancellationToken);
                     }
 
                     if (!_securityConsultBusy)
@@ -782,6 +834,39 @@
         finally
         {
             _toolSourceBusy = false;
+        }
+    }
+
+    private async Task LoadAgentHabitatAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            _agentHabitat = await AgentHabitatClient.GetStatusAsync(cancellationToken);
+            _agentHabitatMessage = null;
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            _agentHabitat = null;
+            _agentHabitatMessage = $"Agent habitat unavailable: {exception.Message}";
+        }
+    }
+
+    private async Task SetAgentHabitatAsync(string habitat)
+    {
+        _agentHabitatBusy = true;
+
+        try
+        {
+            _agentHabitat = await AgentHabitatClient.SetHabitatAsync(habitat, CancellationToken.None);
+            _agentHabitatMessage = null;
+        }
+        catch (Exception exception)
+        {
+            _agentHabitatMessage = $"Agent habitat change failed: {exception.Message}";
+        }
+        finally
+        {
+            _agentHabitatBusy = false;
         }
     }
 

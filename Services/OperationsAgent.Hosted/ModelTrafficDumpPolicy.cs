@@ -14,9 +14,10 @@ namespace OperationsAgent.Hosted;
 /// history. The only way to see what was actually sent is to capture it at the pipeline, and the only
 /// place that capture can be composed is here, where the AIProjectClient is constructed.
 ///
-/// Registered only when DUMP_MODEL_TRAFFIC names a directory. Never set it in a deployed
-/// environment: the dumps contain full prompts, tool outputs and whatever a tool returned about a
-/// person's own documents.
+/// Registered only when DUMP_MODEL_TRAFFIC names a directory, and never in the Foundry-hosted
+/// environment - Program.cs refuses the flag there, because the dumps contain full prompts, tool
+/// outputs and whatever a tool returned about a person's own documents, and a hosted container's
+/// persistent filesystem is no place to leave them.
 /// </remarks>
 internal sealed class ModelTrafficDumpPolicy(string dumpDirectory) : PipelinePolicy
 {
@@ -30,11 +31,21 @@ internal sealed class ModelTrafficDumpPolicy(string dumpDirectory) : PipelinePol
         var sequence = Interlocked.Increment(ref _sequence);
         string? body = null;
 
-        if (message.Request.Content is not null)
+        try
         {
-            using var buffer = new MemoryStream();
-            await message.Request.Content.WriteToAsync(buffer, CancellationToken.None).ConfigureAwait(false);
-            body = Encoding.UTF8.GetString(buffer.ToArray());
+            if (message.Request.Content is not null)
+            {
+                using var buffer = new MemoryStream();
+                await message.Request.Content.WriteToAsync(buffer, CancellationToken.None).ConfigureAwait(false);
+                body = Encoding.UTF8.GetString(buffer.ToArray());
+            }
+        }
+        catch (Exception exception)
+        {
+            // Best-effort for the same reason the write below is: this side runs before the
+            // request is sent, and a capture that stops it from being sent has inverted the
+            // diagnostic's purpose. The failure itself becomes the dump's content.
+            body = $"(body capture failed: {exception.GetType().Name}: {exception.Message})";
         }
 
         // Captured before the call: the URI is what was asked for even if the request then fails.
@@ -42,18 +53,32 @@ internal sealed class ModelTrafficDumpPolicy(string dumpDirectory) : PipelinePol
 
         await ProcessNextAsync(message, pipeline, currentIndex).ConfigureAwait(false);
 
-        var status = message.Response?.Status ?? 0;
-        var path = uri.AbsolutePath.Replace('/', '_');
-        if (path.Length > 80)
+        try
         {
-            path = path[^80..];
-        }
+            var status = message.Response?.Status ?? 0;
+            var path = uri.AbsolutePath.Replace('/', '_');
+            if (path.Length > 80)
+            {
+                path = path[^80..];
+            }
 
-        Directory.CreateDirectory(dumpDirectory);
-        var name = $"{sequence:D3}_{message.Request.Method}_{status}{path}.json";
-        // Deliberately not the message's token: a dump of a cancelled request is exactly the
-        // evidence worth keeping.
-        await File.WriteAllTextAsync(Path.Combine(dumpDirectory, name), body ?? "(no body)", CancellationToken.None)
-            .ConfigureAwait(false);
+            Directory.CreateDirectory(dumpDirectory);
+            var name = $"{sequence:D3}_{message.Request.Method}_{status}{path}.json";
+            // Deliberately not the message's token: a dump of a cancelled request is exactly the
+            // evidence worth keeping.
+            await File.WriteAllTextAsync(Path.Combine(dumpDirectory, name), body ?? "(no body)", CancellationToken.None)
+                .ConfigureAwait(false);
+        }
+        catch (Exception exception)
+        {
+            // A dump that cannot be written must never take the response down with it: by this
+            // point the model has answered, and an unwritable directory is a fact about the
+            // filesystem, not about the request. A pipeline policy is composed before the host
+            // and its logging exist, so there is no ILogger to reach - stderr is where the loss
+            // is reported.
+            await Console.Error.WriteLineAsync(
+                $"ModelTrafficDumpPolicy: dump {sequence:D3} for {uri.AbsolutePath} not written to '{dumpDirectory}': {exception.GetType().Name}: {exception.Message}")
+                .ConfigureAwait(false);
+        }
     }
 }

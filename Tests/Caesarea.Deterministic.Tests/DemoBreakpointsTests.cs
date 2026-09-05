@@ -11,7 +11,7 @@ public sealed class DemoBreakpointsTests
         var snippetValues = GetDemoSnippetValues();
 
         Assert.Equal(
-            ["A2A_DELEGATION", "A2A_SPECIALIST", "AGENT_CREATION", "AGENT_SESSION", "AGENT_SKILLS", "CASE_MEMORY", "FUNCTION_TOOL", "KNOWLEDGE_RETRIEVAL", "MCP_CLIENT", "MCP_SERVER", "MULTI_AGENT", "MULTI_ROUND_TRIP_REQUEST", "TOOL_APPROVAL", "WORKFLOW"],
+            ["A2A_DELEGATION", "A2A_SPECIALIST", "AGENT_CREATION", "AGENT_SESSION", "AGENT_SKILLS", "CASE_MEMORY", "FUNCTION_TOOL", "HOSTING", "KNOWLEDGE_RETRIEVAL", "MCP_CLIENT", "MCP_SERVER", "MULTI_AGENT", "MULTI_ROUND_TRIP_REQUEST", "PROTOCOL", "TOOL_APPROVAL", "WORKFLOW"],
             snippetValues.OrderBy(value => value, StringComparer.Ordinal));
 
         foreach (var value in snippetValues)
@@ -62,14 +62,22 @@ public sealed class DemoBreakpointsTests
 
         Assert.False(string.IsNullOrWhiteSpace(registeredArguments), "No service calls MapDemoBreakpoints.");
 
-        var snippetFieldNames = typeof(DemoSnippets)
+        var snippetFields = typeof(DemoSnippets)
             .GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)
-            .Where(field => field.IsLiteral && field.FieldType == typeof(string))
-            .Select(field => field.Name);
+            .Where(field => field.IsLiteral && field.FieldType == typeof(string));
 
-        foreach (var fieldName in snippetFieldNames)
+        foreach (var field in snippetFields)
         {
-            Assert.Contains($"{nameof(DemoSnippets)}.{fieldName}", registeredArguments, StringComparison.Ordinal);
+            if (DemoSnippets.NavigationOnly.Contains((string)field.GetRawConstantValue()!))
+            {
+                // Navigation-only snippets live in the hosted head, where no presenter debugger
+                // reaches. A service registering one would offer the switchboard a breakpoint that
+                // can never fire, so the guard here is the inverse.
+                Assert.DoesNotContain($"{nameof(DemoSnippets)}.{field.Name}", registeredArguments, StringComparison.Ordinal);
+                continue;
+            }
+
+            Assert.Contains($"{nameof(DemoSnippets)}.{field.Name}", registeredArguments, StringComparison.Ordinal);
         }
     }
 

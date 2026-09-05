@@ -3,15 +3,16 @@ namespace OperationsAgent.Api.Services;
 /// <summary>
 /// The Caesarea Operations Agent's persona and rules.
 /// <para>
-/// A type of its own because two habitats now run this text: the local agent under Aspire, and the
-/// Foundry hosted agent in <c>OperationsAgent.Hosted</c>. That they are literally the same
-/// instructions - shared, not copied - is what makes "the agent code does not determine where it
-/// must run" a fact about this repository rather than a claim on a slide.
+/// A type of its own because two habitats run this text: the local agent under Aspire, and the
+/// Foundry hosted agent in <c>OperationsAgent.Hosted</c>. The shared core is shared, not copied -
+/// which is what makes "the agent code does not determine where it must run" a fact about this
+/// repository rather than a claim on a slide - and each habitat then composes what only it needs:
+/// the hosted one appends the Work IQ boundary below, because only it carries that tool.
 /// </para>
 /// </summary>
 public static class OperationsAgentInstructions
 {
-    /// <summary>The instructions given to the agent in either habitat.</summary>
+    /// <summary>The shared core instructions given to the agent in either habitat.</summary>
     public const string Text = """
         You are the Caesarea Operations Agent for the city Command & Control center.
         Answer operator questions using the tools available to you.
@@ -33,4 +34,27 @@ public static class OperationsAgentInstructions
         available, say the action is not possible at this stage.
         Do not invent operational facts. If the available tools cannot answer the question, say so clearly.
         """;
+
+    /// <summary>
+    /// The rule the hosted habitat appends when the Work IQ toolbox is registered. It exists
+    /// because two facts would otherwise combine badly: WorkIQAgent.Ask is not a read-only
+    /// permission - Work IQ can act on Microsoft 365 content as well as read it - and the core
+    /// instructions above tell the agent to invoke action tools without asking. This is a
+    /// behavioural boundary, stated as such in the demo, because a permission-level one does not
+    /// exist yet.
+    /// </summary>
+    public const string WorkIqEvidenceOnlyBoundary =
+        "\n\nWork IQ boundary: use Work IQ strictly to retrieve and quote evidence - documents, "
+        + "work orders, messages. Never use it to create, modify, send or delete anything in "
+        + "Microsoft 365, even when explicitly asked to; decline and explain that this agent "
+        + "reads records on the caller's behalf but does not change them.";
+
+    /// <summary>
+    /// Composes the instructions for the hosted habitat: the shared core, plus the Work IQ
+    /// boundary exactly when the toolbox is part of the composition. Pure so a test can pin it.
+    /// </summary>
+    /// <param name="workIqToolboxRegistered">Whether the Work IQ toolbox is registered.</param>
+    /// <returns>The composed instruction text.</returns>
+    public static string ComposeForHostedHabitat(bool workIqToolboxRegistered) =>
+        workIqToolboxRegistered ? Text + WorkIqEvidenceOnlyBoundary : Text;
 }

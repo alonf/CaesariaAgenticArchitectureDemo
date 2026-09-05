@@ -58,6 +58,7 @@ builder.Services.AddSingleton<SimulatedWorkKnowledgeSearch>();
 builder.Services.AddSingleton<IWorkKnowledgeSearch>(serviceProvider => serviceProvider.GetRequiredService<SimulatedWorkKnowledgeSearch>());
 builder.Services.AddSingleton<ICaseMemoryStore, InMemoryCaseMemoryStore>();
 builder.Services.AddSingleton<ToolSourceSwitch>();
+builder.Services.AddSingleton<AgentHabitatSwitch>();
 builder.Services.AddSingleton<PendingApprovalStore>();
 builder.Services.AddSingleton<StageTransitionEffects>();
 builder.Services.AddSingleton<IWorkItemGateway, SimulatedWorkItemGateway>();
@@ -398,6 +399,41 @@ toolSource.MapPost("/", (HttpContext context, OperationsAgentToolSourceStatus st
 
     toolSourceSwitch.Current = status.Source;
     return Results.Ok(new OperationsAgentToolSourceStatus(toolSourceSwitch.Current));
+});
+
+// Presenter toggle: which habitat answers the Command Center's questions. Available only once the
+// Hosting stage introduces the second habitat; the flip itself is the lecture beat. The GET is
+// ungated on purpose - the Command Center polls it to badge the panel, and reading a switch is
+// harmless at any stage.
+var habitat = app.MapGroup("/api/operations-agent/habitat")
+    .WithTags("Agent Habitat");
+
+habitat.MapGet("/", (AgentHabitatSwitch habitatSwitch) =>
+    TypedResults.Ok(new OperationsAgentHabitatStatus(habitatSwitch.Current)));
+habitat.MapPost("/", (HttpContext context, OperationsAgentHabitatStatus status, AgentHabitatSwitch habitatSwitch, DemoStageGate stageGate) =>
+{
+    // Enum model binding accepts any integer, and a switch stuck on an undefined value would
+    // route nothing while displaying something.
+    if (!Enum.IsDefined(status.Habitat))
+    {
+        return Results.Problem(ProblemDetailsFactory.Create(
+            StatusCodes.Status400BadRequest,
+            "Unknown agent habitat",
+            $"'{status.Habitat}' is not a defined agent habitat.",
+            context.GetCorrelationId()));
+    }
+
+    if (stageGate.GetCurrent().Id < DemoStage.Hosting)
+    {
+        return Results.Problem(ProblemDetailsFactory.Create(
+            StatusCodes.Status409Conflict,
+            "Agent habitat toggle disabled in the current demo stage",
+            $"Selecting the agent habitat requires the Hosting stage; the current stage is {stageGate.GetCurrent().Name}.",
+            context.GetCorrelationId()));
+    }
+
+    habitatSwitch.Current = status.Habitat;
+    return Results.Ok(new OperationsAgentHabitatStatus(habitatSwitch.Current));
 });
 demoStage.MapPost("/", (DemoStageStatus stage, DemoStageGate stageGate, FoundryCredentialWarmup credentialWarmup, StageTransitionEffects transitionEffects) =>
 {

@@ -9,11 +9,13 @@ namespace OperationsAgent.Hosted;
 /// </summary>
 /// <remarks>
 /// <para>
-/// This exists because <c>AgentSkillsProvider</c> cannot be used in the Foundry hosted runtime: any
-/// reply that goes through its <c>load_skill</c> tool returns <c>failed</c> with HTTP 400
-/// <c>invalid_payload</c>, naming no field. A file-backed skill and a three-line skill defined in
-/// code fail identically, so the cause is the provider rather than the source or the content, and
-/// there is no newer package to move to.
+/// This was born of a wrong diagnosis and is kept because it is independently useful. The HTTP 400
+/// <c>invalid_payload</c> failures once blamed on <c>AgentSkillsProvider</c> were never about
+/// skills: the hosted runtime replays reasoning items the service rejects on any tool-calling
+/// turn, and <c>ReasoningReplaySanitizingChatClient</c> is the actual fix (the full story is in
+/// docs/product-status/hosted-agent.md). The provider path works and remains the default
+/// (SKILLS_MODE=provider); this tool path needs no files in the image and no SKILLS_DIRECTORY,
+/// which is its own reason to exist.
 /// </para>
 /// <para>
 /// What it replaces is smaller than it looks. Progressive disclosure is a pattern, not an API: the

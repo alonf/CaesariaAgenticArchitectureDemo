@@ -93,6 +93,14 @@ resource smartPole 'Microsoft.App/containerApps@2025-01-01' = {
               name: 'AZURE_CLIENT_ID'
               value: workloadIdentityClientId
             }
+            {
+              // The cloud city has no switchboard - the demo control surface below is deliberately
+              // off - so the pole boots into the situation the lecture investigates: lamp ON during
+              // daylight under a forgotten manual override, the exact state work order WO-8732 in
+              // the presenter's OneDrive explains. The hosted agent's two sources then agree.
+              name: 'SmartPoleSimulator__StartWithForgottenOverride'
+              value: 'true'
+            }
           ]
         }
       ]

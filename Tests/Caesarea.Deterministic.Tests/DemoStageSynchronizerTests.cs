@@ -87,6 +87,7 @@ public sealed class DemoStageSynchronizerTests
         return new StageTransitionEffects(
             approvals,
             new ToolSourceSwitch(),
+            new AgentHabitatSwitch(),
             StageTransitionEffectsTests.CreateWorkflowService(approvals),
             new SecurityConsultSwitch(),
             StageTransitionEffectsTests.CreateWarmup(),

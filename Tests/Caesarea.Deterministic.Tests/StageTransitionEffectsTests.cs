@@ -113,13 +113,44 @@ public sealed class StageTransitionEffectsTests
         Assert.True(await decision);
     }
 
+    [Fact]
+    public void DowngradeBelowHostingResetsTheHabitat()
+    {
+        // Re-entering Hosting must start from LOCAL: a stale FOUNDRY HOSTED selection would answer
+        // the re-entered stage's first question from the cloud with no one having flipped anything.
+        var (effects, _, _, habitat) = CreateEffectsWithHabitat();
+        habitat.Current = OperationsAgentHabitat.FoundryHosted;
+
+        effects.Apply(previous: DemoStage.Hosting, current: DemoStage.A2ADelegation);
+
+        Assert.Equal(OperationsAgentHabitat.Local, habitat.Current);
+    }
+
+    [Fact]
+    public void ForwardMoveIntoHostingKeepsTheHabitatSelection()
+    {
+        var (effects, _, _, habitat) = CreateEffectsWithHabitat();
+        habitat.Current = OperationsAgentHabitat.FoundryHosted;
+
+        effects.Apply(previous: DemoStage.Hosting, current: DemoStage.Hosting);
+
+        Assert.Equal(OperationsAgentHabitat.FoundryHosted, habitat.Current);
+    }
+
     private static (StageTransitionEffects Effects, PendingApprovalStore Approvals, ToolSourceSwitch ToolSource) CreateEffects()
+    {
+        var (effects, approvals, toolSource, _) = CreateEffectsWithHabitat();
+        return (effects, approvals, toolSource);
+    }
+
+    private static (StageTransitionEffects Effects, PendingApprovalStore Approvals, ToolSourceSwitch ToolSource, AgentHabitatSwitch Habitat) CreateEffectsWithHabitat()
     {
         var approvals = new PendingApprovalStore(new TestTimeProvider(), NullLogger<PendingApprovalStore>.Instance);
         var toolSource = new ToolSourceSwitch();
+        var habitat = new AgentHabitatSwitch();
         var effects = new StageTransitionEffects(
-            approvals, toolSource, CreateWorkflowService(approvals), new SecurityConsultSwitch(), CreateWarmup(), CreateWorkforceWarmup(), NullLogger<StageTransitionEffects>.Instance);
-        return (effects, approvals, toolSource);
+            approvals, toolSource, habitat, CreateWorkflowService(approvals), new SecurityConsultSwitch(), CreateWarmup(), CreateWorkforceWarmup(), NullLogger<StageTransitionEffects>.Instance);
+        return (effects, approvals, toolSource, habitat);
     }
 
     internal static SecurityAgentWarmup CreateWarmup() =>

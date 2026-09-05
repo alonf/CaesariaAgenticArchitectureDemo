@@ -101,5 +101,3 @@ public static class WorkforceAgentFactory
         #endregion
     }
 }
-
-

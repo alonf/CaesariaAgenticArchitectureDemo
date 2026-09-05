@@ -10,6 +10,7 @@ namespace OperationsAgent.Api.Services;
 public sealed partial class StageTransitionEffects(
     PendingApprovalStore pendingApprovals,
     ToolSourceSwitch toolSourceSwitch,
+    AgentHabitatSwitch habitatSwitch,
     RemediationWorkflowService remediationWorkflow,
     SecurityConsultSwitch securityConsult,
     SecurityAgentWarmup securityAgentWarmup,
@@ -76,6 +77,15 @@ public sealed partial class StageTransitionEffects(
             toolSourceSwitch.Current = OperationsAgentToolSource.Local;
             StageTransitionLog.ToolSourceReset(logger, current);
         }
+
+        // Re-entering Hosting starts from LOCAL, so the habitat flip is always a live beat rather
+        // than a leftover: a stale FOUNDRY HOSTED selection would make the first "Ask agent" of the
+        // re-entered stage answer from the cloud with no one having flipped anything.
+        if (current < DemoStage.Hosting && habitatSwitch.Current != OperationsAgentHabitat.Local)
+        {
+            habitatSwitch.Current = OperationsAgentHabitat.Local;
+            StageTransitionLog.HabitatReset(logger, current);
+        }
     }
 }
 
@@ -98,4 +108,10 @@ internal static partial class StageTransitionLog
         Level = LogLevel.Warning,
         Message = "{RefusedCount} parked interactive-input confirmation(s) were refused: moving to {Stage} withdrew the direct write.")]
     internal static partial void InteractiveInputWithdrawn(ILogger logger, int refusedCount, DemoStage stage);
+
+    [LoggerMessage(
+        EventId = 2637,
+        Level = LogLevel.Information,
+        Message = "Agent habitat reset to Local by the stage downgrade to {Stage}.")]
+    internal static partial void HabitatReset(ILogger logger, DemoStage stage);
 }

@@ -81,7 +81,16 @@ public enum DemoStage
     /// personal detail may not cross; its agent never receives those fields, so it can answer
     /// freely and cannot be talked into disclosing what it never held.
     /// </summary>
-    A2ADelegation
+    A2ADelegation,
+
+    /// <summary>
+    /// The same Operations Agent, hosted by Microsoft Foundry instead of by this process. The
+    /// presenter switches the Command Center between the two habitats: the hosted twin runs the
+    /// same code against the cloud Energy Hub, and reaches the real work order in the presenter's
+    /// own Microsoft 365 through Work IQ - asking as the signed-in person, never as an
+    /// all-reading application.
+    /// </summary>
+    Hosting
 }
 
 /// <summary>

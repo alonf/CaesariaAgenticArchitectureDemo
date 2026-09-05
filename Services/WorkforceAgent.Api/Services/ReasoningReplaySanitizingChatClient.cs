@@ -7,8 +7,8 @@ namespace WorkforceAgent.Api.Services;
 /// follow-up request never replays a reasoning item.
 /// </summary>
 /// <remarks>
-/// The Workforce Agent's counterpart of <c>OperationsAgent.Hosted.ReasoningReplaySanitizingChatClient</c>,
-/// where the defect was diagnosed; the full story is in docs/product-status/hosted-agent.md. In
+/// The Workforce Agent's counterpart of <c>OperationsAgent.Api.Services.ReasoningReplaySanitizingChatClient</c>,
+/// beside which the defect was diagnosed; the full story is in docs/product-status/hosted-agent.md. In
 /// short: the Foundry hosted runtime drives the model with store:false and replays each leg's items
 /// in the follow-up request, and Azure Foundry's Responses endpoint rejects a replayed reasoning
 /// item's encrypted_content with HTTP 400 invalid_payload. Any tool call therefore kills the turn.
@@ -59,6 +59,7 @@ internal sealed class ReasoningReplaySanitizingChatClient(IChatClient innerClien
             {
                 AuthorName = message.AuthorName,
                 MessageId = message.MessageId,
+                CreatedAt = message.CreatedAt,
                 AdditionalProperties = message.AdditionalProperties,
             };
         }

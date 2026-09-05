@@ -2,6 +2,7 @@
 @implements IAsyncDisposable
 @inject CommandCenterApiClient ApiClient
 @inject OperationsAgentApiClient OperationsAgentClient
+@inject HostedOperationsAgentClient HostedAgentClient
 @inject IConfiguration Configuration
 @inject IOptions<CommandCenterWebOptions> WebOptions
 @inject IJSRuntime JS
@@ -388,6 +389,10 @@
                     <section class="investigation-panel">
                         <div class="section-title">
                             <span>Caesarea Operations Agent</span>
+                            @if (IsHostingStage)
+                            {
+                                <span class="agent-status-badge @(HostedHabitatSelected ? "success" : "idle")">@(HostedHabitatSelected ? "Foundry-hosted" : "Local habitat")</span>
+                            }
                             <span class="agent-status-badge @AgentStatusClass">@AgentStatusText</span>
                         </div>
 
@@ -396,8 +401,16 @@
                                 <svg viewBox="0 0 24 24"><path d="M12 2a5 5 0 0 1 5 5v1a5 5 0 0 1-10 0V7a5 5 0 0 1 5-5Zm-7 19a7 7 0 0 1 14 0Z" /></svg>
                             </span>
                             <div>
-                                <strong>@(_agentResponse?.AgentName ?? "Caesarea Operations Agent")</strong>
-                                <small>General operations assistant · one Energy Hub tool</small>
+                                @if (HostedHabitatSelected)
+                                {
+                                    <strong>Caesarea Operations Agent (hosted)</strong>
+                                    <small>Same code, Foundry runtime · Work IQ asks as you</small>
+                                }
+                                else
+                                {
+                                    <strong>@(_agentResponse?.AgentName ?? "Caesarea Operations Agent")</strong>
+                                    <small>General operations assistant · one Energy Hub tool</small>
+                                }
                             </div>
                         </div>
 
@@ -406,14 +419,55 @@
                             <p>@(_lastAgentQuestion ?? AgentQuestion)</p>
                         </div>
 
-                        <button class="action-button investigate-button @(_agentBusy ? "busy" : string.Empty)" @onclick="AskAgentAsync" disabled="@_agentBusy">
-                            <span>@(_agentBusy ? "Asking..." : "Ask agent")</span>
+                        <button class="action-button investigate-button @(_agentBusy || _hostedBusy ? "busy" : string.Empty)" @onclick="AskAgentAsync" disabled="@(_agentBusy || _hostedBusy)">
+                            <span>@(_agentBusy || _hostedBusy ? "Asking..." : "Ask agent")</span>
                             <svg viewBox="0 0 24 24"><path d="M11 4a7 7 0 1 0 4.9 12.1l4.5 4.5 1.4-1.4-4.5-4.5A7 7 0 0 0 11 4Zm0 2a5 5 0 1 1 0 10 5 5 0 0 1 0-10Z" /></svg>
                         </button>
 
                         @if (!string.IsNullOrWhiteSpace(_agentMessage))
                         {
                             <p class="agent-message @(_agentMessageIsError ? "status-error" : string.Empty)">@_agentMessage</p>
+                        }
+
+                        @if (!string.IsNullOrWhiteSpace(_hostedMessage))
+                        {
+                            <p class="agent-message status-error">@_hostedMessage</p>
+                        }
+
+                        @* Work IQ's first act for a person is to ask that person. The platform will
+                           not touch the presenter's Microsoft 365 until they consent, and the
+                           consent arrives as part of the response - so it renders as the beat it
+                           is, not as an error. *@
+                        @if (_hostedConsentLink is { } consentLink)
+                        {
+                            <div class="agent-summary">
+                                <small>Work IQ consent required</small>
+                                <p>
+                                    Work IQ acts as <em>you</em>, and you have not yet consented. Open the
+                                    <a href="@consentLink" target="_blank" rel="noopener">Microsoft 365 consent page</a>,
+                                    sign in as yourself, then ask again.
+                                </p>
+                            </div>
+                        }
+
+                        @if (_hostedAnswerHtml is { } hostedAnswerHtml)
+                        {
+                            <div class="agent-summary">
+                                <small>Hosted agent answer</small>
+                                <div class="agent-answer">@((MarkupString)hostedAnswerHtml)</div>
+                            </div>
+
+                            <p class="agent-footnote">
+                                Answered from Foundry's hosted runtime. It read the cloud Energy Hub and, through
+                                Work IQ, your own Microsoft 365 - not this laptop's city. The cloud city is not
+                                driven by the switchboard: it permanently shows the forgotten-override situation
+                                that WO-8732 explains. The platform carried your identity to the agent; a different
+                                presenter would get a different answer.
+                                @if (_hostedResponseId is { } hostedResponseId)
+                                {
+                                    <text> · Response @ShortCorrelation(hostedResponseId)</text>
+                                }
+                            </p>
                         }
 
                         @if (_agentResponse is { } response)
@@ -627,10 +681,21 @@
                         }
 
                         <div class="rail-actions @(_showEarlierActions ? string.Empty : "hide-earlier")">
+                        @* Provenance over convenience: every button below drives the LOCAL agent
+                           and its local state, so while the habitat is FOUNDRY HOSTED they are
+                           disabled rather than left to produce answers the badge would mislabel. *@
+                        @if (HostedHabitatSelected)
+                        {
+                            <p class="agent-footnote">
+                                Habitat is FOUNDRY HOSTED: only "Ask agent" and the work-records question route to the
+                                hosted agent. The earlier stages' beats run the local agent - flip Habitat to LOCAL on
+                                the switchboard to use them.
+                            </p>
+                        }
                         @if (IsSessionStage && _agentSessionId is not null)
                         {
                             <div class="@RailActionClass(DemoStage.Session)">
-                            <button class="action-button investigate-button @(_agentBusy ? "busy" : string.Empty)" @onclick="AskFollowUpAsync" disabled="@_agentBusy">
+                            <button class="action-button investigate-button @(AgentActionsBusy ? "busy" : string.Empty)" @onclick="AskFollowUpAsync" disabled="@LocalAgentActionsDisabled">
                                 <span>@(_agentBusy ? "Asking..." : "Ask \"Why?\" (same session)")</span>
                                 <svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9h-2a7 7 0 1 1-7-7v3l5-4-5-4Z" /></svg>
                             </button>
@@ -643,7 +708,7 @@
                         @if (IsSkillsStage)
                         {
                             <div class="@RailActionClass(DemoStage.Skills)">
-                            <button class="action-button investigate-button @(_agentBusy ? "busy" : string.Empty)" @onclick="InvestigateAsync" disabled="@_agentBusy">
+                            <button class="action-button investigate-button @(AgentActionsBusy ? "busy" : string.Empty)" @onclick="InvestigateAsync" disabled="@LocalAgentActionsDisabled">
                                 <span>@(_agentBusy ? "Investigating..." : $"Investigate {_snapshot.AssetId} (new session)")</span>
                                 <svg viewBox="0 0 24 24"><path d="M9 3h6l1 4h4l-2 6h-4l-1 8h-2l-1-8H6L4 7h4l1-4Z" /></svg>
                             </button>
@@ -653,7 +718,7 @@
                         @if (IsInteractiveStage)
                         {
                             <div class="@RailActionClass(DemoStage.InteractiveInput)">
-                            <button class="action-button investigate-button @(_agentBusy ? "busy" : string.Empty)" @onclick="RestoreViaAgentAsync" disabled="@_agentBusy">
+                            <button class="action-button investigate-button @(AgentActionsBusy ? "busy" : string.Empty)" @onclick="RestoreViaAgentAsync" disabled="@LocalAgentActionsDisabled">
                                 <span>@(_agentBusy ? "Working..." : $"Restore {_snapshot.AssetId} to scheduled mode (agent)")</span>
                                 <svg viewBox="0 0 24 24"><path d="M12 5V2L8 6l4 4V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7Z" /></svg>
                             </button>
@@ -663,7 +728,7 @@
                         @if (IsWorkflowStage)
                         {
                             <div class="@RailActionClass(DemoStage.Workflow)">
-                            <button class="action-button investigate-button @(_workflowBusy ? "busy" : string.Empty)" @onclick="RunWorkflowAsync" disabled="@_workflowBusy">
+                            <button class="action-button investigate-button @(_workflowBusy ? "busy" : string.Empty)" @onclick="RunWorkflowAsync" disabled="@(_workflowBusy || HostedHabitatSelected)">
                                 <span>@(_workflowBusy ? "Workflow running..." : $"Run remediation workflow for {_snapshot.AssetId}")</span>
                                 <svg viewBox="0 0 24 24"><path d="M4 4h6v6H4V4Zm10 0h6v6h-6V4ZM4 14h6v6H4v-6Zm13 0v3h-4v3h7v-6h-3Z" /></svg>
                             </button>
@@ -673,7 +738,7 @@
                         @if (IsToolApprovalStage)
                         {
                             <div class="@RailActionClass(DemoStage.ToolApproval)">
-                            <button class="action-button investigate-button @(_agentBusy ? "busy" : string.Empty)" @onclick="RequestMaintenanceAsync" disabled="@_agentBusy">
+                            <button class="action-button investigate-button @(AgentActionsBusy ? "busy" : string.Empty)" @onclick="RequestMaintenanceAsync" disabled="@LocalAgentActionsDisabled">
                                 <span>@(_agentBusy ? "Working..." : $"Investigate the reported controller fault on {_snapshot.AssetId}")</span>
                                 <svg viewBox="0 0 24 24"><path d="M14 7a4 4 0 0 0-5.5 4.9l-4.6 4.6 2.6 2.6 4.6-4.6A4 4 0 0 0 17 9.5L14.5 12 12 9.5 14.5 7Z" /></svg>
                             </button>
@@ -686,7 +751,7 @@
                         @if (IsMultiAgentStage)
                         {
                             <div class="@RailActionClass(DemoStage.MultiAgent)">
-                            <button class="action-button investigate-button @(_agentBusy ? "busy" : string.Empty)" @onclick="AssessSecuritySituationAsync" disabled="@_agentBusy">
+                            <button class="action-button investigate-button @(AgentActionsBusy ? "busy" : string.Empty)" @onclick="AssessSecuritySituationAsync" disabled="@LocalAgentActionsDisabled">
                                 <span>@(_agentBusy ? "Asking..." : $"Why is {_snapshot.AssetId} on during daylight? (new session)")</span>
                                 <svg viewBox="0 0 24 24"><path d="M12 3 4 6v5c0 5 3.4 8.5 8 10 4.6-1.5 8-5 8-10V6l-8-3Z" /></svg>
                             </button>
@@ -699,11 +764,11 @@
                         @if (IsA2ADelegationStage)
                         {
                             <div class="@RailActionClass(DemoStage.A2ADelegation)">
-                            <button class="action-button investigate-button @(_agentBusy ? "busy" : string.Empty)" @onclick="ConsultWorkforceAboutAssetAsync" disabled="@_agentBusy">
+                            <button class="action-button investigate-button @(AgentActionsBusy ? "busy" : string.Empty)" @onclick="ConsultWorkforceAboutAssetAsync" disabled="@LocalAgentActionsDisabled">
                                 <span>@(_agentBusy ? "Consulting..." : $"Ask the workforce domain about {_snapshot.AssetId}")</span>
                                 <svg viewBox="0 0 24 24"><path d="M7 4a3 3 0 1 1 0 6 3 3 0 0 1 0-6Zm10 0a3 3 0 1 1 0 6 3 3 0 0 1 0-6ZM2 20v-2a5 5 0 0 1 5-5h1l-1 3 1 4H2Zm14 0 1-4-1-3h1a5 5 0 0 1 5 5v2h-6Z" /></svg>
                             </button>
-                            <button class="action-button investigate-button @(_agentBusy ? "busy" : string.Empty)" @onclick="ConsultWorkforceAboutCostAsync" disabled="@_agentBusy">
+                            <button class="action-button investigate-button @(AgentActionsBusy ? "busy" : string.Empty)" @onclick="ConsultWorkforceAboutCostAsync" disabled="@LocalAgentActionsDisabled">
                                 <span>@(_agentBusy ? "Consulting..." : "Ask the workforce domain for the technician and labour cost")</span>
                                 <svg viewBox="0 0 24 24"><path d="M12 2a5 5 0 0 0-5 5v2H6v11h12V9h-1V7a5 5 0 0 0-5-5Zm0 2a3 3 0 0 1 3 3v2H9V7a3 3 0 0 1 3-3Zm0 9a2 2 0 0 1 1 3.7V18h-2v-1.3A2 2 0 0 1 12 13Z" /></svg>
                             </button>
@@ -808,7 +873,7 @@
                                    asset's identifier against another asset's state. *@
                                 @if (_agentResponse is not null && CaseMatchesDisplayedAsset)
                                 {
-                                    <button class="action-button investigate-button @CloseCaseStateClass" @onclick="CloseCaseAsync" disabled="@(_agentBusy || _caseBusy || _caseClosed)">
+                                    <button class="action-button investigate-button @CloseCaseStateClass" @onclick="CloseCaseAsync" disabled="@(LocalAgentActionsDisabled || _caseBusy || _caseClosed)">
                                         <span>@CloseCaseLabel</span>
                                         <svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4Z" /></svg>
                                     </button>
@@ -821,7 +886,7 @@
                                     </p>
                                 }
 
-                                <button class="action-button investigate-button @(_agentBusy ? "busy" : string.Empty)" @onclick="AskSecondAssetAsync" disabled="@_agentBusy">
+                                <button class="action-button investigate-button @(AgentActionsBusy ? "busy" : string.Empty)" @onclick="AskSecondAssetAsync" disabled="@LocalAgentActionsDisabled">
                                     <span>@(_agentBusy ? "Asking..." : $"Ask about {DemoAssets.SecondStreetlightAssetId} (new session)")</span>
                                     <svg viewBox="0 0 24 24"><path d="M11 4a7 7 0 1 0 4.9 12.1l4.5 4.5 1.4-1.4-4.5-4.5A7 7 0 0 0 11 4Zm0 2a5 5 0 1 1 0 10 5 5 0 0 1 0-10Z" /></svg>
                                 </button>
@@ -829,6 +894,29 @@
                                 @if (!string.IsNullOrWhiteSpace(_caseMessage))
                                 {
                                     <p class="agent-footnote">@_caseMessage</p>
+                                }
+                            </div>
+                        }
+
+                        @if (IsHostingStage)
+                        {
+                            <div class="@RailActionClass(DemoStage.Hosting)">
+                                @* The beat is this one button pressed in both habitats: LOCAL
+                                   answers from the simulated store, FOUNDRY HOSTED from the real
+                                   work order in the presenter's own OneDrive through Work IQ. The
+                                   switchboard owns the flip. *@
+                                <button class="action-button investigate-button @(_agentBusy || _hostedBusy ? "busy" : string.Empty)" @onclick="AskWorkRecordsAsync" disabled="@(_agentBusy || _hostedBusy)">
+                                    <span>@(_agentBusy || _hostedBusy ? "Asking..." : $"Ask about {DemoAssets.StreetlightAssetId}'s work records")</span>
+                                    <svg viewBox="0 0 24 24"><path d="M11 4a7 7 0 1 0 4.9 12.1l4.5 4.5 1.4-1.4-4.5-4.5A7 7 0 0 0 11 4Zm0 2a5 5 0 1 1 0 10 5 5 0 0 1 0-10Z" /></svg>
+                                </button>
+
+                                @if (HostedHabitatSelected && !HostedAgentConfigured)
+                                {
+                                    <p class="agent-footnote">
+                                        Habitat is FOUNDRY HOSTED but no project endpoint is configured.
+                                        Set CommandCenterWeb:HostedAgent:ProjectEndpoint (user secrets or an
+                                        environment variable) to the Foundry project and restart.
+                                    </p>
                                 }
                             </div>
                         }
@@ -956,18 +1044,141 @@
             return _consultHtml;
         }
     }
-    private string AgentStatusText => (_agentBusy, _agentResponse) switch
+    private string AgentStatusText => (_agentBusy || _hostedBusy, _agentResponse is not null || _hostedAnswerHtml is not null) switch
     {
         (true, _) => "Working",
-        (false, not null) => "Answered",
+        (false, true) => "Answered",
         _ => "Idle"
     };
-    private string AgentStatusClass => (_agentBusy, _agentResponse) switch
+    private string AgentStatusClass => (_agentBusy || _hostedBusy, _agentResponse is not null || _hostedAnswerHtml is not null) switch
     {
         (true, _) => "busy",
-        (false, not null) => "success",
+        (false, true) => "success",
         _ => "idle"
     };
+
+    private bool _hostedBusy;
+    private string? _hostedAnswerHtml;
+    private string? _hostedMessage;
+    private string? _hostedConsentLink;
+    private string? _hostedResponseId;
+    private OperationsAgentHabitat _agentHabitat = OperationsAgentHabitat.Local;
+
+    private bool IsHostingStage => _snapshot?.CurrentStage.Id >= DemoStage.Hosting;
+    private bool HostedHabitatSelected => _agentHabitat == OperationsAgentHabitat.FoundryHosted;
+    private bool HostedAgentConfigured => WebOptions.Value.HostedAgent.IsConfigured;
+
+    // One busy truth for the whole rail: a hosted run in flight must block local buttons and vice
+    // versa, or two answers race each other into the same panel.
+    private bool AgentActionsBusy => _agentBusy || _hostedBusy;
+
+    // Local-only beats are additionally closed while the habitat is FOUNDRY HOSTED - they would
+    // run the local agent under a badge that says otherwise, which is a provenance lie on a
+    // projector.
+    private bool LocalAgentActionsDisabled => AgentActionsBusy || HostedHabitatSelected;
+
+    // The Hosting stage's records question, shared by BOTH habitats on purpose: the beat is the
+    // same button pressed twice, once answered from the simulated store and once from the real
+    // work order in the presenter's OneDrive - the source is the only thing that changed.
+    private string WorkRecordsQuestion => WebOptions.Value.HostedAgent.Question;
+
+    // Routed by the switchboard's habitat switch: the same button asks whichever habitat the
+    // presenter selected. That routing lives here rather than behind the local agent's API because
+    // the hosted call must carry the PRESENTER's identity - the platform reads the caller from the
+    // token, and Work IQ answers with what that person can see.
+    private async Task AskRoutedAgentAsync(string question)
+    {
+        // The switch is re-read at the moment of the ask, not trusted from the poll: a presenter
+        // who flips the switchboard and clicks inside the same polling interval must be routed by
+        // what they just chose, not by a value up to one tick stale.
+        if (IsHostingStage)
+        {
+            try
+            {
+                ApplyHabitat((await OperationsAgentClient.GetHabitatAsync(CancellationToken.None)).Habitat);
+            }
+            catch (Exception)
+            {
+                // Unreadable at ask time: the last polled value is the best truth available.
+            }
+        }
+
+        if (HostedHabitatSelected)
+        {
+            await AskHostedAgentAsync(question);
+        }
+        else
+        {
+            await AskAgentCoreAsync(question, sessionId: null);
+        }
+    }
+
+    private void ApplyHabitat(OperationsAgentHabitat habitat)
+    {
+        if (_agentHabitat == habitat)
+        {
+            return;
+        }
+
+        _agentHabitat = habitat;
+
+        // The local conversational session does not follow the agent across habitats: the hosted
+        // twin never saw it, and a follow-up button offering to continue it would promise a
+        // context the routed agent does not hold.
+        if (habitat == OperationsAgentHabitat.FoundryHosted)
+        {
+            _agentSessionId = null;
+        }
+    }
+
+    private Task AskWorkRecordsAsync() => AskRoutedAgentAsync(WorkRecordsQuestion);
+
+    private async Task AskHostedAgentAsync(string question)
+    {
+        if (_hostedBusy || _agentBusy)
+        {
+            return;
+        }
+
+        _hostedBusy = true;
+        _hostedMessage = null;
+        _hostedAnswerHtml = null;
+        _hostedConsentLink = null;
+        _hostedResponseId = null;
+        // One panel, one answer: a hosted answer replaces the local one on screen, exactly as a
+        // local answer clears the hosted one - showing both would invite reading them as one run.
+        _agentResponse = null;
+        _agentMessage = null;
+        _agentMessageIsError = false;
+        _lastAgentQuestion = question;
+
+        try
+        {
+            var outcome = await HostedAgentClient.AskAsync(question, CancellationToken.None);
+            _hostedResponseId = outcome.ResponseId;
+
+            if (outcome is { Succeeded: true, Answer: { } answer })
+            {
+                _hostedAnswerHtml = AnswerHtml.ToSafeHtml(answer);
+            }
+            else if (outcome.ConsentLink is { } consentLink)
+            {
+                _hostedConsentLink = consentLink;
+            }
+            else
+            {
+                _hostedMessage = outcome.FailureMessage;
+            }
+        }
+        catch (Exception exception)
+        {
+            _hostedMessage = $"The hosted agent could not be reached: {exception.Message}";
+        }
+        finally
+        {
+            _hostedBusy = false;
+        }
+    }
     private TimeSpan PollingInterval => TimeSpan.FromSeconds(WebOptions.Value.PollingIntervalSeconds);
     private string LampClass => _snapshot?.OperationalState.ReportedIsOn == true ? "success-text" : "neutral-text";
     private string HealthClass => _snapshot?.OperationalState.ControllerHealth.Status == ControllerHealthStatus.Healthy ? "success-text" : "warning-text";
@@ -1032,7 +1243,8 @@
         (DemoStage.MultiAgent, IsMultiAgentStage),
         // One entry, though the stage owns two buttons: the toggle folds the rail action, not each
         // button inside it, and counting the pair would promise a button the toggle never reveals.
-        (DemoStage.A2ADelegation, IsA2ADelegationStage)
+        (DemoStage.A2ADelegation, IsA2ADelegationStage),
+        (DemoStage.Hosting, IsHostingStage)
     }.Count(entry => entry.Item2 && entry.Item1 != snapshot.CurrentStage.Id);
 
     private bool SecurityWasConsulted => _agentResponse?.Delegations is { Count: > 0 };
@@ -1129,7 +1341,7 @@
         }
     }
 
-    private Task AskAgentAsync() => AskAgentCoreAsync(AgentQuestion, sessionId: null);
+    private Task AskAgentAsync() => AskRoutedAgentAsync(AgentQuestion);
 
     private Task AskFollowUpAsync() => AskAgentCoreAsync("Why?", _agentSessionId);
 
@@ -1554,6 +1766,9 @@
         _agentMessage = null;
         _agentMessageIsError = false;
         _lastAgentQuestion = question;
+        _hostedAnswerHtml = null;
+        _hostedMessage = null;
+        _hostedConsentLink = null;
         using var approvalPolling = new CancellationTokenSource();
         var approvalPollingTask = PollApprovalsAsync(approvalPolling.Token);
 
@@ -1653,6 +1868,28 @@
             }
 
             _lastObservedStage = snapshot.CurrentStage.Id;
+
+            // The habitat switch lives on the agent service and is flipped from the switchboard, so
+            // it rides the same poll that carries the stage. Its failure is kept apart from the
+            // snapshot's: a habitat read that fails leaves the last known selection standing rather
+            // than blanking the city view.
+            if (snapshot.CurrentStage.Id >= DemoStage.Hosting)
+            {
+                try
+                {
+                    ApplyHabitat((await OperationsAgentClient.GetHabitatAsync(cancellationToken)).Habitat);
+                }
+                catch (Exception)
+                {
+                    // One failed read keeps the last known selection; the next tick tries again.
+                }
+            }
+            else if (_agentHabitat != OperationsAgentHabitat.Local)
+            {
+                // Below the Hosting stage the service resets the switch itself; mirroring that here
+                // keeps the badge honest even before the next successful habitat read.
+                ApplyHabitat(OperationsAgentHabitat.Local);
+            }
 
             if (_agentAnswerTracksEvidence && _agentResponse is { } agentResponse)
             {

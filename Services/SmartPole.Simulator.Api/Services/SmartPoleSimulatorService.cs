@@ -11,6 +11,7 @@ public sealed partial class SmartPoleSimulatorService
     private readonly object _gate = new();
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<SmartPoleSimulatorService> _logger;
+    private readonly bool _startWithForgottenOverride;
     private SmartPolePhysicalState _state;
     private long _revision;
 
@@ -19,11 +20,18 @@ public sealed partial class SmartPoleSimulatorService
     /// </summary>
     /// <param name="timeProvider">The clock used for deterministic timestamps.</param>
     /// <param name="logger">The logger used for simulator state changes.</param>
-    public SmartPoleSimulatorService(TimeProvider timeProvider, ILogger<SmartPoleSimulatorService> logger)
+    /// <param name="startWithForgottenOverride">Whether boot and reset land in the
+    /// forgotten-override situation rather than the quiet baseline - see
+    /// <see cref="Configuration.SmartPoleSimulatorOptions.StartWithForgottenOverride"/>.</param>
+    public SmartPoleSimulatorService(
+        TimeProvider timeProvider,
+        ILogger<SmartPoleSimulatorService> logger,
+        bool startWithForgottenOverride = false)
     {
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _state = CreateBaselineState(_timeProvider.GetUtcNow());
+        _startWithForgottenOverride = startWithForgottenOverride;
+        _state = CreateConfiguredBaseline(_timeProvider.GetUtcNow());
     }
 
     /// <summary>
@@ -53,7 +61,7 @@ public sealed partial class SmartPoleSimulatorService
         lock (_gate)
         {
             _revision++;
-            _state = CreateBaselineState(_timeProvider.GetUtcNow());
+            _state = CreateConfiguredBaseline(_timeProvider.GetUtcNow());
         }
 
         SmartPoleSimulatorServiceLog.ResetCompleted(_logger, DemoAssets.StreetlightAssetId, correlationId);
@@ -308,6 +316,33 @@ public sealed partial class SmartPoleSimulatorService
             OperationalContext.None,
             now,
             SmartPoleBehaviorConfiguration.Default);
+
+    /// <summary>
+    /// Creates the forgotten-override boot state: the same physical situation the ForgottenOverride
+    /// scenario applies - lamp ON during daylight against its schedule, manual override engaged,
+    /// maintenance recorded half an hour ago. Field for field the scenario recipe's state, so the
+    /// cloud city that cannot be driven into the scenario boots into it instead.
+    /// </summary>
+    /// <param name="now">The timestamp to stamp onto the state.</param>
+    /// <returns>The forgotten-override simulator state.</returns>
+    public static SmartPolePhysicalState CreateForgottenOverrideState(DateTimeOffset now) =>
+        new(
+            DemoAssets.StreetlightAssetId,
+            DemoAssets.NorthPromenadeArea,
+            IsOn: true,
+            IsDaylight: true,
+            ExpectedScheduledState: false,
+            ManualOverride: true,
+            ControllerHealthInfo.Healthy,
+            null,
+            now.AddMinutes(-30),
+            HasRecentMaintenance: true,
+            OperationalContext.None,
+            now,
+            SmartPoleBehaviorConfiguration.Default);
+
+    private SmartPolePhysicalState CreateConfiguredBaseline(DateTimeOffset now) =>
+        _startWithForgottenOverride ? CreateForgottenOverrideState(now) : CreateBaselineState(now);
 
     private bool TryCommitCommand(long commandRevision, Func<SmartPolePhysicalState, SmartPolePhysicalState> mutation)
     {

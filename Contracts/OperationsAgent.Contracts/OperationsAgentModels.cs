@@ -285,6 +285,28 @@ public enum OperationsAgentToolSource
 public sealed record OperationsAgentToolSourceStatus(OperationsAgentToolSource Source);
 
 /// <summary>
+/// Identifies which habitat answers the Command Center's agent questions.
+/// </summary>
+public enum OperationsAgentHabitat
+{
+    /// <summary>The Aspire-composed Operations Agent running in this process on the laptop.</summary>
+    Local,
+
+    /// <summary>
+    /// The same agent code deployed to Microsoft Foundry's hosted runtime: the platform owns the
+    /// endpoint, the identity and the session, the Energy Hub it reads is the cloud one, and Work
+    /// IQ reads the caller's own Microsoft 365.
+    /// </summary>
+    FoundryHosted
+}
+
+/// <summary>
+/// Reports the presenter-selected agent habitat.
+/// </summary>
+/// <param name="Habitat">The habitat that answers subsequent Command Center questions.</param>
+public sealed record OperationsAgentHabitatStatus(OperationsAgentHabitat Habitat);
+
+/// <summary>
 /// One skill the agent could discover during a run. Skills are documented procedures - versioned,
 /// expert-authored, auditable text - that the agent loads on demand; the trace shows which were
 /// advertised and which the model actually loaded.

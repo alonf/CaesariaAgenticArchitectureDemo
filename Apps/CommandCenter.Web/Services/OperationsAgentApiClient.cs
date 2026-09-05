@@ -67,6 +67,22 @@ internal sealed class OperationsAgentApiClient
         return new OperationsAgentOutcome(false, null, problemDetail ?? "The Operations Agent request could not be completed.");
     }
 
+    /// <summary>
+    /// Reads the presenter-selected agent habitat. The Command Center polls this to badge the
+    /// panel and route the ask; the switch itself is flipped from the switchboard.
+    /// </summary>
+    public async Task<OperationsAgentHabitatStatus> GetHabitatAsync(CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/operations-agent/habitat/");
+        request.Headers.Add(CorrelationHeaderNames.XCorrelationId, CorrelationIds.Create());
+        using var response = await _httpClient.SendAsync(request, cancellationToken);
+
+        response.EnsureSuccessStatusCode();
+
+        return await response.Content.ReadFromJsonAsync<OperationsAgentHabitatStatus>(SerializerOptions, cancellationToken)
+            ?? throw new InvalidOperationException("Agent habitat response was empty.");
+    }
+
     public async Task<IReadOnlyList<OperationsAgentPendingApproval>> GetPendingApprovalsAsync(CancellationToken cancellationToken)
     {
         var correlationId = CorrelationIds.Create();

@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using CommandCenter.Api.Configuration;
+using CommandCenter.Web.Configuration;
 using DemoScenario.Api.Configuration;
 using OperationsAgent.Api.Configuration;
 
@@ -60,6 +61,61 @@ public sealed class ValidationAndOptionsTests
 
         Assert.Empty(results);
     }
+
+    [Fact]
+    public void HostedAgentEndpointOnTheFoundrySuffixIsAccepted()
+    {
+        var options = CreateCommandCenterWebOptions();
+        options.HostedAgent.ProjectEndpoint = "https://aif-example.services.ai.azure.com/api/projects/caesarea-dev";
+
+        Assert.Empty(Validate(options));
+    }
+
+    [Fact]
+    public void HostedAgentEndpointOnAForeignHostIsRejected()
+    {
+        // The presenter's bearer token is attached to this endpoint, so a typo'd or tampered host
+        // must fail at startup rather than receive the token.
+        var options = CreateCommandCenterWebOptions();
+        options.HostedAgent.ProjectEndpoint = "https://evil.example.com/api/projects/caesarea-dev";
+
+        var results = Validate(options);
+
+        Assert.Contains(results, result => result.MemberNames.Contains(nameof(CommandCenterWebOptions.HostedAgent), StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public void HostedAgentEndpointOnAnExplicitlyAllowedHostIsAccepted()
+    {
+        // Private-endpoint setups opt in host-by-host; a suffix pattern would be a hole, an exact
+        // name is a decision.
+        var options = CreateCommandCenterWebOptions();
+        options.HostedAgent.ProjectEndpoint = "https://foundry.corp.internal/api/projects/caesarea-dev";
+        options.HostedAgent.AllowedEndpointHosts.Add("foundry.corp.internal");
+
+        Assert.Empty(Validate(options));
+    }
+
+    [Theory]
+    [InlineData("https://aif-example.services.ai.azure.com/api/projects/caesarea-dev?sneaky=1")]
+    [InlineData("https://user@aif-example.services.ai.azure.com/api/projects/caesarea-dev")]
+    [InlineData("https://aif-example.services.ai.azure.com/api/projects/caesarea-dev#fragment")]
+    [InlineData("https://aif-example.services.ai.azure.com/somewhere/else")]
+    public void HostedAgentEndpointDecorationsAndWrongPathsAreRejected(string endpoint)
+    {
+        var options = CreateCommandCenterWebOptions();
+        options.HostedAgent.ProjectEndpoint = endpoint;
+
+        var results = Validate(options);
+
+        Assert.Contains(results, result => result.MemberNames.Contains(nameof(CommandCenterWebOptions.HostedAgent), StringComparer.Ordinal));
+    }
+
+    private static CommandCenterWebOptions CreateCommandCenterWebOptions() => new()
+    {
+        BaseUri = "https+http://commandcenter-api",
+        OperationsAgentBaseUri = "https+http://operationsagent-api"
+    };
 
     [Fact]
     public void ServiceUriValidatorRejectsUnsupportedSchemes()

@@ -19,6 +19,9 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Caesarea.Deterministic.Tests" />
+    <!-- The hosted head wires the reasoning-replay sanitizer, which stays internal here so the
+         deterministic tests can pin the one copy both compositions run. -->
+    <InternalsVisibleTo Include="OperationsAgent.Hosted" />
   </ItemGroup>
 
   <ItemGroup>

@@ -5,6 +5,9 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
+    <!-- The hosted-agent endpoint names a specific tenant, so it belongs in user secrets rather
+         than in a committed appsettings file. -->
+    <UserSecretsId>caesarea-commandcenter-web</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

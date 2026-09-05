@@ -66,7 +66,12 @@ public sealed class StageCatalog
             DemoStage.A2ADelegation,
             "A2A Delegation",
             "A peer agent in another domain, discovered by its agent card and given a task over A2A rather than called as a tool. The workforce domain's work orders carry commercial and personal detail that may not cross; its agent is handed only the shareable projection, so it answers freely and cannot disclose what it never held.",
-            ["Deterministic scenarios", "Manual operator actions", "Caesarea Operations Agent", "get_streetlight_state tool", "AgentSession follow-ups", "search_work_knowledge retrieval", "Retrieved-evidence trace with citation badges", "Case-memory recall (hypotheses)", "Skill discovery and load_skill procedure", "Tools: LOCAL / MCP toggle (runtime tool discovery)", "restore_scheduled_mode with MRTR operator approval", "Explicit remediation workflow (validate / policy / approval / execute / verify)", "create_maintenance_work_item behind ApprovalRequiredAIFunction", "Security consult ON / OFF (delegation to a second agent)", "Workforce Agent consulted over A2A (agent card discovery, delegated task)"])
+            ["Deterministic scenarios", "Manual operator actions", "Caesarea Operations Agent", "get_streetlight_state tool", "AgentSession follow-ups", "search_work_knowledge retrieval", "Retrieved-evidence trace with citation badges", "Case-memory recall (hypotheses)", "Skill discovery and load_skill procedure", "Tools: LOCAL / MCP toggle (runtime tool discovery)", "restore_scheduled_mode with MRTR operator approval", "Explicit remediation workflow (validate / policy / approval / execute / verify)", "create_maintenance_work_item behind ApprovalRequiredAIFunction", "Security consult ON / OFF (delegation to a second agent)", "Workforce Agent consulted over A2A (agent card discovery, delegated task)"]),
+        new(
+            DemoStage.Hosting,
+            "Hosting",
+            "The same Operations Agent, hosted by Microsoft Foundry. Flip Habitat: LOCAL to FOUNDRY HOSTED and ask again: the platform owns the runtime, the identity and the endpoint, the Energy Hub it reads is the deployed one, and the work-order evidence comes from the presenter's own OneDrive through Work IQ - retrieved as the signed-in person.",
+            ["Deterministic scenarios", "Manual operator actions", "Caesarea Operations Agent", "get_streetlight_state tool", "AgentSession follow-ups", "search_work_knowledge retrieval", "Retrieved-evidence trace with citation badges", "Case-memory recall (hypotheses)", "Skill discovery and load_skill procedure", "Tools: LOCAL / MCP toggle (runtime tool discovery)", "restore_scheduled_mode with MRTR operator approval", "Explicit remediation workflow (validate / policy / approval / execute / verify)", "create_maintenance_work_item behind ApprovalRequiredAIFunction", "Security consult ON / OFF (delegation to a second agent)", "Workforce Agent consulted over A2A (agent card discovery, delegated task)", "Habitat: LOCAL / FOUNDRY HOSTED toggle (same agent, platform-owned runtime, Work IQ evidence)"])
     ];
 
     // The presenter's script per stage, kept beside the capability list it belongs to. The Command
@@ -181,7 +186,21 @@ public sealed class StageCatalog
                 new(DemoSurface.Switchboard, "Turn the Security consult ON.", null),
                 new(DemoSurface.CommandCenter, "Click the same button again.", "assess_lighting_requirement marked ran, plus a Consulted specialist block with the verdict, the recommendation and \"Operational details are withheld\".")
             ],
-            "The second agent did not add a capability - it added authority to know something. The Operations Agent has no route to the Security Hub at all.")
+            "The second agent did not add a capability - it added authority to know something. The Operations Agent has no route to the Security Hub at all."),
+
+        [DemoStage.Hosting] = new(
+            [
+                "The hosted agent is deployed (deploy-hosted-agent.yml) and the Command Center knows its project endpoint (CommandCenterWeb:HostedAgent)",
+                "The work order exists in YOUR OneDrive: ./scripts/New-CaesareaWorkOrder.ps1, indexed by Microsoft 365",
+                "Habitat: LOCAL to start"
+            ],
+            [
+                new(DemoSurface.CommandCenter, "Click Ask about L-417's work records.", "The familiar local answer: evidence cards from the simulated store, labelled Simulated work knowledge."),
+                new(DemoSurface.Switchboard, "Flip Habitat: LOCAL to FOUNDRY HOSTED.", null),
+                new(DemoSurface.CommandCenter, "Click the same button again.", "The answer now arrives from Foundry's hosted runtime and cites the OneDrive work order - source of record: Microsoft 365, with the diffuser detail the simulated store never contained. First time only: a Work IQ consent link appears instead - open it, consent as yourself, ask again."),
+                new(DemoSurface.CommandCenter, "Point at the footnote under the answer.", "The hosted agent read the CLOUD Energy Hub and the presenter's own Microsoft 365 - not this laptop's city. The cloud city is not switchboard-driven: it permanently shows the forgotten-override situation WO-8732 explains, so the two cities agree at the start of the beat and diverge the moment the local one is restored.")
+            ],
+            "The agent code did not change - the habitat did. The platform owns the runtime and the identity, and Work IQ answers as the person asking, which is why your OneDrive is the evidence.")
     };
 
     private static readonly DemoStageDescriptor[] ScriptedDescriptors =

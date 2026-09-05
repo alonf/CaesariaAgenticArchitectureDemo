@@ -9,10 +9,11 @@ using OperationsAgent.Hosted;
 
 // The Caesarea Operations Agent, hosted by Microsoft Foundry instead of by us.
 //
-// Slide 43's claim is that the agent code does not determine where it must run. This project is
-// where that is either true or a slogan: the instructions, the skills and the Energy Hub tool are
-// the same types the Aspire-hosted agent uses, referenced rather than copied. What changes is who
-// owns the runtime, the scaling, the identity and the endpoint.
+// The Hosting stage's claim is that the agent code does not determine where it must run. This
+// project is where that is either true or a slogan: the instructions, the skills and the Energy
+// Hub tool are the same types the Aspire-hosted agent uses, referenced rather than copied. What
+// changes is who owns the runtime, the scaling, the identity and the endpoint.
+// [demo-anchor: HOSTING]
 //
 // What is deliberately NOT here: approvals, the remediation workflow, the MCP tool source toggle,
 // the security consult and the A2A delegation. Those belong to the presenter-driven demo stages and
@@ -115,9 +116,39 @@ if (!string.IsNullOrWhiteSpace(workIqToolbox))
 
 // DUMP_MODEL_TRAFFIC: when set to a directory path, every outbound project request body is written
 // there. This is how the invalid_payload defect was finally read - the service names no parameter,
-// so the only evidence is the request itself. Local diagnosis only; never set it deployed, because
-// the dumps contain full prompts and tool outputs. See ModelTrafficDumpPolicy.
+// so the only evidence is the request itself. Local diagnosis only, and the hosted habitat enforces
+// that rather than trusting configuration to: the dumps contain full prompts and tool outputs -
+// including what Work IQ returned about a person's own documents - and the platform's persistent
+// filesystem is no place to leave them. FOUNDRY_HOSTING_ENVIRONMENT is the platform's own signal
+// that this is that habitat (it is what FoundryEnvironment.IsHosted keys off), so it cannot be
+// spoofed away by the same configuration that set the flag. See ModelTrafficDumpPolicy.
 var dumpModelTraffic = builder.Configuration["DUMP_MODEL_TRAFFIC"];
+
+if (!string.IsNullOrWhiteSpace(dumpModelTraffic))
+{
+    // Development-only, twice over: the Foundry-hosted habitat is refused by the platform's own
+    // signal, and every OTHER habitat is refused unless the environment is Development - a
+    // self-hosted production deployment with the variable set must not persist prompts and
+    // Microsoft 365 content either. The dump exists for a laptop with a debugger, nowhere else.
+    var hostedByFoundry = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("FOUNDRY_HOSTING_ENVIRONMENT"));
+    var environmentName = builder.Configuration["DOTNET_ENVIRONMENT"]
+        ?? builder.Configuration["ASPNETCORE_ENVIRONMENT"]
+        ?? "Production";
+    var isDevelopment = string.Equals(environmentName, "Development", StringComparison.OrdinalIgnoreCase);
+
+    if (hostedByFoundry || !isDevelopment)
+    {
+        // Stderr, not a logger: this runs during construction, when everything goes to the
+        // bootstrap logger that is gone before Application Insights exists - the same hole
+        // HostingDiagnostics documents. The container's own log stream is the one place this line
+        // reliably survives.
+        await Console.Error.WriteLineAsync(
+            "DUMP_MODEL_TRAFFIC is set but this process is "
+            + (hostedByFoundry ? "running in the Foundry-hosted environment" : $"not a Development environment ('{environmentName}')")
+            + "; refusing to dump model traffic. Diagnose on a Development machine instead.");
+        dumpModelTraffic = null;
+    }
+}
 
 builder.Services.AddSingleton(serviceProvider =>
 {
@@ -136,6 +167,7 @@ builder.Services.AddSingleton(serviceProvider =>
         clientOptions);
 });
 
+#region HOSTING
 AIAgent CreateAgent(IServiceProvider serviceProvider)
 {
     var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
@@ -156,6 +188,12 @@ AIAgent CreateAgent(IServiceProvider serviceProvider)
         "hosted",
         loggerFactory.CreateLogger<EnergyTools>());
 
+    // The shared core plus the Work IQ boundary when the toolbox is registered. The composition
+    // is a pure function on OperationsAgentInstructions so the deterministic tests pin it - see
+    // that type for why the boundary exists at all.
+    var instructions = OperationsAgentInstructions.ComposeForHostedHabitat(
+        workIqToolboxRegistered: !string.IsNullOrWhiteSpace(workIqToolbox));
+
     var options = new ChatClientAgentOptions
     {
         Name = "Caesarea Operations Agent (hosted)",
@@ -163,7 +201,7 @@ AIAgent CreateAgent(IServiceProvider serviceProvider)
         ChatOptions = new()
         {
             ModelId = modelDeploymentName,
-            Instructions = OperationsAgentInstructions.Text,
+            Instructions = instructions,
             Tools =
             [
                 AIFunctionFactory.Create(
@@ -224,10 +262,14 @@ AIAgent CreateAgent(IServiceProvider serviceProvider)
 }
 
 builder.Services.AddSingleton(CreateAgent);
+#endregion
+
+#region PROTOCOL
 
 // The Responses protocol: the platform manages conversation history, streaming and the session
 // lifecycle, and the library maps /readiness for the health probe without being asked. The agent is
 // resolved from the container the host builds, not from a second one built here.
+// [demo-anchor: PROTOCOL]
 builder.Services.AddFoundryResponses();
 
 // AddFoundryResponses registers the services; this maps the routes and the /readiness probe the
@@ -245,6 +287,7 @@ builder.Services.AddFoundryResponses();
 // deployment. Allow a minute for startup there: TaskManager retries its storage calls before Kestrel
 // binds, so a container that looks hung at fifteen seconds is often just waiting.
 builder.RegisterProtocol("responses", endpoints => endpoints.MapFoundryResponses());
+#endregion
 
 var app = builder.Build();
 

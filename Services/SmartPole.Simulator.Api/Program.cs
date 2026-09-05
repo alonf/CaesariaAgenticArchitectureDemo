@@ -1,10 +1,17 @@
+using Microsoft.Extensions.Options;
+using SmartPole.Simulator.Api.Configuration;
 using SmartPole.Simulator.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
 builder.Services.AddOpenApi();
-builder.Services.AddSingleton<SmartPoleSimulatorService>();
+builder.Services.AddOptions<SmartPoleSimulatorOptions>()
+    .BindConfiguration(SmartPoleSimulatorOptions.SectionName);
+builder.Services.AddSingleton(serviceProvider => new SmartPoleSimulatorService(
+    serviceProvider.GetRequiredService<TimeProvider>(),
+    serviceProvider.GetRequiredService<ILogger<SmartPoleSimulatorService>>(),
+    serviceProvider.GetRequiredService<IOptions<SmartPoleSimulatorOptions>>().Value.StartWithForgottenOverride));
 
 var app = builder.Build();
 

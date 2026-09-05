@@ -87,6 +87,28 @@ public static class DemoSnippets
     /// </summary>
     public const string A2ADelegation = "A2A_DELEGATION";
 
+    /// <summary>
+    /// Gets the hosting snippet: composing the same Operations Agent for the Foundry hosted
+    /// runtime - same instructions, skills and tool types, different owner of the runtime.
+    /// Navigation and export only: the hosted container runs where no presenter debugger reaches,
+    /// so this snippet is never armed as a live breakpoint.
+    /// </summary>
+    public const string Hosting = "HOSTING";
+
+    /// <summary>
+    /// Gets the protocol snippet: registering the Responses protocol the hosting platform fronts,
+    /// health probe included. Navigation and export only, like <see cref="Hosting"/>.
+    /// </summary>
+    public const string Protocol = "PROTOCOL";
+
+    /// <summary>
+    /// The snippets that exist for navigation and export but are never registered as armable
+    /// breakpoints: their regions live in the hosted head, which runs where no presenter debugger
+    /// reaches. Declared here so the guard tests can hold both directions - every other snippet
+    /// must be registered by some service, and these must be registered by none.
+    /// </summary>
+    public static readonly IReadOnlySet<string> NavigationOnly =
+        new HashSet<string>(StringComparer.Ordinal) { Hosting, Protocol };
 }
 
 /// <summary>

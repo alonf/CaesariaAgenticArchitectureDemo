@@ -307,6 +307,66 @@ public sealed class OperationsAgentApiTests
         Assert.Equal("Connection refused.", body.RemoteConsult!.Failure);
     }
 
+    [Fact]
+    public async Task TheHabitatToggleIsRefusedBelowTheHostingStage()
+    {
+        // The switch only means something once the stage introduces the second habitat; flipped
+        // earlier it would silently promise a routing the Command Center does not yet surface.
+        await using var world = new ApiWorld(DemoStage.A2ADelegation);
+        using var client = world.CreateClient();
+
+        using var response = await client.PostAsJsonAsync(
+            "/api/operations-agent/habitat/",
+            new OperationsAgentHabitatStatus(OperationsAgentHabitat.FoundryHosted),
+            JsonOptions,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+
+        var status = await client.GetFromJsonAsync<OperationsAgentHabitatStatus>(
+            "/api/operations-agent/habitat/", JsonOptions, TestContext.Current.CancellationToken);
+        Assert.Equal(OperationsAgentHabitat.Local, status!.Habitat);
+    }
+
+    [Fact]
+    public async Task TheHabitatToggleRejectsAnUndefinedValue()
+    {
+        // Enum binding accepts any integer; a switch stuck on an undefined value would route
+        // nothing while the badge displayed something. Whichever layer rejects it, the client
+        // must see a 400 and the switch must not move.
+        await using var world = new ApiWorld(DemoStage.Hosting);
+        using var client = world.CreateClient();
+
+        using var content = new StringContent("""{"habitat":42}""", System.Text.Encoding.UTF8, "application/json");
+        using var response = await client.PostAsync(
+            new Uri("/api/operations-agent/habitat/", UriKind.Relative), content, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var status = await client.GetFromJsonAsync<OperationsAgentHabitatStatus>(
+            "/api/operations-agent/habitat/", JsonOptions, TestContext.Current.CancellationToken);
+        Assert.Equal(OperationsAgentHabitat.Local, status!.Habitat);
+    }
+
+    [Fact]
+    public async Task TheHabitatToggleFlipsAndReadsBackAtTheHostingStage()
+    {
+        await using var world = new ApiWorld(DemoStage.Hosting);
+        using var client = world.CreateClient();
+
+        using var response = await client.PostAsJsonAsync(
+            "/api/operations-agent/habitat/",
+            new OperationsAgentHabitatStatus(OperationsAgentHabitat.FoundryHosted),
+            JsonOptions,
+            TestContext.Current.CancellationToken);
+
+        response.EnsureSuccessStatusCode();
+
+        var status = await client.GetFromJsonAsync<OperationsAgentHabitatStatus>(
+            "/api/operations-agent/habitat/", JsonOptions, TestContext.Current.CancellationToken);
+        Assert.Equal(OperationsAgentHabitat.FoundryHosted, status!.Habitat);
+    }
+
     private sealed class ApiWorld : IAsyncDisposable
     {
         private readonly WebApplicationFactory<FoundryOperationsAgent> _factory;

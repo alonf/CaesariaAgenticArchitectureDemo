@@ -1,6 +1,6 @@
 using Microsoft.Extensions.AI;
 
-namespace OperationsAgent.Hosted;
+namespace OperationsAgent.Api.Services;
 
 /// <summary>
 /// Removes reasoning content from messages on their way to the model, so that a tool-calling turn's
@@ -8,7 +8,7 @@ namespace OperationsAgent.Hosted;
 /// </summary>
 /// <remarks>
 /// This works around a defect in the hosted runtime's request composition, diagnosed on 2026-09-05 by
-/// capturing the rejected request body (see ModelTrafficDumpPolicy and
+/// capturing the rejected request body (see OperationsAgent.Hosted's ModelTrafficDumpPolicy and
 /// docs/product-status/hosted-agent.md):
 ///
 ///   - Foundry.Hosting drives the model with store:false and include:["reasoning.encrypted_content"],
@@ -29,8 +29,12 @@ namespace OperationsAgent.Hosted;
 /// reasoning item, unlike openai.com). The cost is that the model re-reasons after each tool result
 /// rather than resuming its chain-of-thought - invisible in answers, slightly more reasoning tokens.
 ///
-/// Sits BENEATH the function-invocation loop (wired via ChatClientAgentOptions.ChatClientFactory), so
-/// it sees the loop's replayed messages, not just the caller's.
+/// Lives in this project rather than in OperationsAgent.Hosted so the deterministic tests can pin
+/// it; the hosted head wires it beneath the function-invocation loop (via
+/// ChatClientAgentOptions.ChatClientFactory), where it sees the loop's replayed messages, not just
+/// the caller's. WorkforceAgent.Api carries its own copy on purpose - the workforce domain does not
+/// reference this one, and a shared cross-domain utility project is a worse trade than one
+/// duplicated, pinned file.
 /// </remarks>
 internal sealed class ReasoningReplaySanitizingChatClient(IChatClient innerClient) : DelegatingChatClient(innerClient)
 {
@@ -69,6 +73,7 @@ internal sealed class ReasoningReplaySanitizingChatClient(IChatClient innerClien
             {
                 AuthorName = message.AuthorName,
                 MessageId = message.MessageId,
+                CreatedAt = message.CreatedAt,
                 AdditionalProperties = message.AdditionalProperties,
             };
         }
