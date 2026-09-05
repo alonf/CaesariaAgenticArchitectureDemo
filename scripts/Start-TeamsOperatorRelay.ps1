@@ -172,8 +172,29 @@ Write-Note "Relaying as: $($me.userPrincipalName)"
 if ($GrantReadConsent) {
     Write-Step "Granting $ReadScope to the Azure CLI for $($me.userPrincipalName) only"
 
-    $azCliSp = (Invoke-GraphJson -Method get -Url "$GraphBase/servicePrincipals?`$filter=appId eq '$AzureCliAppId'&`$select=id" -What 'Finding the Azure CLI service principal').value[0].id
-    $graphSp = (Invoke-GraphJson -Method get -Url "$GraphBase/servicePrincipals?`$filter=appId eq '$GraphResourceAppId'&`$select=id" -What 'Finding the Graph service principal').value[0].id
+    # A first-party app can authenticate without a service principal materialized in the tenant,
+    # but a consent grant needs one to hang on - the same reason Connect-WorkIQ provisions the
+    # Work IQ principal before granting against it.
+    $azCliMatches = @((Invoke-GraphJson -Method get -Url "$GraphBase/servicePrincipals?`$filter=appId eq '$AzureCliAppId'&`$select=id" -What 'Finding the Azure CLI service principal').value)
+    if ($azCliMatches.Count -ge 1) {
+        $azCliSp = $azCliMatches[0].id
+        Write-Exists "Azure CLI service principal ($azCliSp)"
+    }
+    elseif ($PSCmdlet.ShouldProcess('Microsoft Azure CLI', 'Provision the service principal in this tenant')) {
+        $provisioned = Invoke-GraphJson -Method post -Url "$GraphBase/servicePrincipals" -What 'Provisioning the Azure CLI service principal' -Body @{ appId = $AzureCliAppId }
+        $azCliSp = $provisioned.id
+        Write-Created "Azure CLI service principal provisioned ($azCliSp)"
+    }
+    else {
+        return
+    }
+
+    $graphMatches = @((Invoke-GraphJson -Method get -Url "$GraphBase/servicePrincipals?`$filter=appId eq '$GraphResourceAppId'&`$select=id" -What 'Finding the Graph service principal').value)
+    if ($graphMatches.Count -eq 0) {
+        throw 'The Microsoft Graph service principal was not found in this tenant, which should be impossible - stop and look before granting anything.'
+    }
+    $graphSp = $graphMatches[0].id
+    Write-Note "Graph service principal: $graphSp"
 
     $grants = @((Invoke-GraphJson -Method get -Url "$GraphBase/oauth2PermissionGrants?`$filter=clientId eq '$azCliSp' and resourceId eq '$graphSp' and principalId eq '$($me.id)'" -What 'Reading existing grants').value)
 
