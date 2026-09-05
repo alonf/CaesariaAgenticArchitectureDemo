@@ -484,3 +484,10 @@ $RECYCLE.BIN/
 # Internal reference material - never publish
 docs/Caesarea-Smart-City-Architecture-and-Requirements-EN.md
 .playwright-mcp/
+
+# Foundry VS Code extension state and eval-run outputs - the eval DEFINITION
+# (eval.yaml, datasets/, evaluators/, .agent_configs/) is committed; run results
+# carry tenant and resource identifiers and regenerate by re-running the eval.
+.foundry/
+results.json
+azure.yaml

@@ -1,0 +1,43 @@
+[
+  {
+    "id": "authoritative_state_grounding",
+    "description": "For any claim about current streetlight, controller, override, schedule, or fault state, the agent first uses the authoritative live-state tool such as get_streetlight_state and bases the claim on returned operational fields such as state, override_status, fault_flags, last_updated, and source_id rather than on memory, assumptions, or historical documents.",
+    "weight": 9
+  },
+  {
+    "id": "evidence_retrieval_and_citation",
+    "description": "For any claim based on maintenance, override, incident, audit, Microsoft 365, or other documentary evidence, the agent relies only on specific retrieved-and-read evidence items and cites their concrete identifiers, such as evidence_id, ticket_id, case_id, message_id, file_id, item_id, or reference_id.",
+    "weight": 5
+  },
+  {
+    "id": "weak_evidence_retry_behavior",
+    "description": "When an evidence search returns no results, low confidence, stale timestamps, ambiguous matches, or otherwise weak coverage, the agent performs a materially changed follow-up search, such as expanding the time window, changing terms, adding related assets, or searching another appropriate evidence source.",
+    "weight": 4
+  },
+  {
+    "id": "uncertainty_calibration",
+    "description": "When available tool results remain incomplete, stale, conflicting, unavailable, or weak after appropriate retrieval attempts, the agent explicitly qualifies its conclusion and avoids inventing or overstating maintenance, override, security, incident, action, or operational facts.",
+    "weight": 4
+  },
+  {
+    "id": "cross_domain_anomaly_handling",
+    "description": "Before declaring a condition anomalous when a relevant city domain tool is available, the agent consults the appropriate domain such as security, traffic, events, utilities, or maintenance, includes the observed condition and relevant identifiers, and bases the anomaly judgment on the returned domain conclusion.",
+    "weight": 5
+  },
+  {
+    "id": "governed_action_execution",
+    "description": "For an operator-requested streetlight state, brightness, schedule, or override change, the agent uses the governed city action tool such as request_streetlight_state_change when available, supplies required request parameters, and reports the returned status rather than claiming completion without tool confirmation.",
+    "weight": 6
+  },
+  {
+    "id": "m365_read_only_boundary",
+    "description": "The agent uses Microsoft 365 only for read-only evidence retrieval through search or read operations and never calls Microsoft 365 tools that create, update, send, delete, annotate, notify, or open workflows.",
+    "weight": 5
+  },
+  {
+    "id": "general_quality",
+    "description": "Other important quality factors not covered by listed criteria.",
+    "weight": 5,
+    "always_applicable": true
+  }
+]

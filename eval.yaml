@@ -1,0 +1,15 @@
+name: caesarea-operations-behavior
+agent:
+    name: caesarea-operations
+    kind: hosted
+dataset:
+    name: caesarea-operations-behavior
+    version: "1.0"
+    local_uri: datasets\caesarea-operations-behavior
+evaluators:
+    - name: caesarea-operations-behavior
+      version: "1"
+      local_uri: evaluators\caesarea-operations-behavior\rubric_dimensions.json
+options:
+    eval_model: gpt-5.5
+max_samples: 15
