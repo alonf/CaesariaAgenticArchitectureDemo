@@ -144,13 +144,16 @@ function Invoke-GraphJson {
 
     $response = Invoke-WebRequest @arguments
 
+    # Content is a string for JSON responses and byte[] for content types PowerShell does not
+    # recognise (some Graph error payloads among them) - decode only what needs decoding.
+    $text = if ($response.Content -is [byte[]]) { [Text.Encoding]::UTF8.GetString($response.Content) } else { "$($response.Content)" }
+
     if ($response.StatusCode -eq 403 -and $ForRead) {
         throw "Reading channel messages was refused (403). The Azure CLI needs the $ReadScope delegated permission for this user: run ./scripts/Start-TeamsOperatorRelay.ps1 -GrantReadConsent as an admin, then retry."
     }
     if ($response.StatusCode -ge 400) {
-        throw "$What failed with HTTP $($response.StatusCode): $([Text.Encoding]::UTF8.GetString($response.Content))"
+        throw "$What failed with HTTP $($response.StatusCode): $text"
     }
-    $text = [Text.Encoding]::UTF8.GetString($response.Content)
     if ([string]::IsNullOrWhiteSpace($text)) { return $null }
     return $text | ConvertFrom-Json
 }
