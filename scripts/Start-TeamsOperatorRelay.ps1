@@ -55,6 +55,10 @@
 .PARAMETER Once
     Poll a single time, answer what is found, and exit. For rehearsal and testing.
 
+.PARAMETER NoAnnounce
+    Skip the introduction message. For restarts - the channel needs one announcement, not one per
+    relay restart.
+
 .EXAMPLE
     ./scripts/Start-TeamsOperatorRelay.ps1
 
@@ -75,7 +79,8 @@ param(
     [int] $PollSeconds = 5,
     [ValidateRange(0, 1440)]
     [int] $LookbackMinutes = 0,
-    [switch] $Once
+    [switch] $Once,
+    [switch] $NoAnnounce
 )
 
 $ErrorActionPreference = 'Stop'
@@ -218,14 +223,16 @@ Write-Warn 'Work IQ evidence comes from the relay runner''s Microsoft 365, whoev
 $cutoff = (Get-Date).ToUniversalTime().AddMinutes(-$LookbackMinutes)
 $handled = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
 
-$announcement = Invoke-GraphJson -Method POST -Url "$GraphBase/teams/$teamId/channels/$channelId/messages" -What 'Announcing the relay' -Body @{
-    body = @{
-        contentType = 'text'
-        content     = "The Caesarea Operations Agent (Foundry-hosted) is listening on this channel via a presenter-run relay. Post a message to ask it something - try: What do our maintenance records say about streetlight L-417? Note: answers are produced as $($me.displayName), whoever asks."
+if (-not $NoAnnounce) {
+    $announcement = Invoke-GraphJson -Method POST -Url "$GraphBase/teams/$teamId/channels/$channelId/messages" -What 'Announcing the relay' -Body @{
+        body = @{
+            contentType = 'html'
+            content     = "<p><b>&#127963;&#65039; Caesarea Operations Agent</b> <i>(hosted on Microsoft Foundry)</i> is listening on this channel via a presenter-run relay.</p><p>Post a top-level message to ask it something &#8212; try: <i>What do our maintenance records say about streetlight L-417?</i></p><p><i>Answers are produced as $($me.displayName), whoever asks &#8212; that boundary is part of the demo.</i></p>"
+        }
     }
+    [void]$handled.Add("$($announcement.id)")
+    Write-Beat 'Announced in the channel.'
 }
-[void]$handled.Add("$($announcement.id)")
-Write-Beat 'Announced in the channel.'
 Write-Note "Listening - post a TOP-LEVEL message in '$ChannelName' and the agent will reply in its thread. Polling every $PollSeconds s."
 
 $polls = 0
@@ -267,11 +274,18 @@ while ($true) {
             Write-Warn "Work IQ consent required - open this as $($me.userPrincipalName): $($answer.ConsentUrl)"
         }
 
-        $footer = "`n`n— Caesarea Operations Agent (hosted on Microsoft Foundry) · relayed as $($me.displayName)"
-        if ($answer.ResponseId) { $footer += " · response $("$($answer.ResponseId)".Substring(0, [Math]::Min(18, "$($answer.ResponseId)".Length)))" }
+        # The reply is posted by the presenter - delegated Graph can post as nobody else - so the
+        # agent's name leads the body in bold, and the relay label closes it. The thread should
+        # read as the agent speaking through a person, because that is exactly what is happening.
+        $answerHtml = [System.Net.WebUtility]::HtmlEncode($answer.Text) -replace "`r`n", "`n" -replace "`n", '<br/>'
+        $footer = "relayed as $($me.displayName)"
+        if ($answer.ResponseId) { $footer += " &#183; response $("$($answer.ResponseId)".Substring(0, [Math]::Min(18, "$($answer.ResponseId)".Length)))" }
 
         Invoke-GraphJson -Method POST -Url "$GraphBase/teams/$teamId/channels/$channelId/messages/$($message.id)/replies" -What 'Posting the answer' -Body @{
-            body = @{ contentType = 'text'; content = ($answer.Text + $footer) }
+            body = @{
+                contentType = 'html'
+                content     = "<p><b>&#127963;&#65039; Caesarea Operations Agent</b> <i>(hosted on Microsoft Foundry)</i></p><p>$answerHtml</p><p><i>&#8212; $footer</i></p>"
+            }
         } | Out-Null
 
         Write-Beat "A posted: $($answer.Text.Substring(0, [Math]::Min(80, $answer.Text.Length)))"
