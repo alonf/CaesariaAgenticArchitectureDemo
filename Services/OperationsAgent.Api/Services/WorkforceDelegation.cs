@@ -1,5 +1,4 @@
 using A2A;
-using Microsoft.Agents.AI;
 using Microsoft.Agents.AI.A2A;
 using Microsoft.Extensions.AI;
 

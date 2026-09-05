@@ -3,7 +3,6 @@ using Azure.AI.Projects;
 using Azure.Core;
 using Azure.Identity;
 using Caesarea.ServiceDefaults;
-using Microsoft.Agents.AI;
 using Microsoft.Agents.AI.Foundry.Hosting;
 using WorkforceAgent.Api.Services;
 using WorkforceAgent.Hosted;
