@@ -226,9 +226,19 @@ $announcement = Invoke-GraphJson -Method POST -Url "$GraphBase/teams/$teamId/cha
 }
 [void]$handled.Add("$($announcement.id)")
 Write-Beat 'Announced in the channel.'
+Write-Note "Listening - post a TOP-LEVEL message in '$ChannelName' and the agent will reply in its thread. Polling every $PollSeconds s."
+
+$polls = 0
 
 while ($true) {
     $messages = @((Invoke-GraphJson -Method GET -Url "$GraphBase/teams/$teamId/channels/$channelId/messages?`$top=20" -What 'Reading channel messages').value)
+
+    # A listener that prints nothing is indistinguishable from a hung one - learned by being asked
+    # whether it had hung. One quiet line a minute is the difference.
+    $polls++
+    if ($polls % [Math]::Max(1, [int](60 / $PollSeconds)) -eq 0) {
+        Write-Note "listening... ($(Get-Date -Format 'HH:mm:ss'), $($handled.Count - 1) message(s) answered)"
+    }
 
     foreach ($message in ($messages | Sort-Object createdDateTime)) {
         if ("$($message.messageType)" -ne 'message') { continue }
