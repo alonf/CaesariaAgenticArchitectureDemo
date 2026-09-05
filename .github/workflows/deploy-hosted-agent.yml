@@ -116,9 +116,17 @@ jobs:
       # FOUNDRY_* or AGENT_*: the API rejects all of them with "reserved for platform use". The
       # platform injects PORT=8088 and the container is expected to take it.
       #
-      # The protocol version is 2.0.0 and must match what the image serves. Declare 1.0.0 against a
-      # container built on Microsoft.Agents.AI.Foundry.Hosting 1.20 and every call comes back
+      # protocol_versions declares only what the CONTAINER serves - and it serves only Responses
+      # (Program.cs calls RegisterProtocol("responses") and nothing else). The Responses protocol
+      # version is 2.0.0 and must match the image: declare 1.0.0 against a container built on
+      # Microsoft.Agents.AI.Foundry.Hosting 1.20 and every call comes back
       # "unsupported_container_protocol_version", after the version has already gone active.
+      #
+      # Do NOT add {protocol: "activity"} here. Activity belongs on the ENDPOINT (the agent_endpoint
+      # PATCH below), where the Foundry-fronted bot bridges Activity onto Responses at /responses.
+      # Declaring Activity on the version tells Foundry the container serves it natively, so it
+      # forwards raw Activity to the container's /api/messages - which does not exist - and every
+      # Teams/Copilot turn 404s in ~5 ms before the model runs. That was version 12's failure.
       - name: Create the agent version
         id: version
         run: |
@@ -139,7 +147,7 @@ jobs:
                 container_configuration: {image: $image},
                 cpu: "1",
                 memory: "2Gi",
-                protocol_versions: [{protocol: "responses", version: "2.0.0"}, {protocol: "activity", version: "1.0.0"}],
+                protocol_versions: [{protocol: "responses", version: "2.0.0"}],
                 environment_variables: {
                   MODEL_DEPLOYMENT_NAME: $model,
                   ENERGYHUB_BASE_URI: $energyHub,
