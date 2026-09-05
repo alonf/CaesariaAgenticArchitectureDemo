@@ -22,6 +22,7 @@ GitHub Actions workflow driving committed Bicep — see [docs/deployment.md](../
 | [`New-CaesareaOperator.ps1`](New-CaesareaOperator.ps1) | Mints the "Caesarea Operator" identity the relay can post as: Entra user, an Agent 365 seat from the pool the tenant already owns (Teams + mailbox + OneDrive + agent-governance plans), team membership, and the relay's Graph consent for that user alone | Yes — everything reports `[exists]` on a re-run |
 | [`Set-AgentActivityProtocol.ps1`](Set-AgentActivityProtocol.ps1) | Declares the Activity (Teams/M365) protocol on the hosted agent's endpoint — the scriptable half of the native Teams-channel path; verifies Responses still serves | Yes — `[exists]` when already declared |
 | [`Capture-AgentChannelState.ps1`](Capture-AgentChannelState.ps1) | Snapshots the resource group's ARM resources, any Azure Bot services/channels, and the agent record — run before/after a portal channel-add to reverse-engineer it into Bicep | Read-only |
+| [`Publish-AgentToTeams.ps1`](Publish-AgentToTeams.ps1) | Deploys the messaging half of the Teams publish as code: declares the Activity protocol, then deploys [`infra/modules/teams-channel.bicep`](../infra/modules/teams-channel.bicep) — the Azure Bot + Teams channel that front the agent, authenticating as its own identity | Yes — the Bicep converges |
 
 All mutating scripts support `-WhatIf`. **Run that first**; it makes no changes and prints exactly
 what would happen.
