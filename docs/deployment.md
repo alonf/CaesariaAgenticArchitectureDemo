@@ -375,11 +375,27 @@ Seven steps, all API calls, no portal step:
 5. Create the project connection — `RemoteA2A`, because **Work IQ is itself an A2A agent**.
 6. Read the OAuth redirect URL the connection returns and register it on the app. The ordering is
    forced: the URL does not exist until the connection does.
-7. Create a toolbox version carrying `work_iq_preview` — what a hosted agent reaches through
-   `AddFoundryToolboxes`.
+7. Ensure the toolbox's **default version** carries `work_iq_preview` — what a hosted agent reaches
+   through `AddFoundryToolboxes`. The default is compared first; on drift an exactly-matching staged
+   version is reused (or one is created), its own MCP endpoint is exercised — initialize, then
+   tools/list, with the documented `CONSENT_REQUIRED` answer accepted as a healthy unconsented
+   state — and only a version that answers is promoted. Versions are immutable and only a toolbox's
+   very first one becomes the default for free; an earlier version of the script created one per
+   run and quietly grew a pile the runtime never looked at.
 
 Steps 1 and 3 need **Global Administrator**; activate it just-in-time through PIM and deactivate
 after. Everything else needs only the Foundry roles from Step 1 of this document.
+
+**One boundary to know before demoing it as "read-only": it is not.** `WorkIQAgent.Ask` can act on
+Microsoft 365 content as well as read it. The hosted agent is constrained to evidence retrieval by
+an explicit paragraph in its instructions — a behavioural boundary, stated as such in the demo. An
+agent that must be *unable* to write needs a narrower permission when one exists, or an
+approval-gated composition around the tool.
+
+**Consent is per person, and the platform surfaces it.** The first time Work IQ acts for a given
+user, the hosted run returns `status: incomplete` with an `oauth_consent_request` output item
+carrying a consent link instead of text. The Command Center renders it as a consent prompt; open
+it, consent as yourself, ask again. Do this in rehearsal, not on stage.
 
 **Two prerequisites this script cannot give you**, both of which fail at runtime rather than at setup:
 
@@ -388,8 +404,10 @@ after. Everything else needs only the Foundry roles from Step 1 of this document
 | `403 Forbidden` | Work IQ API calls need usage-based billing with Copilot Credits |
 | `Principal does not have access to API/Operation` | The agent's runtime identity needs **Foundry User** on the project |
 
-A Foundry connection's fields **cannot be edited after creation**. The script reports an existing one
-and leaves it alone rather than pretending to update it; to change it, delete and re-run.
+A Foundry connection's fields **cannot be edited after creation**. The script compares an existing
+connection's non-secret fields against what it would have created: a match is reported and left
+alone, drift stops the run with the exact delete command and the drifted fields named. The secret
+itself cannot be read back, which is the one honest gap in that comparison.
 
 ### A correction worth keeping
 
@@ -398,6 +416,50 @@ scripted. That was wrong, and the way it was wrong is instructive: the probe tri
 and `PUT /toolboxes/{name}`, got 405 from both, and generalised. It never tried
 `POST /toolboxes/{name}/versions`, which is where creation actually lives. Two probes of a plausible
 shape are not a survey of an API.
+
+## Step 7 — The work order, and pointing the demo at the hosted agent
+
+Two last pieces turn the deployment into the Hosting stage's demo beat:
+
+```powershell
+./scripts/New-CaesareaWorkOrder.ps1 -WhatIf   # preview
+./scripts/New-CaesareaWorkOrder.ps1           # the work order, in YOUR OneDrive
+```
+
+The document carries a **source-of-record line naming Microsoft 365** and a detail (the replacement
+diffuser) the local simulated store never contained — that is how an audience can tell the hosted
+answer read the real document. Microsoft 365 must index the file before Work IQ finds it; give it a
+few minutes.
+
+The cloud city agrees with that document by construction: the deployed SmartPole boots into the
+forgotten-override situation (`SmartPoleSimulator__StartWithForgottenOverride` in
+[infra/apps.bicep](../infra/apps.bicep)) — lamp ON during daylight, override engaged, recent
+maintenance — because the cloud has no switchboard to drive it there: the deployed demo surface is
+deliberately off. The two cities are separate realities that merely start in the same place; the
+demo's scenarios and restores act on the laptop's city only.
+
+Then tell the Command Center where the hosted agent lives. The project endpoint names a tenant, so
+it goes in user secrets rather than a committed file — and because a per-machine step done once and
+forgotten is exactly what fails on stage, the start script owns it:
+
+```powershell
+./scripts/Start-CaesareaDemo.ps1 -SetupOnly   # resolve and store the endpoint, check the sign-in
+./scripts/Start-CaesareaDemo.ps1              # ...or just start; it checks first, every time
+```
+
+It resolves the endpoint from the GitHub environment's `FOUNDRY_PROJECT_ENDPOINT` (or the Foundry
+account in the resource group), validates its shape the same way the app does at startup, and
+stores it. The manual equivalent, when you would rather state the value:
+
+```powershell
+dotnet user-secrets set "CommandCenterWeb:HostedAgent:ProjectEndpoint" "https://<account>.services.ai.azure.com/api/projects/<project>" --project Apps/CommandCenter.Web
+```
+
+With that set, the demo's Hosting stage works as scripted in
+[docs/prompts/12-hosting.md](prompts/12-hosting.md): the switchboard gains **Habitat: LOCAL /
+FOUNDRY HOSTED**, and the same records question answers from the simulated store or from the
+presenter's own OneDrive depending on the flip. The hosted call is made with the presenter's own
+`az login` credential — whoever runs the demo is who the agent sees.
 
 ### Why this deployment crosses three control planes
 
@@ -527,19 +589,23 @@ one laptop.
 - The bootstrap has been run against a real tenant and repository. It created two applications with
   one federated credential each, assigned the roles, and configured both environments. A second run
   reports `[exists]` on every line.
-- `deploy-infra` has run on GitHub Actions, authenticated by workload identity federation as the
-  dev identity, and produced a what-if of **12 creates, 2 unanalysable, no errors** — matching what
-  this document says to expect.
-- `infra/main.bicep` also passes `what-if` locally.
-- The hosted-agent protocol serves `/responses` and `/readiness` on a laptop with no Azure at all
-  (see [hosted-agent.md](product-status/hosted-agent.md)).
+- `deploy-infra` has applied the platform to `dev`, and `deploy-services` and `deploy-hosted-agent`
+  have released onto it: the Energy Hub rejects anonymous callers with 401 at the ingress, and the
+  hosted agent answers with content only the deployed Energy Hub could supply (the release smoke
+  test requires L-417's area, a string that exists only in the twin).
+- Outbound egress from the hosted sandbox is open, the per-request user identity reaches the
+  container, and Work IQ performs the delegated read as the calling user — consent flow included.
+  All recorded, with dates and the evidence, in [hosted-agent.md](product-status/hosted-agent.md).
+- The Work IQ wiring converges: a re-run of `Connect-WorkIQ.ps1` against the live project reports
+  `[exists]` on every step, including the toolbox default-version comparison, and
+  `Test-FoundryToolbox.ps1` passes as a strict gate against the same project.
 
-**Not verified — nothing here has actually been deployed:**
+**Not verified:**
 
-- Whether the role assignments grant what was intended. `what-if` proves a template is valid, not
-  that its RBAC is correct.
-- Outbound egress from a deployed hosted-agent sandbox.
-- .NET cold-start time on the hosting platform.
+- Whether every role assignment is as narrow as intended. Deployment proves the grants suffice, not
+  that none is broader than needed.
+- .NET cold-start time on the hosting platform under a cold session, which decides how comfortable
+  the on-stage first ask is. Rehearse it.
+- The `azd` deployment path end to end (see the status doc's blocker note).
 
-Treat everything past `what-if` as reviewed, not proven, until the first real deployment says
-otherwise — and update this section when it does.
+Update this section when any of that changes.

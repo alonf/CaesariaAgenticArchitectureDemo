@@ -82,6 +82,7 @@ grows one capability at a time, and each stage maps to a concrete MAF concept:
 | ToolApproval | `ApprovalRequiredAIFunction` — the model selects a protected capability and the framework intercepts it |
 | MultiAgent | A second agent with its own permission boundary, consulted as a remote capability (`AsAIFunction` over MCP) |
 | A2ADelegation | `Microsoft.Agents.AI.A2A` — a peer agent in another domain, discovered by its agent card and given a task (`A2ACardResolver`, `A2AAgent`) |
+| Hosting | The Foundry hosted runtime (`AgentHost`, `AddFoundryResponses`) + `AddFoundryToolboxes` — the same agent code, platform-owned runtime and identity, with Work IQ reading the presenter's own Microsoft 365 |
 
 Each stage has a build-and-design document under [docs/prompts/](docs/prompts/), the exact
 lecture-slide code lives in named `#region` blocks (see the deck anchors in the docs), and
@@ -137,6 +138,13 @@ The demo runs as one application with a presenter-controlled `DemoStage`:
   picture that moved is refused rather than acted on. The graph renders its own Mermaid diagram
   (`WorkflowVisualizer`), live steps stream to the Command Center, and the equivalent declarative
   YAML is displayed beside it.
+- `DemoStage=Hosting` — the same Operations Agent, **hosted by Microsoft Foundry**. A switchboard
+  toggle (`Habitat: LOCAL / FOUNDRY HOSTED`) routes the Command Center's question to the deployed
+  agent: the platform owns the runtime, the endpoint and the agent's Entra identity, the Energy Hub
+  it reads is the cloud one, and the work-order evidence comes from the presenter's **own OneDrive**
+  through Work IQ — asked as the signed-in person, consent flow and all. The answer names Microsoft
+  365 as its source of record, which the local simulated store never does. Requires the deployed
+  half (see [docs/deployment.md](docs/deployment.md)); without it, the local demo is unchanged.
 
 `CommandCenter.Api` owns the selected stage. `DemoScenario.Api` reads and changes it through that authoritative
 boundary, so switching stages does not restart the application.
@@ -196,8 +204,15 @@ project, change `FoundryProjectEndpoint` and `ModelDeploymentName`.
 ## Run locally
 
 ```powershell
-dotnet run --project .\Caesarea.AppHost
+./scripts/Start-CaesareaDemo.ps1
 ```
+
+One command, safe to run every time: it checks the per-machine setup - the hosted agent's project
+endpoint in user secrets (resolved automatically from the GitHub environment or the Azure resource
+group when missing) and the Azure sign-in the hosted call runs as - repairs what it can, reports
+what it cannot as a warning naming the fix, and starts the Aspire AppHost. Nothing cloud-side is
+required for the local demo; unresolved checks only cost the Hosting stage's FOUNDRY HOSTED beat.
+`dotnet run --project .\Caesarea.AppHost` still works when the machine is already set up.
 
 Use `DemoControl.Web` (the presenter switchboard) to pick a scenario and stage, then open
 `CommandCenter.Web` and ask: **"Is streetlight L-417 on?"** — and follow the stage documents in

@@ -220,10 +220,10 @@ container is unnecessary.
 | `JSONRPC` | 1.0, 0.3 |
 | `HTTP+JSON` | 0.3 only |
 
-`WorkforceDelegation` currently selects `ProtocolBindingNames.HttpJson`, which was the right choice
-against the Aspire-hosted peer. Against a Foundry-hosted peer it constrains you to A2A 0.3, or means
-moving to JSON-RPC. Decide that before porting, not after — the last time a binding assumption went
-unchecked here it cost a live 404 that only a real client against a real host revealed.
+`WorkforceDelegation` now prefers `ProtocolBindingNames.JsonRpc` with `HttpJson` as the fallback -
+exactly because of this table: JSON-RPC is the only binding a Foundry-hosted peer serves at A2A 1.0,
+while the Aspire-hosted peer accepts either. The preference list is the porting decision, made where
+the client is composed rather than rediscovered as a live 404.
 
 ### A2A limitations, and the two ways to make the outgoing call
 
@@ -287,8 +287,19 @@ token minted for them, which is what the Foundry Toolbox machinery describes: a 
 (`CONSENT_REQUIRED`) when the user has not yet agreed.
 
 So the open question is narrower than it was: not *does identity flow* - it does - but *can a Toolbox
-with a Microsoft Graph connection turn that identity into a delegated token*. That is the next thing
-to settle before building on it.
+with a Microsoft Graph connection turn that identity into a delegated token*.
+
+**Settled, by running it (2026-09-05): it can, and the missing piece is consent.** With the Work IQ
+toolbox connected (`Connect-WorkIQ.ps1`) the delegated read works end to end - the agent retrieves
+the work order from the calling user's own OneDrive. For a user who has not yet consented, the
+platform does not fail the call: the response comes back `status: "incomplete"` with an output item
+of type **`oauth_consent_request`** carrying a `consent_link` and the connection's `server_label`,
+instead of text. Open the link, consent as the user, ask again. The Command Center's hosted panel
+renders that item as a consent prompt rather than an error, because it is the delegated-access
+story made visible: Work IQ's first act for a person is to ask that person.
+[hosting-stage-consent.png](hosting-stage-consent.png) is that state as the audience sees it,
+captured from a live run of the full chain (switchboard flip → routed ask → deployed agent →
+consent request rendered).
 
 ## Verified stale — the deck's Bicep
 

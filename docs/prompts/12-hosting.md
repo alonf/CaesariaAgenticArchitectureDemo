@@ -16,12 +16,59 @@ This file holds the slide corrections and the presenter notes.
 - **One hosted agent**, the Operations Agent. Slide 43's claim is that the agent code does not
   determine where it must run, and moving one agent proves it. A second multiplies the ACR, version
   and identity surface while proving the same thing.
+- **`WorkforceAgent.Hosted` is a protocol probe, not a deployment.** It exists in the solution to
+  prove the A2A-on-hosted findings in [hosted-agent.md](../product-status/hosted-agent.md) compile
+  and run; it has no image in the release pipeline, no protected Workforce Hub ingress, no identity
+  grants and no smoke test, and none of that is planned — the stage hosts one agent, above. Anyone
+  tempted to deploy it starts by building that path, not by assuming it exists.
 - **Reduced hosted composition, no tunnel.** Same code, instructions and skills; a toolset that does
   not need the city hubs on the presenter's laptop. This is a recorded deviation from §22's
   presenter step 6 ("compare same scenario behavior") — see the status doc for why, and for the
   dev-tunnel variant that remains documented but is not the stage path.
 - **Deployment is Bicep + GitHub Actions**, not `azd up`. See [infra/README.md](../../infra/README.md).
   `azd` stays the inner-loop tool.
+
+## The stage in the demo: the Habitat switch
+
+The Hosting stage is in the scenario itself (`DemoStage.Hosting`), and its beat is a presenter
+switch, exactly like Tools LOCAL/MCP:
+
+1. **Prerequisites, once per machine and person.** The hosted agent deployed
+   ([deploy-hosted-agent.yml](../../.github/workflows/deploy-hosted-agent.yml)); the work order in
+   *your* OneDrive (`./scripts/New-CaesareaWorkOrder.ps1`) and indexed; and the Command Center told
+   where the hosted agent lives. That last one is the start script's job — run the demo with
+   `./scripts/Start-CaesareaDemo.ps1` and it resolves and stores
+   `CommandCenterWeb:HostedAgent:ProjectEndpoint` in user secrets when missing, and checks the
+   Azure sign-in the hosted call runs as. The endpoint names a tenant, which is why it is
+   deliberately not in a committed appsettings file.
+2. **The beat.** At the Hosting stage, the Command Center's agent rail gains *"Ask about L-417's
+   work records"*. Press it with Habitat: LOCAL — the familiar answer from the simulated store.
+   Flip **Habitat: LOCAL → FOUNDRY HOSTED** on the switchboard and press the same button: the
+   answer now comes from Foundry's hosted runtime, cites work order WO-8732 from the presenter's
+   OneDrive, and names **Microsoft 365 as the source of record** — a sentence only the real
+   document contains, alongside the replacement-diffuser detail the simulated store never had.
+3. **First use per person: consent, on screen.** Work IQ will not act for a person who has not
+   consented. The first hosted ask returns an OAuth consent link instead of an answer, and the
+   Command Center renders it as what it is — delegated access made visible, not an error. Open it,
+   consent, ask again. Do this in rehearsal; on stage it is either a ten-second beat or already done.
+4. **What the hosted agent's answers describe.** Its Energy Hub is the **deployed** one, and the
+   cloud city is not driven by the switchboard — its demo surface is deliberately off. Instead, the
+   cloud pole **boots into the forgotten-override situation**
+   (`SmartPoleSimulator__StartWithForgottenOverride` in [apps.bicep](../../infra/apps.bicep)): lamp
+   ON during daylight, override engaged, recent maintenance — the exact state WO-8732 in the
+   presenter's OneDrive explains. So a live-state question hosted agrees with the local
+   ForgottenOverride scenario on screen, and both of the hosted agent's sources tell one story. Say
+   the boundary out loud anyway: the two cities are separate, they merely start in the same place —
+   restoring the local lamp changes nothing in the cloud, and the panel footnote states it.
+5. **Identity, without configuring any.** The Command Center mints the hosted call's token with the
+   presenter's own credential (`az login` via `DefaultAzureCredential`), the platform reads the
+   caller from it and injects `x-agent-user-id`, and Work IQ answers with what *that person* can
+   see. A different presenter gets their own OneDrive's answer, with nothing edited anywhere.
+
+The switch state lives on the Operations Agent service (`/api/operations-agent/habitat`), is
+flipped from the switchboard, requires the Hosting stage, and resets to LOCAL on any stage
+downgrade — same lifecycle as the tool-source toggle, for the same reason: the flip is the beat,
+so re-entering the stage must start from LOCAL.
 
 ## Slide 43/44 corrections
 
