@@ -156,6 +156,17 @@ else {
     $failures.Add("Agent '$AgentName' has no instance identity. Deploy a version first (deploy-hosted-agent.yml).")
 }
 
+# The card description is what the Agent 365 registry's About panel shows a governance reviewer.
+# Blank reads as "nobody will say what this does" - which is a warning, not a failure, because
+# the segment can show the gap and deploy-hosted-agent.yml fills it on the next release.
+$cardDescription = if ($agent.PSObject.Properties.Name -contains 'agent_card' -and $agent.agent_card) { "$($agent.agent_card.description)" } else { '' }
+if ($cardDescription -and $cardDescription.Length -gt 20) {
+    Write-Found 'agent card carries a description for the registry''s About panel'
+}
+else {
+    Write-Warn "The agent card description is blank or a placeholder ('$cardDescription'). The registry will show 'No description provided'; deploy-hosted-agent.yml sets it on the next release."
+}
+
 # ---------------------------------------------------------------------------------------------
 # 2. What the directory says that identity IS.
 # ---------------------------------------------------------------------------------------------

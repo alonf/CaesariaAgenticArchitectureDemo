@@ -123,6 +123,9 @@ jobs:
         id: version
         run: |
           TOKEN=$(az account get-access-token --resource https://ai.azure.com --query accessToken -o tsv)
+          # The description is estate metadata, not decoration: it is what a governance reviewer
+          # reads in the Agent 365 registry before deciding whether this agent belongs in the
+          # tenant. A blank one reads as "nobody will say what this does".
           BODY=$(jq -n \
             --arg image "${{ steps.build.outputs.image }}" \
             --arg model "${{ vars.MODEL_DEPLOYMENT_NAME }}" \
@@ -130,7 +133,8 @@ jobs:
             --arg energyHubScope "${{ vars.ENERGYHUB_API_SCOPE }}" \
             --arg skillsMode "${{ vars.SKILLS_MODE }}" \
             --arg workIqToolbox "${{ vars.WORKIQ_TOOLBOX }}" \
-            '{definition: {
+            '{description: "Caesarea Operations Agent: investigates streetlight anomalies for the city Command & Control center. Reads the authoritative Energy Hub and, through Work IQ as the calling user, the work records in Microsoft 365. Evidence retrieval only; no write capability is composed.",
+              definition: {
                 kind: "hosted",
                 container_configuration: {image: $image},
                 cpu: "1",
@@ -154,6 +158,22 @@ jobs:
             -d "$BODY")
           VERSION=$(echo "$RESPONSE" | jq -er '.version')
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+          # The agent card is agent-level metadata (it survives versions) and is what the Agent 365
+          # registry's About panel reads. Set on every deploy so a rebuilt-from-nothing agent gets
+          # it without anyone remembering a portal step - the same reason everything else here is a
+          # workflow.
+          CARD=$(jq -n '{agent_card: {
+              version: "1.0.0",
+              description: "Caesarea Operations Agent: investigates streetlight anomalies for the city Command & Control center. Reads the authoritative Energy Hub, and - through Work IQ, as the calling user - the work records in Microsoft 365. Evidence retrieval only; no write capability is composed. Part of the Caesarea agentic-architecture lecture demo.",
+              skills: []
+            }}')
+          curl -sS --fail-with-body -X PATCH \
+            "${{ vars.FOUNDRY_PROJECT_ENDPOINT }}/agents/${AGENT_NAME}?api-version=v1" \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "$CARD" > /dev/null
+          echo "Agent card description set."
 
       - name: Wait for the version to become active
         run: |
