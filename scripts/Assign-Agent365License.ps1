@@ -134,12 +134,13 @@ $free = $sku.prepaidUnits.enabled - $sku.consumedUnits
 Write-Note "SKU id: $($sku.skuId)"
 Write-Note "Units:  $($sku.consumedUnits) of $($sku.prepaidUnits.enabled) used, $free free"
 
-if ($free -le 0) {
-    throw "No free units of '$SkuPartNumber'. Release one, or buy more, before assigning."
-}
+# Deliberately NOT failing on zero free units here. With one purchased seat, a successful first run
+# consumes it - and a free-units gate placed before the already-assigned check would then fail every
+# later run of an idempotent script. Whether a free unit is needed depends on whether the target
+# already holds the licence, so the check lives beside the assignment.
 
 # ---------------------------------------------------------------------------------------------
-# The user, and the usage location the assignment silently depends on.
+# The user.
 # ---------------------------------------------------------------------------------------------
 
 Write-Step 'User'
@@ -152,25 +153,9 @@ Write-Note "Object id:      $($user.id)"
 Write-Note "Enabled:        $($user.accountEnabled)"
 Write-Note "Usage location: $(if ($user.usageLocation) { $user.usageLocation } else { '(none)' })"
 
-if (-not $user.usageLocation) {
-    if (-not $UsageLocation) {
-        throw "User '$UserPrincipalName' has no usageLocation, and licence assignment requires one. Re-run with -UsageLocation <two-letter country code>, e.g. -UsageLocation IL."
-    }
-
-    if ($PSCmdlet.ShouldProcess($UserPrincipalName, "Set usageLocation to $UsageLocation")) {
-        Invoke-Graph -Method patch -Url "$GraphBase/users/$($user.id)" -What 'Setting usageLocation' -Body @{
-            usageLocation = $UsageLocation
-        } | Out-Null
-        Write-Created "usageLocation = $UsageLocation"
-    }
-}
-elseif ($UsageLocation -and $UsageLocation -ne $user.usageLocation) {
-    # Never silently changed: it has tax and compliance meaning, and this script's job is licensing.
-    Write-Note "-UsageLocation $UsageLocation ignored; the user already has $($user.usageLocation)."
-}
-
 # ---------------------------------------------------------------------------------------------
-# The assignment.
+# The assignment. Held-licence check first: everything else - the free unit, the usage location,
+# even a disabled account - only matters when a NEW assignment is about to happen.
 # ---------------------------------------------------------------------------------------------
 
 Write-Step 'Assignment'
@@ -181,13 +166,42 @@ $held = @($licenses.value | Where-Object { $_.skuId -eq $sku.skuId })
 if ($held.Count -gt 0) {
     Write-Exists "$SkuPartNumber is already assigned to $UserPrincipalName"
 }
-elseif ($PSCmdlet.ShouldProcess($UserPrincipalName, "Assign $SkuPartNumber")) {
-    Invoke-Graph -Method post -Url "$GraphBase/users/$($user.id)/assignLicense" -What 'Assigning the licence' -Body @{
-        addLicenses    = @(@{ skuId = $sku.skuId; disabledPlans = @() })
-        removeLicenses = @()
-    } | Out-Null
+else {
+    # A licence on a disabled account satisfies Agent 365's "at least one licensed user" on paper
+    # while governing nothing anyone can use - and it burns the seat.
+    if (-not $user.accountEnabled) {
+        throw "User '$UserPrincipalName' is disabled. Assigning a licence to a disabled account spends a seat on nothing; enable the account or pick another user."
+    }
 
-    Write-Created "$SkuPartNumber to $UserPrincipalName"
+    if ($free -le 0) {
+        throw "No free units of '$SkuPartNumber'. Release one, or buy more, before assigning."
+    }
+
+    if (-not $user.usageLocation) {
+        if (-not $UsageLocation) {
+            throw "User '$UserPrincipalName' has no usageLocation, and licence assignment requires one. Re-run with -UsageLocation <two-letter country code>, e.g. -UsageLocation IL."
+        }
+
+        if ($PSCmdlet.ShouldProcess($UserPrincipalName, "Set usageLocation to $UsageLocation")) {
+            Invoke-Graph -Method patch -Url "$GraphBase/users/$($user.id)" -What 'Setting usageLocation' -Body @{
+                usageLocation = $UsageLocation
+            } | Out-Null
+            Write-Created "usageLocation = $UsageLocation"
+        }
+    }
+    elseif ($UsageLocation -and $UsageLocation -ne $user.usageLocation) {
+        # Never silently changed: it has tax and compliance meaning, and this script's job is licensing.
+        Write-Note "-UsageLocation $UsageLocation ignored; the user already has $($user.usageLocation)."
+    }
+
+    if ($PSCmdlet.ShouldProcess($UserPrincipalName, "Assign $SkuPartNumber")) {
+        Invoke-Graph -Method post -Url "$GraphBase/users/$($user.id)/assignLicense" -What 'Assigning the licence' -Body @{
+            addLicenses    = @(@{ skuId = $sku.skuId; disabledPlans = @() })
+            removeLicenses = @()
+        } | Out-Null
+
+        Write-Created "$SkuPartNumber to $UserPrincipalName"
+    }
 }
 
 Write-Step 'Done'

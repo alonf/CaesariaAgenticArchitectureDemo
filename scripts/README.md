@@ -1,14 +1,24 @@
 # scripts
 
-One-time setup that cannot come from a workflow, and its inverse. Everything else this solution
-deploys is a GitHub Actions workflow driving committed Bicep — see [docs/deployment.md](../docs/deployment.md).
+Setup that cannot come from a workflow, and its inverse. Everything else this solution deploys is a
+GitHub Actions workflow driving committed Bicep — see [docs/deployment.md](../docs/deployment.md).
 
 | Script | Does | Idempotent |
 | --- | --- | --- |
 | [`Bootstrap-GitHubOidc.ps1`](Bootstrap-GitHubOidc.ps1) | Creates one Entra application **per environment** with a single federated credential each, their role assignments, and the GitHub environments and variables the workflows read | Yes — a second run reports `[exists]` and changes nothing |
 | [`Remove-GitHubOidc.ps1`](Remove-GitHubOidc.ps1) | Removes only what the bootstrap owns. Does not touch Azure resources or resource providers | Yes — anything already gone reports `[absent]` |
+| [`Sync-PlatformVariables.ps1`](Sync-PlatformVariables.ps1) | Reads the latest platform deployment's outputs and writes them to the GitHub environment's variables, so the release workflows see what infra produced | Yes — every value is compared before it is written |
+| [`Bootstrap-EnergyHubApi.ps1`](Bootstrap-EnergyHubApi.ps1) | Registers the Energy Hub as an Entra-protected API: identifier URI, `EnergyHub.Read` app role, service principal, and the GitHub variables naming them | Yes — the app role keeps its ID across runs, so grants survive |
+| [`Grant-AgentEnergyHubAccess.ps1`](Grant-AgentEnergyHubAccess.ps1) | Grants the hosted agent's platform-minted identity the `EnergyHub.Read` role. Runs after the first agent version exists, because so does the identity | Yes |
+| [`Grant-AgentProjectAccess.ps1`](Grant-AgentProjectAccess.ps1) | Grants the hosted agent's identity the Foundry User role on the project, which Work IQ calls require | Yes |
+| [`Assign-Agent365License.ps1`](Assign-Agent365License.ps1) | Assigns an Agent 365 licence to a user (default: the signed-in one), which Agent 365 needs before it governs anything | Yes — an already-licensed user is reported before any free-seat check |
+| [`Connect-WorkIQ.ps1`](Connect-WorkIQ.ps1) | Wires Work IQ end to end: service principal, client app, admin consent, Foundry connection, redirect URI, and a toolbox whose **default version** carries the tool | Yes — the default version is compared before any new one is created; connection drift stops the run |
+| [`Test-FoundryToolbox.ps1`](Test-FoundryToolbox.ps1) | Gate: verifies the toolbox's default version carries exactly the expected tool on the expected connection, and fails non-zero on anything less | Read-only |
+| [`New-CaesareaWorkOrder.ps1`](New-CaesareaWorkOrder.ps1) | Creates the demo work order in the **signed-in user's own OneDrive** — the document the hosted agent finds through Work IQ, as that person | Yes — an existing file is left alone without `-Force`, and every write is conditional (ETag) |
+| [`Start-CaesareaDemo.ps1`](Start-CaesareaDemo.ps1) | The presenter's one command: checks the per-machine setup (hosted-agent endpoint in user secrets, Azure sign-in), repairs what it can, warns about the rest, and starts the AppHost | Yes — a configured machine reports `[exists]` and just starts |
 
-Both support `-WhatIf`. **Run that first**; it makes no changes and prints exactly what would happen.
+All mutating scripts support `-WhatIf`. **Run that first**; it makes no changes and prints exactly
+what would happen.
 
 ```powershell
 ./scripts/Bootstrap-GitHubOidc.ps1 -ModelVersion 2026-04-24 -WhatIf

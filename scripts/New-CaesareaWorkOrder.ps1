@@ -65,6 +65,34 @@ function Write-Exists { param([string] $Message) Write-Host "  [exists] $Message
 function Write-Created { param([string] $Message) Write-Host "  [created] $Message" -ForegroundColor Green }
 function Write-Note { param([string] $Message) Write-Host "  $Message" -ForegroundColor DarkGray }
 
+function Get-DriveItemOrNull {
+    <#  Only a true 404 is absence. A 403, an expired token, throttling or a network failure would
+        otherwise fall through to the write path and replace a document this run never actually
+        read - the one way this script could destroy someone's file without being asked to. #>
+    param([Parameter(Mandatory)] [string] $Uri)
+
+    try {
+        return Invoke-MgGraphRequest -Method GET -Uri $Uri
+    }
+    catch {
+        $isNotFound = $false
+
+        # Invoke-MgGraphRequest surfaces the Graph error body through ErrorDetails; the HTTP status,
+        # when present, rides on the exception. Either signal alone is enough to call it absent.
+        if ($_.ErrorDetails -and $_.ErrorDetails.Message -match '"code"\s*:\s*"itemNotFound"') {
+            $isNotFound = $true
+        }
+        elseif ($_.Exception.PSObject.Properties['Response'] -and
+                $_.Exception.Response -and
+                [int]$_.Exception.Response.StatusCode -eq 404) {
+            $isNotFound = $true
+        }
+
+        if ($isNotFound) { return $null }
+        throw
+    }
+}
+
 Write-Step 'Signing in'
 
 Import-Module Microsoft.Graph.Authentication -ErrorAction Stop
@@ -92,8 +120,7 @@ Write-Note "File:   $FileName"
 Write-Step "Folder '/$FolderPath'"
 
 $encodedFolder = [uri]::EscapeDataString($FolderPath)
-$folder = $null
-try { $folder = Invoke-MgGraphRequest -Method GET -Uri "$GraphBase/me/drive/root:/$encodedFolder" } catch { $folder = $null }
+$folder = Get-DriveItemOrNull -Uri "$GraphBase/me/drive/root:/$encodedFolder"
 
 if ($folder) {
     Write-Exists "folder '/$FolderPath'"
@@ -118,8 +145,7 @@ else {
 Write-Step "Work order '$FileName'"
 
 $encodedPath = "$encodedFolder/$([uri]::EscapeDataString($FileName))"
-$existingItem = $null
-try { $existingItem = Invoke-MgGraphRequest -Method GET -Uri "$GraphBase/me/drive/root:/$encodedPath" } catch { $existingItem = $null }
+$existingItem = Get-DriveItemOrNull -Uri "$GraphBase/me/drive/root:/$encodedPath"
 $fileExists = $null -ne $existingItem
 
 if ($fileExists -and -not $Force) {
@@ -133,6 +159,10 @@ elseif ($PSCmdlet.ShouldProcess("/$FolderPath/$FileName", $(if ($fileExists) { '
     $raised = (Get-Date).AddDays(-3).ToString('yyyy-MM-dd')
     $expected = (Get-Date).AddDays(1).ToString('yyyy-MM-dd')
 
+    # The source-of-record line is the beat: the local demo's simulated store tells a similar story
+    # about the same asset, so the audience needs one sentence only this document contains. An agent
+    # that names Microsoft 365 as where the record lives - and mentions the diffuser - read this
+    # file, not a fixture.
     $content = @"
 # Work order $WorkOrderId - streetlight $AssetId luminaire maintenance
 
@@ -140,6 +170,7 @@ elseif ($PSCmdlet.ShouldProcess("/$FolderPath/$FileName", $(if ($fileExists) { '
 **Raised:** $raised
 **Status:** In progress
 **Expected clearance:** $expected
+**Source of record:** Microsoft 365 - this document lives in the owner's OneDrive and is retrieved through Work IQ
 
 ## Summary
 
@@ -155,16 +186,42 @@ the controller.
 ## Follow-up
 
 Clear the manual override and return $AssetId to scheduled mode once the diffuser is fitted.
+
+---
+
+Provenance note: this is the Microsoft 365 copy of $WorkOrderId. An assistant that cites this
+document is reading the document owner's own OneDrive, with that person's permissions.
 "@
 
     # UTF-8 without a BOM: a BOM survives into the indexed text and shows up as stray characters in
     # whatever the agent quotes back.
     $bytes = (New-Object System.Text.UTF8Encoding($false)).GetBytes($content)
 
-    $item = Invoke-MgGraphRequest -Method PUT `
-        -Uri "$GraphBase/me/drive/root:/$encodedPath`:/content" `
-        -Body $bytes `
-        -ContentType 'text/markdown'
+    # The write is conditional either way. Creating: If-None-Match * fails with 412 if the file
+    # appeared between the read above and this PUT. Overwriting: If-Match pins the exact version
+    # -Force was approved against, so a copy that changed since the read is not silently replaced.
+    $conditionalHeaders = if ($fileExists -and $existingItem.PSObject.Properties['eTag'] -and $existingItem.eTag) {
+        @{ 'If-Match' = $existingItem.eTag }
+    }
+    else {
+        @{ 'If-None-Match' = '*' }
+    }
+
+    try {
+        $item = Invoke-MgGraphRequest -Method PUT `
+            -Uri "$GraphBase/me/drive/root:/$encodedPath`:/content" `
+            -Headers $conditionalHeaders `
+            -Body $bytes `
+            -ContentType 'text/markdown'
+    }
+    catch {
+        if ($_.Exception.PSObject.Properties['Response'] -and
+            $_.Exception.Response -and
+            [int]$_.Exception.Response.StatusCode -eq 412) {
+            throw "The file changed (or appeared) after this script read it. Re-run to read the current state; nothing was overwritten."
+        }
+        throw
+    }
 
     Write-Created "'$FileName'"
     Write-Note "URL: $($item.webUrl)"
@@ -179,7 +236,9 @@ Write-Host @"
   Indexing is not instant. Microsoft 365 has to index the file before Work IQ can retrieve it - if
   the agent reports no evidence in the next few minutes, wait rather than changing anything.
 
-  Then ask the hosted agent:
-
-    "Streetlight $AssetId is operating against its schedule. Check our work orders and explain why."
+  In the demo, this is the Hosting stage's beat: flip Habitat to FOUNDRY HOSTED on the switchboard
+  and click "Ask about $AssetId's work records" in the Command Center. The answer should name
+  Microsoft 365 as the source of record and mention the replacement diffuser - two things the
+  local simulated store never contained. First use per person shows a Work IQ consent link in the
+  Command Center; open it, consent as yourself, and ask again.
 "@ -ForegroundColor Green
