@@ -59,6 +59,11 @@
     Skip the introduction message. For restarts - the channel needs one announcement, not one per
     relay restart.
 
+.PARAMETER Account
+    Sign in to Microsoft Graph as this specific user (e.g. the Caesarea Operator), so the channel
+    speaks with its face. When the cached session is a different account, it is dropped and a fresh
+    sign-in prompted; the hosted-agent call still runs as the az login, which is the identity split.
+
 .EXAMPLE
     ./scripts/Start-TeamsOperatorRelay.ps1
 
@@ -80,7 +85,8 @@ param(
     [ValidateRange(0, 1440)]
     [int] $LookbackMinutes = 0,
     [switch] $Once,
-    [switch] $NoAnnounce
+    [switch] $NoAnnounce,
+    [string] $Account
 )
 
 $ErrorActionPreference = 'Stop'
@@ -136,12 +142,22 @@ Import-Module Microsoft.Graph.Authentication -ErrorAction Stop
 
 # Connect-MgGraph reuses the machine's token cache silently when the scopes are already consented
 # and cached; it goes interactive only when something is missing - which for the admin-restricted
-# read scope is exactly once per user.
+# read scope is exactly once per user. When -Account names a different identity than the cached
+# one, the cached session is dropped so the channel speaks with the requested face rather than
+# whoever happened to be signed in last.
 $context = Get-MgContext
+if ($Account -and $context -and "$($context.Account)" -ne $Account) {
+    Write-Note "Cached session is $($context.Account); switching to $Account."
+    Disconnect-MgGraph | Out-Null
+    $context = $null
+}
+
 $missing = if ($context) { @($RequiredScopes | Where-Object { $context.Scopes -notcontains $_ }) } else { $RequiredScopes }
 if ($missing.Count -gt 0) {
-    Write-Note "Connecting to Microsoft Graph for: $($RequiredScopes -join ', ')"
-    Connect-MgGraph -Scopes $RequiredScopes -NoWelcome -ErrorAction Stop
+    Write-Note "Connecting to Microsoft Graph$(if ($Account) { " as $Account" }) for: $($RequiredScopes -join ', ')"
+    $connectArgs = @{ Scopes = $RequiredScopes; NoWelcome = $true; ErrorAction = 'Stop' }
+    if ($Account) { $connectArgs.LoginHint = $Account }
+    Connect-MgGraph @connectArgs
 }
 
 $me = Invoke-GraphJson -Method GET -Url "$GraphBase/me?`$select=id,userPrincipalName,displayName" -What 'Reading the signed-in user'
@@ -250,7 +266,11 @@ while ($true) {
     foreach ($message in ($messages | Sort-Object createdDateTime)) {
         if ("$($message.messageType)" -ne 'message') { continue }
         if ($handled.Contains("$($message.id)")) { continue }
-        if ([DateTimeOffset]::Parse($message.createdDateTime).UtcDateTime -lt $cutoff) { continue }
+        # Cast, not [DateTimeOffset]::Parse: Connect-MgGraph returns createdDateTime as a [datetime]
+        # (the old raw-HTTP path returned an ISO string), and ::Parse stringifies it through the
+        # local culture, shifting a UTC value by the offset - which made every fresh message look
+        # hours old and silently filtered every question out. The cast preserves the instant.
+        if (([datetimeoffset]$message.createdDateTime).UtcDateTime -lt $cutoff) { continue }
 
         # Everything a human typed at the top level is a question; replies are conversation the
         # relay stays out of, and its own answers are replies for exactly that reason.
