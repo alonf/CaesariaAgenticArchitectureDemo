@@ -1,4 +1,5 @@
 #Requires -Version 7.0
+#Requires -Modules Microsoft.Graph.Authentication
 
 <#
 .SYNOPSIS
@@ -18,10 +19,12 @@
     Microsoft 365, whoever asked. That is what distinguishes a relay from a published agent, and
     the demo should say so out loud. (It is also why the replies carry "relayed as <user>".)
 
-    Reading channel messages needs the ChannelMessage.Read.All delegated permission, which the
-    Azure CLI does not carry by default. Run once with -GrantReadConsent (as an admin) to add it as
-    a PRINCIPAL-scoped grant - this signed-in user only, never tenant-wide - merged into any grant
-    the user already has, existing scopes preserved.
+    Graph access goes through Connect-MgGraph rather than the Azure CLI, and the reason is worth
+    keeping: Azure CLI is a Microsoft first-party app whose Graph scopes are fixed by Microsoft
+    preauthorization - a tenant admin cannot grant it ChannelMessage.Read.All, and trying earns
+    AADSTS65002 ("must be configured via preauthorization"). The Graph PowerShell app accepts
+    dynamic consent, so the first run prompts once (an admin must approve - the read scope is
+    admin-restricted) and the machine's token cache makes every later run silent.
 
 .PARAMETER TeamName
     Display name of the team.
@@ -52,13 +55,6 @@
 .PARAMETER Once
     Poll a single time, answer what is found, and exit. For rehearsal and testing.
 
-.PARAMETER GrantReadConsent
-    Grant this user's Azure CLI the ChannelMessage.Read.All delegated permission (admin action,
-    principal-scoped, idempotent) and exit. Run once per tenant per user.
-
-.EXAMPLE
-    ./scripts/Start-TeamsOperatorRelay.ps1 -GrantReadConsent
-
 .EXAMPLE
     ./scripts/Start-TeamsOperatorRelay.ps1
 
@@ -66,7 +62,7 @@
     ./scripts/Start-TeamsOperatorRelay.ps1 -Once -LookbackMinutes 5
 #>
 
-[CmdletBinding(SupportsShouldProcess)]
+[CmdletBinding()]
 param(
     [string] $TeamName = "Alon's Demos",
     [string] $ChannelName = 'Demo',
@@ -79,21 +75,16 @@ param(
     [int] $PollSeconds = 5,
     [ValidateRange(0, 1440)]
     [int] $LookbackMinutes = 0,
-    [switch] $Once,
-    [switch] $GrantReadConsent
+    [switch] $Once
 )
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
 $GraphBase = 'https://graph.microsoft.com/v1.0'
-$AzureCliAppId = '04b07795-8ddb-461a-bbee-02f9e1bf7b46'
-$GraphResourceAppId = '00000003-0000-0000-c000-000000000000'
-$ReadScope = 'ChannelMessage.Read.All'
+$RequiredScopes = @('Team.ReadBasic.All', 'Channel.ReadBasic.All', 'ChannelMessage.Read.All', 'ChannelMessage.Send')
 
 function Write-Step { param([string] $Message) Write-Host "`n=== $Message" -ForegroundColor Cyan }
-function Write-Exists { param([string] $Message) Write-Host "  [exists] $Message" -ForegroundColor DarkGray }
-function Write-Created { param([string] $Message) Write-Host "  [done] $Message" -ForegroundColor Green }
 function Write-Note { param([string] $Message) Write-Host "  $Message" -ForegroundColor DarkGray }
 function Write-Warn { param([string] $Message) Write-Host "  $Message" -ForegroundColor Yellow }
 function Write-Beat { param([string] $Message) Write-Host "  $Message" -ForegroundColor Green }
@@ -108,126 +99,48 @@ function Invoke-Checked {
     return $output
 }
 
-function Get-GraphToken {
-    <#  The read permission may have been granted minutes ago, and az serves .default tokens from
-        cache until they expire - so the read path asks for the scope EXPLICITLY, which is its own
-        cache entry and therefore fresh. Send and everything else ride the ordinary token. #>
-    param([switch] $ForRead)
-
-    if ($ForRead) {
-        $token = az account get-access-token --scope "https://graph.microsoft.com/$ReadScope" --query accessToken --output tsv 2>$null
-        if ($LASTEXITCODE -eq 0 -and $token) { return "$token".Trim() }
-        $global:LASTEXITCODE = 0
-    }
-    return (Invoke-Checked { az account get-access-token --resource https://graph.microsoft.com --query accessToken --output tsv } 'Getting a Graph token').Trim()
-}
-
 function Invoke-GraphJson {
+    <#  Invoke-MgGraphRequest with PSObject output and one useful translation: a Forbidden on the
+        message-read path names the admin-restricted scope and the fix instead of just the code. #>
     param(
         [Parameter(Mandatory)] [string] $Method,
         [Parameter(Mandatory)] [string] $Url,
         [object] $Body,
-        [switch] $ForRead,
         [Parameter(Mandatory)] [string] $What
     )
 
-    $arguments = @{
-        Method             = $Method
-        Uri                = $Url
-        Headers            = @{ Authorization = "Bearer $(Get-GraphToken -ForRead:$ForRead)" }
-        SkipHttpErrorCheck = $true
+    try {
+        if ($null -eq $Body) {
+            return Invoke-MgGraphRequest -Method $Method -Uri $Url -OutputType PSObject
+        }
+        return Invoke-MgGraphRequest -Method $Method -Uri $Url -Body ($Body | ConvertTo-Json -Depth 8) -ContentType 'application/json' -OutputType PSObject
     }
-    if ($null -ne $Body) {
-        $arguments.Body = ($Body | ConvertTo-Json -Depth 8)
-        $arguments.ContentType = 'application/json'
+    catch {
+        if ("$_" -match 'Forbidden|Authorization_RequestDenied' -and $What -like '*messages*') {
+            throw "$What was refused. ChannelMessage.Read.All is admin-restricted: sign in as an admin once (delete the cached session with Disconnect-MgGraph, re-run, and approve the consent prompt), or have an admin pre-approve the Microsoft Graph Command Line Tools app for these scopes."
+        }
+        throw "$What failed: $_"
     }
-
-    $response = Invoke-WebRequest @arguments
-
-    # Content is a string for JSON responses and byte[] for content types PowerShell does not
-    # recognise (some Graph error payloads among them) - decode only what needs decoding.
-    $text = if ($response.Content -is [byte[]]) { [Text.Encoding]::UTF8.GetString($response.Content) } else { "$($response.Content)" }
-
-    if ($response.StatusCode -eq 403 -and $ForRead) {
-        throw "Reading channel messages was refused (403). The Azure CLI needs the $ReadScope delegated permission for this user: run ./scripts/Start-TeamsOperatorRelay.ps1 -GrantReadConsent as an admin, then retry."
-    }
-    if ($response.StatusCode -ge 400) {
-        throw "$What failed with HTTP $($response.StatusCode): $text"
-    }
-    if ([string]::IsNullOrWhiteSpace($text)) { return $null }
-    return $text | ConvertFrom-Json
 }
 
 Write-Step 'Checking prerequisites'
 
-if (-not (Get-Command az -ErrorAction SilentlyContinue)) { throw 'az is not on PATH.' }
+if (-not (Get-Command az -ErrorAction SilentlyContinue)) { throw 'az is not on PATH (the hosted agent call needs it).' }
 
-$me = Invoke-GraphJson -Method get -Url "$GraphBase/me?`$select=id,userPrincipalName,displayName" -What 'Reading the signed-in user'
-Write-Note "Relaying as: $($me.userPrincipalName)"
+Import-Module Microsoft.Graph.Authentication -ErrorAction Stop
 
-# ---------------------------------------------------------------------------------------------
-# Optional one-time setup: the read consent, principal-scoped to this user alone.
-# ---------------------------------------------------------------------------------------------
-
-if ($GrantReadConsent) {
-    Write-Step "Granting $ReadScope to the Azure CLI for $($me.userPrincipalName) only"
-
-    # A first-party app can authenticate without a service principal materialized in the tenant,
-    # but a consent grant needs one to hang on - the same reason Connect-WorkIQ provisions the
-    # Work IQ principal before granting against it.
-    $azCliMatches = @((Invoke-GraphJson -Method get -Url "$GraphBase/servicePrincipals?`$filter=appId eq '$AzureCliAppId'&`$select=id" -What 'Finding the Azure CLI service principal').value)
-    if ($azCliMatches.Count -ge 1) {
-        $azCliSp = $azCliMatches[0].id
-        Write-Exists "Azure CLI service principal ($azCliSp)"
-    }
-    elseif ($PSCmdlet.ShouldProcess('Microsoft Azure CLI', 'Provision the service principal in this tenant')) {
-        $provisioned = Invoke-GraphJson -Method post -Url "$GraphBase/servicePrincipals" -What 'Provisioning the Azure CLI service principal' -Body @{ appId = $AzureCliAppId }
-        $azCliSp = $provisioned.id
-        Write-Created "Azure CLI service principal provisioned ($azCliSp)"
-    }
-    else {
-        return
-    }
-
-    $graphMatches = @((Invoke-GraphJson -Method get -Url "$GraphBase/servicePrincipals?`$filter=appId eq '$GraphResourceAppId'&`$select=id" -What 'Finding the Graph service principal').value)
-    if ($graphMatches.Count -eq 0) {
-        throw 'The Microsoft Graph service principal was not found in this tenant, which should be impossible - stop and look before granting anything.'
-    }
-    $graphSp = $graphMatches[0].id
-    Write-Note "Graph service principal: $graphSp"
-
-    $grants = @((Invoke-GraphJson -Method get -Url "$GraphBase/oauth2PermissionGrants?`$filter=clientId eq '$azCliSp' and resourceId eq '$graphSp' and principalId eq '$($me.id)'" -What 'Reading existing grants').value)
-
-    if ($grants.Count -gt 0) {
-        # Merged, never replaced - rewriting the grant to just this scope would revoke whatever
-        # the user's CLI already carried. Exact space-separated tokens, not substrings.
-        $grant = $grants[0]
-        $scopes = @("$($grant.scope)".Split(' ', [StringSplitOptions]::RemoveEmptyEntries))
-
-        if ($scopes -ccontains $ReadScope) {
-            Write-Exists "$ReadScope is already granted"
-        }
-        elseif ($PSCmdlet.ShouldProcess($me.userPrincipalName, "Extend the Azure CLI grant with $ReadScope")) {
-            Invoke-GraphJson -Method patch -Url "$GraphBase/oauth2PermissionGrants/$($grant.id)" -What 'Extending the grant' -Body @{
-                scope = (@($scopes + $ReadScope) -join ' ')
-            } | Out-Null
-            Write-Created "$ReadScope added (existing scopes preserved)"
-        }
-    }
-    elseif ($PSCmdlet.ShouldProcess($me.userPrincipalName, "Create a principal-scoped Azure CLI grant with $ReadScope")) {
-        Invoke-GraphJson -Method post -Url "$GraphBase/oauth2PermissionGrants" -What 'Creating the grant' -Body @{
-            clientId    = $azCliSp
-            consentType = 'Principal'
-            principalId = $me.id
-            resourceId  = $graphSp
-            scope       = $ReadScope
-        } | Out-Null
-        Write-Created "$ReadScope granted, principal-scoped - this user only, never the tenant"
-    }
-
-    Write-Note 'Done. Run the relay without -GrantReadConsent to start it.'
-    return
+# Connect-MgGraph reuses the machine's token cache silently when the scopes are already consented
+# and cached; it goes interactive only when something is missing - which for the admin-restricted
+# read scope is exactly once per user.
+$context = Get-MgContext
+$missing = if ($context) { @($RequiredScopes | Where-Object { $context.Scopes -notcontains $_ }) } else { $RequiredScopes }
+if ($missing.Count -gt 0) {
+    Write-Note "Connecting to Microsoft Graph for: $($RequiredScopes -join ', ')"
+    Connect-MgGraph -Scopes $RequiredScopes -NoWelcome -ErrorAction Stop
 }
+
+$me = Invoke-GraphJson -Method GET -Url "$GraphBase/me?`$select=id,userPrincipalName,displayName" -What 'Reading the signed-in user'
+Write-Note "Relaying as: $($me.userPrincipalName)"
 
 # ---------------------------------------------------------------------------------------------
 # Resolve the stage: the team, the channel, and the agent behind them.
@@ -252,13 +165,13 @@ if (-not $ProjectEndpoint) {
 
 Write-Step "Resolving '$TeamName' / '$ChannelName'"
 
-$teams = @((Invoke-GraphJson -Method get -Url "$GraphBase/me/joinedTeams" -What 'Listing joined teams').value | Where-Object { $_.displayName -eq $TeamName })
+$teams = @((Invoke-GraphJson -Method GET -Url "$GraphBase/me/joinedTeams" -What 'Listing joined teams').value | Where-Object { $_.displayName -eq $TeamName })
 if ($teams.Count -ne 1) {
     throw "Expected exactly one joined team named '$TeamName'; found $($teams.Count)."
 }
 $teamId = $teams[0].id
 
-$channels = @((Invoke-GraphJson -Method get -Url "$GraphBase/teams/$teamId/channels" -What 'Listing channels').value | Where-Object { $_.displayName -eq $ChannelName })
+$channels = @((Invoke-GraphJson -Method GET -Url "$GraphBase/teams/$teamId/channels" -What 'Listing channels').value | Where-Object { $_.displayName -eq $ChannelName })
 if ($channels.Count -ne 1) {
     throw "Expected exactly one channel named '$ChannelName' in '$TeamName'; found $($channels.Count)."
 }
@@ -305,7 +218,7 @@ Write-Warn 'Work IQ evidence comes from the relay runner''s Microsoft 365, whoev
 $cutoff = (Get-Date).ToUniversalTime().AddMinutes(-$LookbackMinutes)
 $handled = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
 
-$announcement = Invoke-GraphJson -Method post -Url "$GraphBase/teams/$teamId/channels/$channelId/messages" -What 'Announcing the relay' -Body @{
+$announcement = Invoke-GraphJson -Method POST -Url "$GraphBase/teams/$teamId/channels/$channelId/messages" -What 'Announcing the relay' -Body @{
     body = @{
         contentType = 'text'
         content     = "The Caesarea Operations Agent (Foundry-hosted) is listening on this channel via a presenter-run relay. Post a message to ask it something - try: What do our maintenance records say about streetlight L-417? Note: answers are produced as $($me.displayName), whoever asks."
@@ -315,7 +228,7 @@ $announcement = Invoke-GraphJson -Method post -Url "$GraphBase/teams/$teamId/cha
 Write-Beat 'Announced in the channel.'
 
 while ($true) {
-    $messages = @((Invoke-GraphJson -Method get -Url "$GraphBase/teams/$teamId/channels/$channelId/messages?`$top=20" -ForRead -What 'Reading channel messages').value)
+    $messages = @((Invoke-GraphJson -Method GET -Url "$GraphBase/teams/$teamId/channels/$channelId/messages?`$top=20" -What 'Reading channel messages').value)
 
     foreach ($message in ($messages | Sort-Object createdDateTime)) {
         if ("$($message.messageType)" -ne 'message') { continue }
@@ -347,11 +260,11 @@ while ($true) {
         $footer = "`n`n— Caesarea Operations Agent (hosted on Microsoft Foundry) · relayed as $($me.displayName)"
         if ($answer.ResponseId) { $footer += " · response $("$($answer.ResponseId)".Substring(0, [Math]::Min(18, "$($answer.ResponseId)".Length)))" }
 
-        Invoke-GraphJson -Method post -Url "$GraphBase/teams/$teamId/channels/$channelId/messages/$($message.id)/replies" -What 'Posting the answer' -Body @{
+        Invoke-GraphJson -Method POST -Url "$GraphBase/teams/$teamId/channels/$channelId/messages/$($message.id)/replies" -What 'Posting the answer' -Body @{
             body = @{ contentType = 'text'; content = ($answer.Text + $footer) }
         } | Out-Null
 
-        Write-Beat "A posted ($([Math]::Min(80, $answer.Text.Length)) chars shown): $($answer.Text.Substring(0, [Math]::Min(80, $answer.Text.Length)))"
+        Write-Beat "A posted: $($answer.Text.Substring(0, [Math]::Min(80, $answer.Text.Length)))"
     }
 
     if ($Once) {

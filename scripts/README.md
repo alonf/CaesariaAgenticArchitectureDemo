@@ -18,7 +18,7 @@ GitHub Actions workflow driving committed Bicep — see [docs/deployment.md](../
 | [`Start-CaesareaDemo.ps1`](Start-CaesareaDemo.ps1) | The presenter's one command: checks the per-machine setup (hosted-agent endpoint in user secrets, Azure sign-in, and that the OneDrive work order is current — refreshing a stale one), repairs what it can, warns about the rest, starts the AppHost and opens the dashboard | Yes — a configured machine reports `[exists]` and just starts |
 | [`Test-Agent365Readiness.ps1`](Test-Agent365Readiness.ps1) | Gate for the Agent 365 segment: the agent's Entra **agent identity**, its owners (flagging a pipeline-only owner), the tenant licence, and the agent-identity inventory | Read-only |
 | [`Set-AgentOwner.ps1`](Set-AgentOwner.ps1) | Adds an accountable human owner (default: the signed-in user) to the hosted agent's identity, alongside the pipeline that created it | Yes — an existing owner reports `[exists]` |
-| [`Start-TeamsOperatorRelay.ps1`](Start-TeamsOperatorRelay.ps1) | Presenter-run relay that answers a Teams channel's new messages with the hosted agent, honestly labeled ("relayed as \<presenter\>"); `-GrantReadConsent` performs the one-time, principal-scoped read grant | Consent grant: yes; the relay itself answers each message once per run |
+| [`Start-TeamsOperatorRelay.ps1`](Start-TeamsOperatorRelay.ps1) | Presenter-run relay that answers a Teams channel's new messages with the hosted agent, honestly labeled ("relayed as \<presenter\>"). First run prompts once for Microsoft Graph consent (admin-restricted read scope); silent afterwards | The relay answers each message once per run |
 
 All mutating scripts support `-WhatIf`. **Run that first**; it makes no changes and prints exactly
 what would happen.
