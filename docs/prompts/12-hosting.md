@@ -70,6 +70,24 @@ flipped from the switchboard, requires the Hosting stage, and resets to LOCAL on
 downgrade — same lifecycle as the tool-source toggle, for the same reason: the flip is the beat,
 so re-entering the stage must start from LOCAL.
 
+### The closing beat: ask it to turn the light off
+
+Do this live — it lands harder than any slide. Ask the hosted agent, in any phrasing, to restore
+L-417 / turn it off. Verified against the deployed agent: it runs the full investigation, *looks
+for* a governed control tool, reports honestly that "no such control tool is available to me
+here", and recommends escalating to the duty supervisor. Then say the ladder out loud:
+
+1. **Instruction-only** — the Work IQ evidence-only rule: the permission could write; the prompt
+   says don't. The weakest tier, and this demo names it as such.
+2. **Approval-gated** — MRTR, the workflow gate, the intercepted tool: the capability exists and a
+   human stands in front of it. The local stages' whole arc.
+3. **Not composed** — the hosted agent: no restore tool exists to approve, no instruction to talk
+   it out of, no confused-deputy path to it. Its Entra identity only ever held `EnergyHub.Read`.
+
+*The most secure capability is the one the composition never granted.* This is not a limitation
+being excused — it is the recorded design ("a hosted agent that carried the presenter-driven
+control surfaces would be a worse example of hosting"), promoted to the stage's closing line.
+
 ## Slide 43/44 corrections
 
 The code block is **correct** — verified by compiling it verbatim, 0 errors and 0 warnings, on the

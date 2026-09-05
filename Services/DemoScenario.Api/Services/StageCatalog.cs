@@ -198,9 +198,10 @@ public sealed class StageCatalog
                 new(DemoSurface.CommandCenter, "Click Ask about L-417's work records.", "The familiar local answer: evidence cards from the simulated store, labelled Simulated work knowledge."),
                 new(DemoSurface.Switchboard, "Flip Habitat: LOCAL to FOUNDRY HOSTED.", null),
                 new(DemoSurface.CommandCenter, "Click the same button again.", "The answer now arrives from Foundry's hosted runtime and cites the OneDrive work order - source of record: Microsoft 365, with the diffuser detail the simulated store never contained. First time only: a Work IQ consent link appears instead - open it, consent as yourself, ask again."),
-                new(DemoSurface.CommandCenter, "Point at the footnote under the answer.", "The hosted agent read the CLOUD Energy Hub and the presenter's own Microsoft 365 - not this laptop's city. The cloud city is not switchboard-driven: it permanently shows the forgotten-override situation WO-8732 explains, so the two cities agree at the start of the beat and diverge the moment the local one is restored.")
+                new(DemoSurface.CommandCenter, "Point at the footnote under the answer.", "The hosted agent read the CLOUD Energy Hub and the presenter's own Microsoft 365 - not this laptop's city. The cloud city is not switchboard-driven: it permanently shows the forgotten-override situation WO-8732 explains, so the two cities agree at the start of the beat and diverge the moment the local one is restored."),
+                new(DemoSurface.CommandCenter, "Closing beat: ask the hosted agent to TURN THE LIGHT OFF (any phrasing).", "It investigates, looks for a control tool, reports that none is available to it, and escalates to a human - because the hosted composition carries no write capability at all. The strongest control on this ladder: not an instruction, not an approval gate, but a capability that was never composed and cannot be exploited.")
             ],
-            "The agent code did not change - the habitat did. The platform owns the runtime and the identity, and Work IQ answers as the person asking, which is why your OneDrive is the evidence.")
+            "The agent code did not change - the habitat did. The platform owns the runtime and the identity, and Work IQ answers as the person asking, which is why your OneDrive is the evidence. And the safest capability is the one the composition never granted.")
     };
 
     private static readonly DemoStageDescriptor[] ScriptedDescriptors =
