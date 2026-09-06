@@ -20,6 +20,22 @@ the source for every live beat; the runbooks only put them in the order each tal
 A beat that reads **Ready to present** on the switchboard is ready; **Not verified** means a check
 could not run, and the readiness list says which.
 
+## Fallback artifacts
+
+None are committed. Two beats depend on things outside a fresh clone - a deployed hosted agent and
+a tenant - so what they show has to be captured by the presenter during rehearsal, on the tenant
+the talk will name. Keep the captures under `docs/runbooks/artifacts/`, which is ignored by git so
+nobody's tenant data lands in the repository by accident, or beside the slides.
+
+| Capture | When | What |
+|---|---|---|
+| Hosted answer | After one successful run of the Hosting beat | The Command Center's agent panel showing the hosted answer with its OneDrive evidence and the footnote naming the source of record. |
+| Agent 365 portal | While signed in to the tenant's admin experience | The agent's registry entry, its activity, security, and permissions tabs; keep the "no owner" capture as the anti-pattern. |
+| Evaluation result | After running `eval.yaml` against your hosted agent | The summary and one trace, good or bad; the talk presents it as a measurement, not a pass. |
+
+The consent-prompt screenshot in [the hosting guide](../product-status/hosted-agent.md) is the one
+image the repository does ship; it shows Work IQ asking the presenter for consent, not an answer.
+
 ## Not in this demo
 
 Said here once so neither lecture promises it from the stage.

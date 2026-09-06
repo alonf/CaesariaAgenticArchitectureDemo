@@ -39,12 +39,16 @@ Beats: **MCP Tools**, **Interactive Input**, **Workflow**.
 
 ## Act 4 - Behavioral proof (24-30 min): slide, not click
 
-There is no runnable baseline-versus-governed comparison in this repository. What exists is
-`eval.yaml` and a 15-question dataset that measures the hosted agent's uncertainty handling on
-unseeded assets; it is kept as an honest, imperfect measurement rather than tuned to pass. Present a
-recorded result and its trace, and close on the distinction the act is for: unit tests prove the
-restore works, identity decides who may ask, and behavioral evaluation asks whether the agent
-should have requested it.
+There is no runnable baseline-versus-governed comparison in this repository, and no recorded
+result either. What the repository ships is the specification: `eval.yaml`, the 15-question
+dataset under `datasets/caesarea-operations-behavior/`, and the rubric under
+`evaluators/caesarea-operations-behavior/`. The dataset measures the hosted agent's uncertainty
+handling on unseeded assets and is kept as an honest, imperfect measurement rather than tuned to
+pass. Show the dataset and the rubric from the repository; if you have run the evaluation against
+your own hosted agent, show your numbers and one trace captured during rehearsal (see "Fallback
+artifacts" in the [runbook index](README.md)). Close on the distinction the act is for: unit tests
+prove the restore works, identity decides who may ask, and behavioral evaluation asks whether the
+agent should have requested it.
 
 ## Short prepared walkthroughs
 

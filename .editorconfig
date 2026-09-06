@@ -44,3 +44,13 @@ indent_size = 2
 
 [*.md]
 trim_trailing_whitespace = false
+
+# Read line by line by Linux tooling; matches .gitattributes.
+[*.{yml,yaml}]
+end_of_line = lf
+
+[Dockerfile]
+end_of_line = lf
+
+[*.sh]
+end_of_line = lf

@@ -22,8 +22,9 @@ the mechanism the beat exists to show; the slide anchor is the `#region` the dec
 | 41-42 | A2A Delegation | Agent-card discovery and task delegation | Lights On | Ask the workforce domain about L-417, then for the technician cost; show the work order in full on the switchboard. |
 | 43-44 | Hosting | Foundry's hosted runtime with Work IQ | Habitat: LOCAL; the hosted agent deployed; the work order in your OneDrive | Ask about the work records, flip Habitat to FOUNDRY HOSTED, ask again. Closing beat: ask the hosted agent to turn the light off. |
 
-The Hosting beat needs the cloud half. Without it, run everything else and show the hosted answer
-from the recorded screenshot in [the hosting guide](../product-status/hosted-agent.md).
+The Hosting beat needs the cloud half. Without it, run everything else and show a hosted answer
+you captured during rehearsal: the repository ships no such capture (the hosting guide's only
+screenshot is the consent prompt). See "Fallback artifacts" in the [runbook index](README.md).
 
 ## Slide-only
 

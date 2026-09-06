@@ -1,3 +1,15 @@
+# Text files check out with CRLF on every platform, matching .editorconfig's end_of_line = crlf, so
+# the formatting gate in CI sees the same bytes on Ubuntu that a Windows desktop sees. The index
+# keeps LF either way; only the checkout differs.
+* text=auto eol=crlf
+
+# Files that Linux tooling reads line by line keep LF: Docker parses instructions per line, a shell
+# chokes on a carriage return, and a workflow's run block is a shell script.
+Dockerfile text eol=lf
+*.sh text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
 # Vendored third-party bundles are stored byte-for-byte: no line-ending normalization and no
 # whitespace checks, so `git diff --check` stays clean and the file keeps its published hash.
 *.min.js -text -whitespace

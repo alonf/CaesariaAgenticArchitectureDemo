@@ -491,3 +491,6 @@ docs/Caesarea-Smart-City-Architecture-and-Requirements-EN.md
 .foundry/
 results.json
 azure.yaml
+
+# Presenters' own rehearsal captures (screenshots, evaluation results): tenant data, kept out.
+docs/runbooks/artifacts/

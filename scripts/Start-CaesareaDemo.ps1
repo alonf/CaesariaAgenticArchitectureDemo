@@ -254,10 +254,20 @@ else {
 
             $reason = if ($null -eq $content) { 'missing' } else { 'stale (old version or past its clearance date)' }
 
-            if ($PSCmdlet.ShouldProcess($workOrderPath, "Refresh the $reason work order in OneDrive")) {
+            # The refresh script signs in for Files.ReadWrite when the cached session lacks it, and
+            # that sign-in is interactive - a prompt nobody is watching would stall the start. So it
+            # is only run when the presenter asked for it (-RefreshWorkOrder) or the cached session
+            # can already write; otherwise the stale copy is reported and the start continues.
+            $canWrite = $RefreshWorkOrder -or ((Get-MgContext).Scopes -contains 'Files.ReadWrite')
+
+            if (-not $canWrite) {
+                Write-Warn "The work order is $reason, and the cached Graph session cannot write it (no Files.ReadWrite)."
+                Write-Warn 'Re-run with -RefreshWorkOrder to sign in for it, or run ./scripts/New-CaesareaWorkOrder.ps1 -Force yourself. The local demo is unaffected.'
+            }
+            elseif ($PSCmdlet.ShouldProcess($workOrderPath, "Refresh the $reason work order in OneDrive")) {
                 # Optional preparation for the hosted beat, never a gate on the local demo: whatever
-                # the child script runs into - sign-in, a conditional write, the network - is
-                # reported, and the start continues.
+                # the child script runs into - a conditional write, the network - is reported, and
+                # the start continues.
                 try {
                     & "$PSScriptRoot/New-CaesareaWorkOrder.ps1" -Force -ErrorAction Stop
                     Write-Note 'Refreshed. Microsoft 365 needs a few minutes to re-index before Work IQ serves the new copy.'
