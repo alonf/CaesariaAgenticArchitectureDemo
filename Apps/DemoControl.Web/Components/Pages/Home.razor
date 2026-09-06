@@ -50,13 +50,15 @@
        does. Rehearsal mode skips this for practice runs. *@
     @if (_pendingTarget is { } pendingTarget)
     {
-        <section class="panel prepare-preview" aria-label="Prepare beat">
+        <section id="prepare-beat" class="panel prepare-preview" aria-labelledby="prepare-beat-title">
             <div class="panel-heading">
-                <h2>Prepare: @StageDisplayName(pendingTarget)</h2>
+                <h2 id="prepare-beat-title">Prepare: @StageDisplayName(pendingTarget)</h2>
                 <span class="stamp">@PendingStamp</span>
             </div>
+            <p class="prepare-status" role="status">@PreparationStatus(pendingTarget)</p>
             @if (_pendingPrepare is { } pending)
             {
+                <div class="prepare-details">
                 @if (PlannedActions(pending).Count == 0)
                 {
                     <p class="panel-intro">Everything this beat starts from is already in place - nothing to change.</p>
@@ -74,10 +76,11 @@
                 {
                     <p class="switchboard-note">Arranged by you, not the director: @string.Join(" · ", ManualPrerequisites(pending))</p>
                 }
+                </div>
                 <div class="stage-switch-actions">
                     @if (PlannedActions(pending).Count > 0)
                     {
-                        <button class="button primary" @onclick="ConfirmPrepareAsync" disabled="@_prepareBusy">@(_prepareBusy ? "Preparing..." : "Confirm")</button>
+                        <button class="button primary" @onclick="ConfirmPrepareAsync" disabled="@_prepareBusy">@(_prepareBusy ? "Preparing..." : $"Confirm {StageDisplayName(pendingTarget)}")</button>
                         <button class="button secondary" @onclick="CancelPrepare" disabled="@_prepareBusy">Cancel</button>
                     }
                     else
@@ -88,7 +91,8 @@
             }
             else
             {
-                <p class="panel-intro">Checking what this beat starts from...</p>
+                <p class="panel-intro">@(_prepareBusy ? "Applying this beat's starting conditions..." : "Checking what this beat starts from...")</p>
+                <button class="button secondary" @onclick="CancelPrepare" disabled="@_prepareBusy">Cancel</button>
             }
         </section>
     }
@@ -122,8 +126,12 @@
                             @foreach (var beat in beats)
                             {
                                 <li>
-                                    <button type="button" class="beat-chip @(beat.Id == CurrentStageId ? "current" : string.Empty)" title="@beat.Feature" @onclick="() => BeginPrepareAsync(beat.Id)" disabled="@_prepareBusy">
+                                    <button type="button" class="beat-chip @(beat.Id == CurrentStageId ? "current" : string.Empty) @(_pendingTarget == beat.Id ? "pending" : string.Empty)" title="@beat.Feature" aria-expanded="@(_pendingTarget == beat.Id)" aria-controls="prepare-beat" @onclick="() => BeginPrepareAsync(beat.Id)" disabled="@_prepareBusy">
                                         @beat.Name
+                                        @if (PreparationStatus(beat.Id) is { } status)
+                                        {
+                                            <span class="beat-pending-status">@status</span>
+                                        }
                                     </button>
                                 </li>
                             }
@@ -230,12 +238,18 @@
                 @foreach (var stage in _stageCatalog.Stages)
                 {
                     <button type="button"
-                            class="stepper-step @StepperClass(stage.Id)"
+                            class="stepper-step @StepperClass(stage.Id) @(_pendingTarget == stage.Id ? "pending" : string.Empty)"
                             title="@stage.Feature"
+                            aria-expanded="@(_pendingTarget == stage.Id)"
+                            aria-controls="prepare-beat"
                             @onclick="() => BeginPrepareAsync(stage.Id)"
                             disabled="@_prepareBusy">
                         <span class="stepper-index">@((int)stage.Id + 1)</span>
                         <span class="stepper-name">@stage.Name</span>
+                        @if (PreparationStatus(stage.Id) is { } status)
+                        {
+                            <span class="beat-pending-status">@status</span>
+                        }
                     </button>
                 }
             </div>
@@ -610,7 +624,29 @@
 
     private DemoStage? CurrentStageId => _stageCatalog?.CurrentStage.Id;
 
-    private string PendingStamp => _pendingPrepare switch
+    // A selection is not yet the active stage. Both sets of stage buttons show the same progress
+    // while the floating panel carries the confirmation, regardless of the page's scroll position.
+    private string? PreparationStatus(DemoStage stage)
+    {
+        if (_pendingTarget != stage)
+        {
+            return null;
+        }
+
+        if (_prepareBusy)
+        {
+            return "Preparing...";
+        }
+
+        if (_pendingPrepare is null)
+        {
+            return "Checking...";
+        }
+
+        return PlannedActions(_pendingPrepare).Count > 0 ? "Awaiting confirmation" : "Already in place";
+    }
+
+    private string PendingStamp => _prepareBusy ? "in progress" : _pendingPrepare switch
     {
         null => "checking...",
         { } pending when PlannedActions(pending).Count == 0 => "already in place",
