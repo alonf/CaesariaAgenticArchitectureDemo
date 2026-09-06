@@ -274,60 +274,12 @@ builder.Services.AddFoundryResponses();
 
 // AddFoundryResponses registers the services; this maps the routes and the /readiness probe the
 // platform requires. The Foundry.Hosting package ships no builder-level extension that would call
-// RegisterProtocol for us, so it is called here.
-//
-// This composition was blameless the whole time. On Foundry.Hosting 1.19 the hosted runtime bound
-// PORT twice and the container died with "Failed to bind to address http://[::]:8088: address
-// already in use" - in an empty container, with nothing else running, because the process was
-// competing with itself. 1.20 fixed it, and that upgrade was the entire fix.
-//
-// The trap while diagnosing it: outside the hosted runtime the bug does not exist, because the two
-// listeners land on different ports and both come up. Set FOUNDRY_HOSTING_ENVIRONMENT to anything
-// non-empty and the sandbox reproduces on a laptop in seconds - worth far more than another
-// deployment. Allow a minute for startup there: TaskManager retries its storage calls before Kestrel
-// binds, so a container that looks hung at fifteen seconds is often just waiting.
+// RegisterProtocol for us, so it is called here. Requires Foundry.Hosting 1.20 or later: 1.19 bound
+// PORT twice inside the hosted runtime and the container never started - the collision, and how to
+// reproduce the sandbox on a laptop, are in docs/product-status/hosted-agent.md.
 builder.RegisterProtocol("responses", endpoints => endpoints.MapFoundryResponses());
 #endregion
 
 var app = builder.Build();
-
-// PROBE: does an inbound request carry a user identity?
-//
-// The whole delegated-data story depends on it. Foundry Toolboxes describe "a tool source that
-// requires a per-user delegated identity, which is only available on a user request's egress" and
-// resolve it with "the platform-injected per-user isolation key" - so if a request reaches this
-// container with no user on it, an agent cannot read a person's OneDrive as that person, and the
-// Work IQ demo has to be an application-permission one instead. Those are different demos and
-// different governance stories, so this is worth one deployment to settle.
-//
-// Header NAMES are logged in full; the user id is truncated, because it identifies a person and a
-// diagnostic has no business writing one into telemetry at full length.
-app.App.Use(async (context, next) =>
-{
-    var interesting = context.Request.Headers
-        .Where(header =>
-            header.Key.StartsWith("x-ms-", StringComparison.OrdinalIgnoreCase) ||
-            header.Key.StartsWith("x-agent-", StringComparison.OrdinalIgnoreCase) ||
-            header.Key.StartsWith("x-client-", StringComparison.OrdinalIgnoreCase))
-        .Select(header => header.Key)
-        .Order(StringComparer.OrdinalIgnoreCase)
-        .ToArray();
-
-    var userId = context.Request.Headers["x-ms-user-id"].FirstOrDefault()
-        ?? context.Request.Headers["x-agent-user-id"].FirstOrDefault();
-
-    var identity = userId is { Length: > 0 }
-        ? $"present ({userId[..Math.Min(8, userId.Length)]}…, {userId.Length} chars)"
-        : "absent";
-
-    var logger = context.RequestServices.GetRequiredService<ILoggerFactory>()
-        .CreateLogger("OperationsAgent.Hosted");
-    var path = context.Request.Path.Value ?? "(none)";
-    var headerNames = interesting.Length == 0 ? "(none)" : string.Join(", ", interesting);
-
-    HostedAgentLog.InboundIdentity(logger, path, identity, headerNames);
-
-    await next();
-});
 
 await app.RunAsync();

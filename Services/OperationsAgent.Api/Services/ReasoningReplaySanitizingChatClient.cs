@@ -7,34 +7,17 @@ namespace OperationsAgent.Api.Services;
 /// follow-up request never replays a reasoning item.
 /// </summary>
 /// <remarks>
-/// This works around a defect in the hosted runtime's request composition, diagnosed on 2026-09-05 by
-/// capturing the rejected request body (see OperationsAgent.Hosted's ModelTrafficDumpPolicy and
-/// docs/product-status/hosted-agent.md):
+/// Azure Foundry's Responses endpoint rejects a replayed reasoning item's <c>encrypted_content</c>
+/// with HTTP 400 <c>invalid_payload</c>, and the hosted runtime (store:false) replays each leg's
+/// items in the follow-up request - so without this filter every tool-calling turn fails there. The
+/// endpoint does not require a function_call to be preceded by its reasoning item, so dropping the
+/// item is safe; the cost is that the model re-reasons after each tool result. The diagnosis is
+/// recorded in docs/product-status/hosted-agent.md.
 ///
-///   - Foundry.Hosting drives the model with store:false and include:["reasoning.encrypted_content"],
-///     so a reasoning model returns its chain-of-thought as an opaque encrypted_content blob.
-///   - After any function call, the function-invocation loop replays that reasoning item - with the
-///     blob - in the follow-up request, because with store:false there is no server-side state to
-///     chain to.
-///   - Azure Foundry's /openai/v1/responses rejects encrypted_content on INPUT reasoning items with
-///     HTTP 400 invalid_payload naming no parameter. The service refuses the very field the SDK asked
-///     it to emit.
-///
-/// The consequence before this filter: every turn in which the model called ANY tool failed, and
-/// turns without tool calls succeeded - which masqueraded as an intermittent fault when it was really
-/// a deterministic one gated on the model's tool choice.
-///
-/// Removing the reasoning items is safe against the same endpoint: replaying the captured request
-/// without them returns 200 (the endpoint does not require a function_call to be preceded by its
-/// reasoning item, unlike openai.com). The cost is that the model re-reasons after each tool result
-/// rather than resuming its chain-of-thought - invisible in answers, slightly more reasoning tokens.
-///
-/// Lives in this project rather than in OperationsAgent.Hosted so the deterministic tests can pin
-/// it; the hosted head wires it beneath the function-invocation loop (via
-/// ChatClientAgentOptions.ChatClientFactory), where it sees the loop's replayed messages, not just
-/// the caller's. WorkforceAgent.Api carries its own copy on purpose - the workforce domain does not
-/// reference this one, and a shared cross-domain utility project is a worse trade than one
-/// duplicated, pinned file.
+/// Lives in this project so the deterministic tests can pin it; the hosted head wires it beneath the
+/// function-invocation loop (ChatClientAgentOptions.ChatClientFactory), where it sees the loop's
+/// replayed messages. WorkforceAgent.Api carries its own copy on purpose - the workforce domain does
+/// not reference this one.
 /// </remarks>
 internal sealed class ReasoningReplaySanitizingChatClient(IChatClient innerClient) : DelegatingChatClient(innerClient)
 {

@@ -37,10 +37,4 @@ internal static partial class HostedAgentLog
         Level = LogLevel.Information,
         Message = "Skills exposed as a load_skill tool rather than through AgentSkillsProvider: {Names}.")]
     internal static partial void SkillsExposedAsTools(ILogger logger, string names);
-
-    [LoggerMessage(
-        EventId = 2707,
-        Level = LogLevel.Information,
-        Message = "Inbound {Path}: user identity {Identity}. Platform headers: {HeaderNames}.")]
-    internal static partial void InboundIdentity(ILogger logger, string path, string identity, string headerNames);
 }

@@ -7,20 +7,13 @@ namespace WorkforceAgent.Api.Services;
 /// follow-up request never replays a reasoning item.
 /// </summary>
 /// <remarks>
-/// The Workforce Agent's counterpart of <c>OperationsAgent.Api.Services.ReasoningReplaySanitizingChatClient</c>,
-/// beside which the defect was diagnosed; the full story is in docs/product-status/hosted-agent.md. In
-/// short: the Foundry hosted runtime drives the model with store:false and replays each leg's items
-/// in the follow-up request, and Azure Foundry's Responses endpoint rejects a replayed reasoning
-/// item's encrypted_content with HTTP 400 invalid_payload. Any tool call therefore kills the turn.
-///
-/// This agent is the worst possible victim: its instructions prescribe a two-tool chain - find the
-/// work orders, then open one - so hosted, it would fail nearly every time.
-///
-/// Applied unconditionally in <see cref="WorkforceAgentFactory"/> rather than only in the hosted
-/// head, because it is harmless where the defect is absent: under the Aspire habitat the session
-/// chains by previous_response_id, no reasoning items are replayed, and this filter has nothing to
-/// remove. The cost where it does act is that the model re-reasons after each tool result rather
-/// than resuming its chain-of-thought.
+/// The Workforce Agent's counterpart of the Operations Agent's filter. The Foundry hosted runtime
+/// replays each leg's items with store:false, and the Responses endpoint rejects a replayed reasoning
+/// item's encrypted_content with HTTP 400 invalid_payload, so any tool call would kill the turn - and
+/// this agent's instructions prescribe a two-tool chain. Applied unconditionally in
+/// <see cref="WorkforceAgentFactory"/> because it is harmless where the defect is absent: under the
+/// Aspire habitat the session chains by previous_response_id and there is nothing to remove. The
+/// diagnosis is recorded in docs/product-status/hosted-agent.md.
 /// </remarks>
 internal sealed class ReasoningReplaySanitizingChatClient(IChatClient innerClient) : DelegatingChatClient(innerClient)
 {

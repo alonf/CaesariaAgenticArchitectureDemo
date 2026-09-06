@@ -8,16 +8,11 @@ namespace OperationsAgent.Hosted;
 /// request, named by sequence and response status so a rejected POST is identifiable at a glance.
 /// </summary>
 /// <remarks>
-/// Exists because of the hosted runtime's invalid_payload defect: the service reports only "The
-/// provided data does not match the expected schema", with no parameter and no offending value, and
-/// the request that earned it is assembled deep inside the SDK from streamed updates and rehydrated
-/// history. The only way to see what was actually sent is to capture it at the pipeline, and the only
-/// place that capture can be composed is here, where the AIProjectClient is constructed.
-///
-/// Registered only when DUMP_MODEL_TRAFFIC names a directory, and never in the Foundry-hosted
-/// environment - Program.cs refuses the flag there, because the dumps contain full prompts, tool
-/// outputs and whatever a tool returned about a person's own documents, and a hosted container's
-/// persistent filesystem is no place to leave them.
+/// The service reports an invalid_payload rejection with no parameter and no offending value, and the
+/// request that earned it is assembled deep inside the SDK - so the only way to see what was sent is
+/// to capture it at the pipeline, where the AIProjectClient is constructed. Registered only when
+/// DUMP_MODEL_TRAFFIC names a directory, and never in the Foundry-hosted environment: the dumps hold
+/// full prompts, tool outputs and whatever a tool returned about a person's own documents.
 /// </remarks>
 internal sealed class ModelTrafficDumpPolicy(string dumpDirectory) : PipelinePolicy
 {

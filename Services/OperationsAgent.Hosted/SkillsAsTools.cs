@@ -9,13 +9,10 @@ namespace OperationsAgent.Hosted;
 /// </summary>
 /// <remarks>
 /// <para>
-/// This was born of a wrong diagnosis and is kept because it is independently useful. The HTTP 400
-/// <c>invalid_payload</c> failures once blamed on <c>AgentSkillsProvider</c> were never about
-/// skills: the hosted runtime replays reasoning items the service rejects on any tool-calling
-/// turn, and <c>ReasoningReplaySanitizingChatClient</c> is the actual fix (the full story is in
-/// docs/product-status/hosted-agent.md). The provider path works and remains the default
-/// (SKILLS_MODE=provider); this tool path needs no files in the image and no SKILLS_DIRECTORY,
-/// which is its own reason to exist.
+/// The provider path (SKILLS_MODE=provider) is the default and works; this tool path needs no files
+/// in the image and no SKILLS_DIRECTORY, which is its own reason to exist. It was first written
+/// against a misread failure - docs/product-status/hosted-agent.md has that history - and is kept
+/// because it is independently useful.
 /// </para>
 /// <para>
 /// What it replaces is smaller than it looks. Progressive disclosure is a pattern, not an API: the
