@@ -65,7 +65,61 @@ public sealed class DemoDirectorTests
     }
 
     [Fact]
-    public async Task AnUnreadableSwitchIsUnknownNotUnmetAndIsStillSetByPreparation()
+    public async Task AFixtureTheCityHasDriftedFromIsUnmetAndAppliedAgain()
+    {
+        // The deterministic beat ends with the operator restoring L-417. The scenario still reads
+        // Lights On, but the next beat starts with the lamp off unless the fixture is re-applied -
+        // so the identifier alone is not a fixture; the asset is.
+        var world = new DirectorWorld(DemoStage.Deterministic, ScenarioId.ForgottenOverride);
+        world.Energy.Twin = world.Energy.Twin with { ReportedIsOn = false, DesiredIsOn = false, ManualOverride = false };
+
+        var readiness = await world.Director.GetReadinessAsync(DemoStage.InvestigationAgent, "corr", CancellationToken.None);
+        var fixture = Assert.Single(readiness.Prerequisites, status => status.Prerequisite.Kind == DemoPrerequisiteKind.Scenario);
+        Assert.False(fixture.Satisfied);
+        Assert.Contains("now off", fixture.CurrentValue, StringComparison.Ordinal);
+
+        var result = await world.Director.PrepareAsync(DemoStage.InvestigationAgent, "corr", CancellationToken.None);
+        Assert.Equal(["scenario:ForgottenOverride", "stage:InvestigationAgent"], world.Log);
+        Assert.True(result.Readiness.Ready);
+    }
+
+    [Fact]
+    public async Task AFailedApplicationIsNotAFixture()
+    {
+        // An application that failed halfway keeps the identifier it asked for. The identifier
+        // matching is not the city being in that state.
+        var world = new DirectorWorld(DemoStage.Session, ScenarioId.ForgottenOverride);
+        world.Scenarios.ApplicationStatus = ScenarioApplicationStatus.Failed;
+
+        var readiness = await world.Director.GetReadinessAsync(DemoStage.Session, "corr", CancellationToken.None);
+
+        var fixture = Assert.Single(readiness.Prerequisites, status => status.Prerequisite.Kind == DemoPrerequisiteKind.Scenario);
+        Assert.False(fixture.Satisfied);
+        Assert.Contains("Failed", fixture.CurrentValue, StringComparison.Ordinal);
+        Assert.False(readiness.Ready);
+    }
+
+    [Fact]
+    public async Task AnUnreadableFixtureIsUnknownAndKeepsTheBeatFromReadingAsReady()
+    {
+        var world = new DirectorWorld(DemoStage.Session, ScenarioId.ForgottenOverride);
+        world.Energy.FailReads = true;
+
+        var readiness = await world.Director.GetReadinessAsync(DemoStage.Session, "corr", CancellationToken.None);
+        var fixture = Assert.Single(readiness.Prerequisites, status => status.Prerequisite.Kind == DemoPrerequisiteKind.Scenario);
+        Assert.Null(fixture.Satisfied);
+        Assert.False(readiness.Ready);
+        Assert.Single(readiness.Unverified);
+
+        // Unknown is not unmet: the fixture is not applied again on a guess, and the outcome says
+        // what could not be checked.
+        var result = await world.Director.PrepareAsync(DemoStage.Session, "corr", CancellationToken.None);
+        Assert.Empty(world.Log);
+        Assert.Contains("could not be verified", result.Summary, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task AnUnreadableSwitchIsUnknownNotMetAndIsStillSetByPreparation()
     {
         var world = new DirectorWorld(DemoStage.Knowledge, ScenarioId.ForgottenOverride);
         world.Switches.FailReads = true;
@@ -73,11 +127,16 @@ public sealed class DemoDirectorTests
         var readiness = await world.Director.GetReadinessAsync(DemoStage.Knowledge, "corr", CancellationToken.None);
         var evidence = Assert.Single(readiness.Prerequisites, status => status.Prerequisite.Switch == DemoSwitch.WorkKnowledge);
         Assert.Null(evidence.Satisfied);
-        Assert.True(readiness.Ready);
+        Assert.False(readiness.Ready);
+        Assert.Contains(readiness.Unverified, status => status.Prerequisite.Switch == DemoSwitch.WorkKnowledge);
 
+        // The value it needs is known even when the value it has is not, so it is set - and the
+        // beat still does not read as ready while the read keeps failing.
         var result = await world.Director.PrepareAsync(DemoStage.Knowledge, "corr", CancellationToken.None);
         Assert.Equal(["switch:WorkKnowledge=Present"], world.Log);
         Assert.Single(result.Actions);
+        Assert.False(result.Readiness.Ready);
+        Assert.Contains("could not be verified", result.Summary, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -98,13 +157,20 @@ public sealed class DemoDirectorTests
     {
         public DirectorWorld(DemoStage stage, ScenarioId scenario)
         {
+            Catalog = new ScenarioCatalog(TimeProvider.System);
+            Energy = new FakeEnergy(TwinFor(Catalog.GetRecipe(scenario)));
             Stages = new FakeStages(stage, Log);
-            Scenarios = new FakeScenarios(scenario, Log);
+            // Applying a scenario moves the city: the fake energy hub follows the recipe, as the real one does.
+            Scenarios = new FakeScenarios(scenario, Log, applied => Energy.Twin = TwinFor(Catalog.GetRecipe(applied)));
             Switches = new FakeSwitches(Log);
-            Director = new DemoDirector(new StageCatalog(), Stages, Scenarios, Switches, NullLogger<DemoDirector>.Instance);
+            Director = new DemoDirector(new StageCatalog(), Catalog, Stages, Scenarios, Switches, Energy, NullLogger<DemoDirector>.Instance);
         }
 
         public List<string> Log { get; } = [];
+
+        public ScenarioCatalog Catalog { get; }
+
+        public FakeEnergy Energy { get; }
 
         public FakeStages Stages { get; }
 
@@ -113,6 +179,42 @@ public sealed class DemoDirectorTests
         public FakeSwitches Switches { get; }
 
         public DemoDirector Director { get; }
+
+        private static EnergyOperationalTwin TwinFor(ScenarioRecipe recipe)
+        {
+            var state = recipe.SmartPoleState;
+            return new EnergyOperationalTwin(
+                DemoAssets.StreetlightAssetId,
+                DemoAssets.NorthPromenadeArea,
+                state.IsOn,
+                state.IsOn,
+                state.IsDaylight,
+                state.ExpectedScheduledState,
+                state.ManualOverride,
+                state.ControllerHealth,
+                null,
+                state.LastMaintenanceTime,
+                state.HasRecentMaintenance,
+                recipe.EnergyState.OpenIncidentId,
+                DateTimeOffset.UtcNow,
+                state.OperationContext);
+        }
+    }
+
+    private sealed class FakeEnergy(EnergyOperationalTwin twin) : IEnergyScenarioClient
+    {
+        public EnergyOperationalTwin Twin { get; set; } = twin;
+
+        public bool FailReads { get; set; }
+
+        public Task ResetAsync(string correlationId, CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public Task ApplyScenarioAsync(EnergyScenarioSyncRequest request, string correlationId, CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public Task<EnergyOperationalTwin> GetStateAsync(string assetId, string correlationId, CancellationToken cancellationToken) =>
+            FailReads
+                ? throw new HttpRequestException("Energy Hub unavailable.")
+                : Task.FromResult(Twin);
     }
 
     private sealed class FakeStages(DemoStage current, List<string> log) : IStageApplier
@@ -133,17 +235,21 @@ public sealed class DemoDirectorTests
             new(stage, stage.ToString(), "Test stage", ["Test"], DateTimeOffset.UtcNow, "stage-corr");
     }
 
-    private sealed class FakeScenarios(ScenarioId current, List<string> log) : IScenarioApplier
+    private sealed class FakeScenarios(ScenarioId current, List<string> log, Action<ScenarioId> onApplied) : IScenarioApplier
     {
         public ScenarioId Current { get; private set; } = current;
 
+        public ScenarioApplicationStatus ApplicationStatus { get; set; } = ScenarioApplicationStatus.Applied;
+
         public ScenarioStatus GetCurrentScenario() =>
-            new(Current, Current.ToString(), "Test scenario", DateTimeOffset.UtcNow, "scenario-corr");
+            new(Current, Current.ToString(), "Test scenario", DateTimeOffset.UtcNow, "scenario-corr", ApplicationStatus);
 
         public Task<ScenarioApplicationResult> ApplyAsync(ScenarioId scenarioId, string correlationId, CancellationToken cancellationToken)
         {
             Current = scenarioId;
+            ApplicationStatus = ScenarioApplicationStatus.Applied;
             log.Add($"scenario:{scenarioId}");
+            onApplied(scenarioId);
             return Task.FromResult(new ScenarioApplicationResult(GetCurrentScenario(), $"{scenarioId} applied."));
         }
     }

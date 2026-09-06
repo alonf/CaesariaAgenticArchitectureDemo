@@ -500,6 +500,12 @@ input[type="number"] {
     flex: 1;
 }
 
+.readiness-note {
+    color: var(--orange);
+    font-size: 0.8rem;
+    white-space: nowrap;
+}
+
 .beat-steps {
     display: grid;
     gap: 0.45rem;

@@ -167,7 +167,7 @@
             @if (_readiness is { } readiness)
             {
                 <div class="readiness @(readiness.Ready ? "ready" : string.Empty)">
-                    <small class="section-label">@(readiness.Ready ? "Ready to present" : "Before the first step")</small>
+                    <small class="section-label">@ReadinessLabel(readiness)</small>
                     @if (readiness.Prerequisites.Count == 0)
                     {
                         <p class="switchboard-note">Nothing to set up - continue from the previous beat.</p>
@@ -181,6 +181,10 @@
                                 <li class="@markClass">
                                     <span class="readiness-mark" aria-hidden="true">@mark</span>
                                     <span class="readiness-text">@status.Prerequisite.Text</span>
+                                    @if (status.Satisfied is null && status.Prerequisite is { AppliesAtStart: true, Kind: not DemoPrerequisiteKind.Manual })
+                                    {
+                                        <span class="readiness-note">could not be checked</span>
+                                    }
                                     @if (CanFix(status))
                                     {
                                         <button type="button" class="button secondary small" @onclick="() => FixPrerequisiteAsync(status)" disabled="@_prepareBusy">@FixLabel(status)</button>
@@ -781,6 +785,22 @@
 
     private static string FixLabel(DemoPrerequisiteStatus status) =>
         status.Prerequisite.Kind == DemoPrerequisiteKind.Scenario ? "Apply" : $"Set {status.Prerequisite.RequiredValue}";
+
+    // Ready only when every check ran and passed. A check that could not run is said so, not
+    // counted either way: "not verified" is a third state, never a quiet pass.
+    private static string ReadinessLabel(DemoStageReadiness readiness)
+    {
+        if (readiness.Ready)
+        {
+            return "Ready to present";
+        }
+
+        var unmet = readiness.Prerequisites.Any(static status => status.Prerequisite.AppliesAtStart && status.Satisfied == false);
+
+        return !unmet && readiness.StageIsCurrent && readiness.Unverified.Count > 0
+            ? "Not verified - a check could not run"
+            : "Before the first step";
+    }
 
     // A check for met, a cross for unmet, a dot for unknowable here, an arrow for a later step's fixture.
     private static (string Mark, string Css) ReadinessMark(DemoPrerequisiteStatus status) =>

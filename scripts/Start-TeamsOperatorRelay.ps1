@@ -230,7 +230,14 @@ function Invoke-HostedAgent {
         }
     }
 
-    $text = (@($response.output | ForEach-Object { $_.content } | Where-Object { $_ -and $_.text } | ForEach-Object { $_.text }) -join "`n`n").Trim()
+    # Only message items carry content, and only output_text parts carry text. A reasoning item has
+    # neither, and under strict mode reading a property an object does not have is an error, not
+    # a null - so the shape is checked before anything is read.
+    $text = (@($response.output |
+        Where-Object { $_.PSObject.Properties['type'] -and "$($_.type)" -eq 'message' -and $_.PSObject.Properties['content'] } |
+        ForEach-Object { @($_.content) } |
+        Where-Object { $_ -and $_.PSObject.Properties['type'] -and "$($_.type)" -eq 'output_text' -and $_.PSObject.Properties['text'] -and $_.text } |
+        ForEach-Object { $_.text }) -join "`n`n").Trim()
     if (-not $text) { $text = "The hosted run ended with status '$($response.status)' and no text." }
 
     return [pscustomobject]@{ Text = $text; ConsentUrl = $null; ResponseId = $response.id }

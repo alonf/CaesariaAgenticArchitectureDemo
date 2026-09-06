@@ -232,9 +232,22 @@ public sealed record DemoStageReadiness(
     /// <summary>Whether the beat's stage is the one the demo is at.</summary>
     public bool StageIsCurrent => Stage == CurrentStage;
 
-    /// <summary>Whether the beat can be presented now: its stage is current and nothing it starts from is known to be unmet.</summary>
+    /// <summary>
+    /// The starting prerequisites that could be checked but were not - a switch or a fixture that
+    /// could not be read. Unknown is never counted as met, so these keep a beat from reading as ready.
+    /// </summary>
+    public IReadOnlyList<DemoPrerequisiteStatus> Unverified =>
+        [.. Prerequisites.Where(static status => IsCheckable(status.Prerequisite) && status.Satisfied is null)];
+
+    /// <summary>
+    /// Whether the beat can be presented now: its stage is current and every prerequisite it starts
+    /// from that can be checked is verified met. A manual precondition is the presenter's to confirm.
+    /// </summary>
     public bool Ready => StageIsCurrent
-        && Prerequisites.All(status => !status.Prerequisite.AppliesAtStart || status.Satisfied != false);
+        && Prerequisites.All(static status => !IsCheckable(status.Prerequisite) || status.Satisfied == true);
+
+    private static bool IsCheckable(DemoPrerequisite prerequisite) =>
+        prerequisite is { AppliesAtStart: true, Kind: not DemoPrerequisiteKind.Manual };
 }
 
 /// <summary>

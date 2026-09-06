@@ -58,6 +58,12 @@ public interface IEnergyScenarioClient
     /// <param name="correlationId">The correlation identifier spanning the scenario orchestration request.</param>
     /// <param name="cancellationToken">The token used to cancel the operation.</param>
     public Task ApplyScenarioAsync(EnergyScenarioSyncRequest request, string correlationId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Reads an asset's live operational state, so a fixture can be checked against the city rather
+    /// than against the identifier of the scenario last applied.
+    /// </summary>
+    public Task<EnergyOperationalTwin> GetStateAsync(string assetId, string correlationId, CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -248,6 +254,22 @@ public sealed partial class HttpEnergyScenarioClient(HttpClient httpClient, ILog
         ArgumentException.ThrowIfNullOrWhiteSpace(correlationId);
         return ScenarioHttpRequestSender.SendAsync(httpClient, logger, "Energy Hub", "apply scenario", ScenarioHttpRequestFactory.CreateRequest(HttpMethod.Post, "/api/energy/admin/scenario", correlationId, request), correlationId, cancellationToken);
     }
+
+    /// <inheritdoc />
+    public async Task<EnergyOperationalTwin> GetStateAsync(string assetId, string correlationId, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(assetId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(correlationId);
+
+        using var request = ScenarioHttpRequestFactory.CreateRequest(HttpMethod.Get, $"/api/energy/assets/{Uri.EscapeDataString(assetId)}", correlationId);
+        using var response = await httpClient.SendAsync(request, cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        return await response.Content.ReadFromJsonAsync<EnergyOperationalTwin>(StateSerializerOptions, cancellationToken)
+            ?? throw new InvalidOperationException("Energy Hub returned an empty state response.");
+    }
+
+    private static readonly System.Text.Json.JsonSerializerOptions StateSerializerOptions = CaesareaJsonDefaults.CreateSerializerOptions();
 }
 
 /// <inheritdoc cref="ICommandCenterScenarioClient"/>

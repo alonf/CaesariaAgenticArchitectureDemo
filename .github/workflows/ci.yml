@@ -1,0 +1,50 @@
+name: CI
+
+# The gate every change passes before it is merged: the solution builds, the deterministic suite
+# passes, formatting holds, and every Bicep template compiles - not only main.bicep, which the
+# infrastructure workflow checks on its own. Nothing here touches Azure.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  dotnet:
+    name: Build and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Test
+        run: dotnet test Tests/Caesarea.Deterministic.Tests --no-build --configuration Release
+
+      - name: Formatting
+        run: dotnet format --verify-no-changes --no-restore
+
+  bicep:
+    name: Compile templates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compile every template
+        run: |
+          set -euo pipefail
+          for template in $(find infra -name '*.bicep' | sort); do
+            echo "== $template"
+            az bicep build --file "$template" --stdout > /dev/null
+          done

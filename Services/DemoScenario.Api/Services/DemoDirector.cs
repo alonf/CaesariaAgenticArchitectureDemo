@@ -36,15 +36,19 @@ public interface IStageApplier
 /// </summary>
 public sealed partial class DemoDirector(
     StageCatalog stageCatalog,
+    ScenarioCatalog scenarioCatalog,
     IStageApplier stages,
     IScenarioApplier scenarios,
     IOperationsAgentSwitchClient switches,
+    IEnergyScenarioClient energy,
     ILogger<DemoDirector> logger)
 {
     private readonly StageCatalog _stageCatalog = stageCatalog ?? throw new ArgumentNullException(nameof(stageCatalog));
+    private readonly ScenarioCatalog _scenarioCatalog = scenarioCatalog ?? throw new ArgumentNullException(nameof(scenarioCatalog));
     private readonly IStageApplier _stages = stages ?? throw new ArgumentNullException(nameof(stages));
     private readonly IScenarioApplier _scenarios = scenarios ?? throw new ArgumentNullException(nameof(scenarios));
     private readonly IOperationsAgentSwitchClient _switches = switches ?? throw new ArgumentNullException(nameof(switches));
+    private readonly IEnergyScenarioClient _energy = energy ?? throw new ArgumentNullException(nameof(energy));
     private readonly ILogger<DemoDirector> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
     /// <summary>
@@ -63,7 +67,7 @@ public sealed partial class DemoDirector(
         {
             statuses.Add(prerequisite.Kind switch
             {
-                DemoPrerequisiteKind.Scenario => new DemoPrerequisiteStatus(prerequisite, scenario.Id == prerequisite.ScenarioId, scenario.Name),
+                DemoPrerequisiteKind.Scenario => await CheckScenarioAsync(prerequisite, scenario, correlationId, cancellationToken),
                 DemoPrerequisiteKind.Switch => await ReadSwitchAsync(prerequisite, correlationId, cancellationToken),
                 _ => new DemoPrerequisiteStatus(prerequisite, null, null)
             });
@@ -86,7 +90,9 @@ public sealed partial class DemoDirector(
 
         DemoDirectorLog.Preparing(_logger, descriptor.Name, correlationId);
 
-        // 1. The fixture. A scenario application also resets the simulator, so it goes first.
+        // 1. The fixture. A scenario application also resets the simulator, so it goes first. A
+        //    fixture the city has drifted from - the operator restored the lamp during the previous
+        //    beat - reads as unmet and is applied again, exactly like a different one.
         foreach (var status in before.Prerequisites.Where(static status =>
                      status.Prerequisite is { Kind: DemoPrerequisiteKind.Scenario, AppliesAtStart: true } && status.Satisfied == false))
         {
@@ -124,12 +130,97 @@ public sealed partial class DemoDirector(
         }
 
         var after = await GetReadinessAsync(stage, correlationId, cancellationToken);
-        var summary = after.Ready
-            ? $"{descriptor.Name} is ready to present."
-            : $"{descriptor.Name} is set, but a prerequisite is still unmet - check the list.";
+        var summary = Summarize(descriptor.Name, after);
 
         DemoDirectorLog.Prepared(_logger, descriptor.Name, actions.Count, after.Ready, correlationId);
         return new DemoStagePrepareResult(after, actions, summary);
+    }
+
+    // Unknown is said out loud: a beat whose only open question is a check that could not run is
+    // not "ready", and it is not "unmet" either.
+    private static string Summarize(string stageName, DemoStageReadiness after)
+    {
+        if (after.Ready)
+        {
+            return $"{stageName} is ready to present.";
+        }
+
+        var unmet = after.Prerequisites.Any(static status => status.Prerequisite.AppliesAtStart && status.Satisfied == false);
+
+        if (!unmet && after.StageIsCurrent && after.Unverified.Count > 0)
+        {
+            var names = string.Join(" and ", after.Unverified.Select(static status => status.Prerequisite.Text));
+            return $"{stageName} is set, but this could not be verified: {names}.";
+        }
+
+        return $"{stageName} is set, but a prerequisite is still unmet - check the list.";
+    }
+
+    // The scenario's identifier is not the city's state: the operator restores L-417 during the
+    // deterministic beat and the scenario still reads Lights On, and an application that failed
+    // halfway keeps the identifier it asked for. So the fixture is checked three ways - the
+    // identifier, the application's outcome, and the asset as the Energy Hub reports it now.
+    private async Task<DemoPrerequisiteStatus> CheckScenarioAsync(
+        DemoPrerequisite prerequisite, ScenarioStatus scenario, string correlationId, CancellationToken cancellationToken)
+    {
+        var required = prerequisite.ScenarioId!.Value;
+
+        if (scenario.Id != required)
+        {
+            return new DemoPrerequisiteStatus(prerequisite, false, scenario.Name);
+        }
+
+        if (scenario.ApplicationStatus != ScenarioApplicationStatus.Applied)
+        {
+            return new DemoPrerequisiteStatus(prerequisite, false, $"{scenario.Name} ({scenario.ApplicationStatus})");
+        }
+
+        var recipe = _scenarioCatalog.GetRecipe(required);
+
+        try
+        {
+            var twin = await _energy.GetStateAsync(DemoAssets.StreetlightAssetId, correlationId, cancellationToken);
+            var drift = DescribeDrift(recipe, twin);
+
+            return drift is null
+                ? new DemoPrerequisiteStatus(prerequisite, true, scenario.Name)
+                : new DemoPrerequisiteStatus(prerequisite, false, $"{scenario.Name}, but {drift}");
+        }
+        catch (Exception exception) when (IsServiceFailure(exception, cancellationToken))
+        {
+            DemoDirectorLog.FixtureUnreadable(_logger, required, correlationId, exception);
+            return new DemoPrerequisiteStatus(prerequisite, null, scenario.Name);
+        }
+    }
+
+    // What a beat's first step relies on: the lamp, the override, the controller, the incident.
+    // Anything else the scenario sets - dates, notes, the customer report - does not change what
+    // the agent or the operator sees on the first click.
+    private static string? DescribeDrift(ScenarioRecipe recipe, EnergyOperationalTwin twin)
+    {
+        var expected = recipe.SmartPoleState;
+
+        if (twin.ReportedIsOn != expected.IsOn)
+        {
+            return $"{twin.AssetId} is now {(twin.ReportedIsOn ? "on" : "off")}";
+        }
+
+        if (twin.ManualOverride != expected.ManualOverride)
+        {
+            return twin.ManualOverride ? "a manual override is now active" : "the manual override is gone";
+        }
+
+        if (twin.ControllerHealth.Status != expected.ControllerHealth.Status)
+        {
+            return $"the controller is now {twin.ControllerHealth.Status}";
+        }
+
+        if (!string.Equals(twin.OpenIncidentId, recipe.EnergyState.OpenIncidentId, StringComparison.Ordinal))
+        {
+            return twin.OpenIncidentId is null ? "the incident is gone" : $"incident {twin.OpenIncidentId} is open";
+        }
+
+        return null;
     }
 
     private async Task<DemoPrerequisiteStatus> ReadSwitchAsync(DemoPrerequisite prerequisite, string correlationId, CancellationToken cancellationToken)
@@ -142,8 +233,8 @@ public sealed partial class DemoDirector(
         }
         catch (Exception exception) when (IsServiceFailure(exception, cancellationToken))
         {
-            // Unknown is not unmet: the presenter sees a question mark, not a blocker, and the
-            // switch is still set by preparation.
+            // Unknown, and reported as such: the presenter sees a question mark, the beat does not
+            // read as ready, and preparation still sets the switch.
             DemoDirectorLog.SwitchUnreadable(_logger, prerequisite.Switch!.Value, correlationId, exception);
             return new DemoPrerequisiteStatus(prerequisite, null, null);
         }
@@ -182,4 +273,10 @@ internal static partial class DemoDirectorLog
         Level = LogLevel.Warning,
         Message = "The {Switch} switch could not be set. CorrelationId: {CorrelationId}.")]
     internal static partial void SwitchNotSet(ILogger logger, DemoSwitch @switch, string correlationId, Exception exception);
+
+    [LoggerMessage(
+        EventId = 2154,
+        Level = LogLevel.Warning,
+        Message = "The {ScenarioId} fixture could not be checked against the Energy Hub. CorrelationId: {CorrelationId}.")]
+    internal static partial void FixtureUnreadable(ILogger logger, ScenarioId scenarioId, string correlationId, Exception exception);
 }

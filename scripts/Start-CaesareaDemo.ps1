@@ -255,8 +255,17 @@ else {
             $reason = if ($null -eq $content) { 'missing' } else { 'stale (old version or past its clearance date)' }
 
             if ($PSCmdlet.ShouldProcess($workOrderPath, "Refresh the $reason work order in OneDrive")) {
-                & "$PSScriptRoot/New-CaesareaWorkOrder.ps1" -Force
-                Write-Note 'Refreshed. Microsoft 365 needs a few minutes to re-index before Work IQ serves the new copy.'
+                # Optional preparation for the hosted beat, never a gate on the local demo: whatever
+                # the child script runs into - sign-in, a conditional write, the network - is
+                # reported, and the start continues.
+                try {
+                    & "$PSScriptRoot/New-CaesareaWorkOrder.ps1" -Force -ErrorAction Stop
+                    Write-Note 'Refreshed. Microsoft 365 needs a few minutes to re-index before Work IQ serves the new copy.'
+                }
+                catch {
+                    Write-Warn "The work order could not be refreshed: $($_.Exception.Message)"
+                    Write-Warn 'The local demo is unaffected. For the hosted records beat, run ./scripts/New-CaesareaWorkOrder.ps1 -Force yourself.'
+                }
             }
         }
         elseif ($content -ne '') {

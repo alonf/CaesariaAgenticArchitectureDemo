@@ -6,7 +6,7 @@ Two layers, two workflows, two sets of approvers. The split is the point.
 | --- | --- | --- |
 | What | Foundry account, project, model deployment, registry, observability, RBAC | The hosted agent version: image digest, CPU, environment |
 | How | `infra/main.bicep` via `az deployment sub create` | data-plane `POST /agents/{name}/versions` |
-| Workflow | [`deploy-infra.yml`](../.github/workflows/deploy-infra.yml) | [`deploy-hosted-agent.yml`](../.github/workflows/deploy-hosted-agent.yml) — **parked** until `Services/OperationsAgent.Hosted` exists |
+| Workflow | [`deploy-infra.yml`](../.github/workflows/deploy-infra.yml) | [`deploy-hosted-agent.yml`](../.github/workflows/deploy-hosted-agent.yml) — builds `Services/OperationsAgent.Hosted` and creates the version; see [the hosting guide](../docs/product-status/hosted-agent.md) |
 | Changes | rarely, and changes the shape of the estate | every release |
 | Owner | platform team | application team |
 
@@ -94,7 +94,7 @@ only caught by preflight - a missing `allowProjectManagement` on the account, wi
 creation is rejected, and a missing `capabilityHosts` resource, without which there is no hosted
 agent runtime at all.
 
-Nothing here has been **deployed**. what-if validates the template against the resource providers;
+This section was written before the first deployment; both workflows have since run for real, and [the hosting guide](../docs/product-status/hosted-agent.md) records what exists. what-if is still the gate before every change: it validates the template against the resource providers;
 it does not prove a role assignment grants what you meant, or that a policy applies on the SKU you
 chose. Treat anything below that line as reviewed, not proven:
 

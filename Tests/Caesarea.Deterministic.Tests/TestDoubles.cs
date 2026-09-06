@@ -170,6 +170,10 @@ internal sealed class FakeEnergyScenarioClient : IEnergyScenarioClient
 
     public Func<EnergyScenarioSyncRequest, string, CancellationToken, Task>? OnApplyScenarioAsync { get; set; }
 
+    // The coordinator tests never read state back; the director has its own energy fake that does.
+    public Task<EnergyOperationalTwin> GetStateAsync(string assetId, string correlationId, CancellationToken cancellationToken) =>
+        throw new HttpRequestException("This fake holds no state to read.");
+
     public Task ResetAsync(string correlationId, CancellationToken cancellationToken)
     {
         ResetCalls++;
