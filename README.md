@@ -87,6 +87,8 @@ grows one capability at a time, and each stage maps to a concrete MAF concept:
 Each stage has a build-and-design document under [docs/prompts/](docs/prompts/), the exact
 lecture-slide code lives in named `#region` blocks (see the deck anchors in the docs), and
 [docs/product-status/](docs/product-status/) records API-drift notes and review history.
+[docs/runbooks/](docs/runbooks/) is the presenter's page per lecture: what runs live, what stays on
+a slide, and what this demo does not have.
 
 ## The cumulative demo stages
 

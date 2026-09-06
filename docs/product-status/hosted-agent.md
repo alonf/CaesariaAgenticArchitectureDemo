@@ -301,6 +301,23 @@ story made visible: Work IQ's first act for a person is to ask that person.
 captured from a live run of the full chain (switchboard flip → routed ask → deployed agent →
 consent request rendered).
 
+### Known limitation: the hosted head's Energy Hub calls carry a fixed correlation id
+
+The Command Center's hosted client generates a correlation id per ask and sends it as
+`x-ms-client-request-id`, and the platform adds `x-agent-foundry-call-id` to every request it
+forwards. Neither reaches the Energy Hub. `CreateAgent` in `OperationsAgent.Hosted/Program.cs` builds
+`EnergyTools` once, when the agent is composed, with the literal correlation id `hosted`, and every
+outbound Energy Hub read logs and carries that literal. On the local path the tools are composed per
+request, so one correlation spans the operator's click, the agent's run and the Hub's read; hosted,
+the correlation ends at the container's front door and the Hub sees `hosted` for everyone.
+
+Fix path, not yet taken: read the request's `x-agent-foundry-call-id` (or the client's
+`x-ms-client-request-id`) at tool-call time through `IHttpContextAccessor` - the function-invocation
+loop runs on the request's async context, so the accessor should resolve inside the tool - and hand
+that to the gateway instead of a value fixed at composition. This needs a hosted deployment to
+confirm the accessor resolves under the Foundry hosting middleware, which is why it is recorded here
+rather than changed blind.
+
 ## Verified stale — the deck's Bicep
 
 Slide 43 shows `minReplicas: 0` / `maxReplicas: 5`. **There is no replica model.** Hosted agents
