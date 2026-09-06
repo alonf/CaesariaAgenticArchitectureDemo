@@ -227,6 +227,12 @@ user secrets, outside committed appsettings files.
 
 ## Run locally
 
+Prerequisites, on any OS: the .NET SDK named in [global.json](global.json) (10.0.103 or a later
+10.0 feature band); PowerShell 7 for the scripts; the Azure CLI, signed in to a tenant that holds
+a Foundry project with a `gpt-5.5` deployment, for every stage past Deterministic. Nothing else is
+installed: the Aspire host, the dashboard and every service are NuGet packages the build restores.
+[docs/deployment.md](docs/deployment.md) lists what the cloud half needs on top.
+
 ```powershell
 ./scripts/Start-CaesareaDemo.ps1
 ```
