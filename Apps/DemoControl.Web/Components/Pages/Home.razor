@@ -44,6 +44,43 @@
         </section>
     }
 
+    @* The scenarios lead: a presenter applies one every beat, and it must not sit below the
+       switches. The active card carries the outcome of the last application, so there is no
+       separate "current scenario" panel repeating the same name and description. *@
+    @if (_catalog is null)
+    {
+        <section class="panel empty-state">
+            <p>Loading scenario catalog...</p>
+        </section>
+    }
+    else
+    {
+        <section class="scenario-grid" aria-label="Scenarios">
+            @foreach (var (scenario, index) in _catalog.Scenarios.Select((item, position) => (item, position)))
+            {
+                var isCurrent = scenario.Id == _catalog.CurrentScenario.Id;
+                <article class="panel scenario-card @(isCurrent ? "active" : string.Empty)">
+                    <span class="card-tag">Scenario @(index + 1)</span>
+                    <h2>@scenario.Name</h2>
+                    <p>@scenario.Description</p>
+                    @if (isCurrent)
+                    {
+                        <p class="scenario-status @(string.IsNullOrWhiteSpace(_catalog.CurrentScenario.FailureSummary) ? string.Empty : "status-error")">
+                            @_catalog.CurrentScenario.ApplicationStatus · @_catalog.CurrentScenario.AppliedAt.ToLocalTime().ToString("HH:mm:ss")
+                            @if (!string.IsNullOrWhiteSpace(_catalog.CurrentScenario.FailureSummary))
+                            {
+                                <text> · @_catalog.CurrentScenario.FailureSummary</text>
+                            }
+                        </p>
+                    }
+                    <button class="button @(isCurrent ? "primary" : "secondary")" @onclick="() => ApplyScenarioAsync(scenario.Id)" disabled="@_busy">
+                        @(isCurrent ? "Apply again" : "Apply Scenario")
+                    </button>
+                </article>
+            }
+        </section>
+    }
+
     <section class="panel switchboard-panel">
         <div class="panel-heading">
             <h2>Presenter Switchboard</h2>
@@ -55,10 +92,10 @@
         }
         else
         {
-            <p>
+            <p class="panel-intro">
                 Current stage: <strong>@_stageCatalog.CurrentStage.Name</strong> - @_stageCatalog.CurrentStage.Description
             </p>
-            <ul class="capability-list">
+            <ul class="capability-chips">
                 @foreach (var capability in _stageCatalog.CurrentStage.Capabilities)
                 {
                     <li>@capability</li>
@@ -90,7 +127,7 @@
         }
         else
         {
-            <p>Arm a snippet to pause its service at that code on its next run, then single-step it in the editor. A snippet lives in the service whose code it pauses, so each service is attached separately.</p>
+            <p class="panel-intro">Arm a snippet to pause its service at that code on its next run, then single-step it in the editor. A snippet lives in the service whose code it pauses, so each service is attached separately.</p>
 
             @if (_attachStatus is { VsCodeAvailable: true, ExtensionInstalled: false })
             {
@@ -115,7 +152,7 @@
                     }
                     else
                     {
-                        <ul class="capability-list">
+                        <ul class="checkbox-list">
                             @foreach (var snippet in source.Snippets)
                             {
                                 <li>
@@ -134,7 +171,7 @@
                         @if (_attachStatus is { ExtensionInstalled: true } && !source.DebuggerAttached)
                         {
                             <div class="stage-switch-actions">
-                                <button class="button" @onclick="() => RequestAttachAsync(source.Service.ProcessName)" disabled="@_attachBusy">
+                                <button class="button secondary" @onclick="() => RequestAttachAsync(source.Service.ProcessName)" disabled="@_attachBusy">
                                     @(_attachBusy ? "Requesting..." : $"Attach debugger to {source.Service.DisplayName}")
                                 </button>
                             </div>
@@ -213,7 +250,7 @@
                     }
                 </ul>
             }
-            <button class="secondary-button" @onclick="ClearCaseMemoryAsync" disabled="@(_caseMemoryBusy || _caseMemory.Cases.Count == 0)">
+            <button class="button secondary" @onclick="ClearCaseMemoryAsync" disabled="@(_caseMemoryBusy || _caseMemory.Cases.Count == 0)">
                 Clear case memory
             </button>
             @if (!string.IsNullOrWhiteSpace(_caseMemoryMessage))
@@ -234,7 +271,7 @@
         }
         else
         {
-            <p class="switchboard-note">Where the agent's streetlight tool comes from. The flip is the lecture beat: same capability, new boundary.</p>
+            <p class="panel-intro">Where the agent's streetlight tool comes from. The flip is the lecture beat: same capability, new boundary.</p>
             <div class="stage-switch-actions">
                 <button class="button @(_toolSource.Source == "Local" ? "primary" : "secondary")" @onclick='() => SetToolSourceAsync("Local")' disabled="@_toolSourceBusy">
                     LOCAL function
@@ -261,7 +298,7 @@
         }
         else
         {
-            <p class="switchboard-note">
+            <p class="panel-intro">
                 Which habitat answers the Command Center's questions. FOUNDRY HOSTED is the same agent
                 code on Microsoft Foundry's runtime: it reads the CLOUD Energy Hub and reaches the work
                 order in the presenter's own OneDrive through Work IQ, asking as the signed-in person.
@@ -296,7 +333,7 @@
         }
         else
         {
-            <p class="switchboard-note">Whether the Operations Agent may consult the Security Operations Agent. Ask the same question with it off and on: with it off the lamp is still intentional, but the reason belongs to a domain that will not disclose it.</p>
+            <p class="panel-intro">Whether the Operations Agent may consult the Security Operations Agent. Ask the same question with it off and on: with it off the lamp is still intentional, but the reason belongs to a domain that will not disclose it.</p>
             <div class="stage-switch-actions">
                 <button class="button @(_securityConsult.Enabled ? "secondary" : "primary")" @onclick="() => SetSecurityConsultAsync(false)" disabled="@_securityConsultBusy">
                     Consult OFF
@@ -320,7 +357,7 @@
             <h2>Workforce Records</h2>
             <span class="stamp">@WorkforceRecordsStamp</span>
         </div>
-        <p class="switchboard-note">The work orders as the workforce domain holds them, read straight from the Workforce Hub. The peer agent never received these fields: its tool returns a projection that does not select them.</p>
+        <p class="panel-intro">The work orders as the workforce domain holds them, read straight from the Workforce Hub. The peer agent never received these fields: its tool returns a projection that does not select them.</p>
         <div class="stage-switch-actions">
             <button class="button @(_workforceRecords is null ? "primary" : "secondary")" @onclick="ToggleWorkforceRecordsAsync" disabled="@_workforceRecordsBusy">
                 @WorkforceRecordsButtonLabel
@@ -387,42 +424,6 @@
         }
     </section>
 
-    @if (_catalog is null)
-    {
-        <section class="panel empty-state">
-            <p>Loading scenario catalog...</p>
-        </section>
-    }
-    else
-    {
-        <section class="panel current-panel">
-            <div class="panel-heading">
-                <h2>Current Scenario</h2>
-                <span class="stamp">@_catalog.CurrentScenario.AppliedAt.ToLocalTime().ToString("HH:mm:ss")</span>
-            </div>
-            <strong class="scenario-name">@_catalog.CurrentScenario.Name</strong>
-            <p>@_catalog.CurrentScenario.Description</p>
-            <p><strong>Status:</strong> @_catalog.CurrentScenario.ApplicationStatus</p>
-            @if (!string.IsNullOrWhiteSpace(_catalog.CurrentScenario.FailureSummary))
-            {
-                <p class="status-error">@_catalog.CurrentScenario.FailureSummary</p>
-            }
-        </section>
-
-        <section class="scenario-grid">
-            @foreach (var scenario in _catalog.Scenarios)
-            {
-                <article class="panel scenario-card @(scenario.Id == _catalog.CurrentScenario.Id ? "active" : string.Empty)">
-                    <span class="card-tag">@scenario.Id</span>
-                    <h2>@scenario.Name</h2>
-                    <p>@scenario.Description</p>
-                    <button class="button secondary" @onclick="() => ApplyScenarioAsync(scenario.Id)" disabled="@_busy">
-                        Apply Scenario
-                    </button>
-                </article>
-            }
-        </section>
-    }
 </div>
 
 @code {

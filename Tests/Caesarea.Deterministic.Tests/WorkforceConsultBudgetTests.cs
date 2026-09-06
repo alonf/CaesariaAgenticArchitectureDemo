@@ -77,6 +77,7 @@ public sealed class WorkforceConsultBudgetTests
                 NullLoggerFactory.Instance,
                 NullLogger<RemediationWorkflowService>.Instance),
             workItems,
+            new FakeIncidentGateway(),
             new SecurityConsultSwitch(),
             delegation,
             httpClientFactory,

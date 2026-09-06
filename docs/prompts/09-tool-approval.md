@@ -44,6 +44,13 @@ Slide 34's notes give the taxonomy this stage completes:
   capability can be withdrawn in between.
 - **Arguments are validated** even though the model supplies them: the asset identifier must be
   canonical and the summary is capped, so a hallucinated asset never enters the work-item store.
+- **Existing work is found before new work is filed.** The Existing Incident scenario is the same
+  faulted controller, already tracked by `INC-L417-001` with a technician dispatch pending. The
+  asset's state names the incident, and a read-only `get_incident` lookup - deliberately not
+  wrapped, because looking is not committing - tells the model what that incident already covers.
+  The same question that filed a work item a minute earlier now files nothing and raises no
+  prompt: duplicate work is avoided by the model's own judgment, with the instructions naming the
+  check.
 - **Exhaustion fails loudly.** If approval requests remain after the bounded rounds, the turn
   fails with a 409 rather than returning a half-finished answer and persisting it as a completed
   turn.
@@ -66,7 +73,11 @@ immediately before the write. Stage 8's physical command keeps the revision bind
 3. **Deny first**: the agent completes its answer and reports that nothing was filed. Check the
    work-item list — empty. The model wanted to act; policy said no.
 4. Ask again and **approve**: the same call now executes and the work item appears.
-5. Name the taxonomy out loud: MRTR was the tool asking, the workflow gate was a node we drew,
+5. Apply **Existing Incident** on the switchboard and click the same button again. The trace shows
+   `get_streetlight_state` naming `INC-L417-001`, then `get_incident` - and no work-item call. The
+   answer reports the dispatch already pending; nothing is filed and no prompt appears. The model
+   looked before it asked.
+6. Name the taxonomy out loud: MRTR was the tool asking, the workflow gate was a node we drew,
    this is the model choosing and policy intercepting. Three control points, one operator
    experience. Then contrast reactive with proactive: *"I did not draw a graph that says 'ask the
    human here'. I attached a policy to one capability, and the framework enforces it wherever the
@@ -80,6 +91,9 @@ immediately before the write. Stage 8's physical command keeps the revision bind
 - The live walk drives both paths against the real model: the framework intercepts the call, the
   prompt names the capability, a denial files nothing and the answer still completes, and an
   approval files exactly one work item.
+- The scenario catalog test pins Existing Incident as the Controller Fault situation with the
+  incident that tracks it, and the incident-tool tests pin what the lookup tells the model, for a
+  tracked incident and for one the Command Center does not know.
 
 ## Deck note
 

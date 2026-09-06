@@ -128,6 +128,12 @@ public static class OperationsAgentToolNames
     public const string CreateMaintenanceWorkItem = "create_maintenance_work_item";
 
     /// <summary>
+    /// The read-only partner of the maintenance capability: an incident the Command Center already
+    /// tracks, looked up so existing work is found before new work is filed.
+    /// </summary>
+    public const string GetIncident = "get_incident";
+
+    /// <summary>
     /// The cross-domain consult: asks the Security Operations Agent whether an active operation
     /// requires an area to stay lit. The answer is a sanitized judgment, never the records.
     /// </summary>

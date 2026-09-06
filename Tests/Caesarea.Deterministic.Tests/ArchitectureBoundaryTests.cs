@@ -74,12 +74,15 @@ public sealed class ArchitectureBoundaryTests
         // write, and the only direct write the agent ever holds is the MCP tool in its window.
         var agentPath = Path.Combine(repositoryRoot, "Services", "OperationsAgent.Api", "Services", "FoundryOperationsAgent.cs");
         var agentText = File.ReadAllText(agentPath);
-        Assert.Equal(3, CountOccurrences(agentText, "AIFunctionFactory.Create("));
+        Assert.Equal(4, CountOccurrences(agentText, "AIFunctionFactory.Create("));
         Assert.Contains("EnergyTools.StreetlightStateToolName", agentText, StringComparison.Ordinal);
         Assert.Contains("OperationsAgentToolNames.StartRestoreLightingOperation", agentText, StringComparison.Ordinal);
         // The third is the maintenance capability, and it only reaches the model wrapped for
         // approval - pinned separately by SensitiveWorkItemToolIsAlwaysApprovalWrapped.
         Assert.Contains("OperationsAgentToolNames.CreateMaintenanceWorkItem", agentText, StringComparison.Ordinal);
+        // The fourth is its read-only partner: the incident lookup that finds existing work before
+        // new work is filed. Reading commits nothing, so it is deliberately not wrapped.
+        Assert.Contains("OperationsAgentToolNames.GetIncident", agentText, StringComparison.Ordinal);
     }
 
     [Fact]

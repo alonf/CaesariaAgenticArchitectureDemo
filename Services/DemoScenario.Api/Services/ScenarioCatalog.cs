@@ -35,7 +35,7 @@ public sealed class ScenarioCatalog(TimeProvider timeProvider)
         new(ScenarioId.ForgottenOverride, "Lights On Reported by a Client", "A customer reports L-417 illuminated during daylight; the Command Center confirms that it is on against schedule."),
         new(ScenarioId.SecurityOperation, "Security Operation", "North Promenade requires lighting during a daytime security operation."),
         new(ScenarioId.ControllerFault, "Controller Fault", "The controller is faulted and rejects attempts to return L-417 to schedule."),
-        new(ScenarioId.ExistingIncident, "Existing Incident", "An anomaly is already known and an incident exists before the operator acts."),
+        new(ScenarioId.ExistingIncident, "Existing Incident", "The controller fault is already known: incident INC-L417-001 tracks it and a technician dispatch is pending before the operator acts."),
         new(ScenarioId.NormalOperation, "Normal Operation", "The deterministic daytime baseline with no active issues.")
     ];
 
@@ -142,6 +142,10 @@ public sealed class ScenarioCatalog(TimeProvider timeProvider)
                     CreateScenarioActivity("The controller is faulted while L-417 remains on against schedule.", now)
                 ],
                 "Controller Fault applied deterministically."),
+            // The Controller Fault situation, already known to the city: the same faulted
+            // controller, but an incident tracks it and a technician dispatch is pending under it.
+            // The Tool Approval beat asks the same question against both scenarios, and the only
+            // difference the agent should produce is that here it files nothing.
             ScenarioId.ExistingIncident => new ScenarioRecipe(
                 descriptor,
                 new SmartPoleScenarioState(
@@ -149,8 +153,8 @@ public sealed class ScenarioCatalog(TimeProvider timeProvider)
                     true,
                     false,
                     false,
-                    ControllerHealthInfo.Healthy,
-                    now.AddHours(-6),
+                    ControllerHealthInfo.Faulted,
+                    now.AddDays(-2),
                     false,
                     OperationalContext.None,
                     SmartPoleBehaviorConfiguration.Default),
@@ -160,14 +164,14 @@ public sealed class ScenarioCatalog(TimeProvider timeProvider)
                     "INC-L417-001",
                     DemoAssets.StreetlightAssetId,
                     DemoAssets.NorthPromenadeArea,
-                    "Streetlight on during daylight",
-                    "The anomaly was already acknowledged before the current operator session.",
+                    "Controller fault on L-417",
+                    "Controller fault confirmed; a technician dispatch has already been requested under this incident.",
                     IncidentSeverity.Warning,
                     IncidentStatus.Open,
                     now.AddMinutes(-18),
                     "incident-seed"),
                 [
-                    CreateScenarioActivity("An existing incident is already tracking the daylight anomaly.", now)
+                    CreateScenarioActivity("The controller fault is already tracked by INC-L417-001; a technician dispatch is pending.", now)
                 ],
                 "Existing Incident applied deterministically."),
             ScenarioId.NormalOperation => new ScenarioRecipe(

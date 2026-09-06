@@ -31,6 +31,12 @@ builder.Services.AddHttpClient<ICommandCenterStageReader, CommandCenterStageRead
     var options = serviceProvider.GetRequiredService<IOptions<OperationsAgentApiOptions>>().Value;
     client.BaseAddress = new Uri(options.CommandCenterBaseUri, UriKind.Absolute);
 });
+// Read-only: the agent may discover the incident the city already tracks, never raise one.
+builder.Services.AddHttpClient<IIncidentGateway, CommandCenterIncidentGateway>((serviceProvider, client) =>
+{
+    var options = serviceProvider.GetRequiredService<IOptions<OperationsAgentApiOptions>>().Value;
+    client.BaseAddress = new Uri(options.CommandCenterBaseUri, UriKind.Absolute);
+});
 
 // AIProjectClient and DefaultAzureCredential construction is lazy: neither performs network or authentication
 // calls until a token is requested, so the service still starts cleanly in Deterministic mode even when no
@@ -134,6 +140,7 @@ builder.Services.AddSingleton<IOperationsAgent>(serviceProvider =>
         serviceProvider.GetRequiredService<PendingApprovalStore>(),
         serviceProvider.GetRequiredService<RemediationWorkflowService>(),
         serviceProvider.GetRequiredService<IWorkItemGateway>(),
+        serviceProvider.GetRequiredService<IIncidentGateway>(),
         serviceProvider.GetRequiredService<SecurityConsultSwitch>(),
         serviceProvider.GetRequiredService<WorkforceDelegation>(),
         serviceProvider.GetRequiredService<IHttpClientFactory>(),

@@ -27,6 +27,7 @@ public sealed partial class FoundryOperationsAgent(
     PendingApprovalStore pendingApprovalStore,
     RemediationWorkflowService remediationWorkflow,
     IWorkItemGateway workItems,
+    IIncidentGateway incidents,
     SecurityConsultSwitch securityConsult,
     WorkforceDelegation workforceDelegation,
     IHttpClientFactory httpClientFactory,
@@ -55,6 +56,7 @@ public sealed partial class FoundryOperationsAgent(
 
     private readonly RemediationWorkflowService _remediationWorkflow = remediationWorkflow ?? throw new ArgumentNullException(nameof(remediationWorkflow));
     private readonly IWorkItemGateway _workItems = workItems ?? throw new ArgumentNullException(nameof(workItems));
+    private readonly IIncidentGateway _incidents = incidents ?? throw new ArgumentNullException(nameof(incidents));
     private readonly SecurityConsultSwitch _securityConsult = securityConsult ?? throw new ArgumentNullException(nameof(securityConsult));
     private readonly WorkforceDelegation _workforceDelegation = workforceDelegation ?? throw new ArgumentNullException(nameof(workforceDelegation));
     private readonly Uri _securityAgentEndpoint = securityAgentEndpoint ?? throw new ArgumentNullException(nameof(securityAgentEndpoint));
@@ -391,6 +393,19 @@ public sealed partial class FoundryOperationsAgent(
                 agentTools.Add(fileWorkItem);
             }
             #endregion
+
+            // The protected capability's read-only partner. Existing work is found before new work
+            // is filed: the asset's state names its open incident, and this lookup tells the model
+            // what that incident already covers. Deliberately not wrapped - looking is not committing.
+            if (currentStage >= DemoStage.ToolApproval)
+            {
+                var incidentTools = new IncidentTools(
+                    _incidents, correlationId, _loggerFactory.CreateLogger<IncidentTools>());
+                agentTools.Add(AIFunctionFactory.Create(
+                    incidentTools.GetIncidentAsync,
+                    OperationsAgentToolNames.GetIncident,
+                    "Gets an incident the Command Center already tracks, so existing work is found before new work is filed."));
+            }
 
             // A second agent, not a second tool: Security owns records this service may not read,
             // so the question crosses a boundary and comes back as a judgment. The relationship is

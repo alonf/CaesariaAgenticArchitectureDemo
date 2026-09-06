@@ -24,54 +24,60 @@ body {
     color: var(--text);
 }
 
-button {
+button,
+input {
     font: inherit;
 }
 
 .page-shell {
     max-width: 1380px;
     margin: 0 auto;
-    padding: 2rem;
+    padding: 1.5rem 2rem 2.5rem;
 }
 
+/* A control panel, not a landing page: the title is a label for the presenter, so it does not
+   need to shout, and the buttons sit on the subtitle's baseline. */
 .hero {
     display: flex;
     justify-content: space-between;
     gap: 1.5rem;
     align-items: end;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.25rem;
 }
 
 .eyebrow {
-    margin: 0 0 0.5rem;
+    margin: 0 0 0.35rem;
     color: var(--orange);
     text-transform: uppercase;
     letter-spacing: 0.12rem;
-    font-size: 0.82rem;
+    font-size: 0.78rem;
 }
 
 .hero h1 {
     margin: 0;
-    font-size: 2.25rem;
+    font-size: 1.75rem;
 }
 
 .subtitle {
-    margin: 0.5rem 0 0;
+    margin: 0.35rem 0 0;
     color: var(--muted);
+    font-size: 0.95rem;
 }
 
 .hero-actions {
     display: flex;
-    gap: 0.75rem;
+    gap: 0.6rem;
     flex-wrap: wrap;
 }
 
 .button {
     border: 1px solid transparent;
-    border-radius: 0.8rem;
-    padding: 0.85rem 1.2rem;
+    border-radius: 0.7rem;
+    padding: 0.6rem 1rem;
     cursor: pointer;
     font-weight: 700;
+    font-size: 0.95rem;
+    line-height: 1.2;
 }
 
 .button.primary {
@@ -101,8 +107,9 @@ button {
 .message-banner {
     display: flex;
     gap: 0.5rem;
-    padding: 1rem 1.1rem;
-    margin-bottom: 1rem;
+    padding: 0.8rem 1rem;
+    margin-bottom: 0.9rem;
+    font-size: 0.95rem;
 }
 
 .message-banner.success {
@@ -115,14 +122,13 @@ button {
     color: var(--error);
 }
 
-.empty-state {
-    padding: 2rem;
-    text-align: center;
+.status-error {
+    color: var(--error);
 }
 
-.current-panel {
-    padding: 1.2rem;
-    margin-bottom: 1rem;
+.empty-state {
+    padding: 1.5rem;
+    text-align: center;
 }
 
 .panel-heading {
@@ -130,92 +136,136 @@ button {
     justify-content: space-between;
     gap: 1rem;
     align-items: center;
-    margin-bottom: 0.65rem;
 }
 
 .panel-heading h2 {
     margin: 0;
-    font-size: 1.25rem;
+    font-size: 1.2rem;
 }
 
 .stamp {
     color: var(--muted);
-    font-size: 0.9rem;
+    font-size: 0.85rem;
 }
 
-.scenario-name {
-    display: block;
-    font-size: 1.45rem;
-    margin-bottom: 0.35rem;
+/* One rhythm for every panel: each direct child is a row and the rows are one gap apart, so a
+   heading is the same distance from a paragraph, a checkbox, a chip row, or a button row. The
+   children's own margins are zeroed so the gap is the only spacing in play. */
+.switchboard-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem 1.1rem;
+    margin-bottom: 0.9rem;
 }
 
-.scenario-grid {
+.switchboard-panel > * {
+    margin: 0;
+}
+
+/* A lone button in a panel is a row of its own; without this the column stretches it edge to edge. */
+.switchboard-panel > .button {
+    align-self: flex-start;
+}
+
+.switchboard-panel p {
+    font-size: 0.95rem;
+    line-height: 1.45;
+}
+
+/* Two text roles. The intro is the panel's explanation and reads at body size in body colour;
+   the note is a footnote - smaller and muted, but never below 14px on a laptop screen. */
+.panel-intro {
+    color: var(--text);
+}
+
+.switchboard-note,
+.switchboard-panel .switchboard-note {
+    color: var(--muted);
+    font-size: 0.875rem;
+    line-height: 1.4;
+}
+
+ul.switchboard-note {
+    padding-left: 1.2rem;
+}
+
+/* The current stage's capabilities as chips: thirteen bullets at body size cost a third of the
+   first screen and say nothing a chip does not. */
+.capability-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    padding: 0;
+    list-style: none;
+}
+
+.capability-chips li {
+    padding: 0.25rem 0.6rem;
+    border-radius: 999px;
+    background: rgba(134, 169, 255, 0.12);
+    border: 1px solid rgba(134, 169, 255, 0.3);
+    color: var(--text);
+    font-size: 0.8rem;
+    line-height: 1.3;
+}
+
+/* Checkbox rows carry their own marker; a bullet beside a checkbox is noise. */
+.checkbox-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 1rem;
+    gap: 0.4rem;
+    font-size: 0.95rem;
 }
 
-.scenario-card {
-    padding: 1.2rem;
-}
-
-.scenario-card.active {
-    border-color: rgba(125, 224, 175, 0.5);
-    box-shadow: 0 0 0 1px rgba(125, 224, 175, 0.18);
-}
-
-.card-tag {
+.checkbox-list label,
+.switchboard-panel > label,
+.stage-switch-actions label {
     display: inline-flex;
     align-items: center;
-    padding: 0.3rem 0.55rem;
-    border-radius: 999px;
-    background: rgba(255, 180, 87, 0.14);
-    color: var(--orange);
-    font-size: 0.78rem;
-    text-transform: uppercase;
-    letter-spacing: 0.06rem;
+    gap: 0.5rem;
+    font-size: 0.95rem;
+    cursor: pointer;
 }
 
-.scenario-card h2 {
-    margin: 0.75rem 0 0.55rem;
-    font-size: 1.28rem;
+input[type="checkbox"] {
+    margin: 0;
+    width: 1rem;
+    height: 1rem;
+    accent-color: var(--green);
 }
 
-.scenario-card p {
+input[type="number"] {
     color: var(--text);
-    min-height: 4.8rem;
-    margin-bottom: 1rem;
-}
-
-.switchboard-panel {
-    padding: 1.2rem;
-    margin-bottom: 1rem;
-}
-
-.capability-list {
-    margin: 0.4rem 0 0.9rem;
-    padding-left: 1.2rem;
-    color: var(--muted);
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(134, 169, 255, 0.45);
+    border-radius: 0.55rem;
+    padding: 0.45rem 0.6rem;
+    width: 7rem;
+    font-size: 0.95rem;
 }
 
 .stage-switch-actions {
     display: flex;
-    gap: 0.75rem;
+    gap: 0.6rem;
     flex-wrap: wrap;
-}
-
-.switchboard-note {
-    margin: 0.75rem 0 0;
-    color: var(--muted);
-    font-size: 0.82rem;
+    align-items: center;
 }
 
 /* One block per service that registers snippets, each with its own debugger state. */
 .breakpoint-source {
-    margin-top: 0.9rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
     padding: 0.75rem 0.9rem;
-    border: 1px solid var(--panel-border, rgba(255, 255, 255, 0.08));
-    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 0.6rem;
+}
+
+.breakpoint-source > * {
+    margin: 0;
 }
 
 .breakpoint-source-heading {
@@ -225,8 +275,68 @@ button {
     gap: 0.75rem;
 }
 
-.breakpoint-source .capability-list {
-    margin-bottom: 0.5rem;
+/* The five scenarios in one row at full width, so the presenter's most frequent action needs no
+   scrolling. The card is a flex column with the description taking the slack, so the buttons of
+   neighbouring cards sit on one line whatever the description length. */
+.scenario-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0.9rem;
+    margin-bottom: 0.9rem;
+}
+
+.scenario-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    padding: 1rem 1.1rem;
+}
+
+.scenario-card.active {
+    border-color: rgba(125, 224, 175, 0.55);
+    box-shadow: 0 0 0 1px rgba(125, 224, 175, 0.22);
+}
+
+.card-tag {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.55rem;
+    border-radius: 999px;
+    background: rgba(255, 180, 87, 0.14);
+    color: var(--orange);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06rem;
+}
+
+.scenario-card h2 {
+    margin: 0;
+    font-size: 1.05rem;
+    line-height: 1.3;
+}
+
+.scenario-card p {
+    margin: 0;
+    flex: 1;
+    color: var(--text);
+    font-size: 0.875rem;
+    line-height: 1.4;
+}
+
+/* Qualified by the card, so these beat the card's own paragraph rule on specificity. */
+.scenario-card .scenario-status {
+    flex: 0;
+    color: var(--green);
+    font-size: 0.8rem;
+}
+
+.scenario-card .scenario-status.status-error {
+    color: var(--error);
+}
+
+.scenario-card .button {
+    align-self: flex-start;
 }
 
 #blazor-error-ui {
@@ -249,6 +359,12 @@ button {
     top: 0.5rem;
 }
 
+@media (max-width: 1280px) {
+    .scenario-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
 @media (max-width: 1080px) {
     .hero {
         flex-direction: column;
@@ -264,7 +380,7 @@ button {
    projection carried out of the domain, and what it never selected. Prefixed wf- because these
    rows are a feature of this panel only. */
 .wf-record {
-    margin: 12px 0 0;
+    margin: 0;
     padding: 10px 12px;
     border-radius: 10px;
     background: rgba(255, 255, 255, 0.04);

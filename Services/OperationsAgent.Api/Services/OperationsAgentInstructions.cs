@@ -35,6 +35,10 @@ public static class OperationsAgentInstructions
         that tool immediately. Confirmation is obtained by the tool or by the operation it starts
         before anything changes, so do not ask for permission in text first. If no such tool is
         available, say the action is not possible at this stage.
+        Before filing new work for an asset, check whether the city already tracks the problem: when
+        the asset's state names an open incident, look that incident up. If it already covers the
+        problem - for example a technician dispatch is already pending under it - report the incident
+        and do not file a duplicate work item.
         Do not invent operational facts. If the available tools cannot answer the question, say so clearly.
         """;
 

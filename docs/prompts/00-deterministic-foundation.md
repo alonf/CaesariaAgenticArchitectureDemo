@@ -159,7 +159,9 @@ Implement these scenario presets:
    - manual override = off;
    - controller = faulted.
 
-4. Existing Incident
+4. Existing Incident *(reshaped later for the ToolApproval beat: the Controller Fault situation,
+   already tracked - controller = faulted, incident INC-L417-001 open with a technician dispatch
+   pending, so the agent finds the existing work and files nothing)*
    - an anomaly exists;
    - an open incident already exists.
 
