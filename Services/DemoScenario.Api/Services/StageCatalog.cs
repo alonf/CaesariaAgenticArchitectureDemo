@@ -92,7 +92,7 @@ public sealed class StageCatalog
             [DemoPrerequisite.ForScenario(ScenarioId.ForgottenOverride, "Scenario: Lights On Reported by a Client")],
             [
                 new(DemoSurface.CommandCenter, "Click Ask agent - \"Is streetlight L-417 on?\".", "One tool call, get_streetlight_state, marked ran."),
-                new(DemoSurface.Code, "Show FoundryOperationsAgent.cs and EnergyTools.cs.", "One general agent; the tool is an ordinary C# method."),
+                new(DemoSurface.Code, "Show FoundryOperationsAgent.cs, then Capabilities/StreetlightToolsCapability.cs and EnergyTools.cs.", "One general agent; the tool is an ordinary C# method, registered by the one capability this stage has."),
                 new(DemoSurface.CommandCenter, "Point out that the deterministic panels are unchanged.", null)
             ],
             "An agent is a model, tools and instructions. The model chose the tool; the Energy Hub still owns the answer."),

@@ -18,7 +18,7 @@ Slide 34's notes give the taxonomy this stage completes:
 
 ## Scope
 
-- **`TOOL_APPROVAL`** (`FoundryOperationsAgent`) — the slide-verbatim wrapping:
+- **`TOOL_APPROVAL`** (`Capabilities/ToolApprovalCapability.cs`) — the slide-verbatim wrapping:
 
   ```csharp
   AIFunction fileWorkItem = new ApprovalRequiredAIFunction(

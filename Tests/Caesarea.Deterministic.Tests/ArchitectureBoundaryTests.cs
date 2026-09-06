@@ -69,20 +69,22 @@ public sealed class ArchitectureBoundaryTests
         Assert.DoesNotContain("Incident", toolsetText, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Activity", toolsetText, StringComparison.OrdinalIgnoreCase);
 
-        // The agent composes exactly two local function tools. One reads authoritative state and
-        // one asks the governed operation to start from the Workflow stage. Neither performs a
-        // write, and the only direct write the agent ever holds is the MCP tool in its window.
-        var agentPath = Path.Combine(repositoryRoot, "Services", "OperationsAgent.Api", "Services", "FoundryOperationsAgent.cs");
-        var agentText = File.ReadAllText(agentPath);
-        Assert.Equal(4, CountOccurrences(agentText, "AIFunctionFactory.Create("));
-        Assert.Contains("EnergyTools.StreetlightStateToolName", agentText, StringComparison.Ordinal);
-        Assert.Contains("OperationsAgentToolNames.StartRestoreLightingOperation", agentText, StringComparison.Ordinal);
-        // The third is the maintenance capability, and it only reaches the model wrapped for
-        // approval - pinned separately by SensitiveWorkItemToolIsAlwaysApprovalWrapped.
-        Assert.Contains("OperationsAgentToolNames.CreateMaintenanceWorkItem", agentText, StringComparison.Ordinal);
-        // The fourth is its read-only partner: the incident lookup that finds existing work before
-        // new work is filed. Reading commits nothing, so it is deliberately not wrapped.
-        Assert.Contains("OperationsAgentToolNames.GetIncident", agentText, StringComparison.Ordinal);
+        // The agent's local function tools live in its capabilities, and there are exactly four:
+        // one reads authoritative state, one asks the governed operation to start from the Workflow
+        // stage, one files a work item behind the approval wrapper, and one looks an incident up.
+        // None performs a write - the only direct write the agent ever holds is the MCP tool in its
+        // window - and the spine registers no tool of its own.
+        var agentText = File.ReadAllText(Path.Combine(repositoryRoot, "Services", "OperationsAgent.Api", "Services", "FoundryOperationsAgent.cs"));
+        var capabilitiesText = ReadCapabilities(repositoryRoot);
+        Assert.Equal(0, CountOccurrences(agentText, "AIFunctionFactory.Create("));
+        Assert.Equal(4, CountOccurrences(capabilitiesText, "AIFunctionFactory.Create("));
+        Assert.Contains("EnergyTools.StreetlightStateToolName", capabilitiesText, StringComparison.Ordinal);
+        Assert.Contains("OperationsAgentToolNames.StartRestoreLightingOperation", capabilitiesText, StringComparison.Ordinal);
+        // The maintenance capability only reaches the model wrapped for approval - pinned
+        // separately by SensitiveWorkItemToolIsAlwaysApprovalWrapped.
+        Assert.Contains("OperationsAgentToolNames.CreateMaintenanceWorkItem", capabilitiesText, StringComparison.Ordinal);
+        // Its read-only partner, the incident lookup, is deliberately not wrapped: reading commits nothing.
+        Assert.Contains("OperationsAgentToolNames.GetIncident", capabilitiesText, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -218,34 +220,37 @@ public sealed class ArchitectureBoundaryTests
     public void SensitiveWorkItemToolIsAlwaysApprovalWrapped()
     {
         var repositoryRoot = FindRepositoryRoot();
-        var agentText = File.ReadAllText(Path.Combine(repositoryRoot, "Services", "OperationsAgent.Api", "Services", "FoundryOperationsAgent.cs"));
+        var capabilityText = ReadCapability(repositoryRoot, "ToolApprovalCapability.cs");
 
         // The work-item capability may only reach the model through the approval wrapper: an
         // unwrapped AIFunctionFactory.Create over the maintenance tool would hand the agent an
         // unsupervised way to commit city resources.
-        var wrapperIndex = agentText.IndexOf("new ApprovalRequiredAIFunction(", StringComparison.Ordinal);
-        var toolIndex = agentText.IndexOf("maintenanceTools.CreateMaintenanceWorkItem", StringComparison.Ordinal);
+        var wrapperIndex = capabilityText.IndexOf("new ApprovalRequiredAIFunction(", StringComparison.Ordinal);
+        var toolIndex = capabilityText.IndexOf("maintenanceTools.CreateMaintenanceWorkItem", StringComparison.Ordinal);
 
         Assert.True(wrapperIndex >= 0, "The maintenance tool is no longer wrapped for approval.");
         Assert.True(toolIndex > wrapperIndex, "The maintenance tool must be created inside the approval wrapper.");
-        Assert.Equal(1, CountOccurrences(agentText, "maintenanceTools.CreateMaintenanceWorkItem"));
-        Assert.Contains("currentStage >= DemoStage.ToolApproval", agentText, StringComparison.Ordinal);
+        Assert.Equal(1, CountOccurrences(capabilityText, "maintenanceTools.CreateMaintenanceWorkItem"));
+        Assert.Equal(1, CountOccurrences(ReadCapabilities(repositoryRoot), "maintenanceTools.CreateMaintenanceWorkItem"));
+        // The capability admits itself only from the ToolApproval stage.
+        Assert.Contains("stage >= DemoStage.ToolApproval", capabilityText, StringComparison.Ordinal);
     }
 
     [Fact]
     public void WriteCapabilityIsStageGatedInTheAgent()
     {
         var repositoryRoot = FindRepositoryRoot();
-        var agentText = File.ReadAllText(Path.Combine(repositoryRoot, "Services", "OperationsAgent.Api", "Services", "FoundryOperationsAgent.cs"));
+        var streetlightText = ReadCapability(repositoryRoot, "StreetlightToolsCapability.cs");
+        var workflowText = ReadCapability(repositoryRoot, "RemediationWorkflowCapability.cs");
 
         // The direct write exists in exactly one stage window: it appears at InteractiveInput,
         // where MRTR guards it, and is withdrawn at Workflow, where the agent must request the
         // governed operation instead of performing the write itself.
-        var windowGateIndex = agentText.IndexOf(
+        var windowGateIndex = streetlightText.IndexOf(
             "currentStage >= DemoStage.InteractiveInput && currentStage < DemoStage.Workflow", StringComparison.Ordinal);
-        var restoreToolIndex = agentText.IndexOf("OperationsAgentToolNames.RestoreScheduledMode", StringComparison.Ordinal);
-        var workflowToolIndex = agentText.IndexOf("OperationsAgentToolNames.StartRestoreLightingOperation", StringComparison.Ordinal);
-        var workflowGateIndex = agentText.IndexOf("currentStage >= DemoStage.Workflow", StringComparison.Ordinal);
+        var restoreToolIndex = streetlightText.IndexOf("OperationsAgentToolNames.RestoreScheduledMode", StringComparison.Ordinal);
+        var workflowGateIndex = workflowText.IndexOf("stage >= DemoStage.Workflow", StringComparison.Ordinal);
+        var workflowToolIndex = workflowText.IndexOf("OperationsAgentToolNames.StartRestoreLightingOperation", StringComparison.Ordinal);
 
         Assert.True(windowGateIndex >= 0, "The InteractiveInput..Workflow stage window for the direct write is missing.");
         Assert.True(restoreToolIndex > windowGateIndex, "The restore tool must be exposed only inside the stage window.");
@@ -253,7 +258,7 @@ public sealed class ArchitectureBoundaryTests
         Assert.True(workflowToolIndex > workflowGateIndex, "The workflow-start tool must be exposed only behind the Workflow stage gate.");
         // Counted on the registration itself, not on every mention of the name: the approval
         // prompt also names the capability, and that is metadata, not a second exposure.
-        Assert.Equal(1, CountOccurrences(agentText, "FindDiscoveredTool(discoveredTools, OperationsAgentToolNames.RestoreScheduledMode, EnergyHubSourceName)"));
+        Assert.Equal(1, CountOccurrences(ReadCapabilities(repositoryRoot), "FindDiscoveredTool(discoveredTools, OperationsAgentToolNames.RestoreScheduledMode, EnergyHubSourceName)"));
     }
 
     [Fact]
@@ -312,6 +317,16 @@ public sealed class ArchitectureBoundaryTests
 
         return directory?.FullName ?? throw new InvalidOperationException("Repository root could not be located from the test output directory.");
     }
+
+    // The agent's capabilities, one file per stage, are where its tools are registered.
+    private static string CapabilitiesDirectory(string repositoryRoot) =>
+        Path.Combine(repositoryRoot, "Services", "OperationsAgent.Api", "Services", "Capabilities");
+
+    private static string ReadCapability(string repositoryRoot, string fileName) =>
+        File.ReadAllText(Path.Combine(CapabilitiesDirectory(repositoryRoot), fileName));
+
+    private static string ReadCapabilities(string repositoryRoot) =>
+        string.Join(Environment.NewLine, Directory.GetFiles(CapabilitiesDirectory(repositoryRoot), "*.cs").Order(StringComparer.Ordinal).Select(File.ReadAllText));
 
     private static int CountOccurrences(string value, string searchText) =>
         (value.Length - value.Replace(searchText, string.Empty, StringComparison.Ordinal).Length) / searchText.Length;

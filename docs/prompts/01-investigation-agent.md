@@ -89,7 +89,9 @@ Operational loop and timeout limits remain hosting safeguards rather than a teac
 2. In Demo Control, switch to **First Agent**.
 3. Show that the deterministic Command Center remains unchanged.
 4. Ask the agent: **“Is streetlight L-417 on?”**
-5. Show `FoundryOperationsAgent.cs`: one general agent and one tool registration.
+5. Show `FoundryOperationsAgent.cs` - one general agent - and `Capabilities/StreetlightToolsCapability.cs`,
+   the one tool registration. Each later stage adds a capability file beside it, never a branch in
+   the agent.
 6. Show `EnergyTools.cs`: one ordinary C# method reading Energy Hub.
 7. Explain that the model selected the tool; Energy Hub still owns the answer.
 

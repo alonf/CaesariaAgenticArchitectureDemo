@@ -1,20 +1,17 @@
 using System.Diagnostics;
-using System.Text.Json;
 using Azure.AI.Projects;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
-using ModelContextProtocol;
-using ModelContextProtocol.Client;
-using ModelContextProtocol.Protocol;
+using OperationsAgent.Api.Services.Capabilities;
 
 namespace OperationsAgent.Api.Services;
 
 /// <summary>
-/// Hosts the general Caesarea Operations Agent using Microsoft Foundry. Capabilities compose by
-/// demo stage: the read-only Energy Hub tool (local or discovered over MCP), knowledge retrieval,
-/// case memory, skills, the approval-guarded restore tool for the Interactive Input stage window,
-/// and - from the Workflow stage, in its place - the tool that starts the governed remediation
-/// operation the workflow owns.
+/// Hosts the general Caesarea Operations Agent using Microsoft Foundry. This file is the spine of a
+/// request - compose the capabilities the stage admits, create the agent, open or restore the
+/// session, run, resolve approvals, serialize, let each capability describe its part of the run.
+/// The capabilities themselves live in <c>Capabilities/</c>, one per stage, each owning what it
+/// adds before the run, what it reports afterwards, and what it disposes.
 /// </summary>
 public sealed partial class FoundryOperationsAgent(
     AIProjectClient projectClient,
@@ -41,7 +38,6 @@ public sealed partial class FoundryOperationsAgent(
     ILoggerFactory loggerFactory,
     ILogger<FoundryOperationsAgent> logger) : IOperationsAgent
 {
-
     private readonly AIProjectClient _projectClient = projectClient ?? throw new ArgumentNullException(nameof(projectClient));
     private readonly IEnergyReadGateway _energyReadGateway = energyReadGateway ?? throw new ArgumentNullException(nameof(energyReadGateway));
     private readonly AgentSessionStore _sessionStore = sessionStore ?? throw new ArgumentNullException(nameof(sessionStore));
@@ -50,9 +46,6 @@ public sealed partial class FoundryOperationsAgent(
     private readonly ToolSourceSwitch _toolSourceSwitch = toolSourceSwitch ?? throw new ArgumentNullException(nameof(toolSourceSwitch));
     private readonly PendingApprovalStore _pendingApprovalStore = pendingApprovalStore ?? throw new ArgumentNullException(nameof(pendingApprovalStore));
     private const int MaxToolApprovalRounds = 3;
-
-    private const string EnergyHubSourceName = "Energy Hub";
-    private const string SecurityAgentSourceName = "Security Operations Agent";
 
     private readonly RemediationWorkflowService _remediationWorkflow = remediationWorkflow ?? throw new ArgumentNullException(nameof(remediationWorkflow));
     private readonly IWorkItemGateway _workItems = workItems ?? throw new ArgumentNullException(nameof(workItems));
@@ -196,11 +189,6 @@ public sealed partial class FoundryOperationsAgent(
         ArgumentException.ThrowIfNullOrWhiteSpace(question);
         ArgumentException.ThrowIfNullOrWhiteSpace(correlationId);
 
-        var energyTools = new EnergyTools(
-            _energyReadGateway,
-            correlationId,
-            _loggerFactory.CreateLogger<EnergyTools>());
-
         // Inspect modelFlightRecorder.Exchanges in the debugger to see every model round trip.
         ModelExchangeRecorder? modelFlightRecorder = null;
 
@@ -217,239 +205,18 @@ public sealed partial class FoundryOperationsAgent(
         // is suspended; otherwise a paused human would trip the timeout mid-step.
         timeoutSource.CancelAfter(Debugger.IsAttached ? Timeout.InfiniteTimeSpan : _requestTimeout);
 
-        TextSearchProvider? workKnowledge = null;
-        CaseMemoryProvider? caseMemory = null;
-        AgentSkillsProvider? skills = null;
-        McpClient? mcpClient = null;
-        HttpClientTransport? mcpTransport = null;
-        McpClient? securityMcpClient = null;
-        HttpClientTransport? securityTransport = null;
+        // The capabilities in lecture order, which is also toolbox order: the stages accumulate,
+        // and so does the list. Only those the stage admits take part in this request.
+        var capabilities = CreateCapabilities();
+        var composition = new AgentComposition(currentStage, correlationId);
+        List<IAgentCapability> active = [];
 
         try
         {
-            #region KNOWLEDGE_RETRIEVAL
-            DemoBreakpoints.Pause(DemoSnippets.Knowledge);
-
-            // Retrieval trace for the UI: what the search returned, which is not the same claim as
-            // what the agent cited. Tool invocations run sequentially, so a plain list is safe.
-            List<WorkEvidence> retrievedEvidence = [];
-
-            if (currentStage >= DemoStage.Knowledge)
+            foreach (var capability in capabilities.Where(capability => capability.IsAvailable(currentStage)))
             {
-                workKnowledge = new TextSearchProvider(
-                    async (query, searchCancellationToken) =>
-                    {
-                        var evidence = await _workKnowledgeSearch.SearchAsync(query, correlationId, searchCancellationToken);
-                        retrievedEvidence.AddRange(evidence);
-                        return evidence.Select(item => new TextSearchProvider.TextSearchResult
-                        {
-                            SourceName = $"{item.SourceType} {item.Id} ({item.SourceLabel})",
-                            Text = $"{item.Title} - {item.Summary} (recorded {item.OccurredAt:u})"
-                        });
-                    },
-                    new TextSearchProviderOptions
-                    {
-                        SearchTime = TextSearchProviderOptions.TextSearchBehavior.OnDemandFunctionCalling,
-                        FunctionToolName = OperationsAgentToolNames.SearchWorkKnowledge,
-                        FunctionToolDescription =
-                            "Searches organizational work knowledge such as work orders, technician notes, and maintenance records."
-                    },
-                    _loggerFactory);
-            }
-            #endregion
-
-            #region CASE_MEMORY
-            DemoBreakpoints.Pause(DemoSnippets.CaseMemory);
-
-            // Hypothesis trace for the UI: which closed cases the provider recalled this run.
-            List<ClosedCase> recalledCases = [];
-
-            if (currentStage >= DemoStage.Memory)
-            {
-                caseMemory = new CaseMemoryProvider(
-                    _caseMemoryStore,
-                    recalled => recalledCases.AddRange(recalled),
-                    correlationId,
-                    _loggerFactory.CreateLogger<CaseMemoryProvider>());
-            }
-            #endregion
-
-            #region AGENT_SKILLS
-            DemoBreakpoints.Pause(DemoSnippets.Skills);
-
-            IReadOnlyList<SkillDescriptor> advertisedSkills = [];
-
-            if (currentStage >= DemoStage.Skills && _skillsDirectory is not null)
-            {
-                // Progressive disclosure: skill names/descriptions are advertised in the system
-                // prompt; the model loads a full procedure on demand through the load_skill tool.
-                // Approval for load_skill is disabled here and returns in the ToolApproval stage.
-                skills = new AgentSkillsProvider(
-                    _skillsDirectory,
-                    options: new AgentSkillsProviderOptions { DisableLoadSkillApproval = true },
-                    loggerFactory: _loggerFactory);
-            }
-            #endregion
-
-            #region MCP_CLIENT
-            DemoBreakpoints.Pause(DemoSnippets.McpClient);
-
-            // Same capability, presenter-selected boundary: the streetlight tool is either the local
-            // function compiled into this service, or discovered at runtime from the Energy Hub's MCP
-            // server - McpClientTool IS an AIFunction, so everything downstream cannot tell them apart.
-            var toolSource = currentStage >= DemoStage.McpTools
-                ? _toolSourceSwitch.Current
-                : OperationsAgentToolSource.Local;
-            List<AITool> agentTools = [];
-
-            if (toolSource == OperationsAgentToolSource.Mcp)
-            {
-                var mcpHttpClient = _httpClientFactory.CreateClient("energyhub-mcp");
-                mcpHttpClient.DefaultRequestHeaders.Add(CorrelationHeaderNames.XCorrelationId, correlationId);
-
-                mcpTransport = new HttpClientTransport(
-                    new HttpClientTransportOptions { Endpoint = _mcpEndpoint },
-                    mcpHttpClient,
-                    _loggerFactory,
-                    ownsHttpClient: true);
-
-                // When a remote tool pauses input-required (MRTR), the elicitation handler carries
-                // the question to the operator; the paused call resumes with the answer.
-                var mcpOptions = new McpClientOptions
-                {
-                    Handlers = new McpClientHandlers
-                    {
-                        ElicitationHandler = CreateOperatorApprovalHandler(correlationId)
-                    }
-                };
-
-                IList<McpClientTool> discoveredTools;
-
-                try
-                {
-                    mcpClient = await McpClient.CreateAsync(
-                        mcpTransport,
-                        mcpOptions,
-                        loggerFactory: _loggerFactory,
-                        cancellationToken: timeoutSource.Token);
-                    discoveredTools = await mcpClient.ListToolsAsync(cancellationToken: timeoutSource.Token);
-                }
-                catch (McpException exception)
-                {
-                    throw new OperationsAgentToolUnavailableException(
-                        $"The Energy Hub MCP server could not be used: {exception.Message}", exception);
-                }
-
-                agentTools.Add(FindDiscoveredTool(discoveredTools, EnergyTools.StreetlightStateToolName, EnergyHubSourceName));
-
-                // The direct write exists in one stage window only: it joins at InteractiveInput,
-                // where the MRTR approval pause guards it, and is withdrawn again at Workflow,
-                // where the agent must request the governed operation instead of performing it.
-                if (currentStage >= DemoStage.InteractiveInput && currentStage < DemoStage.Workflow)
-                {
-                    agentTools.Add(FindDiscoveredTool(discoveredTools, OperationsAgentToolNames.RestoreScheduledMode, EnergyHubSourceName));
-                }
-            }
-            else
-            {
-                agentTools.Add(AIFunctionFactory.Create(
-                    energyTools.GetStreetlightStateAsync,
-                    EnergyTools.StreetlightStateToolName,
-                    "Gets the current authoritative operational state of a streetlight."));
-            }
-
-            // From the Workflow stage the corrective capability is an orchestration, not a write:
-            // the agent starts the governed operation and the workflow owns validation, policy,
-            // approval, execution, and verification.
-            if (currentStage >= DemoStage.Workflow)
-            {
-                var remediationTools = new RemediationTools(
-                    _remediationWorkflow, correlationId, _loggerFactory.CreateLogger<RemediationTools>());
-                agentTools.Add(AIFunctionFactory.Create(
-                    remediationTools.StartRestoreLightingOperation,
-                    OperationsAgentToolNames.StartRestoreLightingOperation,
-                    "Starts the governed Restore Lighting Operation workflow for a streetlight."));
-            }
-            #endregion
-
-            #region TOOL_APPROVAL
-            DemoBreakpoints.Pause(DemoSnippets.ToolApproval);
-
-            // The third control point. MRTR was the tool asking for input; the workflow's gate was
-            // a node in an orchestration we drew. This one is reactive: the model picks a
-            // sensitive capability on its own, and the framework intercepts the call so a
-            // supervisor decides before it runs. Nothing about the tool itself changes.
-            if (currentStage >= DemoStage.ToolApproval)
-            {
-                var maintenanceTools = new MaintenanceTools(
-                    _workItems, _stageGate, correlationId, _loggerFactory.CreateLogger<MaintenanceTools>());
-
-                AIFunction fileWorkItem = new ApprovalRequiredAIFunction(
-                    AIFunctionFactory.Create(
-                        maintenanceTools.CreateMaintenanceWorkItem,
-                        OperationsAgentToolNames.CreateMaintenanceWorkItem,
-                        "Files a maintenance work item so a technician is dispatched to an asset."));
-
-                agentTools.Add(fileWorkItem);
-            }
-            #endregion
-
-            // The protected capability's read-only partner. Existing work is found before new work
-            // is filed: the asset's state names its open incident, and this lookup tells the model
-            // what that incident already covers. Deliberately not wrapped - looking is not committing.
-            if (currentStage >= DemoStage.ToolApproval)
-            {
-                var incidentTools = new IncidentTools(
-                    _incidents, correlationId, _loggerFactory.CreateLogger<IncidentTools>());
-                agentTools.Add(AIFunctionFactory.Create(
-                    incidentTools.GetIncidentAsync,
-                    OperationsAgentToolNames.GetIncident,
-                    "Gets an incident the Command Center already tracks, so existing work is found before new work is filed."));
-            }
-
-            // A second agent, not a second tool: Security owns records this service may not read,
-            // so the question crosses a boundary and comes back as a judgment. The relationship is
-            // delegation - the Operations Agent keeps ownership of the answer it gives the operator.
-            if (currentStage >= DemoStage.MultiAgent && _securityConsult.Enabled)
-            {
-                var securityHttpClient = _httpClientFactory.CreateClient("securityagent-mcp");
-                securityHttpClient.DefaultRequestHeaders.Add(CorrelationHeaderNames.XCorrelationId, correlationId);
-
-                securityTransport = new HttpClientTransport(
-                    new HttpClientTransportOptions { Endpoint = _securityAgentEndpoint },
-                    securityHttpClient,
-                    _loggerFactory,
-                    ownsHttpClient: true);
-
-                try
-                {
-                    securityMcpClient = await McpClient.CreateAsync(
-                        securityTransport, loggerFactory: _loggerFactory, cancellationToken: timeoutSource.Token);
-                    var securityTools = await securityMcpClient.ListToolsAsync(cancellationToken: timeoutSource.Token);
-                    agentTools.Add(FindDiscoveredTool(securityTools, OperationsAgentToolNames.AssessLightingRequirement, SecurityAgentSourceName));
-                }
-                catch (McpException exception)
-                {
-                    throw new OperationsAgentToolUnavailableException(
-                        $"The Security Operations Agent could not be consulted: {exception.Message}", exception);
-                }
-            }
-
-            List<AIContextProvider> contextProviders = [];
-
-            if (workKnowledge is not null)
-            {
-                contextProviders.Add(workKnowledge);
-            }
-
-            if (caseMemory is not null)
-            {
-                contextProviders.Add(caseMemory);
-            }
-
-            if (skills is not null)
-            {
-                contextProviders.Add(skills);
+                await capability.ComposeAsync(composition, timeoutSource.Token);
+                active.Add(capability);
             }
 
             #region AGENT_CREATION
@@ -463,12 +230,13 @@ public sealed partial class FoundryOperationsAgent(
                     {
                         ModelId = _modelDeploymentName,
                         Instructions = OperationsAgentInstructions.Text,
-                        Tools = agentTools
+                        Tools = composition.Tools
                     },
                     // Capabilities join as context providers: knowledge retrieval contributes an
                     // on-demand search tool; case memory contributes trusted hypothesis rules plus
-                    // recalled cases as separate untrusted reference data.
-                    AIContextProviders = contextProviders.Count > 0 ? contextProviders : null
+                    // recalled cases as separate untrusted reference data; skills advertise
+                    // procedures the model loads on demand.
+                    AIContextProviders = composition.ContextProviders.Count > 0 ? composition.ContextProviders : null
                 },
                 clientFactory: client =>
                 {
@@ -483,12 +251,9 @@ public sealed partial class FoundryOperationsAgent(
                 loggerFactory: _loggerFactory);
             #endregion
 
-            if (skills is not null)
+            foreach (var capability in active)
             {
-                // Snapshot the advertised skills before the run - through the SDK's own discovery, so
-                // the response reports exactly what the provider would advertise for THIS request even
-                // if the presenter edits the files while the model works.
-                advertisedSkills = await SkillCatalog.DescribeAsync(_skillsDirectory, agent, _loggerFactory, timeoutSource.Token);
+                await capability.PrepareAsync(agent, timeoutSource.Token);
             }
 
             #region AGENT_SESSION
@@ -532,46 +297,26 @@ public sealed partial class FoundryOperationsAgent(
                 ? []
                 : AgentTraceProjection.DescribeToolCalls(modelFlightRecorder, approvalDecisions);
 
-            IReadOnlyList<OperationsAgentDelegation> delegations = modelFlightRecorder is null
-                ? []
-                : AgentTraceProjection.DescribeDelegations(
-                    modelFlightRecorder,
-                    approvalDecisions,
-                    (toolName, exception) => OperationsAgentLog.DelegationTraceUnreadable(_logger, toolName, exception));
+            // Each capability reports its own part of the trace: the evidence retrieved, the cases
+            // recalled, the skills advertised and loaded, the specialist consulted.
+            var trace = new AgentRunTrace(modelFlightRecorder, approvalDecisions);
+            var parts = new OperationsAgentAnswerParts();
 
-            IReadOnlyList<OperationsAgentEvidence> evidence =
-            [
-                .. retrievedEvidence
-                    .DistinctBy(item => item.Id, StringComparer.OrdinalIgnoreCase)
-                    .Select(item => new OperationsAgentEvidence(
-                        item.Id, item.SourceType, item.Title, item.Summary, item.OccurredAt, item.SourceLabel, item.SourceUri))
-            ];
-
-            IReadOnlyList<OperationsAgentRecalledCase> recalled =
-            [
-                .. recalledCases
-                    .DistinctBy(item => item.CaseId, StringComparer.OrdinalIgnoreCase)
-                    .Select(item => new OperationsAgentRecalledCase(
-                        item.CaseId, item.AssetId, item.Symptom, item.Resolution, item.ClosedAt))
-            ];
-
-            // Skills trace from the pre-run snapshot. A skill counts as loaded only when a
-            // load_skill call named it exactly (the SDK performs an exact lookup) AND the pipeline
-            // executed the call and returned a result to the model.
-            IReadOnlyList<OperationsAgentSkill> skillTrace =
-            [
-                .. advertisedSkills.Select(skill => new OperationsAgentSkill(
-                    skill.Name,
-                    skill.Description,
-                    modelFlightRecorder is not null && modelFlightRecorder.ToolCalls.Any(call =>
-                        call.ToolName == OperationsAgentToolNames.LoadSkill
-                        && SkillCatalog.IsLoadSkillCallFor(call.Arguments, skill.Name)
-                        && modelFlightRecorder.HasResult(call.CallId))))
-            ];
+            foreach (var capability in active)
+            {
+                capability.Describe(trace, parts);
+            }
 
             return new OperationsAgentAnswer(
-                response.Text, resolvedSessionId, toolCalls, evidence, recalled, skillTrace, toolSource,
-                modelFlightRecorder?.Exchanges.Count ?? 0, delegations);
+                response.Text,
+                resolvedSessionId,
+                toolCalls,
+                parts.Evidence,
+                parts.RecalledCases,
+                parts.Skills,
+                composition.ToolSource,
+                modelFlightRecorder?.Exchanges.Count ?? 0,
+                parts.Delegations);
         }
         catch (OperationCanceledException exception) when (!cancellationToken.IsCancellationRequested)
         {
@@ -582,31 +327,27 @@ public sealed partial class FoundryOperationsAgent(
         finally
         {
             // Per-request resources are disposed with the request, on success and on any
-            // initialization failure: the skills provider owns its source pipeline, and the
-            // transport (disposed after the client) owns the HTTP client it was given.
-            skills?.Dispose();
-
-            if (mcpClient is not null)
+            // initialization failure; each capability disposes only what it created.
+            foreach (var capability in capabilities)
             {
-                await mcpClient.DisposeAsync();
-            }
-
-            if (mcpTransport is not null)
-            {
-                await mcpTransport.DisposeAsync();
-            }
-
-            if (securityMcpClient is not null)
-            {
-                await securityMcpClient.DisposeAsync();
-            }
-
-            if (securityTransport is not null)
-            {
-                await securityTransport.DisposeAsync();
+                await capability.DisposeAsync();
             }
         }
     }
+
+    // In lecture order. A new stage is a new entry here and a new file next to the others - not
+    // another condition in the method above.
+    private IReadOnlyList<IAgentCapability> CreateCapabilities() =>
+    [
+        new KnowledgeCapability(_workKnowledgeSearch, _loggerFactory),
+        new CaseMemoryCapability(_caseMemoryStore, _loggerFactory),
+        new SkillsCapability(_skillsDirectory, _loggerFactory),
+        new StreetlightToolsCapability(
+            _energyReadGateway, _toolSourceSwitch, _httpClientFactory, _mcpEndpoint, _pendingApprovalStore, _stageGate, _loggerFactory),
+        new RemediationWorkflowCapability(_remediationWorkflow, _loggerFactory),
+        new ToolApprovalCapability(_workItems, _incidents, _stageGate, _loggerFactory),
+        new SecurityConsultCapability(_securityConsult, _httpClientFactory, _securityAgentEndpoint, _loggerFactory, _logger)
+    ];
 
     /// <summary>
     /// Resolves any tool-approval requests the run returned, then resumes the same session with
@@ -654,49 +395,6 @@ public sealed partial class FoundryOperationsAgent(
         // answer is refused even if the operator approved in the same instant.
         return approved && _stageGate.GetCurrent().Id >= DemoStage.ToolApproval;
     }
-
-    private static McpClientTool FindDiscoveredTool(IList<McpClientTool> discoveredTools, string toolName, string sourceName) =>
-        discoveredTools.FirstOrDefault(tool => tool.Name == toolName)
-        ?? throw new OperationsAgentToolUnavailableException(
-            $"The {sourceName} MCP server did not offer the required tool '{toolName}'.");
-
-    /// <summary>
-    /// Creates the MRTR elicitation handler that bridges a paused remote tool to the operator:
-    /// the question parks in the pending-approval store, the Command Center collects the
-    /// decision, and the tool call resumes with it. The tool produces no side effect until then.
-    /// </summary>
-    /// <param name="correlationId">The correlation identifier spanning the agent run.</param>
-    private Func<ElicitRequestParams?, CancellationToken, ValueTask<ElicitResult>> CreateOperatorApprovalHandler(string correlationId) =>
-        async (elicitation, elicitationCancellation) =>
-        {
-            var (_, decision) = _pendingApprovalStore.Create(
-                elicitation?.Message ?? "A remote tool requests operator confirmation.",
-                correlationId,
-                elicitationCancellation,
-                OperationsAgentControlPoint.InteractiveInput,
-                OperationsAgentToolNames.RestoreScheduledMode);
-            var approved = await decision;
-
-            // The direct write exists in one stage window, so the confirmation is checked against
-            // that whole window and not just its floor. Moving forward into Workflow withdraws
-            // this capability exactly as moving backward does: the governed operation replaces it,
-            // and a confirmation parked beforehand must not be able to perform the write anyway.
-            var stageNow = _stageGate.GetCurrent().Id;
-
-            if (stageNow < DemoStage.InteractiveInput || stageNow >= DemoStage.Workflow)
-            {
-                approved = false;
-            }
-
-            return new ElicitResult
-            {
-                Action = "accept",
-                Content = new Dictionary<string, JsonElement>
-                {
-                    ["approved"] = JsonSerializer.SerializeToElement(approved)
-                }
-            };
-        };
 }
 
 internal static partial class OperationsAgentLog
