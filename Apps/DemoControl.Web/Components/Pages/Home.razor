@@ -48,34 +48,48 @@
     @* Preparation is previewed, not silent: some switches are the beat itself (Tools to MCP is
        the MCP Tools beat), so the presenter sees exactly what the director will touch before it
        does. Rehearsal mode skips this for practice runs. *@
-    @if (_pendingPrepare is { } pending)
+    @if (_pendingTarget is { } pendingTarget)
     {
         <section class="panel prepare-preview" aria-label="Prepare beat">
             <div class="panel-heading">
-                <h2>Prepare: @pending.StageName</h2>
-                <span class="stamp">@(PlannedActions(pending).Count == 0 ? "already in place" : $"{PlannedActions(pending).Count} change(s)")</span>
+                <h2>Prepare: @StageDisplayName(pendingTarget)</h2>
+                <span class="stamp">@PendingStamp</span>
             </div>
-            @if (PlannedActions(pending).Count == 0)
+            @if (_pendingPrepare is { } pending)
             {
-                <p class="panel-intro">Everything this beat starts from is already in place.</p>
+                @if (PlannedActions(pending).Count == 0)
+                {
+                    <p class="panel-intro">Everything this beat starts from is already in place - nothing to change.</p>
+                }
+                else
+                {
+                    <ol class="planned-actions">
+                        @foreach (var action in PlannedActions(pending))
+                        {
+                            <li>@action</li>
+                        }
+                    </ol>
+                }
+                @if (ManualPrerequisites(pending).Count > 0)
+                {
+                    <p class="switchboard-note">Arranged by you, not the director: @string.Join(" · ", ManualPrerequisites(pending))</p>
+                }
+                <div class="stage-switch-actions">
+                    @if (PlannedActions(pending).Count > 0)
+                    {
+                        <button class="button primary" @onclick="ConfirmPrepareAsync" disabled="@_prepareBusy">@(_prepareBusy ? "Preparing..." : "Confirm")</button>
+                        <button class="button secondary" @onclick="CancelPrepare" disabled="@_prepareBusy">Cancel</button>
+                    }
+                    else
+                    {
+                        <button class="button secondary" @onclick="CancelPrepare" disabled="@_prepareBusy">Close</button>
+                    }
+                </div>
             }
             else
             {
-                <ol class="planned-actions">
-                    @foreach (var action in PlannedActions(pending))
-                    {
-                        <li>@action</li>
-                    }
-                </ol>
+                <p class="panel-intro">Checking what this beat starts from...</p>
             }
-            @if (ManualPrerequisites(pending).Count > 0)
-            {
-                <p class="switchboard-note">Arranged by you, not the director: @string.Join(" · ", ManualPrerequisites(pending))</p>
-            }
-            <div class="stage-switch-actions">
-                <button class="button primary" @onclick="ConfirmPrepareAsync" disabled="@_prepareBusy">@(_prepareBusy ? "Preparing..." : "Confirm")</button>
-                <button class="button secondary" @onclick="CancelPrepare" disabled="@_prepareBusy">Cancel</button>
-            </div>
         </section>
     }
 
@@ -576,16 +590,31 @@
     private bool _busy;
     private string? _stageMessage;
     private bool _stageMessageIsError;
+    private DateTimeOffset _stageNoticeUntil;
     private CancellationTokenSource? _pollingTokenSource;
     private Task? _pollingTask;
 
     // The director's view of the current beat, and the beat waiting for the presenter's confirmation.
     private DemoStageReadiness? _readiness;
     private DemoStageReadiness? _pendingPrepare;
+    // The beat being checked or previewed, and a counter so the latest choice wins over a readiness
+    // check still in flight for an earlier one.
+    private DemoStage? _pendingTarget;
+    private int _pendingRequest;
     private bool _prepareBusy;
     private bool _rehearsal;
 
     private DemoStage? CurrentStageId => _stageCatalog?.CurrentStage.Id;
+
+    private string PendingStamp => _pendingPrepare switch
+    {
+        null => "checking...",
+        { } pending when PlannedActions(pending).Count == 0 => "already in place",
+        { } pending => $"{PlannedActions(pending).Count} change(s)"
+    };
+
+    private string StageDisplayName(DemoStage stage) =>
+        _stageCatalog?.Stages.FirstOrDefault(descriptor => descriptor.Id == stage)?.Name ?? stage.ToString();
 
     // The beats a scenario drives: every stage whose walkthrough names it, at the start or later.
     private IReadOnlyList<DemoStageDescriptor> BeatsFor(ScenarioId scenarioId) =>
@@ -603,6 +632,20 @@
         try
         {
             _readiness = await StageClient.GetReadinessAsync(_stageCatalog.CurrentStage.Id, cancellationToken);
+
+            // A preview is a snapshot of a demo that keeps moving underneath it - a scenario applied,
+            // a switch flipped - so an open one is re-read with everything else, unless the presenter
+            // chose something else in the meantime.
+            if (_pendingPrepare is { } pending && _pendingTarget == pending.Stage)
+            {
+                var request = _pendingRequest;
+                var refreshed = await StageClient.GetReadinessAsync(pending.Stage, cancellationToken);
+
+                if (request == _pendingRequest)
+                {
+                    _pendingPrepare = refreshed;
+                }
+            }
         }
         catch (Exception)
         {
@@ -612,41 +655,45 @@
 
     private async Task BeginPrepareAsync(DemoStage stage)
     {
+        // While a preparation runs the chips and stepper are disabled. Otherwise every click is a
+        // new choice: the panel opens at once for it, and if a readiness check for an earlier
+        // choice is still in flight, its answer is dropped when it arrives.
         if (_prepareBusy)
         {
             return;
         }
 
-        _prepareBusy = true;
+        var request = ++_pendingRequest;
+        _pendingTarget = stage;
+        _pendingPrepare = null;
 
         try
         {
             var readiness = await StageClient.GetReadinessAsync(stage, CancellationToken.None);
 
-            if (PlannedActions(readiness).Count == 0)
+            if (request != _pendingRequest)
             {
-                _stageMessage = $"{readiness.StageName} is already in place.";
-                _stageMessageIsError = false;
-                _pendingPrepare = null;
+                return;
             }
-            else if (_rehearsal)
+
+            if (_rehearsal && PlannedActions(readiness).Count > 0)
             {
-                _prepareBusy = false;
                 await PrepareCoreAsync(stage);
+                return;
             }
-            else
-            {
-                _pendingPrepare = readiness;
-            }
+
+            _pendingPrepare = readiness;
         }
         catch (Exception exception)
         {
+            if (request != _pendingRequest)
+            {
+                return;
+            }
+
+            _pendingTarget = null;
             _stageMessage = $"The beat could not be checked: {exception.Message}";
             _stageMessageIsError = true;
-        }
-        finally
-        {
-            _prepareBusy = false;
         }
     }
 
@@ -658,34 +705,48 @@
         }
     }
 
-    private void CancelPrepare() => _pendingPrepare = null;
+    private void CancelPrepare()
+    {
+        _pendingRequest++;
+        _pendingTarget = null;
+        _pendingPrepare = null;
+    }
 
     private async Task PrepareCoreAsync(DemoStage stage)
     {
         _prepareBusy = true;
+        string message;
+        bool isError;
 
         try
         {
             var result = await StageClient.PrepareAsync(stage, CancellationToken.None);
-            _stageMessage = result.Message;
-            _stageMessageIsError = !result.Succeeded;
-            _pendingPrepare = null;
+            message = result.Message;
+            isError = !result.Succeeded;
         }
         catch (Exception exception)
         {
-            _stageMessage = $"The beat could not be prepared: {exception.Message}";
-            _stageMessageIsError = true;
+            message = $"The beat could not be prepared: {exception.Message}";
+            isError = true;
         }
         finally
         {
             _prepareBusy = false;
-            await LoadCatalogAsync(CancellationToken.None, showErrors: true);
-            await LoadStageCatalogAsync(CancellationToken.None, showErrors: true);
-            await LoadToolSourceAsync(CancellationToken.None);
-            await LoadSecurityConsultAsync(CancellationToken.None);
-            await LoadWorkKnowledgeAsync(CancellationToken.None);
-            await LoadAgentHabitatAsync(CancellationToken.None);
         }
+
+        CancelPrepare();
+        await LoadCatalogAsync(CancellationToken.None, showErrors: true);
+        await LoadStageCatalogAsync(CancellationToken.None, showErrors: true);
+        await LoadToolSourceAsync(CancellationToken.None);
+        await LoadSecurityConsultAsync(CancellationToken.None);
+        await LoadWorkKnowledgeAsync(CancellationToken.None);
+        await LoadAgentHabitatAsync(CancellationToken.None);
+
+        // Set after the reloads: a successful load clears the previous notice, and this one is the
+        // outcome the presenter is waiting for.
+        _stageMessage = message;
+        _stageMessageIsError = isError;
+        _stageNoticeUntil = DateTimeOffset.UtcNow.AddSeconds(20);
     }
 
     // One prerequisite at a time, through the same handlers the switch buttons use.
@@ -938,6 +999,7 @@
         {
             _busy = false;
             await LoadCatalogAsync(CancellationToken.None, showErrors: true);
+            await LoadReadinessAsync(CancellationToken.None);
             await LoadBehaviorAsync(CancellationToken.None);
         }
     }
@@ -961,6 +1023,7 @@
         {
             _busy = false;
             await LoadCatalogAsync(CancellationToken.None, showErrors: true);
+            await LoadReadinessAsync(CancellationToken.None);
             await LoadBehaviorAsync(CancellationToken.None);
         }
     }
@@ -993,7 +1056,8 @@
             _stageCatalog = await StageClient.GetCatalogAsync(cancellationToken);
             await LoadReadinessAsync(cancellationToken);
 
-            if (!_stageMessageIsError)
+            // A success notice stays long enough to be read; the poll clears it afterwards.
+            if (!_stageMessageIsError && DateTimeOffset.UtcNow > _stageNoticeUntil)
             {
                 _stageMessage = null;
             }
