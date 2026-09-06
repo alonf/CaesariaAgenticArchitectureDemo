@@ -339,6 +339,335 @@ input[type="number"] {
     align-self: flex-start;
 }
 
+/* ---- The director: preview, beat chips, readiness, steps, stepper, and the regrouped panels ---- */
+
+.rehearsal-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    color: var(--muted);
+    font-size: 0.875rem;
+    cursor: pointer;
+}
+
+.button.small {
+    padding: 0.3rem 0.65rem;
+    font-size: 0.8rem;
+    border-radius: 0.5rem;
+}
+
+.prepare-preview {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem 1.1rem;
+    margin-bottom: 0.9rem;
+    border-color: rgba(125, 224, 175, 0.55);
+    box-shadow: 0 0 0 1px rgba(125, 224, 175, 0.22), 0 18px 42px rgba(0, 0, 0, 0.22);
+}
+
+.prepare-preview > * {
+    margin: 0;
+}
+
+.planned-actions {
+    margin: 0;
+    padding-left: 1.3rem;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+/* The beats a scenario drives, as small buttons on its card: the card is the entry point, the
+   chip is the action. The current beat is marked so the presenter sees where they are. */
+.beat-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.beat-chip {
+    border: 1px solid rgba(134, 169, 255, 0.35);
+    border-radius: 999px;
+    background: rgba(134, 169, 255, 0.1);
+    color: var(--text);
+    padding: 0.2rem 0.55rem;
+    font-size: 0.75rem;
+    line-height: 1.3;
+    cursor: pointer;
+}
+
+.beat-chip:hover:not(:disabled) {
+    background: rgba(134, 169, 255, 0.25);
+}
+
+.beat-chip.current {
+    border-color: rgba(125, 224, 175, 0.6);
+    background: rgba(125, 224, 175, 0.16);
+    color: var(--green);
+}
+
+.beat-chip:disabled {
+    opacity: 0.55;
+    cursor: wait;
+}
+
+.section-label {
+    display: block;
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06rem;
+}
+
+.feature-line {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    color: var(--green);
+    font-size: 0.95rem;
+}
+
+.feature-label {
+    flex: 0 0 auto;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    background: rgba(125, 224, 175, 0.14);
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06rem;
+}
+
+.readiness {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.75rem 0.9rem;
+    border: 1px solid rgba(255, 180, 87, 0.35);
+    border-radius: 0.6rem;
+    background: rgba(255, 180, 87, 0.06);
+}
+
+.readiness.ready {
+    border-color: rgba(125, 224, 175, 0.4);
+    background: rgba(125, 224, 175, 0.06);
+}
+
+.readiness > * {
+    margin: 0;
+}
+
+.readiness-list {
+    display: grid;
+    gap: 0.4rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.readiness-list li {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.95rem;
+}
+
+.readiness-mark {
+    flex: 0 0 1rem;
+    text-align: center;
+    font-weight: 700;
+}
+
+.readiness-list .met .readiness-mark {
+    color: var(--green);
+}
+
+.readiness-list .unmet .readiness-mark {
+    color: var(--error);
+}
+
+.readiness-list .unknown .readiness-mark,
+.readiness-list .later .readiness-mark,
+.readiness-list .later .readiness-text {
+    color: var(--muted);
+}
+
+.readiness-text {
+    flex: 1;
+}
+
+.beat-steps {
+    display: grid;
+    gap: 0.45rem;
+    margin: 0;
+    padding-left: 1.3rem;
+    font-size: 0.95rem;
+    line-height: 1.45;
+}
+
+.beat-steps li {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 0.55rem;
+    align-items: baseline;
+}
+
+.surface-tag {
+    padding: 0.1rem 0.45rem;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05rem;
+    white-space: nowrap;
+}
+
+.surface-command-center {
+    background: rgba(134, 169, 255, 0.18);
+    color: var(--accent);
+}
+
+.surface-switchboard {
+    background: rgba(255, 180, 87, 0.18);
+    color: var(--orange);
+}
+
+.surface-code {
+    background: rgba(125, 224, 175, 0.16);
+    color: var(--green);
+}
+
+.step-expect {
+    grid-column: 2;
+    color: var(--muted);
+    font-size: 0.875rem;
+}
+
+.beat-point {
+    padding-left: 0.9rem;
+    border-left: 3px solid rgba(125, 224, 175, 0.5);
+    color: var(--text);
+    font-size: 0.95rem;
+    font-style: italic;
+}
+
+details.capabilities > summary,
+details.advanced > summary {
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 0.875rem;
+    user-select: none;
+}
+
+details.capabilities .capability-chips {
+    margin-top: 0.6rem;
+}
+
+/* The lecture's beats in order: done, current, ahead. */
+.stepper {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.stepper-step {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.7rem 0.35rem 0.4rem;
+    border: 1px solid rgba(134, 169, 255, 0.3);
+    border-radius: 999px;
+    background: rgba(134, 169, 255, 0.08);
+    color: var(--text);
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.stepper-step:hover:not(:disabled) {
+    background: rgba(134, 169, 255, 0.2);
+}
+
+.stepper-step:disabled {
+    opacity: 0.55;
+    cursor: wait;
+}
+
+.stepper-index {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.4rem;
+    height: 1.4rem;
+    border-radius: 999px;
+    background: rgba(134, 169, 255, 0.2);
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+.stepper-step.done {
+    color: var(--muted);
+}
+
+.stepper-step.done .stepper-index {
+    background: rgba(125, 224, 175, 0.2);
+    color: var(--green);
+}
+
+.stepper-step.current {
+    border-color: rgba(125, 224, 175, 0.6);
+    background: linear-gradient(135deg, var(--green) 0%, #318f67 100%);
+    color: #082218;
+    font-weight: 700;
+}
+
+.stepper-step.current .stepper-index {
+    background: rgba(8, 34, 24, 0.2);
+    color: #082218;
+}
+
+/* The four switches side by side; each keeps its own panel and its own message. */
+.switch-panels {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.9rem;
+    margin-bottom: 0.9rem;
+}
+
+.switch-panels .switchboard-panel {
+    margin-bottom: 0;
+}
+
+details.advanced {
+    margin-bottom: 0.9rem;
+}
+
+details.advanced > summary {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    padding: 0.75rem 1.1rem;
+    border: 1px solid rgba(134, 169, 255, 0.24);
+    border-radius: 1rem;
+    color: var(--text);
+    font-size: 1rem;
+    font-weight: 700;
+    background: rgba(36, 26, 55, 0.6);
+}
+
+details.advanced[open] > summary {
+    margin-bottom: 0.9rem;
+}
+
+@media (max-width: 1080px) {
+    .switch-panels {
+        grid-template-columns: 1fr;
+    }
+}
+
 #blazor-error-ui {
     background: rgba(255, 239, 191, 0.96);
     bottom: 0;

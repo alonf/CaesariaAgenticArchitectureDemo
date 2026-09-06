@@ -33,11 +33,13 @@ public sealed class StageCoordinatorTests
 
         Assert.Contains(
             catalog.GetDescriptor(DemoStage.InteractiveInput).Walkthrough!.Prerequisites,
-            prerequisite => prerequisite.Contains("Tools: MCP", StringComparison.Ordinal));
+            prerequisite => prerequisite is { Switch: DemoSwitch.ToolSource, RequiredValue: DemoSwitchValues.ToolSourceMcp }
+                && prerequisite.Text.Contains("Tools: MCP", StringComparison.Ordinal));
 
         Assert.Contains(
             catalog.GetDescriptor(DemoStage.MultiAgent).Walkthrough!.Prerequisites,
-            prerequisite => prerequisite.Contains("consult", StringComparison.OrdinalIgnoreCase));
+            prerequisite => prerequisite is { Switch: DemoSwitch.SecurityConsult, RequiredValue: DemoSwitchValues.Off }
+                && prerequisite.Text.Contains("consult", StringComparison.OrdinalIgnoreCase));
 
         Assert.Contains(
             catalog.GetDescriptor(DemoStage.McpTools).Walkthrough!.Steps,

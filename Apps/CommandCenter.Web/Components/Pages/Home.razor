@@ -47,7 +47,7 @@
         @if (_snapshot?.CurrentStage.Walkthrough is not null)
         {
             <button class="walkthrough-toggle @(_showWalkthrough ? "active" : string.Empty)"
-                    @onclick="() => _showWalkthrough = !_showWalkthrough"
+                    @onclick="ToggleWalkthroughAsync"
                     aria-expanded="@_showWalkthrough">
                 @(_showWalkthrough ? "Hide walkthrough" : "Walkthrough")
             </button>
@@ -68,7 +68,8 @@
                 <ul class="walkthrough-prereqs">
                     @foreach (var prerequisite in walkthrough.Prerequisites)
                     {
-                        <li>@prerequisite</li>
+                        var (mark, markClass) = PrerequisiteMark(prerequisite);
+                        <li class="@markClass"><span class="walkthrough-mark" aria-hidden="true">@mark</span><span>@prerequisite.Text</span></li>
                     }
                 </ul>
             }
@@ -1265,6 +1266,62 @@
 
     private bool _showWalkthrough;
 
+    // The switch values behind the walkthrough's prerequisites, read from the agent only while the
+    // panel is open. The Command Center never sets a switch - the switchboard owns that - but it
+    // can say whether the beat on screen is ready to follow.
+    private IReadOnlyDictionary<DemoSwitch, string>? _switchValues;
+
+    private async Task ToggleWalkthroughAsync()
+    {
+        _showWalkthrough = !_showWalkthrough;
+
+        if (_showWalkthrough)
+        {
+            await LoadSwitchValuesAsync(CancellationToken.None);
+        }
+    }
+
+    private async Task LoadSwitchValuesAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            _switchValues = await OperationsAgentClient.GetSwitchValuesAsync(cancellationToken);
+        }
+        catch (Exception)
+        {
+            // Unreadable: every switch prerequisite shows as unchecked until the next poll.
+            _switchValues = null;
+        }
+    }
+
+    // A check for a prerequisite the demo already meets, a cross for one it does not, a dot for one
+    // that cannot be checked here, and an arrow for a later step's fixture - which is the presenter's
+    // own move during the beat, not a precondition of it.
+    private (string Mark, string Css) PrerequisiteMark(DemoPrerequisite prerequisite)
+    {
+        if (!prerequisite.AppliesAtStart)
+        {
+            return ("→", "wt-later");
+        }
+
+        bool? satisfied = prerequisite.Kind switch
+        {
+            DemoPrerequisiteKind.Scenario => _snapshot?.CurrentScenario.Id == prerequisite.ScenarioId,
+            DemoPrerequisiteKind.Switch when prerequisite.Switch is { } @switch
+                && _switchValues is not null
+                && _switchValues.TryGetValue(@switch, out var value) =>
+                string.Equals(value, prerequisite.RequiredValue, StringComparison.OrdinalIgnoreCase),
+            _ => null
+        };
+
+        return satisfied switch
+        {
+            true => ("✓", "wt-met"),
+            false => ("✗", "wt-unmet"),
+            _ => ("·", "wt-unknown")
+        };
+    }
+
     // Whether the answer on screen is a claim about the city, and so must go stale when the city
     // moves. A delegated consult is a claim about another domain's records and is not versioned.
     private bool _agentAnswerTracksEvidence = true;
@@ -1923,6 +1980,11 @@
             var snapshot = await ApiClient.GetSnapshotAsync(cancellationToken);
             _snapshot = snapshot;
             _lastRefreshed = DateTimeOffset.Now;
+
+            if (_showWalkthrough)
+            {
+                await LoadSwitchValuesAsync(cancellationToken);
+            }
 
             // A stage downgrade invalidates the conversational session: its history may carry
             // capabilities (loaded skills, retrieved evidence) the earlier stage must not expose.

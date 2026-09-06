@@ -101,12 +101,146 @@ public enum DemoStage
 /// <param name="Description">The stage description shown in the presenter UI.</param>
 /// <param name="Capabilities">The capabilities enabled once the stage is active.</param>
 /// <param name="Walkthrough">What the presenter actually does at this stage.</param>
+/// <param name="Feature">The MAF or Foundry mechanism this stage exists to show.</param>
 public sealed record DemoStageDescriptor(
     DemoStage Id,
     string Name,
     string Description,
     IReadOnlyList<string> Capabilities,
-    DemoStageWalkthrough? Walkthrough = null);
+    DemoStageWalkthrough? Walkthrough = null,
+    string? Feature = null);
+
+/// <summary>
+/// What a prerequisite refers to: a scenario fixture the director can apply, a switchboard switch
+/// it can set, or something only the presenter can arrange.
+/// </summary>
+public enum DemoPrerequisiteKind
+{
+    /// <summary>A deterministic scenario the beat starts from.</summary>
+    Scenario,
+
+    /// <summary>A switchboard switch and the value the beat starts with.</summary>
+    Switch,
+
+    /// <summary>A precondition only the presenter can arrange, stated for them to check.</summary>
+    Manual
+}
+
+/// <summary>
+/// The presenter switches a beat can depend on. Each maps to one Operations Agent endpoint.
+/// </summary>
+public enum DemoSwitch
+{
+    /// <summary>Where the streetlight tool comes from: a local function or the MCP server.</summary>
+    ToolSource,
+
+    /// <summary>Whether the Operations Agent may consult the Security Operations Agent.</summary>
+    SecurityConsult,
+
+    /// <summary>Whether the seeded work-knowledge evidence is available to the agent.</summary>
+    WorkKnowledge,
+
+    /// <summary>Which habitat answers: the local Aspire agent or the Foundry-hosted twin.</summary>
+    AgentHabitat
+}
+
+/// <summary>
+/// The canonical values a <see cref="DemoSwitch"/> takes in a prerequisite and in a readiness
+/// report, so the catalog, the director, and both web apps compare the same words.
+/// </summary>
+public static class DemoSwitchValues
+{
+    /// <summary>The streetlight tool is a local C# function.</summary>
+    public const string ToolSourceLocal = "Local";
+
+    /// <summary>The streetlight tool is discovered from the Energy Hub's MCP server.</summary>
+    public const string ToolSourceMcp = "Mcp";
+
+    /// <summary>A two-state switch is on.</summary>
+    public const string On = "On";
+
+    /// <summary>A two-state switch is off.</summary>
+    public const string Off = "Off";
+
+    /// <summary>The seeded work-knowledge evidence is available to the agent.</summary>
+    public const string EvidencePresent = "Present";
+
+    /// <summary>The seeded work-knowledge evidence is withheld from the agent.</summary>
+    public const string EvidenceAbsent = "Absent";
+
+    /// <summary>The local Aspire agent answers.</summary>
+    public const string HabitatLocal = "Local";
+
+    /// <summary>The Foundry-hosted twin answers.</summary>
+    public const string HabitatFoundryHosted = "FoundryHosted";
+
+    /// <summary>
+    /// The presenter-facing name of a switch.
+    /// </summary>
+    public static string Describe(DemoSwitch @switch) => @switch switch
+    {
+        DemoSwitch.ToolSource => "Tools",
+        DemoSwitch.SecurityConsult => "Security consult",
+        DemoSwitch.WorkKnowledge => "Work knowledge evidence",
+        DemoSwitch.AgentHabitat => "Habitat",
+        _ => @switch.ToString()
+    };
+}
+
+/// <summary>
+/// One thing a beat needs before its first step. <see cref="Text"/> is the presenter-facing line;
+/// the structured fields let the director check and, where it can, satisfy it. A prerequisite
+/// with <see cref="AppliesAtStart"/> false belongs to a later step of the beat: it is shown, never
+/// applied by preparation, and never counted against readiness.
+/// </summary>
+public sealed record DemoPrerequisite(
+    DemoPrerequisiteKind Kind,
+    string Text,
+    ScenarioId? ScenarioId = null,
+    DemoSwitch? Switch = null,
+    string? RequiredValue = null,
+    bool AppliesAtStart = true)
+{
+    /// <summary>A scenario fixture the beat starts from, or - when <paramref name="appliesAtStart"/> is false - one a later step applies.</summary>
+    public static DemoPrerequisite ForScenario(ScenarioId scenarioId, string text, bool appliesAtStart = true) =>
+        new(DemoPrerequisiteKind.Scenario, text, ScenarioId: scenarioId, AppliesAtStart: appliesAtStart);
+
+    /// <summary>A switch and the value the beat starts with.</summary>
+    public static DemoPrerequisite ForSwitch(DemoSwitch @switch, string requiredValue, string text) =>
+        new(DemoPrerequisiteKind.Switch, text, Switch: @switch, RequiredValue: requiredValue);
+
+    /// <summary>A precondition only the presenter can arrange.</summary>
+    public static DemoPrerequisite ByHand(string text) => new(DemoPrerequisiteKind.Manual, text);
+}
+
+/// <summary>
+/// A prerequisite checked against the live demo. <see cref="Satisfied"/> is <see langword="null"/>
+/// when it cannot be checked: a manual precondition, or a switch that could not be read.
+/// </summary>
+public sealed record DemoPrerequisiteStatus(DemoPrerequisite Prerequisite, bool? Satisfied, string? CurrentValue);
+
+/// <summary>
+/// Whether a beat can be presented now: the stage is current and every prerequisite it starts
+/// from is met or unknowable.
+/// </summary>
+public sealed record DemoStageReadiness(
+    DemoStage Stage,
+    string StageName,
+    DemoStage CurrentStage,
+    IReadOnlyList<DemoPrerequisiteStatus> Prerequisites)
+{
+    /// <summary>Whether the beat's stage is the one the demo is at.</summary>
+    public bool StageIsCurrent => Stage == CurrentStage;
+
+    /// <summary>Whether the beat can be presented now: its stage is current and nothing it starts from is known to be unmet.</summary>
+    public bool Ready => StageIsCurrent
+        && Prerequisites.All(status => !status.Prerequisite.AppliesAtStart || status.Satisfied != false);
+}
+
+/// <summary>
+/// The outcome of preparing a beat: what the director did, in order, and where the beat stands now.
+/// </summary>
+public sealed record DemoStagePrepareResult(DemoStageReadiness Readiness, IReadOnlyList<string> Actions, string Summary);
 
 /// <summary>
 /// The presenter's script for one stage. The Command Center's action buttons cannot convey this on
@@ -118,7 +252,7 @@ public sealed record DemoStageDescriptor(
 /// <param name="Steps">What to do, in order.</param>
 /// <param name="Point">The one line this stage exists to land.</param>
 public sealed record DemoStageWalkthrough(
-    IReadOnlyList<string> Prerequisites,
+    IReadOnlyList<DemoPrerequisite> Prerequisites,
     IReadOnlyList<DemoStageWalkthroughStep> Steps,
     string Point);
 
@@ -158,6 +292,7 @@ public enum DemoSurface
 /// <param name="AppliedAt">The time at which the stage was applied.</param>
 /// <param name="CorrelationId">The correlation identifier spanning the stage change.</param>
 /// <param name="Walkthrough">What the presenter does at this stage, for the walkthrough panel.</param>
+/// <param name="Feature">The MAF or Foundry mechanism this stage exists to show.</param>
 public sealed record DemoStageStatus(
     DemoStage Id,
     string Name,
@@ -165,7 +300,8 @@ public sealed record DemoStageStatus(
     IReadOnlyList<string> Capabilities,
     DateTimeOffset AppliedAt,
     string CorrelationId,
-    DemoStageWalkthrough? Walkthrough = null);
+    DemoStageWalkthrough? Walkthrough = null,
+    string? Feature = null);
 
 /// <summary>
 /// Represents the demo stage catalog returned to the presenter switchboard.

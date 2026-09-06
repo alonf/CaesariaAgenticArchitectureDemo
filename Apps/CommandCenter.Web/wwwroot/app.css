@@ -1453,9 +1453,41 @@ svg {
 
 .walkthrough-prereqs {
     margin: 0;
-    padding-left: 18px;
+    padding: 0;
+    list-style: none;
     color: var(--cp-text);
     font-size: 0.82rem;
+}
+
+/* Each prerequisite carries its own readiness mark, so the list has no bullets: met, unmet,
+   unchecked here, or a later step's fixture the presenter applies during the beat. */
+.walkthrough-prereqs li {
+    display: flex;
+    gap: 6px;
+    align-items: baseline;
+}
+
+.walkthrough-mark {
+    flex: 0 0 14px;
+    font-weight: 700;
+    text-align: center;
+}
+
+.walkthrough-prereqs .wt-met .walkthrough-mark {
+    color: var(--cp-success);
+}
+
+.walkthrough-prereqs .wt-unmet .walkthrough-mark {
+    color: var(--cp-danger);
+}
+
+.walkthrough-prereqs .wt-unknown .walkthrough-mark,
+.walkthrough-prereqs .wt-later .walkthrough-mark {
+    color: var(--cp-text-muted);
+}
+
+.walkthrough-prereqs .wt-later {
+    color: var(--cp-text-muted);
 }
 
 .walkthrough-steps {

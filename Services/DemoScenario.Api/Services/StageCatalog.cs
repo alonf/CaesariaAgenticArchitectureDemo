@@ -80,7 +80,7 @@ public sealed class StageCatalog
     private static readonly Dictionary<DemoStage, DemoStageWalkthrough> Walkthroughs = new()
     {
         [DemoStage.Deterministic] = new(
-            ["Scenario: Lights On Reported by a Client"],
+            [DemoPrerequisite.ForScenario(ScenarioId.ForgottenOverride, "Scenario: Lights On Reported by a Client")],
             [
                 new(DemoSurface.CommandCenter, "Show L-417 on the map: reported On, schedule Off.", "Assets requiring attention: 1, and the incoming customer report."),
                 new(DemoSurface.CommandCenter, "Click Restore Scheduled Mode.", "SmartPole confirms, the lamp goes off, the timeline records the correlated command."),
@@ -89,7 +89,7 @@ public sealed class StageCatalog
             "The deterministic platform operates the city. Everything agentic we add later participates in this architecture rather than bypassing it."),
 
         [DemoStage.InvestigationAgent] = new(
-            ["Scenario: Lights On Reported by a Client"],
+            [DemoPrerequisite.ForScenario(ScenarioId.ForgottenOverride, "Scenario: Lights On Reported by a Client")],
             [
                 new(DemoSurface.CommandCenter, "Click Ask agent - \"Is streetlight L-417 on?\".", "One tool call, get_streetlight_state, marked ran."),
                 new(DemoSurface.Code, "Show FoundryOperationsAgent.cs and EnergyTools.cs.", "One general agent; the tool is an ordinary C# method."),
@@ -98,7 +98,7 @@ public sealed class StageCatalog
             "An agent is a model, tools and instructions. The model chose the tool; the Energy Hub still owns the answer."),
 
         [DemoStage.Session] = new(
-            [],
+            [DemoPrerequisite.ForScenario(ScenarioId.ForgottenOverride, "Scenario: Lights On Reported by a Client")],
             [
                 new(DemoSurface.CommandCenter, "Click Ask agent.", "One tool call over 2 round trips."),
                 new(DemoSurface.CommandCenter, "Click Ask \"Why?\" (same session).", "Zero tool calls, one round trip - resolved from session context alone.")
@@ -106,7 +106,10 @@ public sealed class StageCatalog
             "Conversation continuity is useful context, not evidence about reality: the agent did not re-check the city."),
 
         [DemoStage.Knowledge] = new(
-            ["Scenario: Lights On Reported by a Client", "Work knowledge: evidence present"],
+            [
+                DemoPrerequisite.ForScenario(ScenarioId.ForgottenOverride, "Scenario: Lights On Reported by a Client"),
+                DemoPrerequisite.ForSwitch(DemoSwitch.WorkKnowledge, DemoSwitchValues.EvidencePresent, "Work knowledge: evidence present")
+            ],
             [
                 new(DemoSurface.CommandCenter, "Click Ask agent, then Ask \"Why?\".", "The trace adds search_work_knowledge; evidence cards appear with Cited in answer badges."),
                 new(DemoSurface.CommandCenter, "Open the WO-8732 technician note.", "\"Left the light ON for post-maintenance verification.\""),
@@ -115,7 +118,10 @@ public sealed class StageCatalog
             "Retrieval is not citation: the cards show what the search returned, the badge shows what the agent relied on."),
 
         [DemoStage.Memory] = new(
-            ["Arrive from the Knowledge beat, with L-417 already explained"],
+            [
+                DemoPrerequisite.ForScenario(ScenarioId.ForgottenOverride, "Scenario: Lights On Reported by a Client"),
+                DemoPrerequisite.ByHand("Arrive from the Knowledge beat, with L-417 already explained")
+            ],
             [
                 new(DemoSurface.CommandCenter, "Click Close case (record to memory).", "Recorded as CASE-1."),
                 new(DemoSurface.CommandCenter, "Click Ask about L-528 (new session).", "CASE-1 recalled as a hypothesis; L-528 still read live, work knowledge still searched, nothing found.")
@@ -123,7 +129,7 @@ public sealed class StageCatalog
             "Memory is not evidence: green cards are the organization's records, the amber card is the agent's own past conclusion."),
 
         [DemoStage.Skills] = new(
-            [],
+            [DemoPrerequisite.ForScenario(ScenarioId.ForgottenOverride, "Scenario: Lights On Reported by a Client")],
             [
                 new(DemoSurface.CommandCenter, "Click Investigate L-417 (new session).", "load_skill runs first; the answer arrives as the branded incident brief."),
                 new(DemoSurface.Code, "Show SKILL.md - the triage table and the mandated format.", null),
@@ -132,7 +138,10 @@ public sealed class StageCatalog
             "Same model, same tools, same question. The difference is a markdown file in git - skills are ops-owned, auditable configuration."),
 
         [DemoStage.McpTools] = new(
-            ["Tools: LOCAL to start"],
+            [
+                DemoPrerequisite.ForScenario(ScenarioId.ForgottenOverride, "Scenario: Lights On Reported by a Client"),
+                DemoPrerequisite.ForSwitch(DemoSwitch.ToolSource, DemoSwitchValues.ToolSourceLocal, "Tools: LOCAL to start")
+            ],
             [
                 new(DemoSurface.CommandCenter, "Click Ask agent.", "The familiar local trace."),
                 new(DemoSurface.Switchboard, "Flip Tools: LOCAL to MCP.", null),
@@ -141,7 +150,10 @@ public sealed class StageCatalog
             "Same capability, same behavior, new boundary: the tool was discovered over the protocol at runtime."),
 
         [DemoStage.InteractiveInput] = new(
-            ["Tools: MCP - required, the restore tool only arrives over MCP", "Scenario: Lights On Reported by a Client"],
+            [
+                DemoPrerequisite.ForSwitch(DemoSwitch.ToolSource, DemoSwitchValues.ToolSourceMcp, "Tools: MCP - required, the restore tool only arrives over MCP"),
+                DemoPrerequisite.ForScenario(ScenarioId.ForgottenOverride, "Scenario: Lights On Reported by a Client")
+            ],
             [
                 new(DemoSurface.CommandCenter, "Click Restore L-417 to scheduled mode (agent).", "The Operator input required panel appears: the tool is paused mid-execution."),
                 new(DemoSurface.CommandCenter, "Deny first.", "The answer reports the cancellation; the map still shows the override."),
@@ -150,7 +162,7 @@ public sealed class StageCatalog
             "MRTR is the tool asking for input mid-execution. The next stage shows the client gating the call before the tool runs."),
 
         [DemoStage.Workflow] = new(
-            ["Scenario: Lights On Reported by a Client"],
+            [DemoPrerequisite.ForScenario(ScenarioId.ForgottenOverride, "Scenario: Lights On Reported by a Client")],
             [
                 new(DemoSurface.CommandCenter, "Open the workflow definition card.", "The diagram is generated from the code that runs - two policy branches and the work-item branch."),
                 new(DemoSurface.CommandCenter, "Click Run remediation workflow, then deny at the gate.", "Gate Declined, execute Skipped, verify Unresolved - a refusal never paints green and raises no work item."),
@@ -162,8 +174,9 @@ public sealed class StageCatalog
 
         [DemoStage.ToolApproval] = new(
             [
-                "Scenario: Controller Fault - the controller really is faulted, so the agent can verify the report before acting",
-                "Scenario: Existing Incident for the last step - the same fault, already tracked by INC-L417-001"
+                DemoPrerequisite.ForScenario(ScenarioId.ControllerFault, "Scenario: Controller Fault - the controller really is faulted, so the agent can verify the report before acting"),
+                // The last step's fixture, not the first: shown to the presenter, never applied by preparation.
+                DemoPrerequisite.ForScenario(ScenarioId.ExistingIncident, "Scenario: Existing Incident for the last step - the same fault, already tracked by INC-L417-001", appliesAtStart: false)
             ],
             [
                 new(DemoSurface.CommandCenter, "Click Investigate the reported controller fault on L-417.", "The request never names a tool - the agent checks the state, finds the fault, and picks create_maintenance_work_item itself."),
@@ -174,7 +187,7 @@ public sealed class StageCatalog
             "Three control points, one operator experience: the tool asked, then a node we drew, now the model chose and policy intercepted - and when the work already exists, the model finds it and asks for nothing."),
 
         [DemoStage.A2ADelegation] = new(
-            ["Scenario: Lights On Reported by a Client - the open work order explains the override"],
+            [DemoPrerequisite.ForScenario(ScenarioId.ForgottenOverride, "Scenario: Lights On Reported by a Client - the open work order explains the override")],
             [
                 new(DemoSurface.CommandCenter, "Click Ask the workforce domain about L-417.", "The agent card is resolved first, then a task is delegated: the peer searches its work orders, picks the open one and explains the override."),
                 new(DemoSurface.CommandCenter, "Read the Consulted peer block: who answered, which domain runs them, and the skill's own description of what it does not hold.", "A named agent with a provider - not an anonymous endpoint, and not a tool in this agent's toolbox. The card states the limit; the tool is what enforces it."),
@@ -184,7 +197,10 @@ public sealed class StageCatalog
             "Do not ask a model to keep a secret it holds. Hand it only what may cross, and there is nothing left to extract - that is a tool-boundary decision, not a prompt."),
 
         [DemoStage.MultiAgent] = new(
-            ["Scenario: Security Operation", "Security consult: OFF to start"],
+            [
+                DemoPrerequisite.ForScenario(ScenarioId.SecurityOperation, "Scenario: Security Operation"),
+                DemoPrerequisite.ForSwitch(DemoSwitch.SecurityConsult, DemoSwitchValues.Off, "Security consult: OFF to start")
+            ],
             [
                 new(DemoSurface.CommandCenter, "Click Why is L-417 on during daylight? (new session).", "A correct but thin answer: an external directive requires lighting, requesting domain not disclosed."),
                 new(DemoSurface.Switchboard, "Turn the Security consult ON.", null),
@@ -194,9 +210,9 @@ public sealed class StageCatalog
 
         [DemoStage.Hosting] = new(
             [
-                "The hosted agent is deployed (deploy-hosted-agent.yml) and the Command Center knows its project endpoint (CommandCenterWeb:HostedAgent)",
-                "The work order exists in YOUR OneDrive: ./scripts/New-CaesareaWorkOrder.ps1, indexed by Microsoft 365",
-                "Habitat: LOCAL to start"
+                DemoPrerequisite.ByHand("The hosted agent is deployed (deploy-hosted-agent.yml) and the Command Center knows its project endpoint (CommandCenterWeb:HostedAgent)"),
+                DemoPrerequisite.ByHand("The work order exists in YOUR OneDrive: ./scripts/New-CaesareaWorkOrder.ps1, indexed by Microsoft 365"),
+                DemoPrerequisite.ForSwitch(DemoSwitch.AgentHabitat, DemoSwitchValues.HabitatLocal, "Habitat: LOCAL to start")
             ],
             [
                 new(DemoSurface.CommandCenter, "Click Ask about L-417's work records.", "The familiar local answer: evidence cards from the simulated store, labelled Simulated work knowledge."),
@@ -208,8 +224,31 @@ public sealed class StageCatalog
             "The agent code did not change - the habitat did. The platform owns the runtime and the identity, and Work IQ answers as the person asking, which is why your OneDrive is the evidence. And the safest capability is the one the composition never granted.")
     };
 
+    // The MAF or Foundry mechanism each beat exists to show, in the presenter's words. Kept
+    // beside the walkthrough so the switchboard and the Command Center name the same thing.
+    private static readonly Dictionary<DemoStage, string> Features = new()
+    {
+        [DemoStage.Deterministic] = "No agent yet: the deterministic platform operates the city",
+        [DemoStage.InvestigationAgent] = "AIProjectClient.AsAIAgent with an ordinary C# method as its tool (AIFunctionFactory)",
+        [DemoStage.Session] = "AgentSession, serialized between requests and restored for the follow-up",
+        [DemoStage.Knowledge] = "TextSearchProvider as an AIContextProvider: retrieval as an on-demand tool",
+        [DemoStage.Memory] = "A custom AIContextProvider that recalls the agent's own closed cases as hypotheses",
+        [DemoStage.Skills] = "AgentSkillsProvider: a SKILL.md discovered and loaded on demand",
+        [DemoStage.McpTools] = "McpClient tool discovery against the Energy Hub's MCP server",
+        [DemoStage.InteractiveInput] = "MCP elicitation: a tool pausing mid-execution for operator input (MRTR)",
+        [DemoStage.Workflow] = "Microsoft.Agents.AI.Workflows: an explicit graph with a human-in-the-loop gate",
+        [DemoStage.ToolApproval] = "ApprovalRequiredAIFunction: the framework intercepts a tool the model chose",
+        [DemoStage.MultiAgent] = "A second agent consulted as a tool over MCP, holding authority this agent lacks",
+        [DemoStage.A2ADelegation] = "A2A: agent-card discovery and task delegation to a peer domain's agent",
+        [DemoStage.Hosting] = "Foundry's hosted runtime with Work IQ: the same code under the platform's identity",
+    };
+
     private static readonly DemoStageDescriptor[] ScriptedDescriptors =
-        [.. Descriptors.Select(descriptor => descriptor with { Walkthrough = Walkthroughs.GetValueOrDefault(descriptor.Id) })];
+        [.. Descriptors.Select(descriptor => descriptor with
+        {
+            Walkthrough = Walkthroughs.GetValueOrDefault(descriptor.Id),
+            Feature = Features.GetValueOrDefault(descriptor.Id)
+        })];
 
     /// <summary>
     /// Gets the full demo stage catalog.

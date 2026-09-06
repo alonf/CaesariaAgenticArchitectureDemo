@@ -5,7 +5,7 @@ namespace DemoScenario.Api.Services;
 /// <summary>
 /// Coordinates the presenter-selected demo stage and propagates it to the Command Center boundary.
 /// </summary>
-public sealed partial class StageCoordinator : IDisposable
+public sealed partial class StageCoordinator : IStageApplier, IDisposable
 {
     private readonly SemaphoreSlim _applicationLock = new(1, 1);
     private readonly ICommandCenterStageClient _commandCenterStageClient;
@@ -62,7 +62,8 @@ public sealed partial class StageCoordinator : IDisposable
             descriptor.Capabilities,
             _timeProvider.GetUtcNow(),
             correlationId,
-            descriptor.Walkthrough);
+            descriptor.Walkthrough,
+            descriptor.Feature);
 
         await _applicationLock.WaitAsync(cancellationToken);
 

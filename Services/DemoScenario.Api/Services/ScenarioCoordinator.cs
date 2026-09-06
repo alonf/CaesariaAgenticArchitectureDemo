@@ -3,7 +3,7 @@ namespace DemoScenario.Api.Services;
 /// <summary>
 /// Coordinates deterministic scenario application across SmartPole, Energy Hub, and Command Center boundaries.
 /// </summary>
-public sealed partial class ScenarioCoordinator : IDisposable
+public sealed partial class ScenarioCoordinator : IScenarioApplier, IDisposable
 {
     private readonly object _gate = new();
     private readonly SemaphoreSlim _applicationLock = new(1, 1);

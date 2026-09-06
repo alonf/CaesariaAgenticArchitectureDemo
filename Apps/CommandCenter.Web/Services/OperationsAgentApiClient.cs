@@ -83,6 +83,58 @@ internal sealed class OperationsAgentApiClient
             ?? throw new InvalidOperationException("Agent habitat response was empty.");
     }
 
+    /// <summary>
+    /// Reads the presenter switches a walkthrough's prerequisites refer to, in the shared
+    /// <see cref="DemoSwitchValues"/> vocabulary. The Command Center never sets them - the switchboard
+    /// owns that - but it can say whether the beat on screen is ready to follow. A switch that cannot
+    /// be read is left out, so the panel shows it as unchecked rather than failing the whole read.
+    /// </summary>
+    public async Task<IReadOnlyDictionary<DemoSwitch, string>> GetSwitchValuesAsync(CancellationToken cancellationToken)
+    {
+        Dictionary<DemoSwitch, string> values = [];
+        await TryReadSwitchAsync(DemoSwitch.ToolSource, "/api/operations-agent/tool-source/",
+            static payload => payload.GetProperty("source").GetString(), values, cancellationToken);
+        await TryReadSwitchAsync(DemoSwitch.SecurityConsult, "/api/operations-agent/security-consult/",
+            static payload => payload.GetProperty("enabled").GetBoolean() ? DemoSwitchValues.On : DemoSwitchValues.Off, values, cancellationToken);
+        await TryReadSwitchAsync(DemoSwitch.WorkKnowledge, "/api/operations-agent/work-knowledge/",
+            static payload => payload.GetProperty("evidencePresent").GetBoolean() ? DemoSwitchValues.EvidencePresent : DemoSwitchValues.EvidenceAbsent, values, cancellationToken);
+        await TryReadSwitchAsync(DemoSwitch.AgentHabitat, "/api/operations-agent/habitat/",
+            static payload => payload.GetProperty("habitat").GetString(), values, cancellationToken);
+        return values;
+    }
+
+    private async Task TryReadSwitchAsync(
+        DemoSwitch @switch,
+        string route,
+        Func<JsonElement, string?> read,
+        Dictionary<DemoSwitch, string> values,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, route);
+            request.Headers.Add(CorrelationHeaderNames.XCorrelationId, CorrelationIds.Create());
+            using var response = await _httpClient.SendAsync(request, cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                return;
+            }
+
+            var payload = await response.Content.ReadFromJsonAsync<JsonElement>(SerializerOptions, cancellationToken);
+
+            if (read(payload) is { } value)
+            {
+                values[@switch] = value;
+            }
+        }
+        catch (Exception exception) when (exception is HttpRequestException or JsonException or KeyNotFoundException
+            || (exception is OperationCanceledException && !cancellationToken.IsCancellationRequested))
+        {
+            // Unknown, not failed: the walkthrough marks the prerequisite as unchecked.
+        }
+    }
+
     public async Task<IReadOnlyList<OperationsAgentPendingApproval>> GetPendingApprovalsAsync(CancellationToken cancellationToken)
     {
         var correlationId = CorrelationIds.Create();

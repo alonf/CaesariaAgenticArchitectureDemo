@@ -49,6 +49,15 @@ builder.Services.AddSingleton<ScenarioCatalog>();
 builder.Services.AddSingleton<ScenarioCoordinator>();
 builder.Services.AddSingleton<StageCatalog>();
 builder.Services.AddSingleton<StageCoordinator>();
+// The director drives the same coordinators the buttons do, plus the agent's presenter switches.
+builder.Services.AddHttpClient<IOperationsAgentSwitchClient, HttpOperationsAgentSwitchClient>((serviceProvider, client) =>
+{
+    var options = serviceProvider.GetRequiredService<IOptions<DemoScenarioApiOptions>>().Value;
+    client.BaseAddress = new Uri(options.OperationsAgentBaseUri, UriKind.Absolute);
+});
+builder.Services.AddSingleton<IStageApplier>(serviceProvider => serviceProvider.GetRequiredService<StageCoordinator>());
+builder.Services.AddSingleton<IScenarioApplier>(serviceProvider => serviceProvider.GetRequiredService<ScenarioCoordinator>());
+builder.Services.AddSingleton<DemoDirector>();
 
 var app = builder.Build();
 
@@ -76,6 +85,8 @@ var stages = app.MapGroup("/api/demo-stage")
 stages.MapGet(string.Empty, GetStageCatalogAsync);
 stages.MapGet("/current", GetCurrentStage);
 stages.MapPost("/apply/{stage}", ApplyStageAsync);
+stages.MapGet("/readiness/{stage}", GetStageReadinessAsync);
+stages.MapPost("/prepare/{stage}", PrepareStageAsync);
 
 // Narrow presenter surface over the SmartPole behavior configuration (Stage 0 failure controls).
 var simulatorBehavior = app.MapGroup("/api/simulator-behavior")
@@ -86,6 +97,45 @@ simulatorBehavior.MapPost(string.Empty, UpdateSimulatorBehaviorAsync);
 
 await app.RunAsync();
 
+static async Task<IResult> GetStageReadinessAsync(HttpContext context, DemoStage stage, DemoDirector director, CancellationToken cancellationToken)
+{
+    try
+    {
+        return TypedResults.Ok(await director.GetReadinessAsync(stage, context.GetCorrelationId(), cancellationToken));
+    }
+    catch (ArgumentOutOfRangeException exception)
+    {
+        return TypedResults.BadRequest(ProblemDetailsFactory.Create(
+            StatusCodes.Status400BadRequest,
+            "Unknown demo stage",
+            exception.Message,
+            context.GetCorrelationId()));
+    }
+}
+
+static async Task<IResult> PrepareStageAsync(HttpContext context, DemoStage stage, DemoDirector director, CancellationToken cancellationToken)
+{
+    try
+    {
+        return TypedResults.Ok(await director.PrepareAsync(stage, context.GetCorrelationId(), cancellationToken));
+    }
+    catch (ArgumentOutOfRangeException exception)
+    {
+        return TypedResults.BadRequest(ProblemDetailsFactory.Create(
+            StatusCodes.Status400BadRequest,
+            "Unknown demo stage",
+            exception.Message,
+            context.GetCorrelationId()));
+    }
+    catch (HttpRequestException exception)
+    {
+        return TypedResults.Problem(ProblemDetailsFactory.Create(
+            StatusCodes.Status502BadGateway,
+            "Beat could not be prepared",
+            $"A service the beat depends on could not be reached: {exception.Message}",
+            context.GetCorrelationId()));
+    }
+}
 static IResult GetCatalog(ScenarioCatalog catalog, ScenarioCoordinator coordinator) =>
     TypedResults.Ok(new ScenarioCatalogResponse(catalog.GetAll(), coordinator.GetCurrentScenario()));
 

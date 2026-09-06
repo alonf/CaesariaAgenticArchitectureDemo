@@ -19,10 +19,11 @@
     <header class="hero">
         <div>
             <p class="eyebrow">Presenter Only</p>
-            <h1>Deterministic Scenario Control</h1>
-            <p class="subtitle">Use the five curated deterministic scenarios to drive the Energy and Command Center vertical slice. Stage: @StageName.</p>
+            <h1>Demo Director</h1>
+            <p class="subtitle">Pick a scenario or a beat: the director sets what the beat starts from and lists its steps. Stage: @StageName.</p>
         </div>
         <div class="hero-actions">
+            <label class="rehearsal-toggle"><input type="checkbox" @bind="_rehearsal" /> Rehearsal: no confirmations</label>
             <button class="button secondary" @onclick="RefreshAsync" disabled="@_busy">Refresh</button>
             <button class="button primary" @onclick="ResetAsync" disabled="@_busy">Reset to Normal Operation</button>
         </div>
@@ -44,6 +45,41 @@
         </section>
     }
 
+    @* Preparation is previewed, not silent: some switches are the beat itself (Tools to MCP is
+       the MCP Tools beat), so the presenter sees exactly what the director will touch before it
+       does. Rehearsal mode skips this for practice runs. *@
+    @if (_pendingPrepare is { } pending)
+    {
+        <section class="panel prepare-preview" aria-label="Prepare beat">
+            <div class="panel-heading">
+                <h2>Prepare: @pending.StageName</h2>
+                <span class="stamp">@(PlannedActions(pending).Count == 0 ? "already in place" : $"{PlannedActions(pending).Count} change(s)")</span>
+            </div>
+            @if (PlannedActions(pending).Count == 0)
+            {
+                <p class="panel-intro">Everything this beat starts from is already in place.</p>
+            }
+            else
+            {
+                <ol class="planned-actions">
+                    @foreach (var action in PlannedActions(pending))
+                    {
+                        <li>@action</li>
+                    }
+                </ol>
+            }
+            @if (ManualPrerequisites(pending).Count > 0)
+            {
+                <p class="switchboard-note">Arranged by you, not the director: @string.Join(" · ", ManualPrerequisites(pending))</p>
+            }
+            <div class="stage-switch-actions">
+                <button class="button primary" @onclick="ConfirmPrepareAsync" disabled="@_prepareBusy">@(_prepareBusy ? "Preparing..." : "Confirm")</button>
+                <button class="button secondary" @onclick="CancelPrepare" disabled="@_prepareBusy">Cancel</button>
+            </div>
+        </section>
+    }
+
+
     @* The scenarios lead: a presenter applies one every beat, and it must not sit below the
        switches. The active card carries the outcome of the last application, so there is no
        separate "current scenario" panel repeating the same name and description. *@
@@ -63,6 +99,22 @@
                     <span class="card-tag">Scenario @(index + 1)</span>
                     <h2>@scenario.Name</h2>
                     <p>@scenario.Description</p>
+                    @{
+                        var beats = BeatsFor(scenario.Id);
+                    }
+                    @if (beats.Count > 0)
+                    {
+                        <ul class="beat-chips" aria-label="Beats this scenario drives">
+                            @foreach (var beat in beats)
+                            {
+                                <li>
+                                    <button type="button" class="beat-chip @(beat.Id == CurrentStageId ? "current" : string.Empty)" title="@beat.Feature" @onclick="() => BeginPrepareAsync(beat.Id)" disabled="@_prepareBusy">
+                                        @beat.Name
+                                    </button>
+                                </li>
+                            }
+                        </ul>
+                    }
                     @if (isCurrent)
                     {
                         <p class="scenario-status @(string.IsNullOrWhiteSpace(_catalog.CurrentScenario.FailureSummary) ? string.Empty : "status-error")">
@@ -81,9 +133,9 @@
         </section>
     }
 
-    <section class="panel switchboard-panel">
+    <section class="panel switchboard-panel now-playing">
         <div class="panel-heading">
-            <h2>Presenter Switchboard</h2>
+            <h2>Now playing@(_stageCatalog is null ? string.Empty : $": {_stageCatalog.CurrentStage.Name}")</h2>
             <span class="stamp">@(_stageCatalog is null ? "Loading..." : _stageCatalog.CurrentStage.AppliedAt.ToLocalTime().ToString("HH:mm:ss"))</span>
         </div>
         @if (_stageCatalog is null)
@@ -92,337 +144,395 @@
         }
         else
         {
-            <p class="panel-intro">
-                Current stage: <strong>@_stageCatalog.CurrentStage.Name</strong> - @_stageCatalog.CurrentStage.Description
-            </p>
-            <ul class="capability-chips">
-                @foreach (var capability in _stageCatalog.CurrentStage.Capabilities)
-                {
-                    <li>@capability</li>
-                }
-            </ul>
-            <div class="stage-switch-actions">
-                @foreach (var stage in _stageCatalog.Stages)
-                {
-                    <button
-                        class="button @(stage.Id == _stageCatalog.CurrentStage.Id ? "primary" : "secondary")"
-                        @onclick="() => ApplyStageAsync(stage.Id)"
-                        disabled="@_stageBusy">
-                        @stage.Name
-                    </button>
-                }
-            </div>
-            <p class="switchboard-note">Resetting to Normal Operation preserves the currently selected stage.</p>
-        }
-    </section>
-
-    <section class="panel switchboard-panel">
-        <div class="panel-heading">
-            <h2>Demo Breakpoints</h2>
-            <span class="stamp">@BreakpointStamp</span>
-        </div>
-        @if (_breakpoints is null)
-        {
-            <p>@(_breakpointsMessage ?? "Loading demo breakpoints...")</p>
-        }
-        else
-        {
-            <p class="panel-intro">Arm a snippet to pause its service at that code on its next run, then single-step it in the editor. A snippet lives in the service whose code it pauses, so each service is attached separately.</p>
-
-            @if (_attachStatus is { VsCodeAvailable: true, ExtensionInstalled: false })
+            @if (!string.IsNullOrWhiteSpace(_stageCatalog.CurrentStage.Feature))
             {
-                <div class="stage-switch-actions">
-                    <button class="button primary" @onclick="InstallExtensionAsync" disabled="@_attachBusy">
-                        @(_attachBusy ? "Installing..." : "Install VS Code extension")
-                    </button>
-                </div>
+                <p class="feature-line"><span class="feature-label">Shows</span>@_stageCatalog.CurrentStage.Feature</p>
             }
+            <p class="panel-intro">@_stageCatalog.CurrentStage.Description</p>
 
-            @foreach (var source in _breakpoints)
+            @if (_readiness is { } readiness)
             {
-                <div class="breakpoint-source">
-                    <div class="breakpoint-source-heading">
-                        <strong>@source.Service.DisplayName</strong>
-                        <span class="stamp">@SourceStamp(source)</span>
-                    </div>
-
-                    @if (source.Error is not null)
+                <div class="readiness @(readiness.Ready ? "ready" : string.Empty)">
+                    <small class="section-label">@(readiness.Ready ? "Ready to present" : "Before the first step")</small>
+                    @if (readiness.Prerequisites.Count == 0)
                     {
-                        <p class="switchboard-note status-error">@source.Error</p>
+                        <p class="switchboard-note">Nothing to set up - continue from the previous beat.</p>
                     }
                     else
                     {
-                        <ul class="checkbox-list">
-                            @foreach (var snippet in source.Snippets)
+                        <ul class="readiness-list">
+                            @foreach (var status in readiness.Prerequisites)
                             {
-                                <li>
-                                    <label>
-                                        <input
-                                            type="checkbox"
-                                            checked="@snippet.IsArmed"
-                                            disabled="@ArmDisabled"
-                                            @onchange="e => SetBreakpointAsync(source.Service.ClientName, snippet.SnippetName, e.Value is true)" />
-                                        @snippet.SnippetName - break on next run
-                                    </label>
+                                var (mark, markClass) = ReadinessMark(status);
+                                <li class="@markClass">
+                                    <span class="readiness-mark" aria-hidden="true">@mark</span>
+                                    <span class="readiness-text">@status.Prerequisite.Text</span>
+                                    @if (CanFix(status))
+                                    {
+                                        <button type="button" class="button secondary small" @onclick="() => FixPrerequisiteAsync(status)" disabled="@_prepareBusy">@FixLabel(status)</button>
+                                    }
                                 </li>
                             }
                         </ul>
-
-                        @if (_attachStatus is { ExtensionInstalled: true } && !source.DebuggerAttached)
-                        {
-                            <div class="stage-switch-actions">
-                                <button class="button secondary" @onclick="() => RequestAttachAsync(source.Service.ProcessName)" disabled="@_attachBusy">
-                                    @(_attachBusy ? "Requesting..." : $"Attach debugger to {source.Service.DisplayName}")
-                                </button>
-                            </div>
-                        }
                     }
                 </div>
             }
 
-            @if (_attachStatus is { VsCodeAvailable: false })
+            @if (_stageCatalog.CurrentStage.Walkthrough is { } walkthrough)
             {
-                <p class="switchboard-note">The VS Code CLI was not found on this machine; breakpoint arming is unavailable.</p>
-            }
-            else if (_attachStatus is { ExtensionInstalled: false })
-            {
-                <p class="switchboard-note">Breakpoint arming is disabled until the demo-attach VS Code extension is installed.</p>
-            }
-            else
-            {
-                <p class="switchboard-note">Armed snippets stay armed until a debugged run consumes them.</p>
-            }
-        }
-        @if (!string.IsNullOrWhiteSpace(_attachMessage))
-        {
-            <p class="@(_attachMessageIsError ? "status-error" : string.Empty)">@_attachMessage</p>
-        }
-    </section>
-
-    <section class="panel switchboard-panel">
-        <div class="panel-heading">
-            <h2>Work Knowledge</h2>
-            <span class="stamp">@WorkKnowledgeStamp</span>
-        </div>
-        @if (_workKnowledge is null)
-        {
-            <p>@(_workKnowledgeMessage ?? "Loading work knowledge state...")</p>
-        }
-        else
-        {
-            <label>
-                <input
-                    type="checkbox"
-                    checked="@_workKnowledge.EvidencePresent"
-                    disabled="@_workKnowledgeBusy"
-                    @onchange="e => SetWorkEvidenceAsync(e.Value is true)" />
-                Seeded evidence (WO-8732 and the technician note) is available to the agent
-            </label>
-            <p class="switchboard-note">Uncheck to show the agent reporting missing evidence instead of inventing a work order.</p>
-            @if (!string.IsNullOrWhiteSpace(_workKnowledgeMessage))
-            {
-                <p class="status-error">@_workKnowledgeMessage</p>
-            }
-        }
-    </section>
-
-    <section class="panel switchboard-panel">
-        <div class="panel-heading">
-            <h2>Case Memory</h2>
-            <span class="stamp">@CaseMemoryStamp</span>
-        </div>
-        @if (_caseMemory is null)
-        {
-            <p>@(_caseMemoryMessage ?? "Loading case memory...")</p>
-        }
-        else
-        {
-            @if (_caseMemory.Cases.Count == 0)
-            {
-                <p class="switchboard-note">No closed cases yet. Close a case from the Command Center at the Memory stage.</p>
-            }
-            else
-            {
-                <ul class="switchboard-note">
-                    @foreach (var closedCase in _caseMemory.Cases)
+                <small class="section-label">Steps</small>
+                <ol class="beat-steps">
+                    @foreach (var step in walkthrough.Steps)
                     {
-                        <li>@closedCase.CaseId (@closedCase.AssetId) - @closedCase.Symptom</li>
+                        <li>
+                            <span class="surface-tag @SurfaceCss(step.Surface)">@SurfaceLabel(step.Surface)</span>
+                            <span class="step-action">@step.Action</span>
+                            @if (!string.IsNullOrWhiteSpace(step.Expect))
+                            {
+                                <span class="step-expect">@step.Expect</span>
+                            }
+                        </li>
+                    }
+                </ol>
+                <p class="beat-point">@walkthrough.Point</p>
+            }
+
+            <details class="capabilities">
+                <summary>Capabilities at this stage (@_stageCatalog.CurrentStage.Capabilities.Count)</summary>
+                <ul class="capability-chips">
+                    @foreach (var capability in _stageCatalog.CurrentStage.Capabilities)
+                    {
+                        <li>@capability</li>
                     }
                 </ul>
-            }
-            <button class="button secondary" @onclick="ClearCaseMemoryAsync" disabled="@(_caseMemoryBusy || _caseMemory.Cases.Count == 0)">
-                Clear case memory
-            </button>
-            @if (!string.IsNullOrWhiteSpace(_caseMemoryMessage))
-            {
-                <p class="status-error">@_caseMemoryMessage</p>
-            }
-        }
-    </section>
+            </details>
 
-    <section class="panel switchboard-panel">
-        <div class="panel-heading">
-            <h2>Tool Source</h2>
-            <span class="stamp">@ToolSourceStamp</span>
-        </div>
-        @if (_toolSource is null)
-        {
-            <p>@(_toolSourceMessage ?? "Loading tool source...")</p>
-        }
-        else
-        {
-            <p class="panel-intro">Where the agent's streetlight tool comes from. The flip is the lecture beat: same capability, new boundary.</p>
-            <div class="stage-switch-actions">
-                <button class="button @(_toolSource.Source == "Local" ? "primary" : "secondary")" @onclick='() => SetToolSourceAsync("Local")' disabled="@_toolSourceBusy">
-                    LOCAL function
-                </button>
-                <button class="button @(_toolSource.Source == "Mcp" ? "primary" : "secondary")" @onclick='() => SetToolSourceAsync("Mcp")' disabled="@_toolSourceBusy">
-                    MCP remote
-                </button>
+            <small class="section-label">Beats, in lecture order</small>
+            <div class="stepper">
+                @foreach (var stage in _stageCatalog.Stages)
+                {
+                    <button type="button"
+                            class="stepper-step @StepperClass(stage.Id)"
+                            title="@stage.Feature"
+                            @onclick="() => BeginPrepareAsync(stage.Id)"
+                            disabled="@_prepareBusy">
+                        <span class="stepper-index">@((int)stage.Id + 1)</span>
+                        <span class="stepper-name">@stage.Name</span>
+                    </button>
+                }
             </div>
-            @if (!string.IsNullOrWhiteSpace(_toolSourceMessage))
-            {
-                <p class="status-error">@_toolSourceMessage</p>
-            }
+            <p class="switchboard-note">Choosing a beat prepares it: the scenario it starts from, the stage, and the switches it starts with. The flip a beat performs on stage is left to you. Reset to Normal Operation keeps the stage.</p>
         }
     </section>
 
-    <section class="panel switchboard-panel">
-        <div class="panel-heading">
-            <h2>Agent Habitat</h2>
-            <span class="stamp">@AgentHabitatStamp</span>
-        </div>
-        @if (_agentHabitat is null)
-        {
-            <p>@(_agentHabitatMessage ?? "Loading agent habitat...")</p>
-        }
-        else
-        {
-            <p class="panel-intro">
-                Which habitat answers the Command Center's questions. FOUNDRY HOSTED is the same agent
-                code on Microsoft Foundry's runtime: it reads the CLOUD Energy Hub and reaches the work
-                order in the presenter's own OneDrive through Work IQ, asking as the signed-in person.
-                The cloud city is NOT controlled from this switchboard - its demo surface is
-                deliberately off, and it permanently shows the forgotten-override situation that work
-                order WO-8732 explains. First hosted use per person shows a consent link in the
-                Command Center - open it, consent, ask again. Requires the Hosting stage.
-            </p>
-            <div class="stage-switch-actions">
-                <button class="button @(_agentHabitat.Habitat == "Local" ? "primary" : "secondary")" @onclick='() => SetAgentHabitatAsync("Local")' disabled="@_agentHabitatBusy">
-                    LOCAL (Aspire)
-                </button>
-                <button class="button @(_agentHabitat.Habitat == "FoundryHosted" ? "primary" : "secondary")" @onclick='() => SetAgentHabitatAsync("FoundryHosted")' disabled="@_agentHabitatBusy">
-                    FOUNDRY HOSTED
-                </button>
+    @* The four switches the beats flip, side by side: they are steps of the script, so they stay in
+       view. Everything a beat never asks for folds under Advanced. *@
+    <div class="switch-panels">
+        <section class="panel switchboard-panel">
+            <div class="panel-heading">
+                <h2>Tool Source</h2>
+                <span class="stamp">@ToolSourceStamp</span>
             </div>
-            @if (!string.IsNullOrWhiteSpace(_agentHabitatMessage))
+            @if (_toolSource is null)
             {
-                <p class="status-error">@_agentHabitatMessage</p>
+                <p>@(_toolSourceMessage ?? "Loading tool source...")</p>
             }
-        }
-    </section>
-
-    <section class="panel switchboard-panel">
-        <div class="panel-heading">
-            <h2>Security Consult</h2>
-            <span class="stamp">@SecurityConsultStamp</span>
-        </div>
-        @if (_securityConsult is null)
-        {
-            <p>@(_securityConsultMessage ?? "Loading security consult...")</p>
-        }
-        else
-        {
-            <p class="panel-intro">Whether the Operations Agent may consult the Security Operations Agent. Ask the same question with it off and on: with it off the lamp is still intentional, but the reason belongs to a domain that will not disclose it.</p>
-            <div class="stage-switch-actions">
-                <button class="button @(_securityConsult.Enabled ? "secondary" : "primary")" @onclick="() => SetSecurityConsultAsync(false)" disabled="@_securityConsultBusy">
-                    Consult OFF
-                </button>
-                <button class="button @(_securityConsult.Enabled ? "primary" : "secondary")" @onclick="() => SetSecurityConsultAsync(true)" disabled="@_securityConsultBusy">
-                    Consult ON
-                </button>
-            </div>
-            @if (!string.IsNullOrWhiteSpace(_securityConsultMessage))
+            else
             {
-                <p class="status-error">@_securityConsultMessage</p>
-            }
-        }
-    </section>
-
-    @* The A2A beat's closing move. The peer answered from a projection; this is the record that
-       projection came out of, so the presenter can point at the fields that never left the domain.
-       Hidden until asked for - these are on the projector for one minute of a ninety-minute talk. *@
-    <section class="panel switchboard-panel">
-        <div class="panel-heading">
-            <h2>Workforce Records</h2>
-            <span class="stamp">@WorkforceRecordsStamp</span>
-        </div>
-        <p class="panel-intro">The work orders as the workforce domain holds them, read straight from the Workforce Hub. The peer agent never received these fields: its tool returns a projection that does not select them.</p>
-        <div class="stage-switch-actions">
-            <button class="button @(_workforceRecords is null ? "primary" : "secondary")" @onclick="ToggleWorkforceRecordsAsync" disabled="@_workforceRecordsBusy">
-                @WorkforceRecordsButtonLabel
-            </button>
-        </div>
-        @if (_workforceRecords is { } records)
-        {
-            @foreach (var record in records)
-            {
-                <div class="wf-record">
-                    <p class="wf-record-head">@record.WorkOrderId - @record.Title (@record.Status)</p>
-                    <dl class="wf-record-fields">
-                        <div class="wf-shared"><dt>Reason</dt><dd>@record.Reason</dd></div>
-                        <div class="wf-shared"><dt>Operational summary</dt><dd>@record.OperationalSummary</dd></div>
-                        <div class="wf-withheld"><dt>Technician</dt><dd>@record.TechnicianName</dd></div>
-                        <div class="wf-withheld"><dt>Badge</dt><dd>@record.TechnicianBadge</dd></div>
-                        <div class="wf-withheld"><dt>Labour cost</dt><dd>@record.LabourCost.ToString("N2", System.Globalization.CultureInfo.InvariantCulture)</dd></div>
-                        <div class="wf-withheld"><dt>Call-out rate</dt><dd>@record.CallOutRate</dd></div>
-                        <div class="wf-withheld"><dt>Technician note</dt><dd>@record.TechnicianNote</dd></div>
-                    </dl>
+                <p class="panel-intro">Where the agent's streetlight tool comes from. The flip is the lecture beat: same capability, new boundary.</p>
+                <div class="stage-switch-actions">
+                    <button class="button @(_toolSource.Source == "Local" ? "primary" : "secondary")" @onclick='() => SetToolSourceAsync("Local")' disabled="@_toolSourceBusy">
+                        LOCAL function
+                    </button>
+                    <button class="button @(_toolSource.Source == "Mcp" ? "primary" : "secondary")" @onclick='() => SetToolSourceAsync("Mcp")' disabled="@_toolSourceBusy">
+                        MCP remote
+                    </button>
                 </div>
+                @if (!string.IsNullOrWhiteSpace(_toolSourceMessage))
+                {
+                    <p class="status-error">@_toolSourceMessage</p>
+                }
             }
-            <p class="switchboard-note">Green crossed the boundary. Red never entered the agent's context - not redacted from a larger payload, never selected into one.</p>
-        }
-        @if (!string.IsNullOrWhiteSpace(_workforceRecordsMessage))
-        {
-            <p class="status-error">@_workforceRecordsMessage</p>
-        }
-    </section>
+        </section>
+        <section class="panel switchboard-panel">
+            <div class="panel-heading">
+                <h2>Security Consult</h2>
+                <span class="stamp">@SecurityConsultStamp</span>
+            </div>
+            @if (_securityConsult is null)
+            {
+                <p>@(_securityConsultMessage ?? "Loading security consult...")</p>
+            }
+            else
+            {
+                <p class="panel-intro">Whether the Operations Agent may consult the Security Operations Agent. Ask the same question with it off and on: with it off the lamp is still intentional, but the reason belongs to a domain that will not disclose it.</p>
+                <div class="stage-switch-actions">
+                    <button class="button @(_securityConsult.Enabled ? "secondary" : "primary")" @onclick="() => SetSecurityConsultAsync(false)" disabled="@_securityConsultBusy">
+                        Consult OFF
+                    </button>
+                    <button class="button @(_securityConsult.Enabled ? "primary" : "secondary")" @onclick="() => SetSecurityConsultAsync(true)" disabled="@_securityConsultBusy">
+                        Consult ON
+                    </button>
+                </div>
+                @if (!string.IsNullOrWhiteSpace(_securityConsultMessage))
+                {
+                    <p class="status-error">@_securityConsultMessage</p>
+                }
+            }
+        </section>
+        <section class="panel switchboard-panel">
+            <div class="panel-heading">
+                <h2>Agent Habitat</h2>
+                <span class="stamp">@AgentHabitatStamp</span>
+            </div>
+            @if (_agentHabitat is null)
+            {
+                <p>@(_agentHabitatMessage ?? "Loading agent habitat...")</p>
+            }
+            else
+            {
+                <p class="panel-intro">
+                    Which habitat answers the Command Center's questions. FOUNDRY HOSTED is the same agent
+                    code on Microsoft Foundry's runtime: it reads the CLOUD Energy Hub and reaches the work
+                    order in the presenter's own OneDrive through Work IQ, asking as the signed-in person.
+                    The cloud city is NOT controlled from this switchboard - its demo surface is
+                    deliberately off, and it permanently shows the forgotten-override situation that work
+                    order WO-8732 explains. First hosted use per person shows a consent link in the
+                    Command Center - open it, consent, ask again. Requires the Hosting stage.
+                </p>
+                <div class="stage-switch-actions">
+                    <button class="button @(_agentHabitat.Habitat == "Local" ? "primary" : "secondary")" @onclick='() => SetAgentHabitatAsync("Local")' disabled="@_agentHabitatBusy">
+                        LOCAL (Aspire)
+                    </button>
+                    <button class="button @(_agentHabitat.Habitat == "FoundryHosted" ? "primary" : "secondary")" @onclick='() => SetAgentHabitatAsync("FoundryHosted")' disabled="@_agentHabitatBusy">
+                        FOUNDRY HOSTED
+                    </button>
+                </div>
+                @if (!string.IsNullOrWhiteSpace(_agentHabitatMessage))
+                {
+                    <p class="status-error">@_agentHabitatMessage</p>
+                }
+            }
+        </section>
+        <section class="panel switchboard-panel">
+            <div class="panel-heading">
+                <h2>Work Knowledge</h2>
+                <span class="stamp">@WorkKnowledgeStamp</span>
+            </div>
+            @if (_workKnowledge is null)
+            {
+                <p>@(_workKnowledgeMessage ?? "Loading work knowledge state...")</p>
+            }
+            else
+            {
+                <label>
+                    <input
+                        type="checkbox"
+                        checked="@_workKnowledge.EvidencePresent"
+                        disabled="@_workKnowledgeBusy"
+                        @onchange="e => SetWorkEvidenceAsync(e.Value is true)" />
+                    Seeded evidence (WO-8732 and the technician note) is available to the agent
+                </label>
+                <p class="switchboard-note">Uncheck to show the agent reporting missing evidence instead of inventing a work order.</p>
+                @if (!string.IsNullOrWhiteSpace(_workKnowledgeMessage))
+                {
+                    <p class="status-error">@_workKnowledgeMessage</p>
+                }
+            }
+        </section>
+    </div>
 
-    <section class="panel switchboard-panel">
-        <div class="panel-heading">
-            <h2>Simulator Behavior</h2>
-            <span class="stamp">@(_behavior is null ? "Unavailable" : $"{_behaviorDelayMs} ms delay")</span>
-        </div>
-        @if (_behavior is null)
-        {
-            <p>@(_behaviorMessage ?? "Loading simulator behavior...")</p>
-        }
-        else
-        {
+    <details class="advanced">
+        <summary>Advanced controls <span class="stamp">breakpoints · case memory · workforce records · simulator behavior</span></summary>
+        <section class="panel switchboard-panel">
+            <div class="panel-heading">
+                <h2>Demo Breakpoints</h2>
+                <span class="stamp">@BreakpointStamp</span>
+            </div>
+            @if (_breakpoints is null)
+            {
+                <p>@(_breakpointsMessage ?? "Loading demo breakpoints...")</p>
+            }
+            else
+            {
+                <p class="panel-intro">Arm a snippet to pause its service at that code on its next run, then single-step it in the editor. A snippet lives in the service whose code it pauses, so each service is attached separately.</p>
+
+                @if (_attachStatus is { VsCodeAvailable: true, ExtensionInstalled: false })
+                {
+                    <div class="stage-switch-actions">
+                        <button class="button primary" @onclick="InstallExtensionAsync" disabled="@_attachBusy">
+                            @(_attachBusy ? "Installing..." : "Install VS Code extension")
+                        </button>
+                    </div>
+                }
+
+                @foreach (var source in _breakpoints)
+                {
+                    <div class="breakpoint-source">
+                        <div class="breakpoint-source-heading">
+                            <strong>@source.Service.DisplayName</strong>
+                            <span class="stamp">@SourceStamp(source)</span>
+                        </div>
+
+                        @if (source.Error is not null)
+                        {
+                            <p class="switchboard-note status-error">@source.Error</p>
+                        }
+                        else
+                        {
+                            <ul class="checkbox-list">
+                                @foreach (var snippet in source.Snippets)
+                                {
+                                    <li>
+                                        <label>
+                                            <input
+                                                type="checkbox"
+                                                checked="@snippet.IsArmed"
+                                                disabled="@ArmDisabled"
+                                                @onchange="e => SetBreakpointAsync(source.Service.ClientName, snippet.SnippetName, e.Value is true)" />
+                                            @snippet.SnippetName - break on next run
+                                        </label>
+                                    </li>
+                                }
+                            </ul>
+
+                            @if (_attachStatus is { ExtensionInstalled: true } && !source.DebuggerAttached)
+                            {
+                                <div class="stage-switch-actions">
+                                    <button class="button secondary" @onclick="() => RequestAttachAsync(source.Service.ProcessName)" disabled="@_attachBusy">
+                                        @(_attachBusy ? "Requesting..." : $"Attach debugger to {source.Service.DisplayName}")
+                                    </button>
+                                </div>
+                            }
+                        }
+                    </div>
+                }
+
+                @if (_attachStatus is { VsCodeAvailable: false })
+                {
+                    <p class="switchboard-note">The VS Code CLI was not found on this machine; breakpoint arming is unavailable.</p>
+                }
+                else if (_attachStatus is { ExtensionInstalled: false })
+                {
+                    <p class="switchboard-note">Breakpoint arming is disabled until the demo-attach VS Code extension is installed.</p>
+                }
+                else
+                {
+                    <p class="switchboard-note">Armed snippets stay armed until a debugged run consumes them.</p>
+                }
+            }
+            @if (!string.IsNullOrWhiteSpace(_attachMessage))
+            {
+                <p class="@(_attachMessageIsError ? "status-error" : string.Empty)">@_attachMessage</p>
+            }
+        </section>
+        <section class="panel switchboard-panel">
+            <div class="panel-heading">
+                <h2>Case Memory</h2>
+                <span class="stamp">@CaseMemoryStamp</span>
+            </div>
+            @if (_caseMemory is null)
+            {
+                <p>@(_caseMemoryMessage ?? "Loading case memory...")</p>
+            }
+            else
+            {
+                @if (_caseMemory.Cases.Count == 0)
+                {
+                    <p class="switchboard-note">No closed cases yet. Close a case from the Command Center at the Memory stage.</p>
+                }
+                else
+                {
+                    <ul class="switchboard-note">
+                        @foreach (var closedCase in _caseMemory.Cases)
+                        {
+                            <li>@closedCase.CaseId (@closedCase.AssetId) - @closedCase.Symptom</li>
+                        }
+                    </ul>
+                }
+                <button class="button secondary" @onclick="ClearCaseMemoryAsync" disabled="@(_caseMemoryBusy || _caseMemory.Cases.Count == 0)">
+                    Clear case memory
+                </button>
+                @if (!string.IsNullOrWhiteSpace(_caseMemoryMessage))
+                {
+                    <p class="status-error">@_caseMemoryMessage</p>
+                }
+            }
+        </section>
+        @* The A2A beat's closing move. The peer answered from a projection; this is the record that
+           projection came out of, so the presenter can point at the fields that never left the domain.
+           Hidden until asked for - these are on the projector for one minute of a ninety-minute talk. *@
+        <section class="panel switchboard-panel">
+            <div class="panel-heading">
+                <h2>Workforce Records</h2>
+                <span class="stamp">@WorkforceRecordsStamp</span>
+            </div>
+            <p class="panel-intro">The work orders as the workforce domain holds them, read straight from the Workforce Hub. The peer agent never received these fields: its tool returns a projection that does not select them.</p>
             <div class="stage-switch-actions">
-                <label>
-                    Command delay (ms, up to 8000)
-                    <input type="number" min="0" max="8000" step="250" @bind="_behaviorDelayMs" disabled="@_behaviorBusy" />
-                </label>
-                <label>
-                    <input type="checkbox" @bind="_behaviorTimeout" disabled="@_behaviorBusy" />
-                    Simulate timeout
-                </label>
-                <label>
-                    <input type="checkbox" @bind="_behaviorFailure" disabled="@_behaviorBusy" />
-                    Simulate failure
-                </label>
-                <button class="button primary" @onclick="ApplyBehaviorAsync" disabled="@_behaviorBusy">
-                    @(_behaviorBusy ? "Applying..." : "Apply behavior")
+                <button class="button @(_workforceRecords is null ? "primary" : "secondary")" @onclick="ToggleWorkforceRecordsAsync" disabled="@_workforceRecordsBusy">
+                    @WorkforceRecordsButtonLabel
                 </button>
             </div>
-            <p class="switchboard-note">These settings reset to defaults whenever a scenario is applied or reset.</p>
-            @if (!string.IsNullOrWhiteSpace(_behaviorMessage))
+            @if (_workforceRecords is { } records)
             {
-                <p class="@(_behaviorMessageIsError ? "status-error" : string.Empty)">@_behaviorMessage</p>
+                @foreach (var record in records)
+                {
+                    <div class="wf-record">
+                        <p class="wf-record-head">@record.WorkOrderId - @record.Title (@record.Status)</p>
+                        <dl class="wf-record-fields">
+                            <div class="wf-shared"><dt>Reason</dt><dd>@record.Reason</dd></div>
+                            <div class="wf-shared"><dt>Operational summary</dt><dd>@record.OperationalSummary</dd></div>
+                            <div class="wf-withheld"><dt>Technician</dt><dd>@record.TechnicianName</dd></div>
+                            <div class="wf-withheld"><dt>Badge</dt><dd>@record.TechnicianBadge</dd></div>
+                            <div class="wf-withheld"><dt>Labour cost</dt><dd>@record.LabourCost.ToString("N2", System.Globalization.CultureInfo.InvariantCulture)</dd></div>
+                            <div class="wf-withheld"><dt>Call-out rate</dt><dd>@record.CallOutRate</dd></div>
+                            <div class="wf-withheld"><dt>Technician note</dt><dd>@record.TechnicianNote</dd></div>
+                        </dl>
+                    </div>
+                }
+                <p class="switchboard-note">Green crossed the boundary. Red never entered the agent's context - not redacted from a larger payload, never selected into one.</p>
             }
-        }
-    </section>
+            @if (!string.IsNullOrWhiteSpace(_workforceRecordsMessage))
+            {
+                <p class="status-error">@_workforceRecordsMessage</p>
+            }
+        </section>
+        <section class="panel switchboard-panel">
+            <div class="panel-heading">
+                <h2>Simulator Behavior</h2>
+                <span class="stamp">@(_behavior is null ? "Unavailable" : $"{_behaviorDelayMs} ms delay")</span>
+            </div>
+            @if (_behavior is null)
+            {
+                <p>@(_behaviorMessage ?? "Loading simulator behavior...")</p>
+            }
+            else
+            {
+                <div class="stage-switch-actions">
+                    <label>
+                        Command delay (ms, up to 8000)
+                        <input type="number" min="0" max="8000" step="250" @bind="_behaviorDelayMs" disabled="@_behaviorBusy" />
+                    </label>
+                    <label>
+                        <input type="checkbox" @bind="_behaviorTimeout" disabled="@_behaviorBusy" />
+                        Simulate timeout
+                    </label>
+                    <label>
+                        <input type="checkbox" @bind="_behaviorFailure" disabled="@_behaviorBusy" />
+                        Simulate failure
+                    </label>
+                    <button class="button primary" @onclick="ApplyBehaviorAsync" disabled="@_behaviorBusy">
+                        @(_behaviorBusy ? "Applying..." : "Apply behavior")
+                    </button>
+                </div>
+                <p class="switchboard-note">These settings reset to defaults whenever a scenario is applied or reset.</p>
+                @if (!string.IsNullOrWhiteSpace(_behaviorMessage))
+                {
+                    <p class="@(_behaviorMessageIsError ? "status-error" : string.Empty)">@_behaviorMessage</p>
+                }
+            }
+        </section>
+    </details>
 
 </div>
 
@@ -464,11 +574,227 @@
     private string? _message;
     private bool _messageIsError;
     private bool _busy;
-    private bool _stageBusy;
     private string? _stageMessage;
     private bool _stageMessageIsError;
     private CancellationTokenSource? _pollingTokenSource;
     private Task? _pollingTask;
+
+    // The director's view of the current beat, and the beat waiting for the presenter's confirmation.
+    private DemoStageReadiness? _readiness;
+    private DemoStageReadiness? _pendingPrepare;
+    private bool _prepareBusy;
+    private bool _rehearsal;
+
+    private DemoStage? CurrentStageId => _stageCatalog?.CurrentStage.Id;
+
+    // The beats a scenario drives: every stage whose walkthrough names it, at the start or later.
+    private IReadOnlyList<DemoStageDescriptor> BeatsFor(ScenarioId scenarioId) =>
+        _stageCatalog is null
+            ? []
+            : [.. _stageCatalog.Stages.Where(stage => stage.Walkthrough?.Prerequisites.Any(prerequisite => prerequisite.ScenarioId == scenarioId) == true)];
+
+    private async Task LoadReadinessAsync(CancellationToken cancellationToken)
+    {
+        if (_stageCatalog is null)
+        {
+            return;
+        }
+
+        try
+        {
+            _readiness = await StageClient.GetReadinessAsync(_stageCatalog.CurrentStage.Id, cancellationToken);
+        }
+        catch (Exception)
+        {
+            // The last known readiness stands until the next poll.
+        }
+    }
+
+    private async Task BeginPrepareAsync(DemoStage stage)
+    {
+        if (_prepareBusy)
+        {
+            return;
+        }
+
+        _prepareBusy = true;
+
+        try
+        {
+            var readiness = await StageClient.GetReadinessAsync(stage, CancellationToken.None);
+
+            if (PlannedActions(readiness).Count == 0)
+            {
+                _stageMessage = $"{readiness.StageName} is already in place.";
+                _stageMessageIsError = false;
+                _pendingPrepare = null;
+            }
+            else if (_rehearsal)
+            {
+                _prepareBusy = false;
+                await PrepareCoreAsync(stage);
+            }
+            else
+            {
+                _pendingPrepare = readiness;
+            }
+        }
+        catch (Exception exception)
+        {
+            _stageMessage = $"The beat could not be checked: {exception.Message}";
+            _stageMessageIsError = true;
+        }
+        finally
+        {
+            _prepareBusy = false;
+        }
+    }
+
+    private async Task ConfirmPrepareAsync()
+    {
+        if (_pendingPrepare is { } pending)
+        {
+            await PrepareCoreAsync(pending.Stage);
+        }
+    }
+
+    private void CancelPrepare() => _pendingPrepare = null;
+
+    private async Task PrepareCoreAsync(DemoStage stage)
+    {
+        _prepareBusy = true;
+
+        try
+        {
+            var result = await StageClient.PrepareAsync(stage, CancellationToken.None);
+            _stageMessage = result.Message;
+            _stageMessageIsError = !result.Succeeded;
+            _pendingPrepare = null;
+        }
+        catch (Exception exception)
+        {
+            _stageMessage = $"The beat could not be prepared: {exception.Message}";
+            _stageMessageIsError = true;
+        }
+        finally
+        {
+            _prepareBusy = false;
+            await LoadCatalogAsync(CancellationToken.None, showErrors: true);
+            await LoadStageCatalogAsync(CancellationToken.None, showErrors: true);
+            await LoadToolSourceAsync(CancellationToken.None);
+            await LoadSecurityConsultAsync(CancellationToken.None);
+            await LoadWorkKnowledgeAsync(CancellationToken.None);
+            await LoadAgentHabitatAsync(CancellationToken.None);
+        }
+    }
+
+    // One prerequisite at a time, through the same handlers the switch buttons use.
+    private async Task FixPrerequisiteAsync(DemoPrerequisiteStatus status)
+    {
+        var prerequisite = status.Prerequisite;
+
+        switch (prerequisite)
+        {
+            case { Kind: DemoPrerequisiteKind.Scenario, ScenarioId: { } scenarioId }:
+                await ApplyScenarioAsync(scenarioId);
+                break;
+            case { Kind: DemoPrerequisiteKind.Switch, Switch: DemoSwitch.ToolSource, RequiredValue: { } source }:
+                await SetToolSourceAsync(source);
+                break;
+            case { Kind: DemoPrerequisiteKind.Switch, Switch: DemoSwitch.SecurityConsult, RequiredValue: { } consult }:
+                await SetSecurityConsultAsync(string.Equals(consult, DemoSwitchValues.On, StringComparison.OrdinalIgnoreCase));
+                break;
+            case { Kind: DemoPrerequisiteKind.Switch, Switch: DemoSwitch.WorkKnowledge, RequiredValue: { } evidence }:
+                await SetWorkEvidenceAsync(string.Equals(evidence, DemoSwitchValues.EvidencePresent, StringComparison.OrdinalIgnoreCase));
+                break;
+            case { Kind: DemoPrerequisiteKind.Switch, Switch: DemoSwitch.AgentHabitat, RequiredValue: { } habitat }:
+                await SetAgentHabitatAsync(habitat);
+                break;
+        }
+
+        await LoadReadinessAsync(CancellationToken.None);
+    }
+
+    private static bool CanFix(DemoPrerequisiteStatus status) =>
+        status.Prerequisite is { AppliesAtStart: true, Kind: not DemoPrerequisiteKind.Manual } && status.Satisfied != true;
+
+    private static string FixLabel(DemoPrerequisiteStatus status) =>
+        status.Prerequisite.Kind == DemoPrerequisiteKind.Scenario ? "Apply" : $"Set {status.Prerequisite.RequiredValue}";
+
+    // A check for met, a cross for unmet, a dot for unknowable here, an arrow for a later step's fixture.
+    private static (string Mark, string Css) ReadinessMark(DemoPrerequisiteStatus status) =>
+        !status.Prerequisite.AppliesAtStart
+            ? ("→", "later")
+            : status.Satisfied switch
+            {
+                true => ("✓", "met"),
+                false => ("✗", "unmet"),
+                _ => ("·", "unknown")
+            };
+
+    // What preparation will do, in the order the director does it: the fixture, the stage, the switches.
+    private List<string> PlannedActions(DemoStageReadiness readiness)
+    {
+        List<string> actions = [];
+
+        foreach (var status in readiness.Prerequisites.Where(static status =>
+                     status.Prerequisite is { Kind: DemoPrerequisiteKind.Scenario, AppliesAtStart: true } && status.Satisfied == false))
+        {
+            if (status.Prerequisite.ScenarioId is { } scenarioId)
+            {
+                actions.Add($"Apply the scenario {ScenarioName(scenarioId)}.");
+            }
+        }
+
+        if (!readiness.StageIsCurrent)
+        {
+            actions.Add($"Set the stage to {readiness.StageName}.");
+        }
+
+        foreach (var status in readiness.Prerequisites.Where(static status =>
+                     status.Prerequisite is { Kind: DemoPrerequisiteKind.Switch, AppliesAtStart: true } && status.Satisfied != true))
+        {
+            if (status.Prerequisite.Switch is { } demoSwitch)
+            {
+                var current = status.CurrentValue is null ? string.Empty : $" (now {status.CurrentValue})";
+                actions.Add($"Set {DemoSwitchValues.Describe(demoSwitch)} to {status.Prerequisite.RequiredValue}{current}.");
+            }
+        }
+
+        return actions;
+    }
+
+    private static List<string> ManualPrerequisites(DemoStageReadiness readiness) =>
+        [.. readiness.Prerequisites
+            .Where(static status => status.Prerequisite.Kind == DemoPrerequisiteKind.Manual)
+            .Select(static status => status.Prerequisite.Text)];
+
+    private string ScenarioName(ScenarioId scenarioId) =>
+        _catalog?.Scenarios.FirstOrDefault(scenario => scenario.Id == scenarioId)?.Name ?? scenarioId.ToString();
+
+    private string StepperClass(DemoStage stage)
+    {
+        if (_stageCatalog is null || stage == _stageCatalog.CurrentStage.Id)
+        {
+            return "current";
+        }
+
+        return stage < _stageCatalog.CurrentStage.Id ? "done" : string.Empty;
+    }
+
+    private static string SurfaceLabel(DemoSurface surface) => surface switch
+    {
+        DemoSurface.Switchboard => "Switchboard",
+        DemoSurface.Code => "Code",
+        _ => "Command Center"
+    };
+
+    private static string SurfaceCss(DemoSurface surface) => surface switch
+    {
+        DemoSurface.Switchboard => "surface-switchboard",
+        DemoSurface.Code => "surface-code",
+        _ => "surface-command-center"
+    };
 
     private string StageName => _stageCatalog?.CurrentStage.Name ?? Configuration["DemoStage"] ?? "Deterministic";
     private string WorkKnowledgeStamp => _workKnowledge switch
@@ -639,28 +965,6 @@
         }
     }
 
-    private async Task ApplyStageAsync(DemoStage stage)
-    {
-        _stageBusy = true;
-
-        try
-        {
-            var result = await StageClient.ApplyStageAsync(stage, CancellationToken.None);
-            _stageMessage = result.Message;
-            _stageMessageIsError = !result.Succeeded;
-        }
-        catch (Exception exception)
-        {
-            _stageMessage = $"Stage change failed: {exception.Message}";
-            _stageMessageIsError = true;
-        }
-        finally
-        {
-            _stageBusy = false;
-            await LoadStageCatalogAsync(CancellationToken.None, showErrors: true);
-        }
-    }
-
     private async Task LoadCatalogAsync(CancellationToken cancellationToken, bool showErrors)
     {
         try
@@ -687,6 +991,7 @@
         try
         {
             _stageCatalog = await StageClient.GetCatalogAsync(cancellationToken);
+            await LoadReadinessAsync(cancellationToken);
 
             if (!_stageMessageIsError)
             {
