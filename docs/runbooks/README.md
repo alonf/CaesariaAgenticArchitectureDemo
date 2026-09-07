@@ -11,7 +11,8 @@ the source for every live beat; the runbooks only put them in the order each tal
 ## Before either lecture
 
 1. `./scripts/Start-CaesareaDemo.ps1` - checks the SDK, the Azure sign-in, the OneDrive work order
-   for the hosted beat, then starts the Aspire host.
+   for the hosted beat, then starts the Aspire host. Ctrl+C in that console stops it; from
+   anywhere else, `./scripts/Stop-CaesareaDemo.ps1` does.
 2. Open the switchboard (DemoControl.Web). Choose a beat; the director shows what it will apply and
    asks for confirmation. Tick **Rehearsal** to skip the confirmations during practice.
 3. Open the Command Center (CommandCenter.Web) on the projector. Its **Walkthrough** button shows

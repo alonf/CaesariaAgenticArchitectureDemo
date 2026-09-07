@@ -13,6 +13,7 @@ namespace Caesarea.Deterministic.Tests;
 public sealed class AgentTraceProjectionTests
 {
     private const string ProtectedTool = "create_maintenance_work_item";
+    private const string SpecialistName = "Security Operations Agent";
 
     [Fact]
     public async Task ADeclinedCapabilityIsNeverReportedAsExecuted()
@@ -98,8 +99,9 @@ public sealed class AgentTraceProjectionTests
             [Result("call-1", payload)]);
 
         var delegation = Assert.Single(
-            AgentTraceProjection.DescribeDelegations(recorder, new Dictionary<string, bool>()));
+            AgentTraceProjection.DescribeDelegations(recorder, new Dictionary<string, bool>(), SpecialistName));
 
+        Assert.Equal(OperationsAgentToolCallStatus.Completed, delegation.Status);
         Assert.Equal("Caesarea Security Operations Agent", delegation.AssessedBy);
         Assert.Equal("North Promenade", delegation.Area);
         Assert.True(delegation.RequiresLighting);
@@ -110,27 +112,53 @@ public sealed class AgentTraceProjectionTests
     }
 
     [Fact]
-    public async Task AConsultationThatWasNotCompletedContributesNoJudgment()
+    public async Task AConsultationThatNeverFinishedIsShownWithoutAJudgment()
     {
         var recorder = await RecordAsync(
-            [Call("call-1", OperationsAgentToolNames.AssessLightingRequirement)], []);
+            [Call("call-1", OperationsAgentToolNames.AssessLightingRequirement, area: "North Promenade")], []);
 
-        Assert.Empty(AgentTraceProjection.DescribeDelegations(recorder, new Dictionary<string, bool>()));
+        var delegation = Assert.Single(
+            AgentTraceProjection.DescribeDelegations(recorder, new Dictionary<string, bool>(), SpecialistName));
+
+        // The operator sees that a specialist was asked and that nothing came back - not a
+        // shorter trace that reads as if the question was never raised.
+        Assert.Equal(OperationsAgentToolCallStatus.Requested, delegation.Status);
+        Assert.Equal(SpecialistName, delegation.AssessedBy);
+        Assert.Equal("North Promenade", delegation.Area);
+        Assert.Equal(string.Empty, delegation.ReasonCode);
     }
 
     [Fact]
-    public async Task AnAnswerThatDoesNotMatchTheContractIsReportedAndOmitted()
+    public async Task AConsultationThatFailedIsShownWithoutAJudgment()
+    {
+        // The specialist was paused or unreachable, so the Operations Agent answered alone. The
+        // trace must say so rather than look like the consult was never switched on.
+        var recorder = await RecordAsync(
+            [Call("call-1", OperationsAgentToolNames.AssessLightingRequirement, area: "North Promenade")],
+            [new FunctionResultContent("call-1", "timed out") { Exception = new TimeoutException("timed out") }]);
+
+        var delegation = Assert.Single(
+            AgentTraceProjection.DescribeDelegations(recorder, new Dictionary<string, bool>(), SpecialistName));
+
+        Assert.Equal(OperationsAgentToolCallStatus.Failed, delegation.Status);
+        Assert.False(delegation.RequiresLighting);
+        Assert.Equal("North Promenade", delegation.Area);
+    }
+
+    [Fact]
+    public async Task AnAnswerThatDoesNotMatchTheContractIsReportedWithoutAJudgment()
     {
         var recorder = await RecordAsync(
             [Call("call-1", OperationsAgentToolNames.AssessLightingRequirement)],
             [Result("call-1", "The unit on watch is NIGHTHAWK-3.")]);
 
         List<string> unreadable = [];
-        var delegations = AgentTraceProjection.DescribeDelegations(
-            recorder, new Dictionary<string, bool>(), (toolName, _) => unreadable.Add(toolName));
+        var delegation = Assert.Single(AgentTraceProjection.DescribeDelegations(
+            recorder, new Dictionary<string, bool>(), SpecialistName, (toolName, _) => unreadable.Add(toolName)));
 
         // Nothing invented from prose, and the operator is not silently shown a shorter trace.
-        Assert.Empty(delegations);
+        Assert.Equal(OperationsAgentToolCallStatus.Failed, delegation.Status);
+        Assert.Equal(string.Empty, delegation.Reason);
         Assert.Equal(OperationsAgentToolNames.AssessLightingRequirement, Assert.Single(unreadable));
     }
 
@@ -141,11 +169,13 @@ public sealed class AgentTraceProjectionTests
             [Call("call-1", "get_streetlight_state")],
             [Result("call-1", """{"assetId":"L-417","assessedBy":"not a specialist","area":"North Promenade"}""")]);
 
-        Assert.Empty(AgentTraceProjection.DescribeDelegations(recorder, new Dictionary<string, bool>()));
+        Assert.Empty(AgentTraceProjection.DescribeDelegations(recorder, new Dictionary<string, bool>(), SpecialistName));
     }
 
-    private static FunctionCallContent Call(string callId, string toolName) =>
-        new(callId, toolName, new Dictionary<string, object?> { ["assetId"] = "L-417" });
+    private static FunctionCallContent Call(string callId, string toolName, string? area = null) =>
+        new(callId, toolName, area is null
+            ? new Dictionary<string, object?> { ["assetId"] = "L-417" }
+            : new Dictionary<string, object?> { ["area"] = area });
 
     private static FunctionResultContent Result(string callId, string result) => new(callId, result);
 

@@ -3178,9 +3178,13 @@ can single-step the exact code shown on the slide:
   the demo UI trigger the attach itself: DemoControl launches
   `code --open-url "vscode://caesarea-demo.demo-attach/attach?processName=..."` and the extension
   resolves the PID and starts the `coreclr` attach session. DemoControl detects the extension via
-  `code --list-extensions`; when it is missing, breakpoint arming is disabled and an **Install**
-  button installs the committed `.vsix` (`code --install-extension`). When installed but detached,
-  an **Attach debugger** button performs the attach without leaving the demo UI.
+  `code --list-extensions --show-versions`; when it is missing, breakpoint arming is disabled and
+  an **Install** button installs the committed `.vsix` (`code --install-extension --force`), and
+  when the committed package is newer than the install the same button reads **Update**. Each
+  service row shows whether its debugger is attached and carries its own button, **Attach
+  debugger** or **Detach debugger** (the extension's `/detach` route, from 0.2.0), so one request
+  in flight never greys out the others; after a request the switchboard polls that service until
+  it reports the new state, and says so if it does not.
 - A tripped breakpoint pauses that service until the presenter continues; this is presenter-mode
   behavior only and MUST stay disabled in audience profiles.
 

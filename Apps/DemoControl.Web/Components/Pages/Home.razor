@@ -389,11 +389,11 @@
             {
                 <p class="panel-intro">Arm a snippet to pause its service at that code on its next run, then single-step it in the editor. A snippet lives in the service whose code it pauses, so each service is attached separately.</p>
 
-                @if (_attachStatus is { VsCodeAvailable: true, ExtensionInstalled: false })
+                @if (_attachStatus is { VsCodeAvailable: true } tooling && (!tooling.ExtensionInstalled || tooling.UpdateAvailable))
                 {
                     <div class="stage-switch-actions">
-                        <button class="button primary" @onclick="InstallExtensionAsync" disabled="@_attachBusy">
-                            @(_attachBusy ? "Installing..." : "Install VS Code extension")
+                        <button class="button primary" @onclick="InstallExtensionAsync" disabled="@_installBusy">
+                            @InstallButtonLabel(tooling)
                         </button>
                     </div>
                 }
@@ -403,7 +403,7 @@
                     <div class="breakpoint-source">
                         <div class="breakpoint-source-heading">
                             <strong>@source.Service.DisplayName</strong>
-                            <span class="stamp">@SourceStamp(source)</span>
+                            <span class="@SourceStampClass(source)">@SourceStamp(source)</span>
                         </div>
 
                         @if (source.Error is not null)
@@ -428,12 +428,26 @@
                                 }
                             </ul>
 
-                            @if (_attachStatus is { ExtensionInstalled: true } && !source.DebuggerAttached)
+                            @if (_attachStatus is { ExtensionInstalled: true } installed)
                             {
+                                var processName = source.Service.ProcessName;
+                                var busy = _attachBusyProcesses.Contains(processName);
+
                                 <div class="stage-switch-actions">
-                                    <button class="button secondary" @onclick="() => RequestAttachAsync(source.Service.ProcessName)" disabled="@_attachBusy">
-                                        @(_attachBusy ? "Requesting..." : $"Attach debugger to {source.Service.DisplayName}")
-                                    </button>
+                                    @if (source.DebuggerAttached)
+                                    {
+                                        @* Detach goes through the extension's /detach route, which arrived in 0.2.0:
+                                           an older install would swallow the request, so the button waits for the update. *@
+                                        <button class="button secondary" @onclick="() => RequestDetachAsync(processName)" disabled="@(busy || installed.UpdateAvailable)" title="@(installed.UpdateAvailable ? "Update the VS Code extension first." : null)">
+                                            @(busy ? "Detaching..." : $"Detach debugger from {source.Service.DisplayName}")
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <button class="button secondary" @onclick="() => RequestAttachAsync(processName)" disabled="@busy">
+                                            @(busy ? "Attaching..." : $"Attach debugger to {source.Service.DisplayName}")
+                                        </button>
+                                    }
                                 </div>
                             }
                         }
@@ -575,7 +589,10 @@
     private bool _breakpointsBusy;
     private string? _breakpointsMessage;
     private VsCodeAttachStatus? _attachStatus;
-    private bool _attachBusy;
+    private bool _installBusy;
+    // Attach and detach are per service, so each button carries its own busy state: one request
+    // in flight must not grey out the others or hide which service it was for.
+    private readonly HashSet<string> _attachBusyProcesses = new(StringComparer.OrdinalIgnoreCase);
     private string? _attachMessage;
     private bool _attachMessageIsError;
     private WorkKnowledgeState? _workKnowledge;
@@ -968,6 +985,21 @@
         { DebuggerAttached: true } => "Debugger attached",
         _ => "Debugger not attached"
     };
+
+    private static string SourceStampClass(DemoBreakpointSource source) =>
+        source is { Error: null, DebuggerAttached: true } ? "stamp stamp-attached" : "stamp";
+
+    private string InstallButtonLabel(VsCodeAttachStatus tooling)
+    {
+        if (_installBusy)
+        {
+            return "Installing...";
+        }
+
+        return tooling.ExtensionInstalled
+            ? $"Update VS Code extension {tooling.InstalledVersion} to {tooling.PackagedVersion}"
+            : "Install VS Code extension";
+    }
     private TimeSpan PollingInterval => TimeSpan.FromSeconds(WebOptions.Value.PollingIntervalSeconds);
 
     protected override async Task OnInitializedAsync()
@@ -1391,7 +1423,7 @@
 
     private async Task InstallExtensionAsync()
     {
-        _attachBusy = true;
+        _installBusy = true;
 
         try
         {
@@ -1401,27 +1433,79 @@
         }
         finally
         {
-            _attachBusy = false;
+            _installBusy = false;
             await LoadAttachStatusAsync(CancellationToken.None);
         }
     }
 
-    private async Task RequestAttachAsync(string processName)
+    private Task RequestAttachAsync(string processName) => RequestDebuggerChangeAsync(processName, attach: true);
+
+    private Task RequestDetachAsync(string processName) => RequestDebuggerChangeAsync(processName, attach: false);
+
+    private async Task RequestDebuggerChangeAsync(string processName, bool attach)
     {
-        _attachBusy = true;
+        if (!_attachBusyProcesses.Add(processName))
+        {
+            return;
+        }
 
         try
         {
-            var result = await AttachService.RequestAttachAsync(processName, CancellationToken.None);
+            var result = attach
+                ? await AttachService.RequestAttachAsync(processName, CancellationToken.None)
+                : await AttachService.RequestDetachAsync(processName, CancellationToken.None);
             _attachMessage = result.Message;
             _attachMessageIsError = !result.Succeeded;
+
+            if (!result.Succeeded)
+            {
+                return;
+            }
+
+            // The URL was handed to VS Code, which attaches or detaches on its own time. The
+            // service's own report is the only truth about whether a debugger is on it, so it is
+            // polled until it agrees or the wait runs out - and a wait that runs out says so,
+            // because a button that silently did nothing is the failure this replaces.
+            var settled = await WaitForDebuggerStateAsync(processName, attach, TimeSpan.FromSeconds(15));
+            var serviceName = FindBreakpointSource(processName)?.Service.DisplayName ?? processName;
+            _attachMessage = (attach, settled) switch
+            {
+                (true, true) => $"Debugger attached to {serviceName}.",
+                (false, true) => $"Debugger detached from {serviceName}; the service keeps running.",
+                (true, false) => $"{serviceName} has not reported a debugger within 15 seconds. Check the VS Code notification.",
+                (false, false) => $"{serviceName} still reports a debugger after 15 seconds. Check the VS Code notification."
+            };
+            _attachMessageIsError = !settled;
         }
         finally
         {
-            _attachBusy = false;
+            _attachBusyProcesses.Remove(processName);
             await LoadBreakpointsAsync(CancellationToken.None);
         }
     }
+
+    private async Task<bool> WaitForDebuggerStateAsync(string processName, bool attached, TimeSpan timeout)
+    {
+        var deadline = DateTimeOffset.UtcNow + timeout;
+
+        while (DateTimeOffset.UtcNow < deadline)
+        {
+            await Task.Delay(TimeSpan.FromMilliseconds(500));
+            await LoadBreakpointsAsync(CancellationToken.None);
+
+            if (FindBreakpointSource(processName) is { Error: null } source && source.DebuggerAttached == attached)
+            {
+                return true;
+            }
+
+            StateHasChanged();
+        }
+
+        return false;
+    }
+
+    private DemoBreakpointSource? FindBreakpointSource(string processName) =>
+        _breakpoints?.FirstOrDefault(source => string.Equals(source.Service.ProcessName, processName, StringComparison.OrdinalIgnoreCase));
 
     private async Task SetBreakpointAsync(string clientName, string snippetName, bool armed)
     {

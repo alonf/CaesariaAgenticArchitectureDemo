@@ -58,6 +58,7 @@ internal sealed class SecurityConsultCapability(
         parts.Delegations.AddRange(AgentTraceProjection.DescribeDelegations(
             trace.Recorder,
             trace.ApprovalDecisions,
+            SecurityAgentSourceName,
             (toolName, exception) => OperationsAgentLog.DelegationTraceUnreadable(logger, toolName, exception)));
     }
 

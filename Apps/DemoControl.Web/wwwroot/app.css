@@ -148,6 +148,13 @@ input {
     font-size: 0.85rem;
 }
 
+/* A service with a debugger on it is the one that will pause, so its stamp is the one that reads
+   from across the room. */
+.stamp.stamp-attached {
+    color: var(--accent);
+    font-weight: 600;
+}
+
 /* One rhythm for every panel: each direct child is a row and the rows are one gap apart, so a
    heading is the same distance from a paragraph, a checkbox, a chip row, or a button row. The
    children's own margins are zeroed so the gap is the only spacing in play. */

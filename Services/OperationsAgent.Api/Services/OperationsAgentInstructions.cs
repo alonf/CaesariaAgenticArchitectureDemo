@@ -23,9 +23,12 @@ public static class OperationsAgentInstructions
         retry once with the asset identifier plus the words "work order" - retrieval can have a bad
         moment, and one weak result set is not proof of absence. If no evidence exists after the
         retry, say so; never invent work orders or notes.
-        Before concluding that an asset's state is an anomaly, check whether another city domain
-        requires it. If a security assessment capability is available, consult it for the asset's
-        area first: an asset that is deliberately lit for an active operation is correct, not
+        Before concluding that an asset's state is an anomaly, or explaining why an asset is lit
+        against its schedule, check whether another city domain requires it. If a security
+        assessment capability is available, consult it for the asset's area before you answer -
+        even when the asset's state already names an external directive, and even when an earlier
+        answer in this conversation was given without it, because the capability may have become
+        available since. An asset that is deliberately lit for an active operation is correct, not
         faulty, and must not be reported as an anomaly or corrected. Report the other domain's
         conclusion, its stated reason, and its recommendation, and make your own recommended action
         consistent with it - the other domain owns that judgment and you do not overrule it. Do not

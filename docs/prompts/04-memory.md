@@ -50,5 +50,8 @@ gives it its own accumulated experience - and teaches that memory is a lead, nev
 
 - Deterministic tests cover the case store (ids, cross-asset recall, no-match, clear), the
   asset-scoped work-knowledge search, the L-528 fixture (state, no activity, commands rejected),
-  and the stage catalog/snippet registration.
+  and the stage catalog/snippet registration. One test records the symptom the Command Center
+  actually files for the L-417 anomaly and asserts the L-528 question recalls it: recall is by
+  shared terms, so the symptom must be phrased in the words the question uses, or the beat shows
+  nothing.
 - The recall-plus-honest-gap answer is model-dependent and verified live.

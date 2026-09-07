@@ -90,6 +90,11 @@ public sealed record OperationsAgentRemoteConsult(
 /// <param name="Recommendation">What the specialist advised the asking domain to do.</param>
 /// <param name="Reason">The specialist's public explanation.</param>
 /// <param name="DetailsWithheld">Whether operational detail exists that was deliberately not disclosed.</param>
+/// <param name="Status">
+/// How the consultation ended. <see cref="OperationsAgentToolCallStatus.Completed"/> means the
+/// fields above carry the specialist's judgment; any other value means the specialist was asked
+/// and no judgment crossed the boundary, so the verdict fields are empty.
+/// </param>
 public sealed record OperationsAgentDelegation(
     string ToolName,
     string AssessedBy,
@@ -99,7 +104,8 @@ public sealed record OperationsAgentDelegation(
     string ReasonCode,
     string Recommendation,
     string Reason,
-    bool DetailsWithheld);
+    bool DetailsWithheld,
+    OperationsAgentToolCallStatus Status = OperationsAgentToolCallStatus.Completed);
 
 /// <summary>
 /// Well-known tool names the general agent exposes, shared so UI code never hard-codes them.

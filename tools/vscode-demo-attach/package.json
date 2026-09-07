@@ -1,8 +1,8 @@
 {
     "name": "demo-attach",
     "displayName": "Caesarea Demo Attach",
-    "description": "Attaches the VS Code .NET debugger to a running Caesarea demo service when the demo control UI requests it.",
-    "version": "0.1.0",
+    "description": "Attaches the VS Code .NET debugger to a running Caesarea demo service, or detaches from it, when the demo control UI requests it.",
+    "version": "0.2.0",
     "publisher": "caesarea-demo",
     "license": "MIT",
     "engines": {

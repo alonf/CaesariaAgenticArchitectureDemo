@@ -28,7 +28,9 @@
     a warning naming its fix, and the system starts anyway - the Hosting stage is then the only
     beat that will not work.
 
-    Then it starts the Aspire AppHost in the foreground; Ctrl+C stops the whole system.
+    Then it starts the Aspire AppHost in the foreground; Ctrl+C stops the whole system. From
+    anywhere else - the console is gone, the host was started from the IDE - Stop-CaesareaDemo.ps1
+    stops it.
 
 .PARAMETER Environment
     Environment whose hosted agent to point at.

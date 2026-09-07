@@ -242,7 +242,10 @@ endpoint in user secrets (resolved automatically from the GitHub environment or 
 group when missing) and the Azure sign-in the hosted call runs as - repairs what it can, reports
 what it cannot as a warning naming the fix, and starts the Aspire AppHost. Nothing cloud-side is
 required for the Deterministic stage. Agent stages need the model configuration above; the Hosting
-stage's FOUNDRY HOSTED beat additionally needs the cloud deployment. An explicit `-ProjectEndpoint`
+stage's FOUNDRY HOSTED beat additionally needs the cloud deployment. Ctrl+C stops everything;
+when that console is gone, or a build fails because a running service holds its DLL,
+`./scripts/Stop-CaesareaDemo.ps1` stops the host, kills what survived and clears the Aspire CLI's
+stale socket files. An explicit `-ProjectEndpoint`
 replaces a previously stored hosted endpoint, for example when switching deployments.
 `dotnet run --project .\Caesarea.AppHost` still works when the machine is already set up.
 

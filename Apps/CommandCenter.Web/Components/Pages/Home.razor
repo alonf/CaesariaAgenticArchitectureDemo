@@ -961,20 +961,37 @@
                         <div class="agent-summary delegation-panel">
                             <small>Consulted specialist</small>
                             <p class="delegation-agent">@delegation.AssessedBy</p>
-                            <dl class="delegation-fields">
-                                <div><dt>Area</dt><dd>@delegation.Area</dd></div>
-                                <div><dt>Verdict</dt><dd>@(delegation.RequiresLighting ? "Lighting required" : "No lighting requirement")</dd></div>
-                                <div><dt>Classification</dt><dd>@delegation.ReasonCode</dd></div>
-                                <div><dt>Recommendation</dt><dd>@delegation.Recommendation</dd></div>
-                                @if (delegation.UntilUtc is { } until)
-                                {
-                                    <div><dt>Until</dt><dd>@until.ToLocalTime().ToString("dd MMM HH:mm") @LocalZoneLabel</dd></div>
-                                }
-                            </dl>
-                            <p>@delegation.Reason</p>
-                            @if (delegation.DetailsWithheld)
+                            @if (delegation.Status == OperationsAgentToolCallStatus.Completed)
                             {
-                                <p class="agent-footnote">Operational detail exists and was deliberately not disclosed: the Operations Agent never sees it.</p>
+                                <dl class="delegation-fields">
+                                    <div><dt>Area</dt><dd>@delegation.Area</dd></div>
+                                    <div><dt>Verdict</dt><dd>@(delegation.RequiresLighting ? "Lighting required" : "No lighting requirement")</dd></div>
+                                    <div><dt>Classification</dt><dd>@delegation.ReasonCode</dd></div>
+                                    <div><dt>Recommendation</dt><dd>@delegation.Recommendation</dd></div>
+                                    @if (delegation.UntilUtc is { } until)
+                                    {
+                                        <div><dt>Until</dt><dd>@until.ToLocalTime().ToString("dd MMM HH:mm") @LocalZoneLabel</dd></div>
+                                    }
+                                </dl>
+                                <p>@delegation.Reason</p>
+                                @if (delegation.DetailsWithheld)
+                                {
+                                    <p class="agent-footnote">Operational detail exists and was deliberately not disclosed: the Operations Agent never sees it.</p>
+                                }
+                            }
+                            else
+                            {
+                                @* The specialist was asked and nothing came back. The row stays, so an
+                                   answer given alone never looks like the consult was switched off. *@
+                                <dl class="delegation-fields">
+                                    @if (delegation.Area.Length > 0)
+                                    {
+                                        <div><dt>Area</dt><dd>@delegation.Area</dd></div>
+                                    }
+                                    <div><dt>Verdict</dt><dd>None - @ToolCallStatusLabel(delegation.Status)</dd></div>
+                                </dl>
+                                <p>@NoJudgmentExplanation(delegation.Status)</p>
+                                <p class="agent-footnote">The answer above was given without the specialist's judgment.</p>
                             }
                         </div>
                     }
@@ -1841,7 +1858,7 @@
             var resolution = plainAnswer.Length <= 500 ? plainAnswer : $"{plainAnswer[..500]}…";
             var closedCase = await OperationsAgentClient.CloseCaseAsync(
                 assetId,
-                DescribeCaseSymptom(assetId, snapshot),
+                CaseSymptom.Describe(assetId, snapshot.OperationalState),
                 resolution,
                 CancellationToken.None);
             _caseMessage = $"Case {closedCase.CaseId} recorded to the agent's memory for {closedCase.AssetId}.";
@@ -2080,27 +2097,6 @@
     private static string FormatTimestamp(DateTimeOffset? value) =>
         value?.ToLocalTime().ToString("HH:mm:ss") ?? "n/a";
 
-    // The symptom describes what the authoritative snapshot actually showed when the case was
-    // closed. A canned anomaly sentence would file "on during daylight against its schedule" for a
-    // lamp that is off, or for one deliberately lit for an operation - which then comes back later
-    // as a recalled hypothesis that never happened.
-    private static string DescribeCaseSymptom(string assetId, CommandCenterSnapshot snapshot)
-    {
-        var state = snapshot.OperationalState;
-        var observed = state.ReportedIsOn ? "on" : "off";
-
-        if (!state.IsAnomalous)
-        {
-            return state.OperationContext.RequiresLighting
-                ? $"Streetlight {assetId} {observed} during daylight as an active operational context required."
-                : $"Streetlight {assetId} {observed}, matching its effective target.";
-        }
-
-        return state.ManualOverride
-            ? $"Streetlight {assetId} {observed} against its effective target under a manual override."
-            : $"Streetlight {assetId} {observed} against its effective target with no manual override.";
-    }
-
     private static string ToolCallStatusLabel(OperationsAgentToolCallStatus status) => status switch
     {
         OperationsAgentToolCallStatus.Completed => "ran",
@@ -2115,6 +2111,13 @@
         OperationsAgentToolCallStatus.Denied => "denied",
         OperationsAgentToolCallStatus.Failed => "failed",
         _ => "requested"
+    };
+
+    private static string NoJudgmentExplanation(OperationsAgentToolCallStatus status) => status switch
+    {
+        OperationsAgentToolCallStatus.Failed => "The specialist was consulted but did not answer - the call failed, so no judgment crossed the boundary. A Security Agent parked at a breakpoint looks exactly like this.",
+        OperationsAgentToolCallStatus.Denied => "The consultation was declined, so the specialist was never asked.",
+        _ => "The consultation was requested but never finished."
     };
 
     // Counting requests as invocations is exactly the claim this stage disproves, so the summary

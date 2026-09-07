@@ -64,15 +64,19 @@ public static class AgentTraceProjection
     /// <summary>
     /// Builds the visible delegation trace: which specialist agent was consulted and the sanitized
     /// judgment it returned. The specialist's published contract is deserialized rather than
-    /// forwarding tool-result text, so only fields allowed to cross can appear.
+    /// forwarding tool-result text, so only fields allowed to cross can appear. A consultation
+    /// that produced no judgment still gets a row - without a verdict - because an answer given
+    /// without the specialist must not read like an answer that never asked.
     /// </summary>
     /// <param name="recorder">The run's flight recorder.</param>
     /// <param name="approvalDecisions">The operator's decision per intercepted call identifier.</param>
+    /// <param name="specialistName">The consulted agent's name, for a consultation that returned nothing to name itself with.</param>
     /// <param name="onUnreadable">Reports a consulted agent whose answer did not match its contract.</param>
-    /// <returns>One entry per completed consultation.</returns>
+    /// <returns>One entry per consultation, carrying the judgment when one crossed.</returns>
     public static IReadOnlyList<OperationsAgentDelegation> DescribeDelegations(
         ModelExchangeRecorder recorder,
         IReadOnlyDictionary<string, bool> approvalDecisions,
+        string specialistName,
         Action<string, Exception>? onUnreadable = null)
     {
         ArgumentNullException.ThrowIfNull(recorder);
@@ -82,10 +86,12 @@ public static class AgentTraceProjection
         foreach (var call in recorder.ToolCalls.Where(call =>
             string.Equals(call.ToolName, OperationsAgentToolNames.AssessLightingRequirement, StringComparison.Ordinal)))
         {
-            // A consultation that did not complete produced no judgment, so it contributes no row.
-            if (ResolveStatus(call, recorder, approvalDecisions) != OperationsAgentToolCallStatus.Completed
+            var status = ResolveStatus(call, recorder, approvalDecisions);
+
+            if (status != OperationsAgentToolCallStatus.Completed
                 || recorder.FindResult(call.CallId)?.Text is not { } payload)
             {
+                delegations.Add(WithoutJudgment(call, specialistName, status));
                 continue;
             }
 
@@ -97,14 +103,16 @@ public static class AgentTraceProjection
             }
             catch (JsonException exception)
             {
-                // A specialist that answered in an unexpected shape is left out of the trace
-                // rather than described from text nobody validated.
+                // A specialist that answered in an unexpected shape is not described from text
+                // nobody validated: the row says it was asked and that no judgment came back.
                 onUnreadable?.Invoke(call.ToolName, exception);
+                delegations.Add(WithoutJudgment(call, specialistName, OperationsAgentToolCallStatus.Failed));
                 continue;
             }
 
             if (assessment is not { AssessedBy: { Length: > 0 } assessedBy, Area: { Length: > 0 } area })
             {
+                delegations.Add(WithoutJudgment(call, specialistName, OperationsAgentToolCallStatus.Failed));
                 continue;
             }
 
@@ -121,6 +129,39 @@ public static class AgentTraceProjection
         }
 
         return delegations;
+    }
+
+    private static OperationsAgentDelegation WithoutJudgment(
+        RecordedToolCall call, string specialistName, OperationsAgentToolCallStatus status) =>
+        new(
+            call.ToolName,
+            specialistName,
+            AreaAskedAbout(call.Arguments),
+            RequiresLighting: false,
+            UntilUtc: null,
+            ReasonCode: string.Empty,
+            Recommendation: string.Empty,
+            Reason: string.Empty,
+            DetailsWithheld: false,
+            status);
+
+    // The specialist never said which area it judged, so the row names the one the model asked about.
+    private static string AreaAskedAbout(string arguments)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(arguments);
+
+            return document.RootElement.ValueKind == JsonValueKind.Object
+                && document.RootElement.TryGetProperty("area", out var area)
+                && area.ValueKind == JsonValueKind.String
+                ? area.GetString() ?? string.Empty
+                : string.Empty;
+        }
+        catch (JsonException)
+        {
+            return string.Empty;
+        }
     }
 
     private static string Truncate(string value, int maxLength) =>
