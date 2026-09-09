@@ -255,6 +255,11 @@ Use `DemoControl.Web` (the presenter switchboard) to pick a scenario and stage, 
 
 ## Quality commands
 
+The [ASSERT evaluation example](evaluation/assert_demo/README.md) adds the **Evaluation** stage:
+reviewed L-417 behaviors, frozen baseline/governed comparisons, and a report combining model
+judgments with actual tool, approval, and Hub outcomes. Start with
+`./scripts/Invoke-AssertDemo.ps1 -PrepareOnly -Arm both`, then follow the guide for model setup.
+
 ```powershell
 dotnet restore
 dotnet format

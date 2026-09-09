@@ -90,7 +90,13 @@ public enum DemoStage
     /// own Microsoft 365 through Work IQ - asking as the signed-in person, never as an
     /// all-reading application.
     /// </summary>
-    Hosting
+    Hosting,
+
+    /// <summary>
+    /// ASSERT evaluates the cumulative local agent against repeatable streetlight scenarios,
+    /// observing evidence, approval outcomes, and verified state changes through existing APIs.
+    /// </summary>
+    Evaluation
 }
 
 /// <summary>

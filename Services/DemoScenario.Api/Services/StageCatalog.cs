@@ -71,7 +71,12 @@ public sealed class StageCatalog
             DemoStage.Hosting,
             "Hosting",
             "The same Operations Agent, hosted by Microsoft Foundry. Flip Habitat: LOCAL to FOUNDRY HOSTED and ask again: the platform owns the runtime, the identity and the endpoint, the Energy Hub it reads is the deployed one, and the work-order evidence comes from the presenter's own OneDrive through Work IQ - retrieved as the signed-in person.",
-            ["Deterministic scenarios", "Manual operator actions", "Caesarea Operations Agent", "get_streetlight_state tool", "AgentSession follow-ups", "search_work_knowledge retrieval", "Retrieved-evidence trace with citation badges", "Case-memory recall (hypotheses)", "Skill discovery and load_skill procedure", "Tools: LOCAL / MCP toggle (runtime tool discovery)", "restore_scheduled_mode with MRTR operator approval", "Explicit remediation workflow (validate / policy / approval / execute / verify)", "create_maintenance_work_item behind ApprovalRequiredAIFunction", "get_incident lookup - existing work found before new work is filed", "Security consult ON / OFF (delegation to a second agent)", "Workforce Agent consulted over A2A (agent card discovery, delegated task)", "Habitat: LOCAL / FOUNDRY HOSTED toggle (same agent, platform-owned runtime, Work IQ evidence)"])
+            ["Deterministic scenarios", "Manual operator actions", "Caesarea Operations Agent", "get_streetlight_state tool", "AgentSession follow-ups", "search_work_knowledge retrieval", "Retrieved-evidence trace with citation badges", "Case-memory recall (hypotheses)", "Skill discovery and load_skill procedure", "Tools: LOCAL / MCP toggle (runtime tool discovery)", "restore_scheduled_mode with MRTR operator approval", "Explicit remediation workflow (validate / policy / approval / execute / verify)", "create_maintenance_work_item behind ApprovalRequiredAIFunction", "get_incident lookup - existing work found before new work is filed", "Security consult ON / OFF (delegation to a second agent)", "Workforce Agent consulted over A2A (agent card discovery, delegated task)", "Habitat: LOCAL / FOUNDRY HOSTED toggle (same agent, platform-owned runtime, Work IQ evidence)"]),
+        new(
+            DemoStage.Evaluation,
+            "Evaluation",
+            "ASSERT compares the capability-limited Session baseline with the cumulative local agent on the same frozen L-417 cases. Inspect behavioral judgments alongside deterministic execution evidence.",
+            ["All local agent capabilities", "ASSERT behavior specification and frozen cases", "Correlated execution evidence", "Baseline / governed comparison"])
     ];
 
     // The presenter's script per stage, kept beside the capability list it belongs to. The Command
@@ -79,6 +84,14 @@ public sealed class StageCatalog
     // switchboard state instead, and InteractiveInput needs Tools: MCP as a silent precondition.
     private static readonly Dictionary<DemoStage, DemoStageWalkthrough> Walkthroughs = new()
     {
+        [DemoStage.Evaluation] = new(
+            [],
+            [
+                new(DemoSurface.Switchboard, "Open evaluation/assert_demo/cases.json and the ASSERT evaluation guide.", "The required and forbidden behavior is reviewable before any model runs."),
+                new(DemoSurface.Switchboard, "Run scripts/Invoke-AssertDemo.ps1 -Arm both in a terminal against the local demo.", "The harness resets each fixture, scripts its supervisor decision, and runs the same cases through both compositions."),
+                new(DemoSurface.CommandCenter, "Open the generated report.html and expand a failed case's evidence.", "Compare the answer, ordered tool outcomes, approval decisions, and verified Hub state; errors are never passes.")
+            ],
+            "Unit tests prove the operation works. Behavioral evaluation measures whether the agent requested the right operation, using the right evidence and authority."),
         [DemoStage.Deterministic] = new(
             [DemoPrerequisite.ForScenario(ScenarioId.ForgottenOverride, "Scenario: Lights On Reported by a Client")],
             [
@@ -241,11 +254,15 @@ public sealed class StageCatalog
         [DemoStage.MultiAgent] = "A second agent consulted as a tool over MCP, holding authority this agent lacks",
         [DemoStage.A2ADelegation] = "A2A: agent-card discovery and task delegation to a peer domain's agent",
         [DemoStage.Hosting] = "Foundry's hosted runtime with Work IQ: the same code under the platform's identity",
+        [DemoStage.Evaluation] = "ASSERT: requirement-derived behavioral evaluation with public execution evidence",
     };
 
     private static readonly DemoStageDescriptor[] ScriptedDescriptors =
         [.. Descriptors.Select(descriptor => descriptor with
         {
+            Capabilities = descriptor.Id == DemoStage.Evaluation
+                ? [.. Descriptors.Single(stage => stage.Id == DemoStage.Hosting).Capabilities, .. descriptor.Capabilities]
+                : descriptor.Capabilities,
             Walkthrough = Walkthroughs.GetValueOrDefault(descriptor.Id),
             Feature = Features.GetValueOrDefault(descriptor.Id)
         })];

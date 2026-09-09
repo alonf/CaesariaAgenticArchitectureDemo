@@ -37,18 +37,20 @@ Beats: **MCP Tools**, **Interactive Input**, **Workflow**.
   Workflow stage (the tool is no longer in its toolbox), not as a runtime authorization refusal.
   The Hub-side app-role check exists only on the hosted path.
 
-## Act 4 - Behavioral proof (24-30 min): slide, not click
+## Act 4 - Behavioral evaluation (24-30 min)
 
-There is no runnable baseline-versus-governed comparison in this repository, and no recorded
-result either. What the repository ships is the specification: `eval.yaml`, the 15-question
-dataset under `datasets/caesarea-operations-behavior/`, and the rubric under
-`evaluators/caesarea-operations-behavior/`. The dataset measures the hosted agent's uncertainty
-handling on unseeded assets and is kept as an honest, imperfect measurement rather than tuned to
-pass. Show the dataset and the rubric from the repository; if you have run the evaluation against
-your own hosted agent, show your numbers and one trace captured during rehearsal (see "Fallback
-artifacts" in the [runbook index](README.md)). Close on the distinction the act is for: unit tests
-prove the restore works, identity decides who may ask, and behavioral evaluation asks whether the
-agent should have requested it.
+Use the [ASSERT example](../../evaluation/assert_demo/README.md) and the **Evaluation** stage.
+Show a requirement in `cases.json`, then compare the existing Session-stage baseline and the
+cumulative local agent on the same frozen cases. Open the generated `report.html` and expand
+one failure: answer, tool outcomes, approval decisions, and verified lighting state.
+
+Run the full comparison in rehearsal; use a selected case for the live beat. Show actual numbers,
+including failures or infrastructure errors. Label rehearsal captures **CAPTURED / NOT LIVE**.
+The baseline has fewer capabilities, so this demonstrates the architectural progression, not
+an isolated causal test of policy. The root `eval.yaml` remains the separate hosted-agent suite.
+
+Close on the distinction: unit tests prove the restore works, identity decides who may ask,
+and behavioral evaluation measures whether the agent should have requested it.
 
 ## Short prepared walkthroughs
 

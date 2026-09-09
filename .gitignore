@@ -494,3 +494,8 @@ azure.yaml
 
 # Presenters' own rehearsal captures (screenshots, evaluation results): tenant data, kept out.
 docs/runbooks/artifacts/
+
+# Local ASSERT environment and generated evaluation artifacts.
+.venv-assert/
+evaluation/assert_demo/artifacts/
+__pycache__/

@@ -21,10 +21,17 @@ the mechanism the beat exists to show; the slide anchor is the `#region` the dec
 | 40 | Multi-Agent | A second agent consulted as a tool over MCP | Security Operation, consult OFF | Ask why the lamp is on; turn the consult ON; ask again. Only agent-as-tool runs - see below. |
 | 41-42 | A2A Delegation | Agent-card discovery and task delegation | Lights On | Ask the workforce domain about L-417, then for the technician cost; show the work order in full on the switchboard. |
 | 43-44 | Hosting | Foundry's hosted runtime with Work IQ | Habitat: LOCAL; the hosted agent deployed; the work order in your OneDrive | Ask about the work records, flip Habitat to FOUNDRY HOSTED, ask again. Closing beat: ask the hosted agent to turn the light off. |
+| 49 | Evaluation | ASSERT: requirement-derived behavioral evaluation over the public API's execution evidence | Applied per case by the harness, not by the director | Show a requirement in `cases.json`, run `scripts/Invoke-AssertDemo.ps1 -Arm both -Case forgotten-override`, then open the generated `report.html` and expand the baseline and the governed row. |
 
 The Hosting beat needs the cloud half. Without it, run everything else and show a hosted answer
 you captured during rehearsal: the repository ships no such capture (the hosting guide's only
 screenshot is the consent prompt). See "Fallback artifacts" in the [runbook index](README.md).
+
+The Evaluation beat needs its own setup - the ASSERT environment and a judge deployment - and it
+drives the running demo itself: it resets each fixture, switches compositions, and answers its own
+approvals, so leave the switchboard alone until it prints its artifact directory. One case in both
+arms takes about two minutes; the full suite takes about twenty and belongs in rehearsal. Set it up
+from the [ASSERT guide](../../evaluation/assert_demo/README.md).
 
 ## Slide-only
 
@@ -35,7 +42,6 @@ screenshot is the consent prompt). See "Fallback artifacts" in the [runbook inde
 | 40 | Handoff and group chat | Not implemented; the slide compares four modes and the demo runs two. |
 | 45 | Protocols | Decision documents in the hosting guide, not code. |
 | 47 | Governance middleware | Not implemented as middleware. Point at the three approval mechanisms and the stage gate instead. |
-| 49 | Assurance | The dataset and `eval.yaml` exist as an honest, imperfect measurement; there is no live pass to run on stage. |
 
 Agent 365 (segment 13) is a terminal-and-portal walkthrough that depends on the tenant; keep the
 screenshots ready.

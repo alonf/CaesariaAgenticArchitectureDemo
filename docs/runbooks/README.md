@@ -32,7 +32,7 @@ nobody's tenant data lands in the repository by accident, or beside the slides.
 |---|---|---|
 | Hosted answer | After one successful run of the Hosting beat | The Command Center's agent panel showing the hosted answer with its OneDrive evidence and the footnote naming the source of record. |
 | Agent 365 portal | While signed in to the tenant's admin experience | The agent's registry entry, its activity, security, and permissions tabs; keep the "no owner" capture as the anti-pattern. |
-| Evaluation result | After running `eval.yaml` against your hosted agent | The summary and one trace, good or bad; the talk presents it as a measurement, not a pass. |
+| ASSERT comparison | After running `scripts/Invoke-AssertDemo.ps1 -Arm both` against the local demo | Generated report.html and one expanded case; preserve the actual scores and label captures CAPTURED / NOT LIVE. |
 
 The consent-prompt screenshot in [the hosting guide](../product-status/hosted-agent.md) is the one
 image the repository does ship; it shows Work IQ asking the presenter for consent, not an answer.
@@ -44,7 +44,6 @@ Said here once so neither lecture promises it from the stage.
 | Advertised | Status | What to do on stage |
 |---|---|---|
 | Group chat and handoff (H08 slide 40) | Not implemented. The only multi-agent modes that run are agent-as-tool (Multi-Agent beat) and A2A delegation. | Compare the four modes on the slide; run the two that exist. |
-| ASSERT finale - a failing baseline against a passing governed run (W20 act 4) | Not a runnable comparison. `eval.yaml` and the 15-question dataset exist and are meant as an honest, imperfect measurement of the hosted agent, not as proof of the L-417 beats. | Show the dataset and a recorded result; say plainly that it measures uncertainty handling on unseeded assets. |
 | Runtime policy middleware and the agency budget (H08 slide 47, W20 "governance stack") | Not implemented as middleware. The governance that exists is the three approval mechanisms, stage gating, and Hub-side authorization. | Slide only. |
 | Harness agent comparison (H08 slide 15) | Not implemented. | Slide only. |
 | Protocol decision docs (H08 slide 45) | Documents, not code: [the hosting guide](../product-status/hosted-agent.md) records the Responses, Invocations and A2A decisions. | Slide only. |

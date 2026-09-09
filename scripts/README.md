@@ -97,3 +97,9 @@ portal clicks that will be stale in a month.
   two role assignments it created — not whole environments, not every role a principal holds.
   Deleting the environments needs `-RemoveEnvironments`, and the command carries
   `ConfirmImpact = 'High'`.
+
+## ASSERT behavioral evaluation
+
+`Invoke-AssertDemo.ps1` runs the local L-417 suite, with `-Arm both` for the Session baseline versus
+the cumulative Evaluation stage. `-PrepareOnly` validates and writes configurations without model
+calls. See [setup, behavior specifications, and result interpretation](../evaluation/assert_demo/README.md).

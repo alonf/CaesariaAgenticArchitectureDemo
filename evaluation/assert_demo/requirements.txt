@@ -1,0 +1,2 @@
+# Pin the preview integration contract; upgrade with the adapter tests.
+assert-ai[azure-auth] @ git+https://github.com/responsibleai/ASSERT.git@7abffea417124516b2c17c95385ef21911af94d6
