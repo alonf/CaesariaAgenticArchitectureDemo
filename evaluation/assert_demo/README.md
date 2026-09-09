@@ -9,6 +9,58 @@ Each requirement has both an ASSERT semantic judgment and concrete execution che
 requires both to pass; missing scores, failed requests, and unavailable models are **ERROR**, never
 PASS. Model judgments are measurements, not guarantees. No passing results are hard-coded.
 
+## How much integration code does ASSERT need?
+
+**You do not need to build a runner like this for every ASSERT evaluation.** Most of the code
+here is reusable integration and presentation work for Caesarea's stateful demo.
+
+### When a simple approach is enough
+
+For an agent that accepts a question and returns an answer, start with behavior requirements,
+test inputs, an ASSERT configuration, and a supported target connection. If the application
+needs a custom connection, a small Python callable can send the question to its API and return
+the response. Use ASSERT's CLI to run the evaluation and inspect its result artifacts; a custom
+runner and HTML report are optional.
+
+This is enough when the available responses and traces contain the evidence needed to judge
+the requirement, and cases need no application-specific setup or external interaction. For
+example, checking whether an assistant acknowledges missing information can use this approach.
+Requirements about actual tool execution or state changes need evidence beyond the answer text.
+
+### When a custom runner is useful
+
+Add orchestration when a repeatable evaluation must coordinate the application around each
+conversation. This demo needs to reset city scenarios, preserve sessions, supply scripted
+supervisor decisions, wait for background workflows, and read authoritative state to verify
+what happened. It also runs baseline/governed comparisons and combines ASSERT judgments with
+deterministic checks in a report suitable for projection.
+
+For example, an answer saying “I respected the denial” cannot establish that the light stayed
+unchanged. Our adapter observes the approval, workflow, and actual lighting state. ASSERT judges
+the behavior using that evidence, while our checks verify the concrete outcomes.
+
+### What was authored, generated, and reused?
+
+The integration code and initial cases were authored for this repository; ASSERT did not
+generate these source files.
+
+| File | Purpose | When to change it |
+|---|---|---|
+| `cases.json` | Reviewed requirements, initial prompts, and scenario fixtures | Add cases or change expected behavior. |
+| `target.py` | Connect ASSERT to the .NET APIs and collect execution evidence | Change application setup, interaction, or evidence collection. |
+| `run.py` | Prepare inputs, invoke ASSERT, compare compositions, and render reports | Change evaluation orchestration or reporting. |
+| `test_adapter.py` | Test our integration and the pinned ASSERT contract | Change integration behavior; these tests do not evaluate model quality. |
+| `requirements.txt`, `README.md`, PowerShell launcher | Dependency pin, instructions, and convenient entry point | Change setup or usage. |
+
+During a normal run, our runner materializes configuration, taxonomy, and test-set files from
+the authored cases; ASSERT produces evaluation results. With `-Generate`, ASSERT generates
+additional candidate categories and test cases for review. It does not generate the adapter or
+runner. The HTML report is produced automatically by our runner from the collected results.
+
+For subsequent evaluations of this demo, normally update the cases or select reviewed generated
+inputs and rerun the existing harness. For another application, start with the simple connection
+and add only the orchestration its requirements need.
+
 ## Setup
 
 From the repository root (Python 3.11+ and Git are required):
@@ -81,10 +133,10 @@ Open the printed artifact directory's `report.html`. It is a standalone projecti
 table with expandable answers, deterministic checks, approval decisions, workflow outcomes,
 and ASSERT scores. Its header states the judge model, the run it came from, when it was
 rendered, and the result count per composition, so the page carries its own provenance onto a
-projector; `-Captured` adds the CAPTURED / NOT LIVE banner. `summary.json`, per-case logs, and ASSERT's original result artifacts are
-retained alongside it. `manifest.json` records the judge model, ASSERT revision, and frozen input
-hashes (test set, fixture, and taxonomy). Outputs
-are ignored by Git. Label rehearsal captures **CAPTURED / NOT LIVE** when presenting them later.
+projector; `-Captured` adds the CAPTURED / NOT LIVE banner. `summary.json`, per-case logs, and
+ASSERT's original result artifacts are retained alongside it. `manifest.json` records the judge
+model, ASSERT revision, and frozen input hashes (test set, fixture, and taxonomy). Outputs are
+ignored by Git. Label rehearsal captures **CAPTURED / NOT LIVE** when presenting them later.
 
 Exit codes: 0 means no governed failures (baseline failures are expected measurements),
 1 means a governed behavior failed, and 2 means evaluation infrastructure failed or evidence
