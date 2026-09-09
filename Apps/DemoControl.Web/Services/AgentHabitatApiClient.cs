@@ -12,7 +12,7 @@ internal sealed class AgentHabitatApiClient(HttpClient httpClient)
         using var request = CreateRequest("/api/operations-agent/habitat/", correlationId);
         using var response = await httpClient.SendAsync(request, cancellationToken);
 
-        response.EnsureSuccessStatusCode();
+        await response.EnsureSuccessAsync(cancellationToken);
 
         return await response.Content.ReadFromJsonAsync<AgentHabitatState>(SerializerOptions, cancellationToken)
             ?? throw new InvalidOperationException("Agent habitat response was empty.");
@@ -26,7 +26,7 @@ internal sealed class AgentHabitatApiClient(HttpClient httpClient)
         request.Content = JsonContent.Create(new AgentHabitatState(habitat), options: SerializerOptions);
         using var response = await httpClient.SendAsync(request, cancellationToken);
 
-        response.EnsureSuccessStatusCode();
+        await response.EnsureSuccessAsync(cancellationToken);
 
         return await response.Content.ReadFromJsonAsync<AgentHabitatState>(SerializerOptions, cancellationToken)
             ?? throw new InvalidOperationException("Agent habitat response was empty.");

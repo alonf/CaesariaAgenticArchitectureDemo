@@ -11,7 +11,7 @@ internal sealed class SecurityConsultApiClient(HttpClient httpClient)
         using var request = CreateRequest(HttpMethod.Get);
         using var response = await httpClient.SendAsync(request, cancellationToken);
 
-        response.EnsureSuccessStatusCode();
+        await response.EnsureSuccessAsync(cancellationToken);
 
         return await response.Content.ReadFromJsonAsync<SecurityConsultState>(SerializerOptions, cancellationToken)
             ?? throw new InvalidOperationException("Security consult response was empty.");
@@ -23,7 +23,7 @@ internal sealed class SecurityConsultApiClient(HttpClient httpClient)
         request.Content = JsonContent.Create(new SecurityConsultState(enabled), options: SerializerOptions);
         using var response = await httpClient.SendAsync(request, cancellationToken);
 
-        response.EnsureSuccessStatusCode();
+        await response.EnsureSuccessAsync(cancellationToken);
 
         return await response.Content.ReadFromJsonAsync<SecurityConsultState>(SerializerOptions, cancellationToken)
             ?? throw new InvalidOperationException("Security consult response was empty.");

@@ -13,7 +13,7 @@ internal sealed class DemoScenarioApiClient(HttpClient httpClient)
         using var request = CreateRequest(HttpMethod.Get, "/api/demo-scenarios", correlationId);
         using var response = await httpClient.SendAsync(request, cancellationToken);
 
-        response.EnsureSuccessStatusCode();
+        await response.EnsureSuccessAsync(cancellationToken);
 
         return await response.Content.ReadFromJsonAsync<ScenarioCatalogResponse>(SerializerOptions, cancellationToken)
             ?? throw new InvalidOperationException("Scenario catalog response was empty.");
@@ -59,7 +59,7 @@ internal sealed class DemoScenarioApiClient(HttpClient httpClient)
         using var request = CreateRequest(HttpMethod.Get, "/api/simulator-behavior", correlationId);
         using var response = await httpClient.SendAsync(request, cancellationToken);
 
-        response.EnsureSuccessStatusCode();
+        await response.EnsureSuccessAsync(cancellationToken);
 
         return await response.Content.ReadFromJsonAsync<SimulatorBehaviorSettings>(SerializerOptions, cancellationToken)
             ?? throw new InvalidOperationException("Simulator behavior response was empty.");

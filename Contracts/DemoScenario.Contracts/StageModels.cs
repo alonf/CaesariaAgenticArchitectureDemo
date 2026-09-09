@@ -188,6 +188,18 @@ public static class DemoSwitchValues
 }
 
 /// <summary>
+/// The problem-details extension a stage-gated endpoint adds when it refuses a request.
+/// </summary>
+public static class DemoStageProblemExtensions
+{
+    /// <summary>
+    /// The name of the <see cref="DemoStage"/> the refused capability requires, so a caller can
+    /// offer to move there rather than leave the presenter to read the sentence.
+    /// </summary>
+    public const string RequiredStage = "requiredStage";
+}
+
+/// <summary>
 /// One thing a beat needs before its first step. <see cref="Text"/> is the presenter-facing line;
 /// the structured fields let the director check and, where it can, satisfy it. A prerequisite
 /// with <see cref="AppliesAtStart"/> false belongs to a later step of the beat: it is shown, never

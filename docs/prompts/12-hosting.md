@@ -68,7 +68,8 @@ switch, exactly like Tools LOCAL/MCP:
 The switch state lives on the Operations Agent service (`/api/operations-agent/habitat`), is
 flipped from the switchboard, requires the Hosting stage, and resets to LOCAL on any stage
 downgrade — same lifecycle as the tool-source toggle, for the same reason: the flip is the beat,
-so re-entering the stage must start from LOCAL.
+so re-entering the stage must start from LOCAL. Flipped below its stage, the switchboard shows the
+service's reason and offers to move to the Hosting stage and flip, in one click.
 
 ### The closing beat: ask it to turn the light off
 

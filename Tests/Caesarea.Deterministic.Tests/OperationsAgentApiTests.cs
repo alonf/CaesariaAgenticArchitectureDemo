@@ -322,10 +322,34 @@ public sealed class OperationsAgentApiTests
             TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Equal("Hosting", await ReadRequiredStageAsync(response));
 
         var status = await client.GetFromJsonAsync<OperationsAgentHabitatStatus>(
             "/api/operations-agent/habitat/", JsonOptions, TestContext.Current.CancellationToken);
         Assert.Equal(OperationsAgentHabitat.Local, status!.Habitat);
+    }
+
+    [Fact]
+    public async Task TheToolSourceToggleIsRefusedBelowTheMcpToolsStage()
+    {
+        await using var world = new ApiWorld(DemoStage.Skills);
+        using var client = world.CreateClient();
+
+        using var response = await client.PostAsJsonAsync(
+            "/api/operations-agent/tool-source/",
+            new OperationsAgentToolSourceStatus(OperationsAgentToolSource.Mcp),
+            JsonOptions,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Equal("McpTools", await ReadRequiredStageAsync(response));
+    }
+
+    // The refusal names the stage that would allow the switch, so the switchboard can offer to go there.
+    private static async Task<string?> ReadRequiredStageAsync(HttpResponseMessage response)
+    {
+        using var problem = JsonDocument.Parse(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        return problem.RootElement.GetProperty("requiredStage").GetString();
     }
 
     [Fact]

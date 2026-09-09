@@ -280,7 +280,15 @@
                         MCP remote
                     </button>
                 </div>
-                @if (!string.IsNullOrWhiteSpace(_toolSourceMessage))
+                @if (_toolSourceOffer is { } toolSourceOffer && IsOfferOpen(toolSourceOffer))
+                {
+                    <p class="status-error">@toolSourceOffer.Reason</p>
+                    <div class="stage-switch-actions">
+                        <button class="button primary" @onclick="AcceptToolSourceOfferAsync" disabled="@(_toolSourceBusy || _stageOfferBusy)">@(_stageOfferBusy ? "Changing the stage..." : $"Move to {StageDisplayName(toolSourceOffer.Stage)} and select {ToolSourceLabel(toolSourceOffer.Value)}")</button>
+                        <button class="button secondary" @onclick="() => _toolSourceOffer = null" disabled="@_stageOfferBusy">Not now</button>
+                    </div>
+                }
+                else if (!string.IsNullOrWhiteSpace(_toolSourceMessage))
                 {
                     <p class="status-error">@_toolSourceMessage</p>
                 }
@@ -340,7 +348,15 @@
                         FOUNDRY HOSTED
                     </button>
                 </div>
-                @if (!string.IsNullOrWhiteSpace(_agentHabitatMessage))
+                @if (_agentHabitatOffer is { } agentHabitatOffer && IsOfferOpen(agentHabitatOffer))
+                {
+                    <p class="status-error">@agentHabitatOffer.Reason</p>
+                    <div class="stage-switch-actions">
+                        <button class="button primary" @onclick="AcceptAgentHabitatOfferAsync" disabled="@(_agentHabitatBusy || _stageOfferBusy)">@(_stageOfferBusy ? "Changing the stage..." : $"Move to {StageDisplayName(agentHabitatOffer.Stage)} and select {HabitatLabel(agentHabitatOffer.Value)}")</button>
+                        <button class="button secondary" @onclick="() => _agentHabitatOffer = null" disabled="@_stageOfferBusy">Not now</button>
+                    </div>
+                }
+                else if (!string.IsNullOrWhiteSpace(_agentHabitatMessage))
                 {
                     <p class="status-error">@_agentHabitatMessage</p>
                 }
@@ -607,6 +623,10 @@
     private AgentHabitatState? _agentHabitat;
     private bool _agentHabitatBusy;
     private string? _agentHabitatMessage;
+    // A switch the stage refused, with the stage it named: the offer to move there and flip.
+    private StageOffer? _toolSourceOffer;
+    private StageOffer? _agentHabitatOffer;
+    private bool _stageOfferBusy;
     private SecurityConsultState? _securityConsult;
     private IReadOnlyList<WorkOrderRecord>? _workforceRecords;
     private bool _workforceRecordsBusy;
@@ -1279,10 +1299,17 @@
     private async Task SetToolSourceAsync(string source)
     {
         _toolSourceBusy = true;
+        _toolSourceOffer = null;
 
         try
         {
             _toolSource = await ToolSourceClient.SetSourceAsync(source, CancellationToken.None);
+            _toolSourceMessage = null;
+        }
+        catch (ApiProblemException exception) when (exception.RequiredStage is { } stage)
+        {
+            // The stage refused the flip and named the stage that allows it: offer to go there.
+            _toolSourceOffer = new StageOffer(stage, source, exception.Message);
             _toolSourceMessage = null;
         }
         catch (Exception exception)
@@ -1312,10 +1339,16 @@
     private async Task SetAgentHabitatAsync(string habitat)
     {
         _agentHabitatBusy = true;
+        _agentHabitatOffer = null;
 
         try
         {
             _agentHabitat = await AgentHabitatClient.SetHabitatAsync(habitat, CancellationToken.None);
+            _agentHabitatMessage = null;
+        }
+        catch (ApiProblemException exception) when (exception.RequiredStage is { } stage)
+        {
+            _agentHabitatOffer = new StageOffer(stage, habitat, exception.Message);
             _agentHabitatMessage = null;
         }
         catch (Exception exception)
@@ -1327,6 +1360,68 @@
             _agentHabitatBusy = false;
         }
     }
+
+    private Task AcceptToolSourceOfferAsync() =>
+        AcceptStageOfferAsync(_toolSourceOffer, () => _toolSourceOffer = null, SetToolSourceAsync, message => _toolSourceMessage = message);
+
+    private Task AcceptAgentHabitatOfferAsync() =>
+        AcceptStageOfferAsync(_agentHabitatOffer, () => _agentHabitatOffer = null, SetAgentHabitatAsync, message => _agentHabitatMessage = message);
+
+    // The stage the switch asked for, then the switch. The stage alone, not the beat: the presenter
+    // asked for the switch, so the beat's starting conditions - its scenario, the switch at LOCAL -
+    // are not applied over it.
+    private async Task AcceptStageOfferAsync(StageOffer? offer, Action clear, Func<string, Task> apply, Action<string> report)
+    {
+        if (offer is null || _stageOfferBusy)
+        {
+            return;
+        }
+
+        clear();
+        _stageOfferBusy = true;
+
+        try
+        {
+            var result = await StageClient.ApplyStageAsync(offer.Stage, CancellationToken.None);
+
+            if (!result.Succeeded)
+            {
+                report($"The stage could not be changed: {result.Message}");
+                return;
+            }
+
+            _stageMessage = result.Message;
+            _stageMessageIsError = false;
+            _stageNoticeUntil = DateTimeOffset.UtcNow.AddSeconds(20);
+        }
+        catch (Exception exception)
+        {
+            report($"The stage could not be changed: {exception.Message}");
+            return;
+        }
+        finally
+        {
+            _stageOfferBusy = false;
+        }
+
+        await LoadStageCatalogAsync(CancellationToken.None, showErrors: true);
+        await LoadReadinessAsync(CancellationToken.None);
+        await apply(offer.Value);
+    }
+
+    // An offer stands while the stage is still below the one it names; a stage change made
+    // anywhere else retires it.
+    private bool IsOfferOpen(StageOffer offer) =>
+        _stageCatalog is null || _stageCatalog.CurrentStage.Id < offer.Stage;
+
+    private static string ToolSourceLabel(string source) =>
+        string.Equals(source, DemoSwitchValues.ToolSourceMcp, StringComparison.OrdinalIgnoreCase) ? "MCP remote" : "LOCAL function";
+
+    private static string HabitatLabel(string habitat) =>
+        string.Equals(habitat, DemoSwitchValues.HabitatFoundryHosted, StringComparison.OrdinalIgnoreCase) ? "FOUNDRY HOSTED" : "LOCAL (Aspire)";
+
+    // A switch the stage refused: the stage it named, the value asked for, and the service's reason.
+    private sealed record StageOffer(DemoStage Stage, string Value, string Reason);
 
     private async Task ClearCaseMemoryAsync()
     {

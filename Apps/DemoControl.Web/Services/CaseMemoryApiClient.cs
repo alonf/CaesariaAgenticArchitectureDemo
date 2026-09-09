@@ -12,7 +12,7 @@ internal sealed class CaseMemoryApiClient(HttpClient httpClient)
         using var request = CreateRequest(HttpMethod.Get, "/api/operations-agent/cases/", correlationId);
         using var response = await httpClient.SendAsync(request, cancellationToken);
 
-        response.EnsureSuccessStatusCode();
+        await response.EnsureSuccessAsync(cancellationToken);
 
         return await response.Content.ReadFromJsonAsync<CaseMemoryState>(SerializerOptions, cancellationToken)
             ?? throw new InvalidOperationException("Case memory response was empty.");
@@ -24,7 +24,7 @@ internal sealed class CaseMemoryApiClient(HttpClient httpClient)
         using var request = CreateRequest(HttpMethod.Post, "/api/operations-agent/cases/clear", correlationId);
         using var response = await httpClient.SendAsync(request, cancellationToken);
 
-        response.EnsureSuccessStatusCode();
+        await response.EnsureSuccessAsync(cancellationToken);
 
         return await response.Content.ReadFromJsonAsync<CaseMemoryState>(SerializerOptions, cancellationToken)
             ?? throw new InvalidOperationException("Case memory response was empty.");

@@ -12,7 +12,7 @@ internal sealed class WorkKnowledgeApiClient(HttpClient httpClient)
         using var request = CreateRequest(HttpMethod.Get, "/api/operations-agent/work-knowledge/", correlationId);
         using var response = await httpClient.SendAsync(request, cancellationToken);
 
-        response.EnsureSuccessStatusCode();
+        await response.EnsureSuccessAsync(cancellationToken);
 
         return await response.Content.ReadFromJsonAsync<WorkKnowledgeState>(SerializerOptions, cancellationToken)
             ?? throw new InvalidOperationException("Work knowledge response was empty.");
@@ -25,7 +25,7 @@ internal sealed class WorkKnowledgeApiClient(HttpClient httpClient)
         request.Content = JsonContent.Create(new WorkKnowledgeState(evidencePresent), options: SerializerOptions);
         using var response = await httpClient.SendAsync(request, cancellationToken);
 
-        response.EnsureSuccessStatusCode();
+        await response.EnsureSuccessAsync(cancellationToken);
 
         return await response.Content.ReadFromJsonAsync<WorkKnowledgeState>(SerializerOptions, cancellationToken)
             ?? throw new InvalidOperationException("Work knowledge response was empty.");

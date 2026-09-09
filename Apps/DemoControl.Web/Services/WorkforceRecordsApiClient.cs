@@ -36,7 +36,7 @@ internal sealed class WorkforceRecordsApiClient(HttpClient httpClient)
         request.Headers.Add(CallerHeaderName, CallerName);
         using var response = await _httpClient.SendAsync(request, cancellationToken);
 
-        response.EnsureSuccessStatusCode();
+        await response.EnsureSuccessAsync(cancellationToken);
 
         return await response.Content.ReadFromJsonAsync<IReadOnlyList<WorkOrderRecord>>(SerializerOptions, cancellationToken)
             ?? [];

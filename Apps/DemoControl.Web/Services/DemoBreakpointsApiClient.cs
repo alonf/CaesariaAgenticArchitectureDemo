@@ -57,7 +57,7 @@ internal sealed class DemoBreakpointsApiClient(IHttpClientFactory httpClientFact
         request.Content = JsonContent.Create(new DemoBreakpointArmRequest(armed), options: SerializerOptions);
         using var response = await client.SendAsync(request, cancellationToken);
 
-        response.EnsureSuccessStatusCode();
+        await response.EnsureSuccessAsync(cancellationToken);
 
         return await response.Content.ReadFromJsonAsync<DemoBreakpointsResponse>(SerializerOptions, cancellationToken)
             ?? throw new InvalidOperationException("Demo breakpoints response was empty.");
@@ -77,7 +77,7 @@ internal sealed class DemoBreakpointsApiClient(IHttpClientFactory httpClientFact
             using var request = CreateRequest(HttpMethod.Get, "/api/demo-breakpoints");
             using var response = await client.SendAsync(request, attempt.Token);
 
-            response.EnsureSuccessStatusCode();
+            await response.EnsureSuccessAsync(attempt.Token);
 
             var status = await response.Content.ReadFromJsonAsync<DemoBreakpointsResponse>(SerializerOptions, attempt.Token)
                 ?? throw new InvalidOperationException("Demo breakpoints response was empty.");

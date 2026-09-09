@@ -397,11 +397,7 @@ toolSource.MapPost("/", (HttpContext context, OperationsAgentToolSourceStatus st
 {
     if (stageGate.GetCurrent().Id < DemoStage.McpTools)
     {
-        return Results.Problem(ProblemDetailsFactory.Create(
-            StatusCodes.Status409Conflict,
-            "Tool source toggle disabled in the current demo stage",
-            $"Selecting the tool source requires the McpTools stage; the current stage is {stageGate.GetCurrent().Name}.",
-            context.GetCorrelationId()));
+        return CreateSwitchStageProblem(context, stageGate, DemoStage.McpTools, "Tool source toggle disabled in the current demo stage", "Selecting the tool source");
     }
 
     toolSourceSwitch.Current = status.Source;
@@ -432,11 +428,7 @@ habitat.MapPost("/", (HttpContext context, OperationsAgentHabitatStatus status, 
 
     if (stageGate.GetCurrent().Id < DemoStage.Hosting)
     {
-        return Results.Problem(ProblemDetailsFactory.Create(
-            StatusCodes.Status409Conflict,
-            "Agent habitat toggle disabled in the current demo stage",
-            $"Selecting the agent habitat requires the Hosting stage; the current stage is {stageGate.GetCurrent().Name}.",
-            context.GetCorrelationId()));
+        return CreateSwitchStageProblem(context, stageGate, DemoStage.Hosting, "Agent habitat toggle disabled in the current demo stage", "Selecting the agent habitat");
     }
 
     habitatSwitch.Current = status.Habitat;
@@ -459,6 +451,20 @@ demoStage.MapPost("/", (DemoStageStatus stage, DemoStageGate stageGate, FoundryC
 });
 
 await app.RunAsync();
+
+// A presenter switch the stage refuses names the stage that would allow it, as data beside the
+// sentence, so the switchboard can offer to move there instead of leaving a status code on screen.
+static IResult CreateSwitchStageProblem(HttpContext context, DemoStageGate stageGate, DemoStage required, string title, string action)
+{
+    var problem = ProblemDetailsFactory.Create(
+        StatusCodes.Status409Conflict,
+        title,
+        $"{action} requires the {required} stage; the current stage is {stageGate.GetCurrent().Name}.",
+        context.GetCorrelationId());
+    problem.Extensions[DemoStageProblemExtensions.RequiredStage] = required.ToString();
+
+    return Results.Problem(problem);
+}
 
 static IResult? CreateWorkflowStageProblem(HttpContext context, DemoStageGate stageGate) =>
     stageGate.GetCurrent().Id < DemoStage.Workflow

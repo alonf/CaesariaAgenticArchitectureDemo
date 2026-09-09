@@ -12,7 +12,7 @@ internal sealed class ToolSourceApiClient(HttpClient httpClient)
         using var request = CreateRequest("/api/operations-agent/tool-source/", correlationId);
         using var response = await httpClient.SendAsync(request, cancellationToken);
 
-        response.EnsureSuccessStatusCode();
+        await response.EnsureSuccessAsync(cancellationToken);
 
         return await response.Content.ReadFromJsonAsync<ToolSourceState>(SerializerOptions, cancellationToken)
             ?? throw new InvalidOperationException("Tool source response was empty.");
@@ -26,7 +26,7 @@ internal sealed class ToolSourceApiClient(HttpClient httpClient)
         request.Content = JsonContent.Create(new ToolSourceState(source), options: SerializerOptions);
         using var response = await httpClient.SendAsync(request, cancellationToken);
 
-        response.EnsureSuccessStatusCode();
+        await response.EnsureSuccessAsync(cancellationToken);
 
         return await response.Content.ReadFromJsonAsync<ToolSourceState>(SerializerOptions, cancellationToken)
             ?? throw new InvalidOperationException("Tool source response was empty.");
