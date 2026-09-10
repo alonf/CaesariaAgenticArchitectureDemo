@@ -446,7 +446,7 @@
                         }
                         @if (IsSessionStage && _agentSessionId is not null)
                         {
-                            <div class="@RailActionClass(DemoStage.Session)">
+                            <div class="@FollowUpRailClass">
                             <button class="action-button investigate-button @ActionBusyClass(AgentAction.FollowUp)" @onclick="AskFollowUpAsync" disabled="@LocalAgentActionsDisabled">
                                 <span>@(IsRunning(AgentAction.FollowUp) ? "Asking..." : "Ask \"Why?\" (same session)")</span>
                                 <svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9h-2a7 7 0 1 1-7-7v3l5-4-5-4Z" /></svg>
@@ -1370,13 +1370,22 @@
     private string RailActionClass(DemoStage stage) =>
         _snapshot?.CurrentStage.Id == stage ? "rail-action current" : "rail-action earlier";
 
+    // "Why?" is the Knowledge beat's button as much as Session's: Knowledge changes what the
+    // follow-up retrieves, not which button asks it, and its script says to click it. So it
+    // leads at both stages rather than folding away under the one beat that needs it.
+    private bool FollowUpLeadsHere => _snapshot?.CurrentStage.Id is DemoStage.Session or DemoStage.Knowledge;
+
+    private string FollowUpRailClass => FollowUpLeadsHere ? "rail-action current" : "rail-action earlier";
+
     // Counts exactly what the toggle folds away. Ask agent is deliberately not in this list: it is
     // the question box's own control, sits above the answer, and stays put - it is also the action
     // the Knowledge and McpTools beats reuse, so it has no single owning stage. Counting it here
     // would promise one more hidden button than the toggle actually reveals.
     private int EarlierActionCount => _snapshot is not { } snapshot ? 0 : new[]
     {
-        (DemoStage.Session, IsSessionStage && _agentSessionId is not null),
+        // Not "earlier" at Knowledge either: the button is showing there, so it must not be counted
+        // as one the toggle would reveal.
+        (DemoStage.Session, IsSessionStage && _agentSessionId is not null && !FollowUpLeadsHere),
         (DemoStage.Memory, IsMemoryStage),
         (DemoStage.Skills, IsSkillsStage),
         (DemoStage.InteractiveInput, IsInteractiveStage),
