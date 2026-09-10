@@ -87,9 +87,10 @@ public sealed class StageCatalog
         [DemoStage.Evaluation] = new(
             [],
             [
-                new(DemoSurface.Switchboard, "Open evaluation/assert_demo/cases.json and the ASSERT evaluation guide.", "The required and forbidden behavior is reviewable before any model runs."),
+                // Nothing in this beat is a Command Center element: two files and a terminal.
+                new(DemoSurface.Code, "Open evaluation/assert_demo/cases.json and the ASSERT evaluation guide.", "The required and forbidden behavior is reviewable before any model runs."),
                 new(DemoSurface.Switchboard, "Run scripts/Invoke-AssertDemo.ps1 -Arm both in a terminal against the local demo.", "The harness resets each fixture, scripts its supervisor decision, and runs the same cases through both compositions."),
-                new(DemoSurface.CommandCenter, "Open the generated report.html and expand a failed case's evidence.", "Compare the answer, ordered tool outcomes, approval decisions, and verified Hub state; errors are never passes.")
+                new(DemoSurface.Code, "Open the generated report.html and expand a failed case's evidence.", "Compare the answer, ordered tool outcomes, approval decisions, and verified Hub state; errors are never passes.")
             ],
             "Unit tests prove the operation works. Behavioral evaluation measures whether the agent requested the right operation, using the right evidence and authority."),
         [DemoStage.Deterministic] = new(
