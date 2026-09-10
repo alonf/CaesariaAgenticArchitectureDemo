@@ -1528,6 +1528,11 @@ svg {
     background: color-mix(in srgb, var(--cp-text-muted) 14%, transparent);
 }
 
+.walkthrough-surface.wt-hosted-chat {
+    color: #0f6e8c;
+    background: rgba(15, 110, 140, 0.12);
+}
+
 .walkthrough-expect {
     display: block;
     margin-top: 2px;

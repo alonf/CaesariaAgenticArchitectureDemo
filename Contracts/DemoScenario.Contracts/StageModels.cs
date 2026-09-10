@@ -310,7 +310,13 @@ public enum DemoSurface
     Switchboard,
 
     /// <summary>The editor or the repository - a code or file step.</summary>
-    Code
+    Code,
+
+    /// <summary>
+    /// A chat client to the hosted agent - Copilot, Teams, or the Foundry UI - for a question in
+    /// the presenter's own words. Neither demo app has a free-text question box.
+    /// </summary>
+    HostedChat
 }
 
 /// <summary>

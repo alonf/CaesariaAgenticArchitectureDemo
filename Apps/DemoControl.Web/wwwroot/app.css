@@ -584,6 +584,11 @@ input[type="number"] {
     color: var(--green);
 }
 
+.surface-hosted-chat {
+    background: rgba(94, 200, 230, 0.16);
+    color: #5ec8e6;
+}
+
 .step-expect {
     grid-column: 2;
     color: var(--muted);

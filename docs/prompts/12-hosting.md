@@ -73,8 +73,9 @@ service's reason and offers to move to the Hosting stage and flip, in one click.
 
 ### The closing beat: ask it to turn the light off
 
-Do this live — it lands harder than any slide. Ask the hosted agent, in any phrasing, to restore
-L-417 / turn it off. Verified against the deployed agent: it runs the full investigation, *looks
+Do this live — it lands harder than any slide. In Copilot, Teams or the Foundry UI (the Command
+Center asks fixed questions only), ask the hosted agent, in any phrasing, to restore L-417 / turn
+it off. Verified against the deployed agent: it runs the full investigation, *looks
 for* a governed control tool, reports honestly that "no such control tool is available to me
 here", and recommends escalating to the duty supervisor. Then say the ladder out loud:
 

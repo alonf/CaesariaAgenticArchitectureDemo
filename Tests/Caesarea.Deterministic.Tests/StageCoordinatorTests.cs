@@ -44,6 +44,14 @@ public sealed class StageCoordinatorTests
         Assert.Contains(
             catalog.GetDescriptor(DemoStage.McpTools).Walkthrough!.Steps,
             step => step.Surface == DemoSurface.Switchboard);
+
+        // The closing beat is a question in the presenter's own words, and the Command Center has
+        // no free-text box: the step must send the presenter to a chat client, not to a button
+        // that is not there.
+        Assert.Contains(
+            catalog.GetDescriptor(DemoStage.Hosting).Walkthrough!.Steps,
+            step => step.Surface == DemoSurface.HostedChat
+                && step.Action.Contains("Copilot", StringComparison.Ordinal));
     }
 
     [Fact]
