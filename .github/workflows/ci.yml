@@ -3,6 +3,13 @@ name: CI
 # The gate every change passes before it is merged: the solution builds, the deterministic suite
 # passes, formatting holds, and every Bicep template compiles - not only main.bicep, which the
 # infrastructure workflow checks on its own. Nothing here touches Azure.
+#
+# The build and test job runs on Linux, Windows and macOS because the demo is presented from all
+# three. Linux and macOS prove the portable build needs nothing Windows-only and that the
+# switchboard reports Visual Studio as unavailable there; Windows additionally builds and tests the
+# Visual Studio 2026 helper, which lives outside the solution on purpose. The live attach round
+# trips (an IDE actually on a process) need a presenter machine and are not run here - see
+# scripts/Test-DemoDebuggers.ps1.
 
 on:
   pull_request:
@@ -14,8 +21,12 @@ permissions:
 
 jobs:
   dotnet:
-    name: Build and test
-    runs-on: ubuntu-latest
+    name: Build and test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
       - uses: actions/checkout@v4
 
@@ -33,7 +44,28 @@ jobs:
         run: dotnet test Tests/Caesarea.Deterministic.Tests --no-build --configuration Release
 
       - name: Formatting
+        if: matrix.os == 'ubuntu-latest'
         run: dotnet format --verify-no-changes --no-restore
+
+      # The VS Code extension's one piece of logic - which debug session a request is about.
+      - name: Test the VS Code extension
+        if: matrix.os == 'ubuntu-latest'
+        run: node --test tools/vscode-demo-attach/extension.test.js
+
+      # Windows only, by design: the helper targets net10.0-windows and drives Visual Studio over
+      # COM. It is built and unit-tested here so a change to it cannot land broken, and it is
+      # built separately so the steps above stay exactly what a Linux or macOS machine runs.
+      - name: Build the Visual Studio helper
+        if: matrix.os == 'windows-latest'
+        run: dotnet build tools/visualstudio-demo-attach/VisualStudioDemoAttach.slnx --configuration Release
+
+      - name: Test the Visual Studio helper
+        if: matrix.os == 'windows-latest'
+        run: dotnet test tools/visualstudio-demo-attach/tests/VisualStudioDemoAttach.Tests.csproj --no-build --configuration Release
+
+      - name: Helper formatting
+        if: matrix.os == 'windows-latest'
+        run: dotnet format tools/visualstudio-demo-attach/VisualStudioDemoAttach.slnx --verify-no-changes
 
   bicep:
     name: Compile templates

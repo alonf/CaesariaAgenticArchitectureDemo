@@ -499,3 +499,6 @@ docs/runbooks/artifacts/
 .venv-assert/
 evaluation/assert_demo/artifacts/
 __pycache__/
+
+# Visual Studio helper output (built on demand on Windows; see tools/visualstudio-demo-attach)
+tools/visualstudio-demo-attach/dist/

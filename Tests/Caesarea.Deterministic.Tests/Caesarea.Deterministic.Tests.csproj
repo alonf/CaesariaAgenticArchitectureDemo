@@ -39,6 +39,8 @@
     <ProjectReference Include="..\..\Services\WorkforceHub.Api\WorkforceHub.Api.csproj" />
     <ProjectReference Include="..\..\Apps\CommandCenter.Web\CommandCenter.Web.csproj" />
     <ProjectReference Include="..\..\Apps\DemoControl.Web\DemoControl.Web.csproj" />
+    <!-- The second .NET process the live debugger tests attach an IDE to. -->
+    <ProjectReference Include="..\DebuggerBystander\DebuggerBystander.csproj" />
   </ItemGroup>
 
 </Project>

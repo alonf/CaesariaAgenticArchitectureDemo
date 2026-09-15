@@ -23,6 +23,10 @@
          and a stale copy is refreshed by re-running New-CaesareaWorkOrder.ps1 -Force, using the
          Microsoft Graph session already cached on this machine. With no cached session the check
          degrades to a warning (pass -RefreshWorkOrder to sign in here and now).
+      4. The debuggers DemoControl can put on a service for the demo breakpoints: whether the VS
+         Code demo-attach extension is installed, and on Windows with Visual Studio 2026 present,
+         a build of the Visual Studio helper (tools/visualstudio-demo-attach), which lives outside
+         the portable solution. Elsewhere Visual Studio is simply reported as unavailable.
 
     No check is fatal. The local demo needs no cloud at all, so anything unresolved is reported as
     a warning naming its fix, and the system starts anyway - the Hosting stage is then the only
@@ -287,7 +291,58 @@ else {
 }
 
 # ---------------------------------------------------------------------------------------------
-# 4. Up.
+# 4. The debuggers the switchboard can put on a service. VS Code's helper is an extension the
+#    switchboard installs itself; Visual Studio 2026's is a Windows-only executable outside the
+#    portable solution, so it is built here where Visual Studio is. Informational elsewhere: a Mac
+#    or Linux presenter uses VS Code, and nothing about the demo depends on Visual Studio.
+# ---------------------------------------------------------------------------------------------
+
+Write-Step 'Debuggers for the demo breakpoints'
+
+$demoAttachVsix = Get-ChildItem (Join-Path $RepositoryRoot 'tools/vscode-demo-attach') -Filter 'demo-attach-*.vsix' | Select-Object -Last 1
+if (Get-Command code -ErrorAction SilentlyContinue) {
+    $installed = (& code --list-extensions --show-versions 2>$null) -match '^caesarea-demo\.demo-attach@'
+    $global:LASTEXITCODE = 0
+    if ($installed) { Write-Exists "VS Code: $($installed -join ', ') (committed package: $($demoAttachVsix.Name))" }
+    else { Write-Note "VS Code: the demo-attach extension is not installed; DemoControl's debugger picker offers Install." }
+}
+else {
+    Write-Note 'VS Code CLI (code) not on PATH; the VS Code debugger will not be offered.'
+}
+
+if (-not $IsWindows) {
+    Write-Note 'Visual Studio: unavailable on this platform (VS Code is the debugger here).'
+}
+else {
+    $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio/Installer/vswhere.exe'
+    $vs2026 = if (Test-Path $vswhere) { & $vswhere -prerelease -products '*' -version '[18.0,19.0)' -property installationPath 2>$null } else { $null }
+    $global:LASTEXITCODE = 0
+
+    if (-not $vs2026) {
+        Write-Note 'Visual Studio 2026 is not installed; the Visual Studio debugger will not be offered.'
+    }
+    else {
+        $helperExecutable = Join-Path $RepositoryRoot 'tools/visualstudio-demo-attach/dist/VisualStudioDemoAttach.exe'
+        $helperProject = Join-Path $RepositoryRoot 'tools/visualstudio-demo-attach/src/VisualStudioDemoAttach.csproj'
+
+        if ($PSCmdlet.ShouldProcess($helperProject, 'Build the Visual Studio helper')) {
+            # Rebuilding is cheap and keeps the helper current with the checkout; a failure is a
+            # warning, because the local demo and VS Code attach do not need it.
+            dotnet build $helperProject --configuration Release --nologo -v q
+            if ($LASTEXITCODE -eq 0 -and (Test-Path $helperExecutable)) {
+                Write-Created "Visual Studio helper built ($helperExecutable)"
+                Write-Note 'Open Caesarea.slnx in Visual Studio 2026 before attaching from DemoControl.'
+            }
+            else {
+                Write-Warn 'The Visual Studio helper did not build; DemoControl will offer to build it again, or use VS Code.'
+            }
+            $global:LASTEXITCODE = 0
+        }
+    }
+}
+
+# ---------------------------------------------------------------------------------------------
+# 5. Up.
 # ---------------------------------------------------------------------------------------------
 
 if ($SetupOnly) {

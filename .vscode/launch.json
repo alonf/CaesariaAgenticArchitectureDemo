@@ -2,21 +2,55 @@
     // Presenter attach configurations for the demo-breakpoint feature (Section 39.6 of the
     // requirements). Attach before the lecture; DemoControl's "Demo Breakpoints" panel shows
     // whether the debugger is attached. Requires the services to be running (dotnet run
-    // --project Caesarea.AppHost) with Debug builds.
+    // --project Caesarea.AppHost) with Debug builds. The apphost is <Service>.exe on Windows and
+    // <Service> on macOS and Linux, hence the per-OS process names.
     "version": "0.2.0",
     "configurations": [
         {
             "name": "Attach: OperationsAgent.Api",
             "type": "coreclr",
             "request": "attach",
-            "processName": "OperationsAgent.Api.exe"
+            "processName": "OperationsAgent.Api",
+            "windows": {
+                "processName": "OperationsAgent.Api.exe"
+            }
+        },
+        {
+            "name": "Attach: EnergyHub.Api",
+            "type": "coreclr",
+            "request": "attach",
+            "processName": "EnergyHub.Api",
+            "windows": {
+                "processName": "EnergyHub.Api.exe"
+            }
+        },
+        {
+            "name": "Attach: SecurityAgent.Api",
+            "type": "coreclr",
+            "request": "attach",
+            "processName": "SecurityAgent.Api",
+            "windows": {
+                "processName": "SecurityAgent.Api.exe"
+            }
+        },
+        {
+            "name": "Attach: WorkforceAgent.Api",
+            "type": "coreclr",
+            "request": "attach",
+            "processName": "WorkforceAgent.Api",
+            "windows": {
+                "processName": "WorkforceAgent.Api.exe"
+            }
         }
     ],
     "compounds": [
         {
             "name": "Attach: Demo services",
             "configurations": [
-                "Attach: OperationsAgent.Api"
+                "Attach: OperationsAgent.Api",
+                "Attach: EnergyHub.Api",
+                "Attach: SecurityAgent.Api",
+                "Attach: WorkforceAgent.Api"
             ]
         }
     ]

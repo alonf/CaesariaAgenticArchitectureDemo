@@ -31,6 +31,7 @@
   </Folder>
   <Folder Name="/Tests/">
     <Project Path="Tests/Caesarea.Deterministic.Tests/Caesarea.Deterministic.Tests.csproj" />
+    <Project Path="Tests/DebuggerBystander/DebuggerBystander.csproj" />
   </Folder>
   <Project Path="Caesarea.AppHost/Caesarea.AppHost.csproj" />
   <Project Path="Caesarea.ServiceDefaults/Caesarea.ServiceDefaults.csproj" />

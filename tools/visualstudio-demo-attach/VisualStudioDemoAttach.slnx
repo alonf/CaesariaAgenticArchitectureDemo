@@ -1,0 +1,5 @@
+<Solution>
+  <!-- Windows-only. Deliberately not part of Caesarea.slnx: the demo's own build stays portable. -->
+  <Project Path="src/VisualStudioDemoAttach.csproj" />
+  <Project Path="tests/VisualStudioDemoAttach.Tests.csproj" />
+</Solution>

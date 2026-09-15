@@ -51,6 +51,19 @@ public sealed class DemoBreakpointsApiClientTests
     }
 
     [Fact]
+    public async Task TheServiceReportedProcessIdTravelsWithItsRow()
+    {
+        // The id is what a debugger attaches to; a row that could not be read has none.
+        var client = new DemoBreakpointsApiClient(
+            new StubBreakpointHttpClientFactory(failingClientName: DemoBreakpointsApiClient.Services[3].ClientName));
+
+        var sources = await client.GetStatusAsync(TestContext.Current.CancellationToken);
+
+        Assert.All(sources.Take(3), source => Assert.Equal(4242, source.ProcessId));
+        Assert.Null(sources[3].ProcessId);
+    }
+
+    [Fact]
     public async Task CallerCancellationStillPropagates()
     {
         // The page going away is not a per-service failure, and must not be reported as one.
@@ -90,7 +103,7 @@ public sealed class DemoBreakpointsApiClientTests
                 return new HttpResponseMessage(HttpStatusCode.OK)
                 {
                     Content = JsonContent.Create(
-                        new DemoBreakpointsResponse(false, [new DemoBreakpointStatus("SNIPPET", false)]),
+                        new DemoBreakpointsResponse(false, [new DemoBreakpointStatus("SNIPPET", false)], ProcessId: 4242),
                         options: CaesareaJsonDefaults.CreateSerializerOptions())
                 };
             }
