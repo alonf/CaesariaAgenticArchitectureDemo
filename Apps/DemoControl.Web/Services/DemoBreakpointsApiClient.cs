@@ -15,10 +15,10 @@ internal sealed class DemoBreakpointsApiClient(IHttpClientFactory httpClientFact
     /// </summary>
     internal static readonly IReadOnlyList<DemoBreakpointService> Services =
     [
-        new("Operations Agent", "breakpoints-operationsagent", "OperationsAgent.Api.exe"),
-        new("Energy Hub", "breakpoints-energyhub", "EnergyHub.Api.exe"),
-        new("Security Agent", "breakpoints-securityagent", "SecurityAgent.Api.exe"),
-        new("Workforce Agent", "breakpoints-workforceagent", "WorkforceAgent.Api.exe")
+        new("Operations Agent", "breakpoints-operationsagent", DemoProcessNames.OnThisPlatform("OperationsAgent.Api")),
+        new("Energy Hub", "breakpoints-energyhub", DemoProcessNames.OnThisPlatform("EnergyHub.Api")),
+        new("Security Agent", "breakpoints-securityagent", DemoProcessNames.OnThisPlatform("SecurityAgent.Api")),
+        new("Workforce Agent", "breakpoints-workforceagent", DemoProcessNames.OnThisPlatform("WorkforceAgent.Api"))
     ];
 
     private static readonly JsonSerializerOptions SerializerOptions = CaesareaJsonDefaults.CreateSerializerOptions();
@@ -82,7 +82,8 @@ internal sealed class DemoBreakpointsApiClient(IHttpClientFactory httpClientFact
             var status = await response.Content.ReadFromJsonAsync<DemoBreakpointsResponse>(SerializerOptions, attempt.Token)
                 ?? throw new InvalidOperationException("Demo breakpoints response was empty.");
 
-            return new DemoBreakpointSource(service, status.DebuggerAttached, status.Snippets, Error: null);
+            // A service built before the id was reported sends zero; the debugger then falls back to the name.
+            return new DemoBreakpointSource(service, status.DebuggerAttached, status.Snippets, Error: null, ProcessId: status.ProcessId > 0 ? status.ProcessId : null);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -117,7 +118,7 @@ internal sealed class DemoBreakpointsApiClient(IHttpClientFactory httpClientFact
 /// </summary>
 /// <param name="DisplayName">The projector-friendly service name.</param>
 /// <param name="ClientName">The named HTTP client addressing the service.</param>
-/// <param name="ProcessName">The process a debugger attaches to for this service's snippets.</param>
+/// <param name="ProcessName">The process a debugger attaches to for this service's snippets, named as this platform names it.</param>
 internal sealed record DemoBreakpointService(string DisplayName, string ClientName, string ProcessName);
 
 /// <summary>
@@ -127,8 +128,10 @@ internal sealed record DemoBreakpointService(string DisplayName, string ClientNa
 /// <param name="DebuggerAttached">Whether a debugger is attached to that service's process.</param>
 /// <param name="Snippets">The snippets the service registered.</param>
 /// <param name="Error">Why the service could not be reached, when it could not.</param>
+/// <param name="ProcessId">The process id the service reported, or <see langword="null"/> when it reported none.</param>
 internal sealed record DemoBreakpointSource(
     DemoBreakpointService Service,
     bool DebuggerAttached,
     IReadOnlyList<DemoBreakpointStatus> Snippets,
-    string? Error);
+    string? Error,
+    int? ProcessId = null);

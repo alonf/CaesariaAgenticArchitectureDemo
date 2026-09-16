@@ -9,7 +9,7 @@
 @inject AgentHabitatApiClient AgentHabitatClient
 @inject SecurityConsultApiClient SecurityConsultClient
 @inject WorkforceRecordsApiClient WorkforceRecordsClient
-@inject VsCodeAttachService AttachService
+@inject DebuggerSelection Debuggers
 @inject IConfiguration Configuration
 @inject IOptions<DemoControlWebOptions> WebOptions
 
@@ -403,16 +403,34 @@
             }
             else
             {
-                <p class="panel-intro">Arm a snippet to pause its service at that code on its next run, then single-step it in the editor. A snippet lives in the service whose code it pauses, so each service is attached separately.</p>
+                <p class="panel-intro">Arm a snippet to pause its service at that code on its next run, then single-step it in the editor. A snippet lives in the service whose code it pauses, so each service is attached separately, with the IDE you pick on its row.</p>
 
-                @if (_attachStatus is { VsCodeAvailable: true } tooling && (!tooling.ExtensionInstalled || tooling.UpdateAvailable))
-                {
-                    <div class="stage-switch-actions">
-                        <button class="button primary" @onclick="InstallExtensionAsync" disabled="@_installBusy">
-                            @InstallButtonLabel(tooling)
-                        </button>
+                <div class="breakpoint-source">
+                    <div class="breakpoint-source-heading">
+                        <strong>Debuggers</strong>
+                        <span class="stamp">@DebuggerStamp</span>
                     </div>
-                }
+                    @foreach (var adapter in Debuggers.Adapters)
+                    {
+                        var availability = AvailabilityOf(adapter);
+                        <div class="breakpoint-source-heading">
+                            <span title="@availability.Detail">@adapter.DisplayName - @availability.Summary</span>
+                            <span class="@(availability.Available ? "stamp stamp-attached" : "stamp")">@(availability.Available ? "ready" : "unavailable")</span>
+                        </div>
+                        @if (!availability.Available && availability.Detail is { } detail)
+                        {
+                            <p class="switchboard-note">@detail</p>
+                        }
+                        @if (availability.SetupAction is { } setupAction)
+                        {
+                            <div class="stage-switch-actions">
+                                <button class="button primary" @onclick="() => SetUpDebuggerAsync(adapter)" disabled="@_setupBusy">
+                                    @(_setupBusy ? "Working..." : setupAction)
+                                </button>
+                            </div>
+                        }
+                    }
+                </div>
 
                 @foreach (var source in _breakpoints)
                 {
@@ -425,6 +443,30 @@
                         @if (source.Error is not null)
                         {
                             <p class="switchboard-note status-error">@source.Error</p>
+
+                            @* A service paused at a breakpoint answers nothing, and the presenter's next
+                               move is to let the debugger go: the hold this switchboard recorded when the
+                               IDE confirmed, or failing that the service's last report, keeps Detach on the
+                               row - with the process id either one carries. *@
+                            var hold = Debuggers.HeldBy(source.Service.ProcessName);
+                            var last = Debuggers.LastObservation(source.Service.ProcessName);
+
+                            @if (hold is not null || last is { Attached: true })
+                            {
+                                var heldBy = DetachWith(Debuggers.Describe(source.Service.ProcessName, serviceReportsAttached: true));
+                                var knownPid = hold?.ProcessId ?? last?.ProcessId;
+                                var busyNow = Debuggers.IsBusy(source.Service.ProcessName);
+
+                                <p class="switchboard-note">@(hold is null ? "Last report: debugger attached" : $"{Debuggers.Find(hold.AdapterId)?.DisplayName ?? "A debugger"} attached")@(knownPid is { } pid ? $" (PID {pid})" : string.Empty). A service paused at a breakpoint does not answer until it is continued or the debugger lets go.</p>
+                                @if (heldBy is not null)
+                                {
+                                    <div class="stage-switch-actions">
+                                        <button class="button secondary" @onclick="() => RequestDetachAsync(source with { ProcessId = knownPid }, heldBy)" disabled="@busyNow">
+                                            @(busyNow ? "Detaching..." : $"Detach {heldBy.DisplayName}")
+                                        </button>
+                                    </div>
+                                }
+                            }
                         }
                         else
                         {
@@ -436,7 +478,7 @@
                                             <input
                                                 type="checkbox"
                                                 checked="@snippet.IsArmed"
-                                                disabled="@ArmDisabled"
+                                                disabled="@ArmDisabled(source)"
                                                 @onchange="e => SetBreakpointAsync(source.Service.ClientName, snippet.SnippetName, e.Value is true)" />
                                             @snippet.SnippetName - break on next run
                                         </label>
@@ -444,39 +486,43 @@
                                 }
                             </ul>
 
-                            @if (_attachStatus is { ExtensionInstalled: true } installed)
-                            {
-                                var processName = source.Service.ProcessName;
-                                var busy = _attachBusyProcesses.Contains(processName);
+                            var processName = source.Service.ProcessName;
+                            var busy = Debuggers.IsBusy(processName);
+                            var attachment = Debuggers.Describe(processName, source.DebuggerAttached);
+                            var detachWith = DetachWith(attachment);
 
-                                <div class="stage-switch-actions">
-                                    @if (source.DebuggerAttached)
-                                    {
-                                        @* Detach goes through the extension's /detach route, which arrived in 0.2.0:
-                                           an older install would swallow the request, so the button waits for the update. *@
-                                        <button class="button secondary" @onclick="() => RequestDetachAsync(processName)" disabled="@(busy || installed.UpdateAvailable)" title="@(installed.UpdateAvailable ? "Update the VS Code extension first." : null)">
-                                            @(busy ? "Detaching..." : $"Detach debugger from {source.Service.DisplayName}")
-                                        </button>
-                                    }
-                                    else
-                                    {
-                                        <button class="button secondary" @onclick="() => RequestAttachAsync(processName)" disabled="@busy">
-                                            @(busy ? "Attaching..." : $"Attach debugger to {source.Service.DisplayName}")
-                                        </button>
-                                    }
-                                </div>
+                            @* One debugger per process: an attached service offers only Detach, with the
+                               IDE that holds it, and never a second attach on top. *@
+                            @if (attachment.Kind == DebuggerAttachmentKind.AttachedOutside)
+                            {
+                                <p class="switchboard-note">A debugger this switchboard did not attach is on this service - a launch.json attach, a Visual Studio window it could not ask, or one from before a restart.</p>
                             }
+
+                            <div class="stage-switch-actions">
+                                @if (attachment.Kind == DebuggerAttachmentKind.NotAttached)
+                                {
+                                    @foreach (var adapter in AvailableAdapters)
+                                    {
+                                        <button class="button secondary" @onclick="() => RequestAttachAsync(source, adapter)" disabled="@busy">
+                                            @(busy ? "Attaching..." : $"Attach {adapter.DisplayName}")
+                                        </button>
+                                    }
+                                }
+                                else if (detachWith is not null)
+                                {
+                                    var detachLabel = attachment.Holder is null ? $"Detach via {detachWith.DisplayName}" : $"Detach {detachWith.DisplayName}";
+                                    <button class="button secondary" @onclick="() => RequestDetachAsync(source, detachWith)" disabled="@busy">
+                                        @(busy ? "Detaching..." : detachLabel)
+                                    </button>
+                                }
+                            </div>
                         }
                     </div>
                 }
 
-                @if (_attachStatus is { VsCodeAvailable: false })
+                @if (!AnyDebuggerAvailable)
                 {
-                    <p class="switchboard-note">The VS Code CLI was not found on this machine; breakpoint arming is unavailable.</p>
-                }
-                else if (_attachStatus is { ExtensionInstalled: false })
-                {
-                    <p class="switchboard-note">Breakpoint arming is disabled until the demo-attach VS Code extension is installed.</p>
+                    <p class="switchboard-note">No debugger can attach from this machine yet, so breakpoint arming waits - unless a service already reports a debugger put there another way.</p>
                 }
                 else
                 {
@@ -604,11 +650,9 @@
     private IReadOnlyList<DemoBreakpointSource>? _breakpoints;
     private bool _breakpointsBusy;
     private string? _breakpointsMessage;
-    private VsCodeAttachStatus? _attachStatus;
-    private bool _installBusy;
-    // Attach and detach are per service, so each button carries its own busy state: one request
-    // in flight must not grey out the others or hide which service it was for.
-    private readonly HashSet<string> _attachBusyProcesses = new(StringComparer.OrdinalIgnoreCase);
+    private Dictionary<string, DebuggerAvailability> _debuggerAvailability = new(StringComparer.Ordinal);
+    private DateTimeOffset _debuggerAvailabilityCheckedAt = DateTimeOffset.MinValue;
+    private bool _setupBusy;
     private string? _attachMessage;
     private bool _attachMessageIsError;
     private WorkKnowledgeState? _workKnowledge;
@@ -999,7 +1043,10 @@
         null => "Unavailable",
         _ => $"{_breakpoints.Count(source => source.DebuggerAttached)}/{_breakpoints.Count} services attached"
     };
-    private bool ArmDisabled => _breakpointsBusy || _attachStatus is not { ExtensionInstalled: true };
+    // Arming without a way to attach would be a checkbox that does nothing - unless the service
+    // already reports a debugger, put there some other way, in which case the snippet will pause.
+    private bool ArmDisabled(DemoBreakpointSource source) =>
+        _breakpointsBusy || (!source.DebuggerAttached && !AnyDebuggerAvailable);
 
     private static string SourceStamp(DemoBreakpointSource source) => source switch
     {
@@ -1011,17 +1058,24 @@
     private static string SourceStampClass(DemoBreakpointSource source) =>
         source is { Error: null, DebuggerAttached: true } ? "stamp stamp-attached" : "stamp";
 
-    private string InstallButtonLabel(VsCodeAttachStatus tooling)
-    {
-        if (_installBusy)
-        {
-            return "Installing...";
-        }
+    private bool AnyDebuggerAvailable => _debuggerAvailability.Values.Any(availability => availability.Available);
 
-        return tooling.ExtensionInstalled
-            ? $"Update VS Code extension {tooling.InstalledVersion} to {tooling.PackagedVersion}"
-            : "Install VS Code extension";
-    }
+    private DebuggerAvailability AvailabilityOf(IDebuggerAdapter adapter) =>
+        _debuggerAvailability.TryGetValue(adapter.Id, out var availability)
+            ? availability
+            : new DebuggerAvailability(false, "checking...");
+
+    private IEnumerable<IDebuggerAdapter> AvailableAdapters => Debuggers.Adapters.Where(adapter => AvailabilityOf(adapter).Available);
+
+    private string DebuggerStamp => AnyDebuggerAvailable ? string.Join(", ", AvailableAdapters.Select(adapter => adapter.DisplayName)) : "none available";
+
+    // Detach goes to the IDE that holds the service; a holder nobody could name is asked to let
+    // go through the first available IDE, as a best effort.
+    private IDebuggerAdapter? DetachWith(DebuggerAttachment attachment) => attachment.Holder ?? AvailableAdapters.FirstOrDefault();
+
+    // Availability is a process spawn per IDE, so it is re-checked on a slower cadence than the
+    // HTTP reads - often enough to notice Visual Studio opening the solution mid-setup.
+    private static readonly TimeSpan DebuggerAvailabilityRefresh = TimeSpan.FromSeconds(15);
     private TimeSpan PollingInterval => TimeSpan.FromSeconds(WebOptions.Value.PollingIntervalSeconds);
 
     protected override async Task OnInitializedAsync()
@@ -1029,7 +1083,7 @@
         await LoadCatalogAsync(CancellationToken.None, showErrors: true);
         await LoadStageCatalogAsync(CancellationToken.None, showErrors: true);
         await LoadBreakpointsAsync(CancellationToken.None);
-        await LoadAttachStatusAsync(CancellationToken.None);
+        await LoadDebuggerAvailabilityAsync(CancellationToken.None);
         await LoadBehaviorAsync(CancellationToken.None);
         await LoadWorkKnowledgeAsync(CancellationToken.None);
         await LoadCaseMemoryAsync(CancellationToken.None);
@@ -1055,6 +1109,11 @@
                     await LoadStageCatalogAsync(cancellationToken, showErrors: _stageCatalog is null);
                     await LoadBreakpointsAsync(cancellationToken);
                     await LoadCaseMemoryAsync(cancellationToken);
+
+                    if (!_setupBusy && DateTimeOffset.UtcNow - _debuggerAvailabilityCheckedAt >= DebuggerAvailabilityRefresh)
+                    {
+                        await LoadDebuggerAvailabilityAsync(cancellationToken);
+                    }
 
                     // The tool source can change server-side (a stage downgrade resets it to
                     // Local); keep the toggle truthful without a page action.
@@ -1188,8 +1247,19 @@
         {
             _breakpoints = await BreakpointsClient.GetStatusAsync(cancellationToken);
             _breakpointsMessage = null;
+
+            foreach (var source in _breakpoints.Where(source => source.Error is null))
+            {
+                Debuggers.RecordObservation(source.Service.ProcessName, source.ProcessId, source.DebuggerAttached);
+            }
+
+            // A debugger the switchboard did not put there is named by asking the IDEs, once per process.
+            foreach (var source in _breakpoints.Where(source => source is { Error: null, DebuggerAttached: true }))
+            {
+                await Debuggers.IdentifyHolderAsync(source.Service.ProcessName, source.ProcessId, cancellationToken);
+            }
         }
-        catch (Exception exception) when (exception is not OperationCanceledException)
+        catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             _breakpoints = null;
             _breakpointsMessage = $"Demo breakpoints unavailable: {exception.Message}";
@@ -1203,7 +1273,7 @@
             _workKnowledge = await WorkKnowledgeClient.GetStatusAsync(cancellationToken);
             _workKnowledgeMessage = null;
         }
-        catch (Exception exception) when (exception is not OperationCanceledException)
+        catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             _workKnowledge = null;
             _workKnowledgeMessage = $"Work knowledge state unavailable: {exception.Message}";
@@ -1217,7 +1287,7 @@
             _caseMemory = await CaseMemoryClient.GetStatusAsync(cancellationToken);
             _caseMemoryMessage = null;
         }
-        catch (Exception exception) when (exception is not OperationCanceledException)
+        catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             _caseMemory = null;
             _caseMemoryMessage = $"Case memory unavailable: {exception.Message}";
@@ -1231,7 +1301,7 @@
             _securityConsult = await SecurityConsultClient.GetStatusAsync(cancellationToken);
             _securityConsultMessage = null;
         }
-        catch (Exception exception) when (exception is not OperationCanceledException)
+        catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             _securityConsult = null;
             _securityConsultMessage = $"Security consult unavailable: {exception.Message}";
@@ -1291,7 +1361,7 @@
             _toolSource = await ToolSourceClient.GetStatusAsync(cancellationToken);
             _toolSourceMessage = null;
         }
-        catch (Exception exception) when (exception is not OperationCanceledException)
+        catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             _toolSource = null;
             _toolSourceMessage = $"Tool source unavailable: {exception.Message}";
@@ -1331,7 +1401,7 @@
             _agentHabitat = await AgentHabitatClient.GetStatusAsync(cancellationToken);
             _agentHabitatMessage = null;
         }
-        catch (Exception exception) when (exception is not OperationCanceledException)
+        catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             _agentHabitat = null;
             _agentHabitatMessage = $"Agent habitat unavailable: {exception.Message}";
@@ -1477,7 +1547,7 @@
                 _behaviorMessage = null;
             }
         }
-        catch (Exception exception) when (exception is not OperationCanceledException)
+        catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             _behavior = null;
             _behaviorMessage = $"Simulator behavior unavailable: {exception.Message}";
@@ -1504,53 +1574,101 @@
         }
     }
 
-    private async Task LoadAttachStatusAsync(CancellationToken cancellationToken)
+    private async Task LoadDebuggerAvailabilityAsync(CancellationToken cancellationToken)
     {
-        try
+        // Every adapter answers for itself, in parallel: a slow VS Code CLI must not delay the
+        // Visual Studio answer, and an adapter that throws costs only its own row.
+        var checks = Debuggers.Adapters.Select(async adapter =>
         {
-            _attachStatus = await AttachService.GetStatusAsync(cancellationToken);
-        }
-        catch (Exception exception) when (exception is not OperationCanceledException)
-        {
-            _attachStatus = new VsCodeAttachStatus(VsCodeAvailable: false, ExtensionInstalled: false);
-            _attachMessage = $"VS Code status check failed: {exception.Message}";
-            _attachMessageIsError = true;
-        }
+            try
+            {
+                return (adapter.Id, Availability: await adapter.GetAvailabilityAsync(cancellationToken));
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+            {
+                return (adapter.Id, Availability: new DebuggerAvailability(false, "check failed", $"{adapter.DisplayName} status check failed: {exception.Message}"));
+            }
+        });
+
+        var results = await Task.WhenAll(checks);
+        _debuggerAvailability = results.ToDictionary(result => result.Id, result => result.Availability, StringComparer.Ordinal);
+        _debuggerAvailabilityCheckedAt = DateTimeOffset.UtcNow;
     }
 
-    private async Task InstallExtensionAsync()
+    private async Task SetUpDebuggerAsync(IDebuggerAdapter adapter)
     {
-        _installBusy = true;
+        _setupBusy = true;
 
         try
         {
-            var result = await AttachService.InstallExtensionAsync(CancellationToken.None);
+            var result = await adapter.SetUpAsync(CancellationToken.None);
             _attachMessage = result.Message;
             _attachMessageIsError = !result.Succeeded;
         }
         finally
         {
-            _installBusy = false;
-            await LoadAttachStatusAsync(CancellationToken.None);
+            _setupBusy = false;
+            await LoadDebuggerAvailabilityAsync(CancellationToken.None);
         }
     }
 
-    private Task RequestAttachAsync(string processName) => RequestDebuggerChangeAsync(processName, attach: true);
+    private Task RequestAttachAsync(DemoBreakpointSource source, IDebuggerAdapter adapter) =>
+        RequestDebuggerChangeAsync(source, adapter, attach: true);
 
-    private Task RequestDetachAsync(string processName) => RequestDebuggerChangeAsync(processName, attach: false);
+    private Task RequestDetachAsync(DemoBreakpointSource source, IDebuggerAdapter adapter) =>
+        RequestDebuggerChangeAsync(source, adapter, attach: false);
 
-    private async Task RequestDebuggerChangeAsync(string processName, bool attach)
+    private async Task RequestDebuggerChangeAsync(DemoBreakpointSource source, IDebuggerAdapter adapter, bool attach)
     {
-        if (!_attachBusyProcesses.Add(processName))
+        var processName = source.Service.ProcessName;
+        var serviceName = source.Service.DisplayName;
+
+        // One operation per service across every open switchboard tab, not per page: two tabs
+        // clicking Attach would otherwise race two IDEs onto one process.
+        if (!Debuggers.TryBeginOperation(processName))
         {
+            _attachMessage = $"{serviceName} already has a debugger operation in progress.";
+            _attachMessageIsError = true;
             return;
         }
 
         try
         {
+            var target = new DebuggerTarget(processName, source.ProcessId);
+
+            if (attach)
+            {
+                // A fresh read, not the last poll: another tab or an IDE may have attached since,
+                // and a second debugger is never stacked on the first. From here to the IDE's own
+                // attach the service is claimed above, so the debugger the poll then sees is the
+                // one requested; Visual Studio additionally confirms ownership in its report.
+                await LoadBreakpointsAsync(CancellationToken.None);
+                var current = FindBreakpointSource(processName);
+
+                if (current is null || current.Error is not null)
+                {
+                    _attachMessage = $"{serviceName} is not answering, so nothing was attached.";
+                    _attachMessageIsError = true;
+                    return;
+                }
+
+                var attachment = Debuggers.Describe(processName, current.DebuggerAttached);
+
+                if (attachment.Kind != DebuggerAttachmentKind.NotAttached)
+                {
+                    _attachMessage = attachment.Holder is { } holder
+                        ? $"{serviceName} is attached using {holder.DisplayName}. Detach it before attaching with {adapter.DisplayName}."
+                        : $"{serviceName} already reports a debugger, so nothing was attached.";
+                    _attachMessageIsError = true;
+                    return;
+                }
+
+                target = new DebuggerTarget(processName, current.ProcessId);
+            }
+
             var result = attach
-                ? await AttachService.RequestAttachAsync(processName, CancellationToken.None)
-                : await AttachService.RequestDetachAsync(processName, CancellationToken.None);
+                ? await adapter.AttachAsync(target, CancellationToken.None)
+                : await adapter.DetachAsync(target, CancellationToken.None);
             _attachMessage = result.Message;
             _attachMessageIsError = !result.Succeeded;
 
@@ -1559,24 +1677,47 @@
                 return;
             }
 
-            // The URL was handed to VS Code, which attaches or detaches on its own time. The
+            if (attach)
+            {
+                // Recorded now, on the IDE's word, not after the poll: a service that pauses at an
+                // armed snippet the instant the debugger lands never answers that poll, and its
+                // row must still know who holds it and which process id to detach.
+                Debuggers.RecordAttached(processName, adapter.Id, target.ProcessId);
+            }
+
+            // The request was handed to the IDE, which attaches or detaches on its own time. The
             // service's own report is the only truth about whether a debugger is on it, so it is
             // polled until it agrees or the wait runs out - and a wait that runs out says so,
             // because a button that silently did nothing is the failure this replaces.
             var settled = await WaitForDebuggerStateAsync(processName, attach, TimeSpan.FromSeconds(15));
-            var serviceName = FindBreakpointSource(processName)?.Service.DisplayName ?? processName;
-            _attachMessage = (attach, settled) switch
+            var answered = FindBreakpointSource(processName) is { Error: null } reachable ? reachable : null;
+
+            // The hold goes when the service answers and sees no debugger - an attach that did
+            // not happen after all, or a detach that did - and when a detach settles. It stays
+            // when the service is not answering: a paused service is exactly the one that must
+            // keep its Detach.
+            var attachFellThrough = attach && !settled && answered is { DebuggerAttached: false };
+            var detachTookEffect = !attach && (settled || answered is { DebuggerAttached: false });
+
+            if (attachFellThrough || detachTookEffect)
             {
-                (true, true) => $"Debugger attached to {serviceName}.",
-                (false, true) => $"Debugger detached from {serviceName}; the service keeps running.",
-                (true, false) => $"{serviceName} has not reported a debugger within 15 seconds. Check the VS Code notification.",
-                (false, false) => $"{serviceName} still reports a debugger after 15 seconds. Check the VS Code notification."
+                Debuggers.RecordDetached(processName);
+            }
+
+            _attachMessage = (attach, settled, answered) switch
+            {
+                (true, true, _) => $"{adapter.DisplayName} attached to {serviceName}.",
+                (false, true, _) => $"{adapter.DisplayName} detached from {serviceName}; the service keeps running.",
+                (true, false, null) => $"{serviceName} stopped answering after the attach request - paused at an armed snippet, most likely. Continue it in {adapter.DisplayName}, or detach from its row.",
+                (true, false, _) => $"{serviceName} has not reported a debugger within 15 seconds. Check the {adapter.DisplayName} window.",
+                (false, false, null) => $"{serviceName} is not answering after the detach request. Check the {adapter.DisplayName} window.",
+                (false, false, _) => $"{serviceName} still reports a debugger after 15 seconds. Check the {adapter.DisplayName} window."
             };
             _attachMessageIsError = !settled;
         }
         finally
         {
-            _attachBusyProcesses.Remove(processName);
+            Debuggers.EndOperation(processName);
             await LoadBreakpointsAsync(CancellationToken.None);
         }
     }

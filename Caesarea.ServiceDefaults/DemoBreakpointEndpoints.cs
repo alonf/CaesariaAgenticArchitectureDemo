@@ -53,8 +53,10 @@ public static class DemoBreakpointEndpoints
         return app;
     }
 
+    // The process id travels with the state so the switchboard can hand a debugger the exact
+    // process instead of resolving it from a name that differs per platform (.exe or not).
     private static DemoBreakpointsResponse CreateResponse() =>
-        new(DemoBreakpoints.IsDebuggerAttached, DemoBreakpoints.GetStatus());
+        new(DemoBreakpoints.IsDebuggerAttached, DemoBreakpoints.GetStatus(), Environment.ProcessId);
 }
 
 /// <summary>
@@ -62,7 +64,8 @@ public static class DemoBreakpointEndpoints
 /// </summary>
 /// <param name="DebuggerAttached">Whether a debugger is attached to the service process.</param>
 /// <param name="Snippets">The registered snippets and their armed state.</param>
-public sealed record DemoBreakpointsResponse(bool DebuggerAttached, IReadOnlyList<DemoBreakpointStatus> Snippets);
+/// <param name="ProcessId">The service's process id, for a debugger to attach to. Zero when the service predates this field.</param>
+public sealed record DemoBreakpointsResponse(bool DebuggerAttached, IReadOnlyList<DemoBreakpointStatus> Snippets, int ProcessId = 0);
 
 /// <summary>
 /// Arms or disarms one demo breakpoint.

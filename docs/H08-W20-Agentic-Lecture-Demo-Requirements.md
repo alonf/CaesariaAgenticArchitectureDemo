@@ -3176,15 +3176,60 @@ can single-step the exact code shown on the slide:
   and DemoControl shows "debugger not attached" on the checkboxes when Pause would be inert.
 - A companion VS Code extension (`tools/vscode-demo-attach`, id `caesarea-demo.demo-attach`) lets
   the demo UI trigger the attach itself: DemoControl launches
-  `code --open-url "vscode://caesarea-demo.demo-attach/attach?processName=..."` and the extension
-  resolves the PID and starts the `coreclr` attach session. DemoControl detects the extension via
-  `code --list-extensions --show-versions`; when it is missing, breakpoint arming is disabled and
-  an **Install** button installs the committed `.vsix` (`code --install-extension --force`), and
-  when the committed package is newer than the install the same button reads **Update**. Each
-  service row shows whether its debugger is attached and carries its own button, **Attach
-  debugger** or **Detach debugger** (the extension's `/detach` route, from 0.2.0), so one request
-  in flight never greys out the others; after a request the switchboard polls that service until
-  it reports the new state, and says so if it does not.
+  `code --open-url "vscode://caesarea-demo.demo-attach/attach?processName=...&processId=..."` and
+  the extension starts the `coreclr` attach session on that process. The `processId` is the one
+  the service itself reports from `/api/demo-breakpoints`; `processName` names the session and is
+  the lookup fallback (Windows `tasklist`, macOS and Linux `ps`) for a service that reports none.
+  DemoControl detects the extension via `code --list-extensions --show-versions`; when it is
+  missing, breakpoint arming is disabled and an **Install** button installs the committed `.vsix`
+  (`code --install-extension --force`), and when the committed package is newer than the install
+  the same button reads **Update**. Each service row shows whether its debugger is attached and
+  carries its own button, **Attach** or **Detach** (the extension's `/detach` route, from 0.2.0;
+  `processId` from 0.3.0), so one request in flight never greys out the others; after a request
+  the switchboard polls that service until it reports the new state, and says so if it does not.
+  The VS Code path works on Windows, macOS and Linux; the process name it sends is platform-shaped
+  (`OperationsAgent.Api.exe` on Windows, `OperationsAgent.Api` elsewhere).
+- DemoControl works against an IDE-neutral `IDebuggerAdapter` (availability, setup, attach,
+  detach per process, and whether the IDE holds a given process) and a process-scoped
+  `DebuggerSelection`. The panel lists each IDE with its readiness and setup action, and every
+  service row carries one **Attach** button per available IDE - **VS Code** everywhere, and
+  **Visual Studio 2026** on Windows hosts where the helper under `tools/visualstudio-demo-attach`
+  is built and a Visual Studio 2026 instance has the Caesarea solution open - so with both
+  installed the presenter chooses per attach, and with one there is nothing to choose. An
+  attached row offers only **Detach**, naming the IDE that holds the service: the one the
+  switchboard attached with, or the one identified by asking the IDEs (Visual Studio answers
+  exactly through the helper; VS Code cannot be asked from outside, so a debugger nobody can name
+  is reported as attached outside the switchboard and detached through an available IDE as a
+  best effort). A hold is re-checked against the IDEs every fifteen seconds and dropped when a
+  service comes back under a new process id, so a debugger swapped in the IDE, or a restarted
+  service, is named correctly within a poll or two. The VS Code extension matches attach sessions
+  only, never a launch session, so Detach can never terminate a service started with F5, and the
+  page's clients to the Operations Agent time out in ten seconds and report "unavailable" rather
+  than stalling the page or its polling while that agent is paused. The helper is a
+  `net10.0-windows` executable outside `Caesarea.slnx` that finds
+  the instance through the COM running-object table (matching the open solution, never "the first
+  instance running"), attaches the `Managed (.NET Core, .NET 5+)` engine to the one process and
+  detaches only that process; DemoControl starts it and reads its JSON, so no portable project
+  references Visual Studio SDK, EnvDTE or COM, and no portable project leaves `net10.0`. On macOS
+  and Linux, and on Windows without Visual Studio 2026, the picker reports Visual Studio as
+  unavailable and nothing fails. A service holds one debugger at a time: a row another IDE holds
+  offers to detach that IDE first and never stacks a second debugger; a debugger the switchboard
+  did not attach is reported as such; an attach re-reads the service and checks ownership before
+  asking the IDE, and one operation per service is claimed process-wide so a second browser tab
+  cannot race another IDE onto it. A service paused at a breakpoint answers nothing, so its row
+  keeps Detach from the last state it reported, with the process id it gave. Sessions the VS Code
+  extension starts carry the process id and are matched by it, so two checkouts running a service
+  of the same name never affect each other; the Visual Studio helper pins detach to the instance
+  that attached. Debugger operations are logged apart from domain events
+  (`[DebuggerIntegration] IDE=... Operation=... Process=... PID=... Result=...`), a failed attach or
+  detach is reported and never terminates or restarts a service, and `dotnet build` of the
+  solution needs no Visual Studio, Windows SDK, VSIX tooling or COM registration on any platform.
+  Tests hold the boundary (`DebuggerBoundaryTests`), the selection rules (`DebuggerSelectionTests`),
+  the adapters' portable parts, the helper's pure parts (its own Windows-only test project), and -
+  opt-in, via `scripts/Test-DemoDebuggers.ps1` - the live round trip of each IDE attaching to a
+  process and letting it go; CI builds and tests on Linux, Windows and macOS, with the helper on
+  Windows only, and `scripts/Test-LinuxContainer.ps1` runs the portable suite in the .NET SDK
+  Linux container from a presenter's checkout.
 - A tripped breakpoint pauses that service until the presenter continues; this is presenter-mode
   behavior only and MUST stay disabled in audience profiles.
 

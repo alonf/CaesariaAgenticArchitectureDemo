@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The Windows-only bridge between DemoControl and Visual Studio 2026. Deliberately outside
+    Caesarea.slnx: the demo's own build stays portable, and this helper is built on demand by the
+    switchboard or by scripts/Start-CaesareaDemo.ps1, on the presenter's Windows machine only.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <RootNamespace>VisualStudioDemoAttach</RootNamespace>
+    <AssemblyName>VisualStudioDemoAttach</AssemblyName>
+    <!-- Both configurations land in dist/, the one path DemoControl looks for the helper at. -->
+    <OutputPath>..\dist\</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The DTE automation interfaces (EnvDTE, EnvDTE80). Stable COM contracts since Visual Studio
+         2003: the 17.x interop assemblies drive Visual Studio 2026 through the same IIDs. -->
+    <PackageReference Include="Microsoft.VisualStudio.Interop" Version="17.14.40260" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="VisualStudioDemoAttach.Tests" />
+  </ItemGroup>
+
+</Project>

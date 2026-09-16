@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Unit tests for the helper's pure parts: command line, moniker parsing, instance selection,
+       engine choice and the JSON contract DemoControl reads. Windows-only like the helper; the
+       Windows CI job runs them, the portable build never sees them. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" Version="4.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\src\VisualStudioDemoAttach.csproj" />
+  </ItemGroup>
+
+</Project>

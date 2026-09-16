@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- A second .NET process for the live debugger tests to be attached to: framework-dependent
+       and portable like the demo services, and nothing else. The test project references it so
+       the executable lands in the test output on every platform. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Caesarea.DebuggerBystander</RootNamespace>
+    <AssemblyName>Caesarea.DebuggerBystander</AssemblyName>
+  </PropertyGroup>
+
+</Project>
