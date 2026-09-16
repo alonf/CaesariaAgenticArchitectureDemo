@@ -178,6 +178,79 @@ public sealed class DebuggerSelectionTests
     }
 
     [Fact]
+    public void ARestartDropsAHoldRecordedWithoutAProcessId()
+    {
+        // The hold carries no id when the service reported none at attach time. It is still the
+        // old process's hold, and must not survive that process.
+        var selection = CreateSelection();
+        selection.RecordAttached(Process, "vscode");
+        selection.RecordObservation(Process, 111, attached: true);
+        Assert.Equal("vscode", selection.HeldBy(Process)?.AdapterId);
+
+        selection.RecordObservation(Process, 222, attached: true);
+
+        Assert.Null(selection.HeldBy(Process));
+    }
+
+    [Fact]
+    public void AnAttachRecordedForTheNewProcessSurvivesItsFirstReport()
+    {
+        // Attach, then the service's first report under the new id: the fresh hold names that
+        // very process, so the restart rule must not erase it.
+        var selection = CreateSelection();
+        selection.RecordObservation(Process, 111, attached: false);
+        selection.RecordAttached(Process, "visualstudio", 222);
+
+        selection.RecordObservation(Process, 222, attached: true);
+
+        Assert.Equal("visualstudio", selection.HeldBy(Process)?.AdapterId);
+        Assert.Equal(222, selection.HeldBy(Process)?.ProcessId);
+    }
+
+    [Fact]
+    public async Task ParallelPollsAttachesAndReportsLeaveConsistentState()
+    {
+        // Four browser tabs polling while attaches, detaches and service reports interleave:
+        // the point is that nothing throws, nothing deadlocks, and the end state is exactly what
+        // the last operation said - not a torn mixture of the two dictionaries.
+        var visualStudio = new FakeDebuggerAdapter("visualstudio", "Visual Studio 2026", holds: true);
+        var selection = new DebuggerSelection([new FakeDebuggerAdapter("vscode", "VS Code", null), visualStudio]);
+        using var stop = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+
+        var pollers = Enumerable.Range(0, 4).Select(_ => Task.Run(async () =>
+        {
+            while (!stop.IsCancellationRequested)
+            {
+                selection.RecordObservation(Process, 111, attached: true);
+                await selection.IdentifyHolderAsync(Process, 111, CancellationToken.None);
+                selection.Describe(Process, serviceReportsAttached: true);
+            }
+        }));
+
+        var operators = Enumerable.Range(0, 2).Select(_ => Task.Run(() =>
+        {
+            while (!stop.IsCancellationRequested)
+            {
+                if (selection.TryBeginOperation(Process))
+                {
+                    selection.RecordAttached(Process, "vscode", 111);
+                    selection.RecordDetached(Process);
+                    selection.EndOperation(Process);
+                }
+            }
+        }));
+
+        await Task.WhenAll(pollers.Concat(operators));
+
+        // Settle: one last operation has the final word, and a check afterwards agrees with it.
+        Assert.True(selection.TryBeginOperation(Process));
+        selection.RecordAttached(Process, "vscode", 111);
+        selection.EndOperation(Process);
+        Assert.Equal("vscode", selection.HeldBy(Process)?.AdapterId);
+        Assert.False(selection.IsBusy(Process));
+    }
+
+    [Fact]
     public async Task NoReCheckWhileAnOperationIsInFlight()
     {
         var time = new TestTimeProvider();
@@ -191,6 +264,139 @@ public sealed class DebuggerSelectionTests
 
         Assert.Equal(0, visualStudio.Asked);
         Assert.Equal("vscode", selection.HeldBy(Process)!.AdapterId);
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task ADelayedReCheckCannotChangeANewerAttach(bool oldAnswer, bool operationCompleted)
+    {
+        // An old "no" must not erase the new hold; an old "yes" must not replace it.
+        // Both stay stale even after the newer operation has finished and IsBusy is false.
+        var time = new TestTimeProvider();
+        var reply = new TaskCompletionSource<bool?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var visualStudio = new FakeDebuggerAdapter("visualstudio", "Visual Studio 2026", null) { PendingAnswer = reply.Task };
+        var selection = new DebuggerSelection([new FakeDebuggerAdapter("vscode", "VS Code", null), visualStudio], time);
+        var adapterId = oldAnswer ? "vscode" : "visualstudio";
+        selection.RecordAttached(Process, adapterId, 111);
+        time.Advance(TimeSpan.FromSeconds(16));
+
+        var pending = selection.IdentifyHolderAsync(Process, 111, TestContext.Current.CancellationToken);
+        Assert.Equal(1, visualStudio.Asked);
+        Assert.False(pending.IsCompleted);
+
+        // An IDE status read must not hold up a presenter trying to attach or detach.
+        Assert.True(selection.TryBeginOperation(Process));
+        selection.RecordAttached(Process, adapterId, 222);
+        var newerHold = selection.HeldBy(Process);
+
+        if (operationCompleted)
+        {
+            selection.EndOperation(Process);
+        }
+
+        reply.SetResult(oldAnswer);
+        await pending;
+
+        Assert.Same(newerHold, selection.HeldBy(Process));
+        Assert.Equal(adapterId, selection.Describe(Process, serviceReportsAttached: true).Holder?.Id);
+        selection.EndOperation(Process);
+    }
+
+    [Fact]
+    public async Task ADelayedIdentificationCannotUndoACompletedDetach()
+    {
+        var reply = new TaskCompletionSource<bool?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var visualStudio = new FakeDebuggerAdapter("visualstudio", "Visual Studio 2026", null) { PendingAnswer = reply.Task };
+        var selection = new DebuggerSelection([visualStudio]);
+        selection.RecordObservation(Process, 111, attached: true);
+
+        var pending = selection.IdentifyHolderAsync(Process, 111, TestContext.Current.CancellationToken);
+        Assert.Equal(1, visualStudio.Asked);
+        Assert.True(selection.TryBeginOperation(Process));
+        selection.RecordDetached(Process);
+        selection.EndOperation(Process);
+
+        reply.SetResult(true);
+        await pending;
+
+        Assert.Null(selection.HeldBy(Process));
+    }
+
+    [Theory]
+    [InlineData(222, true)]
+    [InlineData(111, false)]
+    public async Task AChangedServiceReportInvalidatesAPendingIdentification(int processId, bool attached)
+    {
+        // A restart or a report of no debugger outranks an IDE answer about the earlier state,
+        // even when the switchboard had not identified a holder yet.
+        var reply = new TaskCompletionSource<bool?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var visualStudio = new FakeDebuggerAdapter("visualstudio", "Visual Studio 2026", true) { PendingAnswer = reply.Task };
+        var selection = new DebuggerSelection([visualStudio]);
+        selection.RecordObservation(Process, 111, attached: true);
+
+        var pending = selection.IdentifyHolderAsync(Process, 111, TestContext.Current.CancellationToken);
+        Assert.Equal(1, visualStudio.Asked);
+        selection.RecordObservation(Process, processId, attached);
+        reply.SetResult(true);
+        await pending;
+
+        Assert.Null(selection.HeldBy(Process));
+
+        // The invalidated check must not throttle identification of the new attachment.
+        visualStudio.PendingAnswer = null;
+        selection.RecordObservation(Process, processId, attached: true);
+        await selection.IdentifyHolderAsync(Process, processId, TestContext.Current.CancellationToken);
+
+        Assert.Equal(2, visualStudio.Asked);
+        Assert.Equal(processId, selection.HeldBy(Process)?.ProcessId);
+    }
+
+    [Fact]
+    public async Task ANewerReCheckSupersedesAnOlderAnswer()
+    {
+        var time = new TestTimeProvider();
+        var reply = new TaskCompletionSource<bool?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var visualStudio = new FakeDebuggerAdapter("visualstudio", "Visual Studio 2026", true) { PendingAnswer = reply.Task };
+        var selection = new DebuggerSelection([visualStudio], time);
+        selection.RecordAttached(Process, "visualstudio", 111);
+        time.Advance(TimeSpan.FromSeconds(16));
+
+        var pending = selection.IdentifyHolderAsync(Process, 111, TestContext.Current.CancellationToken);
+        Assert.Equal(1, visualStudio.Asked);
+
+        // The helper can take longer than the refresh interval; the later check's answer wins.
+        time.Advance(TimeSpan.FromSeconds(16));
+        visualStudio.PendingAnswer = null;
+        await selection.IdentifyHolderAsync(Process, 111, TestContext.Current.CancellationToken);
+        Assert.Equal(2, visualStudio.Asked);
+
+        reply.SetResult(false);
+        await pending;
+
+        Assert.Equal("visualstudio", selection.HeldBy(Process)?.AdapterId);
+    }
+
+    [Fact]
+    public async Task AnUnchangedServiceReportDoesNotDiscardAPendingIdentification()
+    {
+        var reply = new TaskCompletionSource<bool?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var visualStudio = new FakeDebuggerAdapter("visualstudio", "Visual Studio 2026", true) { PendingAnswer = reply.Task };
+        var selection = new DebuggerSelection([visualStudio]);
+        selection.RecordObservation(Process, 111, attached: true);
+
+        var pending = selection.IdentifyHolderAsync(Process, 111, TestContext.Current.CancellationToken);
+        Assert.Equal(1, visualStudio.Asked);
+
+        // Regular polling must not starve an IDE whose answer takes longer than one poll.
+        selection.RecordObservation(Process, 111, attached: true);
+        reply.SetResult(true);
+        await pending;
+
+        Assert.Equal("visualstudio", selection.HeldBy(Process)?.AdapterId);
+        Assert.Equal(111, selection.HeldBy(Process)?.ProcessId);
     }
 
     [Fact]
@@ -261,6 +467,8 @@ public sealed class DebuggerSelectionTests
 
         public bool? Holds { get; set; } = holds;
 
+        public Task<bool?>? PendingAnswer { get; set; }
+
         public int Asked { get; private set; }
 
         public Task<DebuggerAvailability> GetAvailabilityAsync(CancellationToken cancellationToken) =>
@@ -278,7 +486,7 @@ public sealed class DebuggerSelectionTests
         public Task<bool?> IsAttachedAsync(DebuggerTarget target, CancellationToken cancellationToken)
         {
             Asked++;
-            return Task.FromResult(Holds);
+            return PendingAnswer ?? Task.FromResult(Holds);
         }
     }
 }

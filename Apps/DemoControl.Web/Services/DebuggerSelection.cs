@@ -22,6 +22,11 @@ internal sealed class DebuggerSelection(IEnumerable<IDebuggerAdapter> adapters, 
     private readonly ConcurrentDictionary<string, byte> _operations = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, DebuggerObservation> _observations = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, DateTimeOffset> _holderCheckedAt = new(StringComparer.OrdinalIgnoreCase);
+    // State changes and accepting an IDE reply must be atomic across the dictionaries. The
+    // lock is never held while waiting for an IDE; a revision rejects any reply made obsolete
+    // by an attach, detach, service report, or newer check while that wait was in progress.
+    private readonly Lock _stateLock = new();
+    private readonly Dictionary<string, long> _holderRevisions = new(StringComparer.OrdinalIgnoreCase);
     private readonly TimeProvider _time = timeProvider ?? TimeProvider.System;
 
     /// <summary>
@@ -46,7 +51,16 @@ internal sealed class DebuggerSelection(IEnumerable<IDebuggerAdapter> adapters, 
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(processName);
 
-        return _operations.TryAdd(processName, 0);
+        lock (_stateLock)
+        {
+            if (!_operations.TryAdd(processName, 0))
+            {
+                return false;
+            }
+
+            InvalidateHolderCheck(processName);
+            return true;
+        }
     }
 
     /// <summary>
@@ -57,7 +71,10 @@ internal sealed class DebuggerSelection(IEnumerable<IDebuggerAdapter> adapters, 
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(processName);
 
-        _operations.TryRemove(processName, out _);
+        lock (_stateLock)
+        {
+            _operations.TryRemove(processName, out _);
+        }
     }
 
     /// <summary>
@@ -86,23 +103,43 @@ internal sealed class DebuggerSelection(IEnumerable<IDebuggerAdapter> adapters, 
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(processName);
 
-        _observations[processName] = new DebuggerObservation(processId, attached, _time.GetUtcNow());
-
-        if (!attached)
+        lock (_stateLock)
         {
-            _holderCheckedAt.TryRemove(processName, out _);
+            var previous = LastObservation(processName);
+            _observations[processName] = new DebuggerObservation(processId, attached, _time.GetUtcNow());
 
-            if (!IsBusy(processName))
+            if (!attached)
             {
-                _heldBy.TryRemove(processName, out _);
+                InvalidateHolderCheck(processName);
+
+                if (!IsBusy(processName))
+                {
+                    _heldBy.TryRemove(processName, out _);
+                }
             }
-        }
-        else if (HeldBy(processName) is { ProcessId: { } heldProcessId } && processId is { } observed && heldProcessId != observed)
-        {
-            // A different process id under the same name is a restarted service: whatever held
-            // the old process holds nothing now, and the new debugger is asked about afresh.
-            _heldBy.TryRemove(processName, out _);
-            _holderCheckedAt.TryRemove(processName, out _);
+            else
+            {
+                // A service answering under a different process id than last time is a restarted
+                // service: pending checks are about the process that is gone.
+                var restarted = previous is not null && previous.ProcessId != processId;
+
+                // Whoever held another process holds nothing now. A hold that names an id says so
+                // itself; one recorded without an id - the service reported none at attach time -
+                // is the old process's only when the service has just come back under a new id.
+                // Either way a newer attach naming this very process is preserved.
+                var holdIsForAnotherProcess = HeldBy(processName) is { } currentHold
+                    && (currentHold.ProcessId is { } heldProcessId ? heldProcessId != processId : restarted);
+
+                if (restarted || holdIsForAnotherProcess)
+                {
+                    InvalidateHolderCheck(processName);
+
+                    if (holdIsForAnotherProcess)
+                    {
+                        _heldBy.TryRemove(processName, out _);
+                    }
+                }
+            }
         }
     }
 
@@ -132,9 +169,13 @@ internal sealed class DebuggerSelection(IEnumerable<IDebuggerAdapter> adapters, 
         ArgumentException.ThrowIfNullOrWhiteSpace(processName);
         ArgumentException.ThrowIfNullOrWhiteSpace(adapterId);
 
-        var now = _time.GetUtcNow();
-        _heldBy[processName] = new DebuggerHold(adapterId, processId, now);
-        _holderCheckedAt[processName] = now;
+        lock (_stateLock)
+        {
+            InvalidateHolderCheck(processName);
+            var now = _time.GetUtcNow();
+            _heldBy[processName] = new DebuggerHold(adapterId, processId, now);
+            _holderCheckedAt[processName] = now;
+        }
     }
 
     /// <summary>
@@ -145,7 +186,11 @@ internal sealed class DebuggerSelection(IEnumerable<IDebuggerAdapter> adapters, 
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(processName);
 
-        _heldBy.TryRemove(processName, out _);
+        lock (_stateLock)
+        {
+            InvalidateHolderCheck(processName);
+            _heldBy.TryRemove(processName, out _);
+        }
     }
 
     /// <summary>
@@ -166,8 +211,9 @@ internal sealed class DebuggerSelection(IEnumerable<IDebuggerAdapter> adapters, 
     /// from before a restart - is named by the first IDE that says it holds the process; a hold
     /// whose IDE says it does not hold the process any more is dropped, and a hold by an IDE
     /// that cannot be asked gives way to one that answers yes. Asked at most every
-    /// <see cref="HolderRecheckInterval"/> per service, never mid-operation: an IDE that cannot
-    /// tell says so every time, and a helper process per poll would be the cost.
+    /// <see cref="HolderRecheckInterval"/> per service, never mid-operation. A reply is discarded
+    /// if the state changed while the IDE was answering, so an old check cannot erase or replace
+    /// a newer attachment. Waiting on the IDE does not block attach or detach requests.
     /// </summary>
     /// <param name="processName">The service process.</param>
     /// <param name="processId">The process id the service reported.</param>
@@ -178,38 +224,62 @@ internal sealed class DebuggerSelection(IEnumerable<IDebuggerAdapter> adapters, 
         ArgumentException.ThrowIfNullOrWhiteSpace(processName);
 
         var now = _time.GetUtcNow();
+        long revision;
+        DebuggerHold? hold;
 
-        if (IsBusy(processName)
-            || (_holderCheckedAt.TryGetValue(processName, out var checkedAt) && now - checkedAt < HolderRecheckInterval))
+        lock (_stateLock)
         {
-            return;
+            if (IsBusy(processName)
+                || (_holderCheckedAt.TryGetValue(processName, out var checkedAt) && now - checkedAt < HolderRecheckInterval))
+            {
+                return;
+            }
+
+            revision = InvalidateHolderCheck(processName);
+            _holderCheckedAt[processName] = now;
+            hold = HeldBy(processName);
         }
 
-        _holderCheckedAt[processName] = now;
         var target = new DebuggerTarget(processName, processId);
-        var hold = HeldBy(processName);
 
         foreach (var adapter in Adapters)
         {
             var answer = await adapter.IsAttachedAsync(target, cancellationToken);
 
-            if (answer == true)
+            lock (_stateLock)
             {
-                if (hold is null || !string.Equals(hold.AdapterId, adapter.Id, StringComparison.Ordinal))
+                if (_holderRevisions[processName] != revision)
                 {
-                    _heldBy[processName] = new DebuggerHold(adapter.Id, processId, now);
+                    return;
                 }
 
-                return;
-            }
+                if (answer == true)
+                {
+                    if (hold is null || !string.Equals(hold.AdapterId, adapter.Id, StringComparison.Ordinal))
+                    {
+                        _heldBy[processName] = new DebuggerHold(adapter.Id, processId, now);
+                    }
 
-            if (answer == false && hold is not null && string.Equals(hold.AdapterId, adapter.Id, StringComparison.Ordinal))
-            {
-                // The IDE on record says it does not hold the process: the record is stale.
-                _heldBy.TryRemove(processName, out _);
-                hold = null;
+                    return;
+                }
+
+                if (answer == false && hold is not null && string.Equals(hold.AdapterId, adapter.Id, StringComparison.Ordinal))
+                {
+                    // The IDE on record says it does not hold the process: the record is stale.
+                    _heldBy.TryRemove(processName, out _);
+                    hold = null;
+                }
             }
         }
+    }
+
+    // Called only under _stateLock, including when a newer check supersedes an older one.
+    private long InvalidateHolderCheck(string processName)
+    {
+        _holderCheckedAt.TryRemove(processName, out _);
+        var revision = _holderRevisions.GetValueOrDefault(processName) + 1;
+        _holderRevisions[processName] = revision;
+        return revision;
     }
 
     /// <summary>
