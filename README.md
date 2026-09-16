@@ -12,6 +12,26 @@ MAF in C#, this codebase and its stage-by-stage documentation are for you.** Eve
 a small, reviewable increment with the exact SDK code in a marked region, deterministic tests,
 and a documented lecture beat explaining *why* it is built that way.
 
+## VSLive San Diego 2026 — Session Materials
+
+You don't need to copy what's on the screen: this page is the permanent landing page for the slides, the
+code, the book and everything that comes later. The QR code shown in both sessions points here.
+
+| Session | Slides | Resources |
+| --- | --- | --- |
+| **W20** — The Agentic Revolution: From Code Builders to System Rulers (Wed, Sep 16) | [Slides (PDF)](https://github.com/alonf/CaesariaAgenticArchitectureDemo/releases/download/vslive-san-diego-2026/VSLive-SanDiego-2026-W20.pdf) | [Companion book](docs/companion-book.md) · [Specrew](https://github.com/alonf/specrew) (the spec-driven development loop) |
+| **H08** — Developing Agentic Systems in .NET: From Concept to Code (Thu, Sep 17) | [Slides (PDF)](https://github.com/alonf/CaesariaAgenticArchitectureDemo/releases/download/vslive-san-diego-2026/VSLive-SanDiego-2026-H08.pdf) | [Demo stages](#the-cumulative-demo-stages) · [Demo runbooks](docs/runbooks/) · [Run locally](#run-locally) |
+
+Both decks are live ([details and how to verify a download](docs/presentations.md)).
+
+### Additional resources
+
+- [The Agentic Revolution in .NET — companion book](docs/companion-book.md) (free PDF, 205 pages)
+- [Architecture and implementation documentation](docs/)
+- [Demo runbooks](docs/runbooks/) and [deployment](docs/deployment.md)
+
+<p align="center"><img src="docs/presentations/qr-caesarea-repo.png" alt="QR code to github.com/alonf/CaesariaAgenticArchitectureDemo" width="180"><br><sub>Demo code, slides &amp; resources — github.com/alonf/CaesariaAgenticArchitectureDemo</sub></p>
+
 ## The lectures
 
 ### H08 — Developing Agentic Systems in .NET: From Concept to Code
