@@ -98,32 +98,95 @@ public sealed class DebuggerSelectionTests
     }
 
     [Fact]
-    public async Task IdentificationIsAskedOncePerProcessAndAgainAfterADetach()
+    public async Task IdentificationIsAskedAtMostEveryFifteenSecondsAndAgainAfterADetach()
     {
         // An IDE that cannot tell says so every time; asking it on every poll would spawn a
         // helper per poll. Once the service reports no debugger, a later attachment is asked anew.
+        var time = new TestTimeProvider();
         var visualStudio = new FakeDebuggerAdapter("visualstudio", "Visual Studio 2026", holds: false);
-        var selection = new DebuggerSelection([new FakeDebuggerAdapter("vscode", "VS Code", null), visualStudio]);
+        var selection = new DebuggerSelection([new FakeDebuggerAdapter("vscode", "VS Code", null), visualStudio], time);
 
         await selection.IdentifyHolderAsync(Process, 4242, TestContext.Current.CancellationToken);
         await selection.IdentifyHolderAsync(Process, 4242, TestContext.Current.CancellationToken);
         Assert.Equal(1, visualStudio.Asked);
         Assert.Equal(DebuggerAttachmentKind.AttachedOutside, selection.Describe(Process, serviceReportsAttached: true).Kind);
 
+        time.Advance(TimeSpan.FromSeconds(16));
+        await selection.IdentifyHolderAsync(Process, 4242, TestContext.Current.CancellationToken);
+        Assert.Equal(2, visualStudio.Asked);
+
         selection.RecordObservation(Process, 4242, attached: false);
         visualStudio.Holds = true;
         await selection.IdentifyHolderAsync(Process, 4242, TestContext.Current.CancellationToken);
-        Assert.Equal(2, visualStudio.Asked);
+        Assert.Equal(3, visualStudio.Asked);
         Assert.Equal("visualstudio", selection.Describe(Process, serviceReportsAttached: true).Holder?.Id);
     }
 
     [Fact]
-    public async Task AKnownHoldIsNotReIdentified()
+    public async Task AFreshHoldIsTrustedForFifteenSecondsThenReCheckedAndCorrected()
     {
+        // VS Code let go in its own window and Visual Studio attached, both between two polls:
+        // the record says VS Code until the next check, when the IDE that says it holds the
+        // process wins.
+        var time = new TestTimeProvider();
         var visualStudio = new FakeDebuggerAdapter("visualstudio", "Visual Studio 2026", holds: true);
-        var selection = new DebuggerSelection([new FakeDebuggerAdapter("vscode", "VS Code", null), visualStudio]);
+        var selection = new DebuggerSelection([new FakeDebuggerAdapter("vscode", "VS Code", null), visualStudio], time);
         selection.RecordAttached(Process, "vscode", 4242);
 
+        await selection.IdentifyHolderAsync(Process, 4242, TestContext.Current.CancellationToken);
+        Assert.Equal(0, visualStudio.Asked);
+        Assert.Equal("vscode", selection.HeldBy(Process)!.AdapterId);
+
+        time.Advance(TimeSpan.FromSeconds(16));
+        await selection.IdentifyHolderAsync(Process, 4242, TestContext.Current.CancellationToken);
+        Assert.Equal(1, visualStudio.Asked);
+        Assert.Equal("visualstudio", selection.HeldBy(Process)!.AdapterId);
+    }
+
+    [Fact]
+    public async Task AHoldIsDroppedWhenItsIdeSaysItNoLongerHoldsTheProcess()
+    {
+        var time = new TestTimeProvider();
+        var visualStudio = new FakeDebuggerAdapter("visualstudio", "Visual Studio 2026", holds: false);
+        var selection = new DebuggerSelection([new FakeDebuggerAdapter("vscode", "VS Code", null), visualStudio], time);
+        selection.RecordAttached(Process, "visualstudio", 4242);
+
+        time.Advance(TimeSpan.FromSeconds(16));
+        await selection.IdentifyHolderAsync(Process, 4242, TestContext.Current.CancellationToken);
+
+        Assert.Null(selection.HeldBy(Process));
+        Assert.Equal(DebuggerAttachmentKind.AttachedOutside, selection.Describe(Process, serviceReportsAttached: true).Kind);
+    }
+
+    [Fact]
+    public async Task ARestartedServiceDropsTheOldHoldAndIsAskedAboutAtOnce()
+    {
+        // The Operations Agent restarts under a new process id with Visual Studio on it; the VS
+        // Code hold on the old process must not direct Detach at the wrong IDE, or the old id.
+        var visualStudio = new FakeDebuggerAdapter("visualstudio", "Visual Studio 2026", holds: true);
+        var selection = new DebuggerSelection([new FakeDebuggerAdapter("vscode", "VS Code", null), visualStudio]);
+        selection.RecordAttached(Process, "vscode", 111);
+
+        selection.RecordObservation(Process, 222, attached: true);
+        Assert.Null(selection.HeldBy(Process));
+
+        await selection.IdentifyHolderAsync(Process, 222, TestContext.Current.CancellationToken);
+        var hold = selection.HeldBy(Process);
+        Assert.NotNull(hold);
+        Assert.Equal("visualstudio", hold.AdapterId);
+        Assert.Equal(222, hold.ProcessId);
+    }
+
+    [Fact]
+    public async Task NoReCheckWhileAnOperationIsInFlight()
+    {
+        var time = new TestTimeProvider();
+        var visualStudio = new FakeDebuggerAdapter("visualstudio", "Visual Studio 2026", holds: true);
+        var selection = new DebuggerSelection([new FakeDebuggerAdapter("vscode", "VS Code", null), visualStudio], time);
+        selection.RecordAttached(Process, "vscode", 4242);
+        time.Advance(TimeSpan.FromSeconds(16));
+
+        Assert.True(selection.TryBeginOperation(Process));
         await selection.IdentifyHolderAsync(Process, 4242, TestContext.Current.CancellationToken);
 
         Assert.Equal(0, visualStudio.Asked);

@@ -10,12 +10,19 @@ namespace DemoControl.Web.Services;
 /// breakpoint - answering nothing - must still be one click from detaching. The choice of IDE is
 /// made per attach, on the row: every available IDE offers its own button.
 /// </summary>
-internal sealed class DebuggerSelection(IEnumerable<IDebuggerAdapter> adapters)
+internal sealed class DebuggerSelection(IEnumerable<IDebuggerAdapter> adapters, TimeProvider? timeProvider = null)
 {
+    // How long a hold is trusted before the IDEs are asked again. Long enough that an attached
+    // row costs one helper process a quarter-minute, short enough that a debugger swapped
+    // behind the switchboard's back - detached in the IDE, another attached - is named
+    // correctly before the presenter reaches for the button.
+    private static readonly TimeSpan HolderRecheckInterval = TimeSpan.FromSeconds(15);
+
     private readonly ConcurrentDictionary<string, DebuggerHold> _heldBy = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, byte> _operations = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, DebuggerObservation> _observations = new(StringComparer.OrdinalIgnoreCase);
-    private readonly ConcurrentDictionary<string, int?> _identificationAsked = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, DateTimeOffset> _holderCheckedAt = new(StringComparer.OrdinalIgnoreCase);
+    private readonly TimeProvider _time = timeProvider ?? TimeProvider.System;
 
     /// <summary>
     /// Gets the adapters in presentation order.
@@ -79,16 +86,23 @@ internal sealed class DebuggerSelection(IEnumerable<IDebuggerAdapter> adapters)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(processName);
 
-        _observations[processName] = new DebuggerObservation(processId, attached, DateTimeOffset.UtcNow);
+        _observations[processName] = new DebuggerObservation(processId, attached, _time.GetUtcNow());
 
         if (!attached)
         {
-            _identificationAsked.TryRemove(processName, out _);
+            _holderCheckedAt.TryRemove(processName, out _);
 
             if (!IsBusy(processName))
             {
                 _heldBy.TryRemove(processName, out _);
             }
+        }
+        else if (HeldBy(processName) is { ProcessId: { } heldProcessId } && processId is { } observed && heldProcessId != observed)
+        {
+            // A different process id under the same name is a restarted service: whatever held
+            // the old process holds nothing now, and the new debugger is asked about afresh.
+            _heldBy.TryRemove(processName, out _);
+            _holderCheckedAt.TryRemove(processName, out _);
         }
     }
 
@@ -118,7 +132,9 @@ internal sealed class DebuggerSelection(IEnumerable<IDebuggerAdapter> adapters)
         ArgumentException.ThrowIfNullOrWhiteSpace(processName);
         ArgumentException.ThrowIfNullOrWhiteSpace(adapterId);
 
-        _heldBy[processName] = new DebuggerHold(adapterId, processId, DateTimeOffset.UtcNow);
+        var now = _time.GetUtcNow();
+        _heldBy[processName] = new DebuggerHold(adapterId, processId, now);
+        _holderCheckedAt[processName] = now;
     }
 
     /// <summary>
@@ -145,35 +161,53 @@ internal sealed class DebuggerSelection(IEnumerable<IDebuggerAdapter> adapters)
     }
 
     /// <summary>
-    /// Asks each IDE whether it holds a service that reports a debugger the switchboard did not
-    /// put there - a launch.json attach, an attach from another window, one from before a
-    /// restart - and records the first that says yes, so the row names the right debugger to
-    /// detach. Asked once per process id, not on every poll: an IDE that cannot tell says so
-    /// every time, and a helper process per poll would be the cost.
+    /// Keeps the holder of an attached service truthful by asking the IDEs. A debugger the
+    /// switchboard did not put there - a launch.json attach, an attach from another window, one
+    /// from before a restart - is named by the first IDE that says it holds the process; a hold
+    /// whose IDE says it does not hold the process any more is dropped, and a hold by an IDE
+    /// that cannot be asked gives way to one that answers yes. Asked at most every
+    /// <see cref="HolderRecheckInterval"/> per service, never mid-operation: an IDE that cannot
+    /// tell says so every time, and a helper process per poll would be the cost.
     /// </summary>
     /// <param name="processName">The service process.</param>
     /// <param name="processId">The process id the service reported.</param>
     /// <param name="cancellationToken">Cancels the checks.</param>
-    /// <returns>A task that completes when the hold is recorded or every adapter has answered.</returns>
+    /// <returns>A task that completes when the hold is settled or every adapter has answered.</returns>
     public async Task IdentifyHolderAsync(string processName, int? processId, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(processName);
 
-        if (HeldBy(processName) is not null
-            || (_identificationAsked.TryGetValue(processName, out var asked) && asked == processId))
+        var now = _time.GetUtcNow();
+
+        if (IsBusy(processName)
+            || (_holderCheckedAt.TryGetValue(processName, out var checkedAt) && now - checkedAt < HolderRecheckInterval))
         {
             return;
         }
 
-        _identificationAsked[processName] = processId;
+        _holderCheckedAt[processName] = now;
         var target = new DebuggerTarget(processName, processId);
+        var hold = HeldBy(processName);
 
         foreach (var adapter in Adapters)
         {
-            if (await adapter.IsAttachedAsync(target, cancellationToken) == true)
+            var answer = await adapter.IsAttachedAsync(target, cancellationToken);
+
+            if (answer == true)
             {
-                RecordAttached(processName, adapter.Id, processId);
+                if (hold is null || !string.Equals(hold.AdapterId, adapter.Id, StringComparison.Ordinal))
+                {
+                    _heldBy[processName] = new DebuggerHold(adapter.Id, processId, now);
+                }
+
                 return;
+            }
+
+            if (answer == false && hold is not null && string.Equals(hold.AdapterId, adapter.Id, StringComparison.Ordinal))
+            {
+                // The IDE on record says it does not hold the process: the record is stale.
+                _heldBy.TryRemove(processName, out _);
+                hold = null;
             }
         }
     }

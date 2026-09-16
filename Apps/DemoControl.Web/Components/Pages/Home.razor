@@ -1259,7 +1259,7 @@
                 await Debuggers.IdentifyHolderAsync(source.Service.ProcessName, source.ProcessId, cancellationToken);
             }
         }
-        catch (Exception exception) when (exception is not OperationCanceledException)
+        catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             _breakpoints = null;
             _breakpointsMessage = $"Demo breakpoints unavailable: {exception.Message}";
@@ -1273,7 +1273,7 @@
             _workKnowledge = await WorkKnowledgeClient.GetStatusAsync(cancellationToken);
             _workKnowledgeMessage = null;
         }
-        catch (Exception exception) when (exception is not OperationCanceledException)
+        catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             _workKnowledge = null;
             _workKnowledgeMessage = $"Work knowledge state unavailable: {exception.Message}";
@@ -1287,7 +1287,7 @@
             _caseMemory = await CaseMemoryClient.GetStatusAsync(cancellationToken);
             _caseMemoryMessage = null;
         }
-        catch (Exception exception) when (exception is not OperationCanceledException)
+        catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             _caseMemory = null;
             _caseMemoryMessage = $"Case memory unavailable: {exception.Message}";
@@ -1301,7 +1301,7 @@
             _securityConsult = await SecurityConsultClient.GetStatusAsync(cancellationToken);
             _securityConsultMessage = null;
         }
-        catch (Exception exception) when (exception is not OperationCanceledException)
+        catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             _securityConsult = null;
             _securityConsultMessage = $"Security consult unavailable: {exception.Message}";
@@ -1361,7 +1361,7 @@
             _toolSource = await ToolSourceClient.GetStatusAsync(cancellationToken);
             _toolSourceMessage = null;
         }
-        catch (Exception exception) when (exception is not OperationCanceledException)
+        catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             _toolSource = null;
             _toolSourceMessage = $"Tool source unavailable: {exception.Message}";
@@ -1401,7 +1401,7 @@
             _agentHabitat = await AgentHabitatClient.GetStatusAsync(cancellationToken);
             _agentHabitatMessage = null;
         }
-        catch (Exception exception) when (exception is not OperationCanceledException)
+        catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             _agentHabitat = null;
             _agentHabitatMessage = $"Agent habitat unavailable: {exception.Message}";
@@ -1547,7 +1547,7 @@
                 _behaviorMessage = null;
             }
         }
-        catch (Exception exception) when (exception is not OperationCanceledException)
+        catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             _behavior = null;
             _behaviorMessage = $"Simulator behavior unavailable: {exception.Message}";
@@ -1584,7 +1584,7 @@
             {
                 return (adapter.Id, Availability: await adapter.GetAvailabilityAsync(cancellationToken));
             }
-            catch (Exception exception) when (exception is not OperationCanceledException)
+            catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
             {
                 return (adapter.Id, Availability: new DebuggerAvailability(false, "check failed", $"{adapter.DisplayName} status check failed: {exception.Message}"));
             }

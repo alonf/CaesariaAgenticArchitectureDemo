@@ -56,13 +56,14 @@ function nameMatches(session, processName) {
     return configuration.processName === processName || configuration.caesareaProcessName === processName;
 }
 
-// Which session a request is about. With an id in the request, a session known to debug exactly
-// that id wins; a session known to debug another id is never it; only a session whose id is
-// unknown may still be matched by name, and only when it is the sole such session - guessing
-// between two would detach the wrong one. Without an id, the name decides, as before ids were
-// sent.
+// Which session a request is about. Only attach sessions qualify: stopping a launch session
+// (F5 on a service) would terminate the process it started, and this extension only ever lets
+// go. With an id in the request, a session known to debug exactly that id wins; a session known
+// to debug another id is never it; only a session whose id is unknown may still be matched by
+// name, and only when it is the sole such session - guessing between two would detach the wrong
+// one. Without an id, the name decides, as before ids were sent.
 function chooseSession(candidates, target, reportedProcessIds = new Map()) {
-    const known = candidates.filter((session) => !!session);
+    const known = candidates.filter((session) => !!session && session.configuration?.request === 'attach');
     if (target.processId !== undefined) {
         const exact = known.find((session) => processIdOf(session, reportedProcessIds) === target.processId);
         if (exact) {

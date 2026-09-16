@@ -3200,7 +3200,13 @@ can single-step the exact code shown on the slide:
   switchboard attached with, or the one identified by asking the IDEs (Visual Studio answers
   exactly through the helper; VS Code cannot be asked from outside, so a debugger nobody can name
   is reported as attached outside the switchboard and detached through an available IDE as a
-  best effort). The helper is a `net10.0-windows` executable outside `Caesarea.slnx` that finds
+  best effort). A hold is re-checked against the IDEs every fifteen seconds and dropped when a
+  service comes back under a new process id, so a debugger swapped in the IDE, or a restarted
+  service, is named correctly within a poll or two. The VS Code extension matches attach sessions
+  only, never a launch session, so Detach can never terminate a service started with F5, and the
+  page's clients to the Operations Agent time out in ten seconds and report "unavailable" rather
+  than stalling the page or its polling while that agent is paused. The helper is a
+  `net10.0-windows` executable outside `Caesarea.slnx` that finds
   the instance through the COM running-object table (matching the open solution, never "the first
   instance running"), attaches the `Managed (.NET Core, .NET 5+)` engine to the one process and
   detaches only that process; DemoControl starts it and reads its JSON, so no portable project

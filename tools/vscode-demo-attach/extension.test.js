@@ -19,9 +19,20 @@ Module._load = originalLoad;
 
 let nextId = 1;
 const session = (configuration) => ({ id: `session-${nextId++}`, configuration });
-const attachedTo = (processId, processName) => session({ processId: String(processId), caesareaProcessName: processName });
-const byName = (processName) => session({ processName });
+const attachedTo = (processId, processName) => session({ request: 'attach', processId: String(processId), caesareaProcessName: processName });
+const byName = (processName) => session({ request: 'attach', processName });
+const launched = (program) => session({ request: 'launch', program });
 const reported = (...pairs) => new Map(pairs.map(([s, pid]) => [s.id, pid]));
+
+test('a launch session is never chosen, even when it debugs the requested process', () => {
+    // Stopping a launch session terminates the process VS Code started; this extension only
+    // ever lets go, so an F5 session is not its to touch, whatever id it reports.
+    const f5 = launched('OperationsAgent.Api.dll');
+    assert.equal(chooseSession([f5], { processName: 'OperationsAgent.Api.exe', processId: 111 }, reported([f5, 111])), undefined);
+    assert.equal(chooseSession([f5], { processName: 'OperationsAgent.Api.exe' }), undefined);
+    const attached = attachedTo(111, 'OperationsAgent.Api.exe');
+    assert.equal(chooseSession([f5, attached], { processName: 'OperationsAgent.Api.exe', processId: 111 }, reported([f5, 111])), attached);
+});
 
 test('a request with a process id matches only the session on that id', () => {
     // Two checkouts can run a service of the same name; the id is what tells them apart, so a

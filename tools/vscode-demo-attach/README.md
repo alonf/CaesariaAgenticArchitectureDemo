@@ -24,9 +24,10 @@ key when no id came along (an older service, or a hand-typed URI): Windows lists
 For `attach`, the extension starts a `coreclr` attach debug session named after the process and
 reports the result as a VS Code notification. For `detach`, it finds that session - or a
 launch.json attach session naming the same process - and stops it, which for an attach session
-disconnects the debugger and leaves the service running. The extension tracks every debug session
-it sees after activation, because VS Code exposes only the active one and the presenter attaches
-to several services.
+disconnects the debugger and leaves the service running. Only attach sessions are ever matched:
+a launch session (F5 on a service) would be terminated by a stop, and this extension only lets
+go. The extension tracks every debug session it sees after activation, because VS Code exposes
+only the active one and the presenter attaches to several services.
 
 The DemoControl "Demo Breakpoints" panel shows each service's "Debugger attached" stamp through
 the service's `/api/demo-breakpoints` endpoint, and turns the button into Attach or Detach
