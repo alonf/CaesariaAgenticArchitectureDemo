@@ -247,8 +247,8 @@ user secrets, outside committed appsettings files.
 
 ## Run locally
 
-Prerequisites, on any OS: the .NET SDK named in [global.json](global.json) (10.0.103 or a later
-10.0 feature band); PowerShell 7 for the scripts; the Azure CLI, signed in to a tenant that holds
+Prerequisites, on any OS: the .NET SDK named in [global.json](global.json) (11.0.100 or a later
+11.0 feature band); PowerShell 7 for the scripts; the Azure CLI, signed in to a tenant that holds
 a Foundry project with a `gpt-5.5` deployment, for every stage past Deterministic. Nothing else is
 installed: the Aspire host, the dashboard and every service are NuGet packages the build restores.
 [docs/deployment.md](docs/deployment.md) lists what the cloud half needs on top.
@@ -256,6 +256,16 @@ installed: the Aspire host, the dashboard and every service are NuGet packages t
 ```powershell
 ./scripts/Start-CaesareaDemo.ps1
 ```
+
+For a per-user SDK installation, the startup script selects the installed .NET 11 SDK automatically.
+Before other CLI commands, use `. ./scripts/Use-CaesareaSdk.ps1` in the same PowerShell session.
+The optional [Durable Functions recovery rehearsal](docs/runbooks/durable-recovery.md) demonstrates
+a persisted MAF conversation and supervised repair surviving a worker restart. It uses a separate
+local host and preserves the earlier Stage 8 workflow.
+
+See the [upgrade execution record](docs/product-status/net11-upgrade.md) for the tested dependency
+set and the [Routines and Insights walkthrough](docs/runbooks/routines-and-insights.md) for the
+new presenter-side tools. Published September slides and book remain historical editions.
 
 One command, safe to run every time: it checks the per-machine setup - the hosted agent's project
 endpoint in user secrets (resolved automatically from the GitHub environment or the Azure resource

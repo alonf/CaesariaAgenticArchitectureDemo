@@ -1,0 +1,10 @@
+{
+  "instanceId": "repair-evidence-stale-review",
+  "runtimeStatus": "Completed",
+  "progress": {
+    "State": "StateChanged",
+    "Summary": "The Hub revision changed; earlier approval cannot authorize this state.",
+    "Review": null
+  },
+  "outcome": "{\"State\":\"StateChanged\",\"CommandExecuted\":false,\"Resolved\":true,\"Summary\":\"The Hub revision changed; earlier approval cannot authorize this state.\"}"
+}

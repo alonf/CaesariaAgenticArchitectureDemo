@@ -6,6 +6,7 @@
   <Folder Name="/Contracts/">
     <Project Path="Contracts/CommandCenter.Contracts/CommandCenter.Contracts.csproj" />
     <Project Path="Contracts/DemoScenario.Contracts/DemoScenario.Contracts.csproj" />
+    <Project Path="Contracts/DurableOperations.Contracts/DurableOperations.Contracts.csproj" />
     <Project Path="Contracts/Energy.Contracts/Energy.Contracts.csproj" />
     <Project Path="Contracts/OperationsAgent.Contracts/OperationsAgent.Contracts.csproj" />
     <Project Path="Contracts/Security.Contracts/Security.Contracts.csproj" />
@@ -32,6 +33,9 @@
   <Folder Name="/Tests/">
     <Project Path="Tests/Caesarea.Deterministic.Tests/Caesarea.Deterministic.Tests.csproj" />
     <Project Path="Tests/DebuggerBystander/DebuggerBystander.csproj" />
+  </Folder>
+  <Folder Name="/Tools/">
+    <Project Path="tools/FoundryInsights/FoundryInsights.csproj" />
   </Folder>
   <Project Path="Caesarea.AppHost/Caesarea.AppHost.csproj" />
   <Project Path="Caesarea.ServiceDefaults/Caesarea.ServiceDefaults.csproj" />

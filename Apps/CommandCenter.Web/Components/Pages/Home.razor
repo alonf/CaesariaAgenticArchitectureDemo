@@ -1324,9 +1324,9 @@
         bool? satisfied = prerequisite.Kind switch
         {
             DemoPrerequisiteKind.Scenario => _snapshot?.CurrentScenario.Id == prerequisite.ScenarioId,
-            DemoPrerequisiteKind.Switch when prerequisite.Switch is { } @switch
+            DemoPrerequisiteKind.Switch when prerequisite.Switch is { } selectedSwitch
                 && _switchValues is not null
-                && _switchValues.TryGetValue(@switch, out var value) =>
+                && _switchValues.TryGetValue(selectedSwitch, out var value) =>
                 string.Equals(value, prerequisite.RequiredValue, StringComparison.OrdinalIgnoreCase),
             _ => null
         };

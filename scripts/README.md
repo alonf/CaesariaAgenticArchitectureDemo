@@ -5,6 +5,8 @@ GitHub Actions workflow driving committed Bicep — see [docs/deployment.md](../
 
 | Script | Does | Idempotent |
 | --- | --- | --- |
+| [`Use-CaesareaSdk.ps1`](Use-CaesareaSdk.ps1) | Selects the installed SDK required by the repository for the current shell; supports the per-user .NET 11 install | No persistent machine changes |
+| [`Manage-InvestigationRoutine.ps1`](Manage-InvestigationRoutine.ps1) | Creates a disabled L-417 timer routine, inspects it and explicitly dispatches/enables/disables it; see the [runbook](../docs/runbooks/routines-and-insights.md) | Creation refuses overwrite; dispatch intentionally starts a new run |
 | [`Bootstrap-GitHubOidc.ps1`](Bootstrap-GitHubOidc.ps1) | Creates one Entra application **per environment** with a single federated credential each, their role assignments, and the GitHub environments and variables the workflows read | Yes — a second run reports `[exists]` and changes nothing |
 | [`Remove-GitHubOidc.ps1`](Remove-GitHubOidc.ps1) | Removes only what the bootstrap owns. Does not touch Azure resources or resource providers | Yes — anything already gone reports `[absent]` |
 | [`Sync-PlatformVariables.ps1`](Sync-PlatformVariables.ps1) | Reads the latest platform deployment's outputs and writes them to the GitHub environment's variables, so the release workflows see what infra produced | Yes — every value is compared before it is written |
@@ -99,6 +101,19 @@ portal clicks that will be stale in a month.
   two role assignments it created — not whole environments, not every role a principal holds.
   Deleting the environments needs `-RemoveEnvironments`, and the command carries
   `ConfirmImpact = 'High'`.
+
+## Durable Functions recovery rehearsal
+
+`Initialize-DurableRecovery.ps1` creates private local settings with distinct operator/supervisor
+keys and the existing Foundry model endpoint. `Start-DurableRecovery.ps1` builds and runs the
+.NET 11 Functions host using the selected per-user SDK. Use `-NoBuild` for a worker restart.
+`Wait-DurableRecovery.ps1` polls for a valid `AwaitingApproval` review before restart, or a terminal
+runtime result after a decision. It can save status-only evidence with `-EvidencePath`; pass the
+operator headers explicitly and inspect the terminal business outcome, including nullable unknowns.
+Run `python scripts/tests/test_durable_recovery_polling.py` for the six local HTTP polling checks
+(Python standard library and PowerShell 7; no city services or credentials required).
+Start the city demo and dedicated scheduler/Azurite emulators first; see the
+[complete rehearsal and boundaries](../docs/runbooks/durable-recovery.md).
 
 ## ASSERT behavioral evaluation
 

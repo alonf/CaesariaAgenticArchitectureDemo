@@ -1,0 +1,38 @@
+<Project Sdk="Azure.Functions.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net11.0</TargetFramework>
+    <AzureFunctionsVersion>v4</AzureFunctionsVersion>
+    <OutputType>Exe</OutputType>
+    <JSModulesEnabled>false</JSModulesEnabled>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Microsoft.Azure.Functions.Worker" Version="2.52.0" />
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Http.AspNetCore" Version="2.1.1" />
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.DurableTask" Version="1.22.0" />
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.DurableTask.AzureManaged" Version="1.12.0" />
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Mcp" Version="1.6.0" />
+    <PackageReference Include="Microsoft.Agents.AI.Hosting.AzureFunctions" Version="1.16.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../OperationsAgent.Api/OperationsAgent.Api.csproj" />
+    <ProjectReference Include="../../Contracts/DurableOperations.Contracts/DurableOperations.Contracts.csproj" />
+    <InternalsVisibleTo Include="Caesarea.Deterministic.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="host.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="local.settings.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Never" />
+  </ItemGroup>
+  <!-- Hosting.AzureFunctions 1.16 embeds MCP 1.0 extension metadata. The new
+       Functions SDK rejects that declaration alongside the current worker's 1.6
+       declaration. Keep the worker's actual extension version, not the stale copy. -->
+  <Target Name="UseCurrentMcpHostExtension" AfterTargets="CollectExtensionPackages" BeforeTargets="WriteExtensionProject">
+    <ItemGroup>
+      <_AzureFunctionPackageReference Remove="Microsoft.Azure.Functions.Extensions.Mcp"
+        Condition="'%(_AzureFunctionPackageReference.Version)' == '1.0.0'" />
+      <!-- Patch the host extension graph as well as the isolated worker graph.
+           The SDK's generated project intentionally ignores Directory.Build.props. -->
+      <_AzureFunctionPackageReference Include="Microsoft.AspNetCore.WebUtilities" Version="2.3.14" TargetFramework="net11.0" />
+    </ItemGroup>
+  </Target>
+</Project>

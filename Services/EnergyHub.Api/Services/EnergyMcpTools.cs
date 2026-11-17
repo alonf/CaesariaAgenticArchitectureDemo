@@ -1,6 +1,5 @@
 using System.ComponentModel;
 using System.Text.Json;
-using System.Text.Json.Serialization.Metadata;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
@@ -121,7 +120,7 @@ public sealed class EnergyRestoreMcpTool(
     private static bool IsApproved(InputResponse response)
     {
         var result = response.Deserialize(
-            (JsonTypeInfo<ElicitResult>)McpJsonUtilities.DefaultOptions.GetTypeInfo(typeof(ElicitResult)));
+            McpJsonUtilities.DefaultOptions.GetTypeInfo<ElicitResult>());
         return result is { IsAccepted: true, Content: { } content }
             && content.TryGetValue("approved", out var approvedValue)
             && approvedValue.ValueKind == JsonValueKind.True;

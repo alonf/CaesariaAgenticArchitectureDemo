@@ -1,0 +1,4 @@
+{
+  "Message": "L-417 state read: it is anomalous — reported on while desired/scheduled state is off during daylight.\n\nStarted supervised recovery. Operation ID: `repair-evidence-success`\n\nI have not approved it, and acceptance is not completion. A separate supervisor must review it.",
+  "SessionId": "session-evidence-success"
+}

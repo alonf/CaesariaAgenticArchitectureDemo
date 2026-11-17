@@ -1,10 +1,11 @@
-using System.Net.Http.Json;
+using DurableOperations.Contracts;
 using EnergyHub.Api.Services;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OperationsAgent.Api.Services;
+using OperationsAgent.Functions;
 
 namespace Caesarea.Deterministic.Tests;
 
@@ -16,6 +17,105 @@ namespace Caesarea.Deterministic.Tests;
 /// </summary>
 public sealed class EnergyCommandGatewayIntegrationTests
 {
+    [Fact]
+    public async Task InterruptedActivityReconcilesPendingHubCommandBeforeItCompletes()
+    {
+        var accepted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var finishDeviceCommand = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var deviceCommands = 0;
+        var pole = new FakeSmartPoleGateway
+        {
+            PhysicalState = CreateOverriddenDaylightState(),
+            OnSetLampStateAsync = async (command, correlation, token) =>
+            {
+                Interlocked.Increment(ref deviceCommands);
+                accepted.SetResult();
+                await finishDeviceCommand.Task.WaitAsync(token);
+                return new SmartPoleCommandResult(command.AssetId, command.DesiredIsOn!.Value,
+                    CommandExecutionStatus.Succeeded, correlation, "Device finished after interruption.", DateTimeOffset.UtcNow);
+            }
+        };
+        await using var factory = CreateEnergyHub(pole);
+        using var client = factory.CreateClient();
+        using var seeded = await client.PostAsJsonAsync("/api/energy/admin/scenario",
+            new EnergyScenarioSyncRequest(false, null, "Pending command recovery test"), TestContext.Current.CancellationToken);
+        seeded.EnsureSuccessStatusCode();
+        var twin = await ReadTwinAsync(client);
+        var clock = new TestTimeProvider();
+        var now = clock.GetUtcNow();
+        var authorization = new RecoveryAuthorization("operator", "supervisor", "test-supervisor");
+        var review = new RecoveryReview("recovery-pending-hub", twin.AssetId, twin.StateRevision, "challenge", now.AddMinutes(5));
+        var commands = new InterruptPendingResponse(CreateGateway(client), accepted.Task);
+        var activity = new RecoveryActivities(new HttpEnergyReadGateway(client, NullLogger<HttpEnergyReadGateway>.Instance),
+            commands, new RecoveryStageReader(now), authorization, clock);
+        var request = new RecoveryRequest(twin.AssetId, twin.StateRevision, now, review.InstanceId);
+        var execution = new RecoveryExecution(review.InstanceId, request, review,
+            authorization.Sign(new RecoveryDecisionRequest(review, true), now));
+        try
+        {
+            await Assert.ThrowsAsync<HttpRequestException>(() => activity.ExecuteRecovery(execution, TestContext.Current.CancellationToken));
+            var pendingTwin = await ReadTwinAsync(client);
+            Assert.Equal(CommandExecutionStatus.Pending, pendingTwin.LastCommand!.Status);
+            Assert.True(pendingTwin.StateRevision > twin.StateRevision);
+
+            var redelivered = await activity.ExecuteRecovery(execution, TestContext.Current.CancellationToken);
+            Assert.Equal("CommandPending", redelivered.State);
+            Assert.Null(redelivered.CommandExecuted);
+            Assert.Null(redelivered.Resolved);
+            Assert.Equal(1, deviceCommands);
+            Assert.Equal(1, commands.Attempts);
+
+            finishDeviceCommand.SetResult();
+            await commands.InFlight!;
+            var reconciled = await activity.ReconcileRecovery(request, TestContext.Current.CancellationToken);
+            Assert.Equal("Recovered", reconciled.State);
+            Assert.True(reconciled.CommandExecuted);
+            Assert.True(reconciled.Resolved);
+            Assert.Equal(1, deviceCommands);
+            Assert.Equal(pendingTwin.StateRevision, (await ReadTwinAsync(client)).StateRevision);
+        }
+        finally
+        {
+            finishDeviceCommand.TrySetResult();
+            if (commands.InFlight is not null)
+            {
+                await commands.InFlight;
+            }
+        }
+    }
+
+    [Fact]
+    public async Task DurableActivityRecoversAnAcceptedHubCommandAfterLosingItsHttpResponse()
+    {
+        await using var factory = CreateEnergyHub();
+        using var client = factory.CreateClient();
+        using var seeded = await client.PostAsJsonAsync("/api/energy/admin/scenario",
+            new EnergyScenarioSyncRequest(false, null, "Forgotten override recovery test"), TestContext.Current.CancellationToken);
+        seeded.EnsureSuccessStatusCode();
+        var twin = await ReadTwinAsync(client);
+        Assert.True(twin.IsAnomalous);
+
+        var clock = new TestTimeProvider();
+        var now = clock.GetUtcNow();
+        var authorization = new RecoveryAuthorization("operator", "supervisor", "test-supervisor");
+        var review = new RecoveryReview("recovery-real-hub", twin.AssetId, twin.StateRevision, "challenge", now.AddMinutes(5));
+        var command = new LoseSuccessfulResponse(CreateGateway(client));
+        var activity = new RecoveryActivities(new HttpEnergyReadGateway(client, NullLogger<HttpEnergyReadGateway>.Instance),
+            command, new RecoveryStageReader(now), authorization, clock);
+        var execution = new RecoveryExecution(review.InstanceId,
+            new RecoveryRequest(twin.AssetId, twin.StateRevision, now, review.InstanceId), review,
+            authorization.Sign(new RecoveryDecisionRequest(review, true), now));
+
+        await Assert.ThrowsAsync<HttpRequestException>(() => activity.ExecuteRecovery(execution, TestContext.Current.CancellationToken));
+        var acceptedRevision = (await ReadTwinAsync(client)).StateRevision;
+        var recovered = await activity.ExecuteRecovery(execution, TestContext.Current.CancellationToken);
+        Assert.Equal("Recovered", recovered.State);
+        Assert.True(recovered.CommandExecuted);
+        Assert.True(recovered.Resolved);
+        Assert.Equal(1, command.Attempts);
+        Assert.Equal(acceptedRevision, (await ReadTwinAsync(client)).StateRevision);
+    }
+
     [Fact]
     public async Task StaleRevisionIsRefusedAsAPreconditionFailureOverHttp()
     {
@@ -139,5 +239,40 @@ public sealed class EnergyCommandGatewayIntegrationTests
 
         public Task<SmartPoleCommandResult> SetLampStateAsync(SetLampStateCommand command, string correlationId, CancellationToken cancellationToken) =>
             throw new HttpRequestException("SmartPole is unreachable.");
+    }
+
+    private sealed class RecoveryStageReader(DateTimeOffset appliedAt) : ICommandCenterStageReader
+    {
+        public Task<DemoStageStatus> GetCurrentStageAsync(string correlationId, CancellationToken cancellationToken) =>
+            Task.FromResult(new DemoStageStatus(DemoStage.Hosting, "Hosting", "Recovery", [], appliedAt, correlationId));
+    }
+
+    private sealed class LoseSuccessfulResponse(IEnergyCommandGateway inner) : IEnergyCommandGateway
+    {
+        public int Attempts { get; private set; }
+
+        public async Task<EnergyCommandOutcome> RestoreScheduledModeAsync(string assetId, string correlationId,
+            long expectedStateRevision, CancellationToken cancellationToken)
+        {
+            Attempts++;
+            var result = await inner.RestoreScheduledModeAsync(assetId, correlationId, expectedStateRevision, cancellationToken);
+            Assert.Equal(CommandExecutionStatus.Succeeded, result.Status);
+            throw new HttpRequestException("Hub response lost after acceptance.");
+        }
+    }
+
+    private sealed class InterruptPendingResponse(IEnergyCommandGateway inner, Task accepted) : IEnergyCommandGateway
+    {
+        public int Attempts { get; private set; }
+        public Task<EnergyCommandOutcome>? InFlight { get; private set; }
+
+        public async Task<EnergyCommandOutcome> RestoreScheduledModeAsync(string assetId, string correlationId,
+            long expectedStateRevision, CancellationToken cancellationToken)
+        {
+            Attempts++;
+            InFlight = inner.RestoreScheduledModeAsync(assetId, correlationId, expectedStateRevision, cancellationToken);
+            await accepted.WaitAsync(cancellationToken);
+            throw new HttpRequestException("Worker lost its request while the Hub was still awaiting the device.");
+        }
     }
 }

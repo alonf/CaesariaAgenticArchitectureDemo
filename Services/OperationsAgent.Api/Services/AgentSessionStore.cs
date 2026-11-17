@@ -16,7 +16,7 @@ public sealed class AgentSessionStore(TimeProvider timeProvider)
     private static readonly TimeSpan SessionLifetime = TimeSpan.FromMinutes(30);
     private const int MaxSessions = 50;
 
-    private readonly object _gate = new();
+    private readonly Lock _gate = new();
     private readonly Dictionary<string, StoredSession> _sessions = new(StringComparer.Ordinal);
     private readonly TimeProvider _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
 

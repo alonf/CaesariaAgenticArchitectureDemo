@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Http.Json;
 using System.Text.Json;
 using CommandCenter.Api.Services;
 using DemoScenario.Api.Services;

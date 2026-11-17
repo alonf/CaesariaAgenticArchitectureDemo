@@ -6,14 +6,14 @@
 
 # The runtime tag floats on purpose: patch releases carry security fixes and nothing here pins
 # against them.
-FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble AS base
+FROM mcr.microsoft.com/dotnet/aspnet:11.0-resolute AS base
 WORKDIR /app
 # The port AgentHost listens on: PORT, which the platform injects and reserves, defaulting to 8088.
 EXPOSE 8088
 
-# The build tag does NOT float, and must stay in step with global.json - see the note in
-# Services/OperationsAgent.Hosted/Dockerfile for what happens when it drifts.
-FROM mcr.microsoft.com/dotnet/sdk:10.0.103-noble AS build
+# Pin the build SDK to global.json; latestFeature permits newer .NET 11 feature bands.
+# Keep the explicit image version aligned with the minimum SDK when upgrading.
+FROM mcr.microsoft.com/dotnet/sdk:11.0.100-resolute AS build
 WORKDIR /src
 
 # Restore against the project graph before copying sources, so a source-only change does not

@@ -2,9 +2,12 @@
   "sdk": {
     "rollForward": "latestFeature",
     "allowPrerelease": false,
-    "version": "10.0.103"
+    "version": "11.0.100"
   },
   "test": {
     "runner": "Microsoft.Testing.Platform"
+  },
+  "msbuild-sdks": {
+    "Azure.Functions.Sdk": "1.1.0"
   }
 }

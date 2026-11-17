@@ -10,7 +10,7 @@ public sealed partial class EnergyHubService
         "Restore Scheduled Mode was superseded by a newer operation, scenario change, or reset; the newer state was preserved.";
 
 
-    private readonly object _gate = new();
+    private readonly Lock _gate = new();
     private readonly ISmartPoleGateway _smartpoleGateway;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<EnergyHubService> _logger;

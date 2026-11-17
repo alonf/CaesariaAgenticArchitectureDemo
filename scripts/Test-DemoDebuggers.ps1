@@ -48,7 +48,7 @@ Set-StrictMode -Version Latest
 
 $RepositoryRoot = Resolve-Path "$PSScriptRoot/.."
 $TestProject = Join-Path $RepositoryRoot 'Tests/Caesarea.Deterministic.Tests/Caesarea.Deterministic.Tests.csproj'
-$TestExecutable = Join-Path $RepositoryRoot 'Tests/Caesarea.Deterministic.Tests/bin/Debug/net10.0/Caesarea.Deterministic.Tests'
+$TestExecutable = Join-Path $RepositoryRoot 'Tests/Caesarea.Deterministic.Tests/bin/Debug/net11.0/Caesarea.Deterministic.Tests'
 $HelperProject = Join-Path $RepositoryRoot 'tools/visualstudio-demo-attach/src/VisualStudioDemoAttach.csproj'
 $HelperExecutable = Join-Path $RepositoryRoot 'tools/visualstudio-demo-attach/dist/VisualStudioDemoAttach.exe'
 $Solution = Join-Path $RepositoryRoot 'Caesarea.slnx'

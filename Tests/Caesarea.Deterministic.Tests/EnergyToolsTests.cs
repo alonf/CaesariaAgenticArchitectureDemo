@@ -5,6 +5,36 @@ namespace Caesarea.Deterministic.Tests;
 public sealed class EnergyToolsTests
 {
     [Fact]
+    public async Task SharedHostedToolsKeepConcurrentRequestCorrelationsSeparate()
+    {
+        var accessor = new Microsoft.AspNetCore.Http.HttpContextAccessor();
+        var seen = new System.Collections.Concurrent.ConcurrentBag<string>();
+        var gateway = new FakeEnergyReadGateway
+        {
+            State = CreateState(),
+            Activity = [],
+            OnGetStateAsync = (_, correlationId, _) =>
+            {
+                seen.Add(correlationId);
+                return Task.FromResult(CreateState());
+            }
+        };
+        var tools = new EnergyTools(gateway,
+            () => InvocationCorrelation.Resolve(accessor.HttpContext), NullLogger<EnergyTools>.Instance);
+
+        async Task InvokeAsync(string correlationId)
+        {
+            accessor.HttpContext = new Microsoft.AspNetCore.Http.DefaultHttpContext();
+            accessor.HttpContext.Request.Headers[CorrelationIds.HeaderName] = correlationId;
+            await Task.Yield();
+            await tools.GetStreetlightStateAsync(DemoAssets.StreetlightAssetId, TestContext.Current.CancellationToken);
+        }
+
+        await Task.WhenAll(InvokeAsync("operator-a"), InvokeAsync("operator-b"));
+        Assert.Equal(["operator-a", "operator-b"], seen.Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
     public async Task GetStreetlightStateAsyncReadsAuthoritativeStateAndPropagatesCorrelationId()
     {
         string? observedAssetId = null;

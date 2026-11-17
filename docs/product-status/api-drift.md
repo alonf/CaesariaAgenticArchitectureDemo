@@ -1,5 +1,9 @@
 # Deck vs. implemented API drift
 
+November 2026 update: see [the .NET 11 execution record](net11-upgrade.md) for the compiled package
+set. September material is historical. Refresh code listings from the current marked regions;
+Routines and Insights presenter tooling does not imply cloud rehearsal or durable Functions support.
+
 Where the deck shows an API shape that the installed SDK no longer offers (or never shipped), this
 log records what the demo actually uses, so the deck and the live code stay reconcilable. Rows are
 anchored by the stable demo identifier (the `DemoSnippets` value stamped into the relevant slide's

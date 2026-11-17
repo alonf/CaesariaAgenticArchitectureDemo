@@ -10,7 +10,7 @@ namespace OperationsAgent.Api.Services;
 /// </summary>
 public sealed partial class PendingApprovalStore(TimeProvider timeProvider, ILogger<PendingApprovalStore> logger)
 {
-    private readonly object _gate = new();
+    private readonly Lock _gate = new();
     private readonly Dictionary<string, PendingEntry> _pending = new(StringComparer.Ordinal);
 
     /// <summary>

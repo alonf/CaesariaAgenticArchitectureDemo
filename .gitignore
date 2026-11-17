@@ -497,6 +497,7 @@ docs/runbooks/artifacts/
 
 # Local ASSERT environment and generated evaluation artifacts.
 .venv-assert/
+**/local.settings.json
 evaluation/assert_demo/artifacts/
 __pycache__/
 

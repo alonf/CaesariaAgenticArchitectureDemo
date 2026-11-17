@@ -72,7 +72,7 @@ internal sealed class ModelTrafficDumpPolicy(string dumpDirectory) : PipelinePol
             // and its logging exist, so there is no ILogger to reach - stderr is where the loss
             // is reported.
             await Console.Error.WriteLineAsync(
-                $"ModelTrafficDumpPolicy: dump {sequence:D3} for {uri.AbsolutePath} not written to '{dumpDirectory}': {exception.GetType().Name}: {exception.Message}")
+                $"ModelTrafficDumpPolicy: dump {sequence:D3} for {uri.AbsolutePath} not written to '{dumpDirectory}': {exception.GetType().Name}: {exception.Message}".AsMemory(), CancellationToken.None)
                 .ConfigureAwait(false);
         }
     }

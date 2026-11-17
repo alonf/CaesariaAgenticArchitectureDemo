@@ -1,0 +1,11 @@
+{
+  "$schema": "http://json.schemastore.org/launchsettings.json",
+  "profiles": {
+    "durable-recovery": {
+      "commandName": "Project",
+      "commandLineArgs": "--port 17071",
+      "applicationUrl": "http://localhost:17071",
+      "launchBrowser": false
+    }
+  }
+}

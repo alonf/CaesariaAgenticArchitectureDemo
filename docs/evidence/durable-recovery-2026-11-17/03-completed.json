@@ -1,0 +1,10 @@
+{
+  "instanceId": "repair-evidence-success",
+  "runtimeStatus": "Completed",
+  "progress": {
+    "State": "Completed",
+    "Summary": "The Hub confirmed the command; verification reread the physical state.",
+    "Review": null
+  },
+  "outcome": "{\"State\":\"Completed\",\"CommandExecuted\":true,\"Resolved\":true,\"Summary\":\"The Hub confirmed the command; verification reread the physical state.\"}"
+}

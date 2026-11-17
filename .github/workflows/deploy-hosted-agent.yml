@@ -40,10 +40,10 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.environmentName || 'dev' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
 
       - name: Log in to Azure
-        uses: azure/login@v2
+        uses: azure/login@v3.1.0
         with:
           client-id: ${{ vars.AZURE_CLIENT_ID }}
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
@@ -87,7 +87,7 @@ jobs:
           esac
           echo "Energy Hub: $URI"
 
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4.4.1
 
       - name: Build and push the image
         id: build

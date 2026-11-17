@@ -1,0 +1,25 @@
+version: 2
+updates:
+  - package-ecosystem: nuget
+    directories:
+      - /
+      - /tools/visualstudio-demo-attach
+    schedule:
+      interval: weekly
+    groups:
+      agent-framework:
+        patterns:
+          - Microsoft.Agents.*
+          - Microsoft.Extensions.AI*
+          - Azure.AI.*
+      opentelemetry:
+        patterns:
+          - OpenTelemetry.*
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: pip
+    directory: /evaluation/assert_demo
+    schedule:
+      interval: weekly

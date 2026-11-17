@@ -76,7 +76,7 @@ public sealed partial class InMemoryCaseMemoryStore(
         "that", "of", "to", "in", "on", "off", "at", "by", "for", "or", "as", "why", "what",
         "how", "when", "who", "with", "without", "against", "during", "reported", "currently"
     ];
-    private readonly object _gate = new();
+    private readonly Lock _gate = new();
     private readonly List<ClosedCase> _cases = [];
     private int _nextCaseNumber = 1;
 
