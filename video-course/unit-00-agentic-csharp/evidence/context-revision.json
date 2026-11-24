@@ -1,0 +1,30 @@
+{
+  "sourcePDF": "video-course\\.build\\Agentic-CSharp-context-source.pdf",
+  "sha256": "7ed2f91ac48cf0535ce85196977b2aca3ef32effe5ad20100723e1bca2c8cbcc",
+  "pages": 59,
+  "export": "PowerPoint UI; local PDF; source deck unchanged",
+  "revisedSlides": [
+    6,
+    12,
+    13,
+    14,
+    16,
+    18
+  ],
+  "editBaseCommit": "a5f45642b547d269f9ea837343818e3aefa4e90b",
+  "narration": "Microsoft Agent Framework or Agent Framework; no spoken acronym",
+  "captureReuse": "Existing real local recordings, re-edited; no new application execution claimed",
+  "sourceDeckReadLimitation": "PowerPoint held the PPTX open; provenance pins the freshly exported PDF, not a new PPTX hash",
+  "validation": {
+    "restore": "pass",
+    "format": "pass",
+    "build": "pass",
+    "buildWarnings": 0,
+    "buildErrors": 0,
+    "testsPassed": 469,
+    "testsSkipped": 4,
+    "gitDiffCheck": "pass"
+  },
+  "macRecording": "Deferred to a later lesson",
+  "publishing": "Local only; no push, deployment or publication"
+}

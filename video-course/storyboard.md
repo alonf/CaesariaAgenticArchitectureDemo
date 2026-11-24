@@ -7,7 +7,7 @@ Audience: C#/.NET developers who need to architect, design and implement new age
 or add agentic capabilities to existing applications. No prior agent-development knowledge is
 assumed. Developers who already use the APIs should gain the architectural judgment to decide
 when to use each mechanism and why. Primary language: English. First production:
-Unit 00, a chaptered foundation and environment/debugging lesson, approximately 30 minutes.
+Unit 00, a chaptered foundation and environment/debugging lesson, approximately 33 minutes.
 Later units are separate videos, normally 6–12 minutes.
 
 ## Teaching contract
@@ -18,11 +18,12 @@ the conditions. The main Command Center is where the operator performs the demon
 The Energy Hub and deterministic services own operational truth and physical commands.
 
 This is a self-paced lab course, not a conference recording, product tour, or feature checklist.
-Unit 00 first lays the foundation: audience, course purpose, MAF and Foundry, and architecture
-decisions. Add an orientation through GitHub/README/project structure, Microsoft Learn, the
-existing Foundry project and hosted agent, and the smallest C# request/response example.
-Then explain the example's system of systems, deterministic core, domain Hubs/digital twins,
-and agentic layer. The first live **local environment** view is Aspire, followed by the two UIs.
+Unit 00 first lays the foundation: audience, course purpose, Microsoft Agent Framework and
+Foundry, and architecture decisions. Orient through GitHub/README/project structure and the
+existing Foundry project and hosted agent. Introduce the city with slide **12**, tracing the
+city systems, domain Hubs/digital twins and deterministic core; only then use slide **13** for
+the agentic layer. Teach **slide 14, Context Engineering**, before the first code/tool example.
+Then visit Microsoft Learn and use the short code on slides **16 and 18** before the real code. The first live **local environment** view is Aspire, followed by the two UIs.
 Record actual attach/step/inspect/continue/detach in VS Code followed by Visual Studio 2026,
 using Director controls for both attachments and detachments. Only then begin individual labs.
 Each topic follows concept → concrete walkthrough → short recap. Preserve and improve the
@@ -35,11 +36,26 @@ final response. Truncated values should be expanded or evaluated in Debug Consol
 Mac learners use VS Code; Windows learners may choose either IDE. Synthetic narration and local
 rough-cut status belong in the companion notes and file labeling, not persistent video borders.
 Later labs open on an observable incident and a question the learner can answer by the end. Use a branded-deck
-keyframe only when it explains that decision; the book supplies rationale, the merged .NET 11 `main`
+keyframe only when it explains that decision; the book supplies rationale, the local .NET 11
 checkout supplies commands, and actual execution settles discrepancies. See
 [book alignment](book-alignment.md) and [the revised Unit 00 plan](unit-00-agentic-csharp/production-plan.md).
 Teach in present tense without historical date comparisons. Keep exact version provenance in
-the setup/source notes, not in the spoken explanation.
+the setup/source notes. Spoken version guidance: the lab code is .NET 11; the same Agent
+Framework concepts and patterns apply on .NET 10 LTS. This checkout still requires its declared SDK.
+Always say **Microsoft Agent Framework** or **Agent Framework**, never the acronym.
+Keep the Mac recording for a later lesson; Unit 00 explains the IDE choice without a Mac take.
+
+Context Engineering is the recurring model for later lessons: application/framework assemble
+instructions, user request, history, knowledge and admitted tool definitions; the model may request
+a tool; deterministic code executes it under policy; its result enters the next context/model call.
+Connected agents can be capabilities too. One app invocation can contain multiple exchanges.
+Completion, requests for input, approval gates, cancellation, errors and limits are distinct outcomes.
+A Description attribute supplies metadata; AIFunctionFactory and registration expose the local
+function. Do not invent a tool-class attribute.
+
+In debugger footage, announce entry only after the visible breakpoint. Use synchronized markers
+on actual values. Explicitly distinguish exchange 1 selecting the tool, deterministic execution,
+and exchange 2 using its result to answer. Explain observable protocol data, not private reasoning.
 
 Keep L-417 as the continuing case. After each repair, explicitly show the Director reapplying
 **Lights On Reported by a Client** before another investigation. L-528 is only a controlled
@@ -78,7 +94,7 @@ or publishing is authorized as part of this local course-production task.
 
 | Unit | Title / purpose | Published slide pages | Scenario / stage | Code anchor and completion evidence |
 |---|---|---|---|---|
-| 00 | Understand, run and debug the system | Alon-branded deck; book rationale; GitHub; Microsoft Learn; real app/Foundry/IDE recordings | Foundations, then Lights On / InvestigationAgent for a read-only debugger exercise | Audience and purpose; MAF/Foundry; repo/README/code map; smallest C# call; system of systems and Hubs/twins; Aspire → Director → Command Center → Director attach/inspect/detach in either IDE; actual model/tool/result evidence |
+| 00 | Understand, run and debug the system | Alon-branded deck; book rationale; GitHub; Microsoft Learn; real app/Foundry/IDE recordings | Foundations, then Lights On / InvestigationAgent for a read-only debugger exercise | Audience and purpose; MAF/Foundry; repo/README/code map; slide 12 Hubs/twins → 13 agentic layer → 14 context loop → 16/18 simple C#; Aspire → Director → Command Center → Director attach/inspect/detach in either IDE; actual model/tool/result evidence |
 | 01 | The deterministic foundation | Deck 7, 11–13 | Lights On / Deterministic | `CommandCenterService.cs`, `HttpEnergyHubGateway.cs`; restore schedule, receipt succeeds, lamp off, no invented investigation |
 | 02 | The first agent and its function tool | Deck 15–18 | Lights On / InvestigationAgent | `AGENT_CREATION`, `FUNCTION_TOOL`; real `get_streetlight_state` invocation and unchanged authoritative state |
 | 03 | A conversation that remembers | Deck 20–21 | Lights On / Session | `AGENT_SESSION`, `AgentSessionStore.cs`; ask then Why in the same session, compare a new session |

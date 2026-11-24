@@ -1,9 +1,9 @@
 {
-  "durationSeconds": 1830.488,
-  "sha256": "88163bd353fa2870bf5fe6957b9bfe2f768ef01d8ff54834d9bf2984a2117858",
-  "bytes": 61077717,
-  "scenes": 33,
-  "captionCues": 385,
+  "durationSeconds": 2000.488,
+  "sha256": "b0e5994aa1234643515c9e4dccc1525fdcbb83e96303e5852ff14c377c6a3122",
+  "bytes": 67301075,
+  "scenes": 37,
+  "captionCues": 425,
   "captionOrderAndBounds": "pass",
   "fullDecode": "pass",
   "streams": [
@@ -38,8 +38,8 @@
       "time_base": "1/1000",
       "start": 0,
       "start_time": "0.000000",
-      "end": 441200,
-      "end_time": "441.200000",
+      "end": 443733,
+      "end_time": "443.733000",
       "tags": {
         "title": "Welcome to Agentic C#"
       }
@@ -47,10 +47,10 @@
     {
       "id": 1,
       "time_base": "1/1000",
-      "start": 441200,
-      "start_time": "441.200000",
-      "end": 665333,
-      "end_time": "665.333000",
+      "start": 443733,
+      "start_time": "443.733000",
+      "end": 559800,
+      "end_time": "559.800000",
       "tags": {
         "title": "The code, framework and platform"
       }
@@ -58,10 +58,10 @@
     {
       "id": 2,
       "time_base": "1/1000",
-      "start": 665333,
-      "start_time": "665.333000",
-      "end": 1007867,
-      "end_time": "1007.867000",
+      "start": 559800,
+      "start_time": "559.800000",
+      "end": 1111733,
+      "end_time": "1111.733000",
       "tags": {
         "title": "Architecture and operational authority"
       }
@@ -69,10 +69,10 @@
     {
       "id": 3,
       "time_base": "1/1000",
-      "start": 1007867,
-      "start_time": "1007.867000",
-      "end": 1287467,
-      "end_time": "1287.467000",
+      "start": 1111733,
+      "start_time": "1111.733000",
+      "end": 1395800,
+      "end_time": "1395.800000",
       "tags": {
         "title": "Start and navigate the lab"
       }
@@ -80,10 +80,10 @@
     {
       "id": 4,
       "time_base": "1/1000",
-      "start": 1287467,
-      "start_time": "1287.467000",
-      "end": 1566467,
-      "end_time": "1566.467000",
+      "start": 1395800,
+      "start_time": "1395.800000",
+      "end": 1744600,
+      "end_time": "1744.600000",
       "tags": {
         "title": "Debug in Visual Studio Code"
       }
@@ -91,10 +91,10 @@
     {
       "id": 5,
       "time_base": "1/1000",
-      "start": 1566467,
-      "start_time": "1566.467000",
-      "end": 1669267,
-      "end_time": "1669.267000",
+      "start": 1744600,
+      "start_time": "1744.600000",
+      "end": 1839267,
+      "end_time": "1839.267000",
       "tags": {
         "title": "Debug in Visual Studio 2026"
       }
@@ -102,10 +102,10 @@
     {
       "id": 6,
       "time_base": "1/1000",
-      "start": 1669267,
-      "start_time": "1669.267000",
-      "end": 1830467,
-      "end_time": "1830.467000",
+      "start": 1839267,
+      "start_time": "1839.267000",
+      "end": 2000467,
+      "end_time": "2000.467000",
       "tags": {
         "title": "Verify, practice, and reset"
       }
@@ -113,6 +113,18 @@
   ],
   "renderStyle": "Full-frame; no permanent title or credit strips; normal-speed motion; labeled freeze holds",
   "narration": "Synthetic Andrew Neural review voice",
-  "visualReview": "Sampled all 33 scenes, then inspected full-size tool-boundary, tool-request, tool-payload and Visual Studio Watch frames. Cut Quick Open history from the selected payload segment; labeled reading holds.",
-  "remainingReview": "Author review of pacing, pronunciation and synthetic review voice; Unit 00 only."
+  "editorialChecks": {
+    "slideOrder": "12 Hubs -> 13 agentic layer -> 14 context engineering -> 16/18 simple code",
+    "spokenFrameworkNames": "Microsoft Agent Framework or Agent Framework; no acronym",
+    "toolBreakpoint": "EnergyTools visible before entry narration; source starts 120s",
+    "highlights": "Speech-timed rectangles on genuine values; final tool-request hold verified expanded",
+    "mac": "Deferred",
+    "finalFramesReviewed": [
+      "all scene contact sheets",
+      "L-417 Locals marker",
+      "reportedIsOn true marker",
+      "expanded tool name and arguments marker",
+      "response.Text answer marker"
+    ]
+  }
 }

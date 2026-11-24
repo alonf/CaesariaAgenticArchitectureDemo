@@ -21,8 +21,8 @@ already know the APIs, focus on the decisions, boundaries and evidence behind th
 2. Open [Your First Agent (C#)](https://learn.microsoft.com/en-us/agent-framework/get-started/your-first-agent?pivots=programming-language-csharp)
    and [Add Tools](https://learn.microsoft.com/en-us/agent-framework/get-started/add-tools?pivots=programming-language-csharp).
    Identify construction, instructions, `RunAsync` input and returned response. Compare sample
-   package/API versions with the checkout before copying code. The video reads this example;
-   it does not claim a separate execution of the Learn console sample.
+   package/API versions with the checkout before copying code. The video first explains slide 14 (Context Engineering), then reads the simpler slide 16/18
+   examples. It does not claim a separate execution of the Learn console sample.
 3. In your authorized existing Foundry project, locate its model deployments and Agents page.
    The recording visits `caesarea-dev` and `caesarea-operations` (Hosted, Running, version 13).
    This is orientation to an existing deployment, not a requirement to create one. Learners
@@ -48,6 +48,43 @@ service are separate responsibilities.
   and workflows. You still design the permissions, evidence boundaries and verification.
 
 Checkpoint: explain why an agent saying “done” cannot prove that a lamp changed.
+
+## Trace one agent invocation
+
+Read slides **12 → 13 → 14**: Hubs and operational core, agentic layer, then Context Engineering.
+In slide 14, follow context → model → requested tool → deterministic execution → tool result →
+updated context → next model call. A run may return an answer or ask for input; errors,
+cancellation, limits and approval gates are other possible boundaries.
+
+Read the short code on slides **16 and 18** before opening the full implementation:
+
+- `[Description]` on the method and parameter supplies purpose/argument metadata.
+- `AIFunctionFactory.Create` and adding the function to the agent's tools expose the capability.
+- `EnergyTools` is an ordinary C# class; this local function path has no special tool-class attribute.
+- Registration lives in `Services/OperationsAgent.Api/Services/Capabilities/StreetlightToolsCapability.cs`.
+
+At the post-`RunAsync` breakpoint, inspect `modelFlightRecorder.Exchanges`:
+
+| Evidence | Expected in the recorded request | Meaning |
+|---|---|---|
+| `[0].Received` | `get_streetlight_state` with `assetId: L-417` | First model exchange selects a tool |
+| EnergyTools breakpoint | `assetId == "L-417"`; gateway call | Deterministic code executes the request |
+| `[1].Sent[0]` | Tool-result payload from Hub | Evidence enters the next model context |
+| `[1].Received` and `response.Text` | Lamp currently reported on | Second exchange uses evidence to answer |
+
+Evaluate the long payload in Debug Console. Locate `reportedIsOn: true`, `isDaylight: true`,
+`expectedScheduledState: false`, and `manualOverride: true`. The marker boxes in the video point
+to these genuine values. Your model wording and number of exchanges can vary; inspect your run.
+The recorder exposes messages and tool data, not the model's private reasoning.
+
+Investigate: why is a method description insufficient to expose a tool? Find the registration.
+Explain why one awaited `RunAsync` can involve two model calls. Identify what would change if
+the tool returned a failure or a stale observation. Verify your explanation against the source
+and [Agent Framework function-tool documentation](https://learn.microsoft.com/en-us/agent-framework/agents/tools/function-tools).
+
+The lab targets **.NET 11**. The same Agent Framework concepts/patterns apply on **.NET 10 LTS**;
+this checkout's `global.json` and target frameworks still require the stated .NET 11 SDK.
+The Mac recording is reserved for a later lesson. On macOS use VS Code; on Windows either editor.
 
 ## 1. Clone main and record the baseline
 

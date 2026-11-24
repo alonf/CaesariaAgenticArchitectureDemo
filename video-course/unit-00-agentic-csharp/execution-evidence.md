@@ -47,3 +47,29 @@ output is retained locally in `output/prior-branded-cut/`.
 This is a local review rough cut with synthetic narration, not a published finished course. UI footage uses the running local app and real remote model calls; the lamp hardware is simulated. No cloud deployment, cloud resilience or production scale claim is established. The current main merge and course files were not pushed. Clone instructions require the separate release gate in `lab.md` before distribution.
 
 The automated render validates source existence and card bounds. Final media checks, duration, streams and hashes are recorded in `evidence/media-validation.json`. Review creative pacing and pronunciation before replacing the synthetic review voice or producing later units.
+
+
+## Context Engineering revision
+
+This edit reuses the genuine recordings above; it does not claim a newly executed agent request.
+PowerPoint exported the updated source locally to `Agentic-CSharp-context-source.pdf`.
+`evidence/context-revision.json` pins that PDF. The original PowerPoint remains unchanged.
+Slide 6 has its refreshed title color; city explanation uses 12 then 13, followed by Context
+Engineering (14) before the short construction/tool examples (16/18).
+
+The corrected VS Code tool segment starts at source 120 seconds, where the yellow execution
+marker and `assetId = "L-417"` are visible. The previous 110-second trim was too early. The
+post-RunAsync segment now starts at 145 seconds. First-exchange tool request, next-request
+Hub payload and second-exchange answer are separate teaching segments. Source 322–329.8 shows
+the actual console payload and excludes the later Quick Open. Yellow editorial markers point
+to genuine fields using narration word timings; they do not alter application content.
+Visual Studio cuts are retimed to the attachment, breakpoint and Watch explanations.
+
+Narration always says Microsoft Agent Framework or Agent Framework. Source slide titles
+retain the author's wording. .NET 11 is identified as the lab target, with the same framework
+concepts/patterns applicable on .NET 10 LTS. No Mac recording was attempted.
+
+Validation for this revision: restore, format, build, targeted test project and diff check passed.
+Build: zero warnings/errors. Tests: 469 passed, 4 skipped. Media verification is recorded in
+`evidence/media-validation.json`. The preceding orientation edit is preserved in
+`output/prior-orientation-cut/`. All media and edits remain local for author review.

@@ -7,12 +7,16 @@ The smart city is the recurring example; engineering judgment is the goal.
 
 The improved Unit 00 preserves Alon's branded introduction and architecture foundation. It adds
 **GitHub/README/code structure → Microsoft Learn → the actual Foundry project and hosted agent →
-the simplest C# agent call**. The local walkthrough follows **Aspire → Director → Command Center →
+the architecture and context foundation → simple slide code**. City architecture now starts
+with slide 12, then 13; slide 14 explains Context Engineering before slides 16/18 introduce code. The local walkthrough follows **Aspire → Director → Command Center →
 VS Code → Visual Studio 2026**. Both IDEs attach and detach through Director. Actual motion shows
 variable drill-down, the model-selected function call, and returned Hub data. The edit uses the
 full frame without permanent title/credit strips, with larger teaching-card text and relevant
 deck diagrams. Visual Studio 2026 is Windows-only; Mac learners use VS Code. The main app's
 top-right Walkthrough is shown. Only Unit 00 is produced.
+
+Current edit: **33:20**, with captions and chapter markers. Review points: city architecture
+09:19, Context Engineering 13:13, tool breakpoint 24:59, model exchanges 25:58.
 
 - [Watch the local Unit 00 rough cut](unit-00-agentic-csharp/output/agentic-csharp-unit-00-rough-cut.mp4)
 - [Timestamped shooting script](unit-00-agentic-csharp/shooting-script.md)
@@ -33,7 +37,10 @@ timeouts and the separate successful retry are explicitly distinguished. The ope
 is simulated; model inference is real. No cloud deployment or shared settings change was made.
 The Foundry portal visit is read-only orientation to an existing deployment. It does not switch
 the local debugging exercise to cloud hosting. The preceding branded cut is preserved locally
-under `unit-00-agentic-csharp/output/prior-branded-cut/`.
+under `unit-00-agentic-csharp/output/prior-branded-cut/`; the preceding orientation edit is
+in `output/prior-orientation-cut/`. The current revision adds synchronized debugger markers,
+refreshes slide 6, and uses Microsoft Agent Framework or Agent Framework in narration.
+The Mac take remains for a later lesson.
 
 The older `unit-00-introduction/` and `unit-00-foundations/` pilots remain archived review
 material. Their branding, pinned-branch setup and still-capture approach are superseded here.
