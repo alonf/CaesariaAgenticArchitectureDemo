@@ -1,0 +1,640 @@
+1
+00:00:00,400 --> 00:00:04,343
+This streetlight is on in daylight The
+schedule says it should be off You
+
+2
+00:00:04,355 --> 00:00:08,232
+are the operator can you restore it and
+prove that the command actually worked
+
+3
+00:00:08,568 --> 00:00:13,035
+In this unit you will start the Caesarea
+lab repair L four seventeen check
+
+4
+00:00:13,047 --> 00:00:16,473
+the result at the Energy Hub and reset the
+incident so you can repeat it
+
+5
+00:00:16,808 --> 00:00:20,547
+The streetlight is simulated The services
+and commands you will inspect are
+
+6
+00:00:20,558 --> 00:00:21,681
+real local execution
+
+7
+00:00:25,400 --> 00:00:29,216
+Success is more than a green screen We
+want the Hub to report that the lamp
+
+8
+00:00:29,239 --> 00:00:33,475
+is off the manual override is cleared and
+the last command succeeded after
+
+9
+00:00:33,487 --> 00:00:37,399
+confirmation from the simulator We will
+also inspect the command's correlation
+
+10
+00:00:37,410 --> 00:00:41,959
+identifier Right now the override tells us
+a condition of the system It does
+
+11
+00:00:41,970 --> 00:00:45,454
+not tell us why somebody left the light on
+That distinction will matter when
+
+12
+00:00:45,466 --> 00:00:48,961
+we add the Operations Agent and
+investigate the cause in later lessons
+
+13
+00:00:55,400 --> 00:01:00,261
+Microsoft Agent Framework gives our C
+sharp application agents tools sessions
+
+14
+00:01:00,377 --> 00:01:03,996
+and workflows An agent can choose what to
+inspect next when the evidence
+
+15
+00:01:04,007 --> 00:01:08,336
+changes the investigation But the known
+repair path we need today is deterministic
+
+16
+00:01:08,672 --> 00:01:12,410
+We do not need a model to restore a
+schedule The companion book starts with
+
+17
+00:01:12,422 --> 00:01:16,241
+this architectural choice use the least
+autonomy that solves the requirement
+
+18
+00:01:16,577 --> 00:01:20,836
+Later the agent will observe through tools
+and infer an explanation Permission
+
+19
+00:01:20,848 --> 00:01:23,834
+to change city state still belongs at an
+enforced service boundary
+
+20
+00:01:30,400 --> 00:01:34,250
+Start with the companion lab beside the
+video It gives you the repository
+
+21
+00:01:34,262 --> 00:01:38,371
+URL and the exact dot net eleven revision
+used here Do not assume GitHub
+
+22
+00:01:38,382 --> 00:01:42,480
+main matches this recording Clone the
+repository fetch the upgrade branch
+
+23
+00:01:42,781 --> 00:01:46,021
+and check out the pinned commit Then
+compare git rev parse HEAD with the
+
+24
+00:01:46,033 --> 00:01:50,130
+baseline file I am recording from a clean
+checkout of that application revision
+
+25
+00:01:50,466 --> 00:01:54,181
+The September book and slide deck explain
+the design but their older package
+
+26
+00:01:54,193 --> 00:01:56,808
+versions are not the installation
+instructions for this lab
+
+27
+00:02:05,400 --> 00:02:10,365
+You need Git PowerShell seven a browser
+and the SDK selected by global dot
+
+28
+00:02:10,377 --> 00:02:14,690
+json This baseline asks for dot net eleven
+point zero point one hundred and
+
+29
+00:02:14,702 --> 00:02:19,401
+permits compatible later feature bands Run
+restore build and the test project
+
+30
+00:02:19,412 --> 00:02:23,406
+command shown in the lab Wait for them to
+succeed before continuing You do
+
+31
+00:02:23,417 --> 00:02:27,746
+not need Azure credentials Docker or Azure
+Functions for this lesson If the
+
+32
+00:02:27,757 --> 00:02:32,850
+SDK cannot be resolved install the
+required SDK and reopen your shell
+changing
+
+33
+00:02:32,862 --> 00:02:34,933
+the version constraint would change the
+experiment
+
+34
+00:02:45,400 --> 00:02:48,675
+Start the AppHost with the command in the
+lab and keep that terminal open
+
+35
+00:02:49,007 --> 00:02:52,757
+For this local exercise we start it
+directly The presenter's convenience
+
+36
+00:02:52,769 --> 00:02:56,542
+script also prepares hosted demonstrations
+and may refresh a shared work
+
+37
+00:02:56,565 --> 00:03:00,755
+order which we do not need here Aspire
+coordinates the processes and gives
+
+38
+00:03:00,767 --> 00:03:04,540
+you their addresses Open your own printed
+dashboard login link then use the
+
+39
+00:03:04,551 --> 00:03:08,382
+resource links for Demo Control and
+Command Center Keep the login token out
+
+40
+00:03:08,394 --> 00:03:12,584
+of screenshots you share A dashboard
+saying started is not enough wait for
+
+41
+00:03:12,595 --> 00:03:14,042
+the city services to respond
+
+42
+00:03:20,400 --> 00:03:24,644
+There are two browser surfaces Demo
+Director is our lab bench it creates
+
+43
+00:03:24,656 --> 00:03:28,637
+the starting conditions and selects a
+stage Command Center is the operator's
+
+44
+00:03:28,649 --> 00:03:32,919
+application that is where we perform the
+repair Behind it the Command Center
+
+45
+00:03:32,943 --> 00:03:37,827
+API calls the Energy Hub and only the Hub
+talks to SmartPole SmartPole simulates
+
+46
+00:03:37,838 --> 00:03:41,762
+the physical device We will read the Hub
+directly to check what the operational
+
+47
+00:03:41,774 --> 00:03:45,431
+system knows rather than treating the
+browser's presentation as independent
+
+48
+00:03:45,443 --> 00:03:45,790
+proof
+
+49
+00:03:50,400 --> 00:03:54,667
+In the Director choose beat one
+Deterministic Read the preparation preview
+
+50
+00:03:54,679 --> 00:03:58,903
+before confirming We want Lights On
+Reported by a Client which the code calls
+
+51
+00:03:58,915 --> 00:04:03,336
+Forgotten Override These names refer to
+the same starting fixture The stage
+
+52
+00:04:03,348 --> 00:04:07,179
+decides which capabilities are available
+the scenario decides the condition
+
+53
+00:04:07,190 --> 00:04:11,623
+of the city Confirm preparation and check
+readiness If you previously repaired
+
+54
+00:04:11,635 --> 00:04:15,755
+the light explicitly reapply this scenario
+Merely selecting a stage that
+
+55
+00:04:15,767 --> 00:04:18,822
+is already active does not prove that you
+recreated the anomaly
+
+56
+00:04:30,400 --> 00:04:34,656
+Switch to Command Center Find L four
+seventeen on the North Promenade Read
+
+57
+00:04:34,667 --> 00:04:38,035
+the customer report and the operational
+fields before touching the action
+
+58
+00:04:38,371 --> 00:04:42,850
+The lamp is reported on it is daylight the
+schedule expects off and the override
+
+59
+00:04:42,862 --> 00:04:47,711
+is active The controller is healthy At
+this stage we have no agent investigation
+
+60
+00:04:48,047 --> 00:04:51,704
+The system can detect the discrepancy and
+execute a predefined correction
+
+61
+00:04:52,040 --> 00:04:55,512
+It cannot explain the maintenance decision
+merely because we gave the scenario
+
+62
+00:04:55,524 --> 00:04:56,380
+a suggestive name
+
+63
+00:05:00,400 --> 00:05:05,107
+Now make the independent check In a second
+terminal set hub base to the HTTPS
+
+64
+00:05:05,153 --> 00:05:08,996
+Energy Hub address from Aspire then run
+the read command in the lab This
+
+65
+00:05:09,007 --> 00:05:13,058
+calls the Hub's asset endpoint for L four
+seventeen Compare reported state
+
+66
+00:05:13,394 --> 00:05:17,989
+schedule override and revision with the
+browser Store this response as before
+
+67
+00:05:18,325 --> 00:05:22,144
+The revision is a version of authoritative
+state not a value you should copy
+
+68
+00:05:22,156 --> 00:05:26,206
+from my recording Our read has its own
+correlation identifier the repair
+
+69
+00:05:26,218 --> 00:05:29,679
+will have another one We will use the
+repair identifier when joining its
+
+70
+00:05:29,690 --> 00:05:30,165
+events
+
+71
+00:05:40,400 --> 00:05:44,077
+Return to Command Center and click Restore
+Scheduled Mode once Watch the
+
+72
+00:05:44,088 --> 00:05:48,440
+request complete The operator is
+initiating a narrow deterministic
+operation
+
+73
+00:05:48,776 --> 00:05:52,202
+There is no model deciding whether to
+press the button and no claim here
+
+74
+00:05:52,213 --> 00:05:56,091
+of a production identity deployment The
+Hub computes the target sends the
+
+75
+00:05:56,102 --> 00:06:00,269
+device command and waits for a result A
+desired target can change while that
+
+76
+00:06:00,281 --> 00:06:04,054
+work is pending We must wait for
+confirmation before saying that the
+reported
+
+77
+00:06:04,065 --> 00:06:05,200
+lamp state has changed
+
+78
+00:06:15,400 --> 00:06:20,188
+Read the Hub again The expected outcome is
+reported off desired off and manual
+
+79
+00:06:20,200 --> 00:06:24,899
+override false Inspect last command it
+must say Succeeded with a completion
+
+80
+00:06:24,910 --> 00:06:28,625
+time and a correlation identifier Check
+that the revision advanced from the
+
+81
+00:06:28,637 --> 00:06:33,000
+snapshot you saved Then filter the Hub
+activity by this command's identifier
+
+82
+00:06:33,093 --> 00:06:36,820
+and read the confirmation The lab includes
+checks that fail if these conditions
+
+83
+00:06:36,832 --> 00:06:41,322
+are missing This combination is our
+evidence The browser changing color or
+
+84
+00:06:41,334 --> 00:06:45,836
+an HTTP request being accepted would not
+be enough We have proven the local
+
+85
+00:06:45,848 --> 00:06:48,776
+simulated repair not delivery to a real
+streetlight
+
+86
+00:07:00,400 --> 00:07:04,671
+Open Energy Hub Service dot cs in Restore
+Scheduled Mode Async Look at the
+
+87
+00:07:04,682 --> 00:07:08,282
+call to Set Lamp State Async and the
+success branch immediately after it
+
+88
+00:07:08,614 --> 00:07:12,526
+Reported Is On is assigned from the
+confirmed device result and the override
+
+89
+00:07:12,538 --> 00:07:16,704
+is cleared there Earlier in the method a
+pending command can record the desired
+
+90
+00:07:16,716 --> 00:07:20,743
+target without inventing a reported
+success This is why the Energy Hub remains
+
+91
+00:07:20,755 --> 00:07:25,130
+the operational authority even after we
+add an agent The agent may propose
+
+92
+00:07:25,142 --> 00:07:28,961
+or request work a confident explanation
+cannot replace this confirmation
+
+93
+00:07:28,973 --> 00:07:29,401
+boundary
+
+94
+00:07:40,400 --> 00:07:44,424
+Back in Command Center the lamp is off We
+have corrected the condition but
+
+95
+00:07:44,436 --> 00:07:47,943
+we still have not established the
+technician's reason In the next lessons
+
+96
+00:07:48,139 --> 00:07:52,202
+the Operations Agent will read current
+state follow the conversation and
+
+97
+00:07:52,213 --> 00:07:56,484
+retrieve a work order That work order can
+be evidence A similar remembered
+
+98
+00:07:56,496 --> 00:08:00,373
+incident is only a lead to investigate
+Keeping those categories separate
+
+99
+00:08:00,385 --> 00:08:03,845
+prevents yesterday's explanation from
+becoming today's operational truth
+
+100
+00:08:04,181 --> 00:08:07,167
+The same L four seventeen case will let us
+see the difference
+
+101
+00:08:10,400 --> 00:08:14,818
+Before repeating the exercise reset the
+lab deliberately Go back to the Director
+
+102
+00:08:14,841 --> 00:08:18,730
+and reapply Lights On Reported by a Client
+with Deterministic still selected
+
+103
+00:08:19,065 --> 00:08:22,549
+Return to the main app and read the Hub
+again The lamp should be on with
+
+104
+00:08:22,561 --> 00:08:26,612
+the override active and the controller
+healthy Save a new before snapshot
+
+105
+00:08:26,947 --> 00:08:30,813
+Do not compare a new repair with a
+snapshot from an earlier scenario This
+
+106
+00:08:30,825 --> 00:08:34,528
+visible reset is how we reuse the incident
+in every lesson without hiding
+
+107
+00:08:34,540 --> 00:08:35,709
+a preparation step from you
+
+108
+00:08:45,400 --> 00:08:49,320
+Pause the video now Starting from the
+reset fixture read and save the Hub
+
+109
+00:08:49,332 --> 00:08:53,544
+state Perform the restore from Command
+Center Then verify the Hub's reported
+
+110
+00:08:53,556 --> 00:08:58,753
+state override command receipt and
+revision without following my clicks
+Explain
+
+111
+00:08:58,764 --> 00:09:02,723
+three things out loud which service owns
+reported state what distinguishes
+
+112
+00:09:02,734 --> 00:09:06,021
+accepting a command from completing it and
+what you still do not know about
+
+113
+00:09:06,033 --> 00:09:10,605
+the cause The companion lab contains
+copyable commands and checkpoints Take
+
+114
+00:09:10,616 --> 00:09:14,355
+the time you need then return for the
+expected result and a recovery tip
+
+115
+00:09:25,400 --> 00:09:29,366
+Your answer should name the Energy Hub as
+owner of the operational twin Success
+
+116
+00:09:29,378 --> 00:09:33,440
+requires the confirmed off state and a
+succeeded correlated command not just
+
+117
+00:09:33,452 --> 00:09:37,653
+a changed desired target We still need
+evidence for the cause If your result
+
+118
+00:09:37,665 --> 00:09:41,542
+differs check the fixture first Controller
+Fault is designed to fail the
+
+119
+00:09:41,554 --> 00:09:46,010
+healthy-device expectation while Normal
+Operation is already off Reapply
+
+120
+00:09:46,021 --> 00:09:50,118
+Lights On Reported by a Client verify a
+healthy controller and Deterministic
+
+121
+00:09:50,130 --> 00:09:54,621
+stage reread the Hub and retry Do not keep
+clicking against an unexplained
+
+122
+00:09:54,632 --> 00:09:57,989
+failed receipt Inspect it and restore the
+starting conditions
+
+123
+00:10:10,400 --> 00:10:15,072
+You can read this solution in Visual
+Studio 2026 or VS Code We will attach
+
+124
+00:10:15,084 --> 00:10:18,637
+a debugger and single step when the first
+agent's tool call gives us a useful
+
+125
+00:10:18,649 --> 00:10:22,630
+decision to inspect you do not need that
+setup to finish today's lab Read
+
+126
+00:10:22,642 --> 00:10:26,264
+chapters six and fourteen of the companion
+book for the rationale and lab
+
+127
+00:10:26,276 --> 00:10:30,338
+pattern Reset the anomaly for the next
+lesson or stop the AppHost using the
+
+128
+00:10:30,350 --> 00:10:34,760
+lab's cleanup instructions You can now
+operate and verify the city Next we
+
+129
+00:10:34,771 --> 00:10:38,637
+will ask what the agent actually observed
+and what it is justified in concluding
