@@ -1,68 +1,61 @@
 # Caesarea: building agentic systems in .NET
 
-Course author and source presentations: Alon Fliess. Video production branch:
-`video/maf-course-introduction`. Narration is synthetic and is not an imitation of the presenter.
+Course author and source presentations: Alon Fliess. Production branch:
+`video/maf-course-introduction`. All course files and generated media stay local.
 
-Start with [the course storyboard](storyboard.md). The first deliverable is
-[Unit 00: MAF and the Caesarea lab](unit-00-introduction/storyboard.md).
-Subsequent units are storyboarded, not recorded yet.
+Start with the [course storyboard](storyboard.md). Unit 00 now lays the foundation **before**
+the demo: course purpose, Microsoft Agent Framework, system of systems, deterministic core,
+domain Hubs and digital twins, then the agentic layer. The environment walkthrough follows
+**Aspire → Director → Command Center → VS Code → Visual Studio 2026**. Individual labs follow
+only after learners can run and debug the system. Later units are not recorded.
 
-**Current deliverable:** Unit00's 10:45 narrated **edited-still rough cut**, with real app captures,
-saved Hub evidence, captions and a companion lab. Open the local
-[MP4](unit-00-introduction/output/caesarea-unit-00-rough-cut.mp4) and
-[captions](unit-00-introduction/output/unit-00-introduction.en.srt).
-This is not a continuous screencast. Startup/Aspire footage and the Director reset sequence still
-need pickups; a verified API reset is explicitly labeled in this cut. See
-[execution evidence and limitations](unit-00-introduction/execution-evidence.md).
+The revised Unit 00 materials are:
 
-The source decks are the unchanged September 2026 H08 and W20 release PDFs. This course uses
-the pinned November .NET 11 baseline. PDF **page numbers**, including animation keyframes, are
-the slide references throughout this folder. Old runbook slide numbers are not interchangeable.
+- [Production plan and H08 recording crosswalk](unit-00-foundations/production-plan.md)
+- [Timestamped shooting script](unit-00-foundations/shooting-script.md)
+- [Copyable setup/debugging lab and reset](unit-00-foundations/lab.md)
+- [Execution evidence and recording gaps](unit-00-foundations/execution-evidence.md)
+- [Local revised rough cut](unit-00-foundations/output/caesarea-unit-00-rough-cut.mp4)
+- [Captions](unit-00-foundations/output/unit-00-introduction.en.srt)
 
-The branch was created from `upgrade/net11-foundry-insights-routines`, preserving its existing
-uncommitted durable-demo changes. Unit00 uses a separate clean worktree at
-`89d5a513be97301857dd4f156ce0773103712d51`; see its [baseline](unit-00-introduction/baseline.md).
-No merge to main is needed. Do not tell viewers a local-only course branch is available remotely.
+The revised cut uses original slides, edited **actual still captures**, and synthetic narration.
+It is not a continuous screencast or an imitation of the presenter's voice. Aspire, both UIs,
+and real VS Code and Visual Studio 2026 attach/step/inspect/detach cycles were captured.
+The debugger timeouts and separate
+successful read-only retry are explicitly distinguished. See the evidence file before recording
+or describing this as a finished intro.
 
-The revised course is a self-paced lab around L-417, not a feature checklist. Start with the
-[timestamped shooting script](unit-00-introduction/shooting-script.md) and
-[companion lab](unit-00-introduction/lab.md). Produce only Unit00 and stop for review.
-Final rough-cut captions are in `unit-00-introduction/output/`; the draft file remains a script export.
+The earlier 10:45 repair-first pilot under `unit-00-introduction/` is archived review material.
+Its repair walkthrough belongs in Lab 01; its deferred-debugger teaching order is superseded.
 
-Production sources, narration, chapter metadata and rebuild tools live here. Downloaded decks,
-raw captures, generated speech and rendered videos are ignored to keep large binaries and local
-screen content out of Git. The video is delivered locally; it is not uploaded or published.
+## Source and executable baseline
 
-## Source material
-
-- [H08 release PDF](https://github.com/alonf/CaesariaAgenticArchitectureDemo/releases/download/vslive-san-diego-2026/VSLive-SanDiego-2026-H08.pdf)
-- [W20 release PDF](https://github.com/alonf/CaesariaAgenticArchitectureDemo/releases/download/vslive-san-diego-2026/VSLive-SanDiego-2026-W20.pdf)
-- [Companion book and chapter alignment](book-alignment.md)
-- [Repository setup](../README.md#run-locally)
-- [Deployment runbook](../docs/deployment.md)
-- [Current stage catalog](../Services/DemoScenario.Api/Services/StageCatalog.cs)
+- [Book rationale and chapter alignment](book-alignment.md)
+- [H08 deck](https://github.com/alonf/CaesariaAgenticArchitectureDemo/releases/download/vslive-san-diego-2026/VSLive-SanDiego-2026-H08.pdf)
+- Supplied H08 recording: transcript reviewed; interval mapping in the production plan.
 - [VS Code helper](../tools/vscode-demo-attach/README.md)
 - [Visual Studio helper](../tools/visualstudio-demo-attach/README.md)
-- [Durable recovery runbook](../docs/runbooks/durable-recovery.md)
-- [Microsoft Agent Framework overview](https://learn.microsoft.com/agent-framework/overview)
-- [Visual Studio stepping](https://learn.microsoft.com/visualstudio/debugger/navigating-through-code-with-the-debugger)
+- [Runtime stage catalog](../Services/DemoScenario.Api/Services/StageCatalog.cs)
 
-The September decks illustrate architecture and historical API examples. Use the compiled
-repository for current signatures. Harness agents, group chat, handoffs and generic governance
-middleware are conceptual comparisons where the repository does not implement them.
+Use the book for rationale, the slides for visuals, and compiled source/observed execution for
+commands and signatures. Do not narrate historical date comparisons. PDF references are **page
+numbers**, including animation keyframes. The course baseline is the clean .NET 11 commit
+`89d5a513be97301857dd4f156ce0773103712d51`, not an assumption about `main`.
+No merge to main is needed for local production. Existing unrelated working changes are preserved.
 
-## Local production tools
+## Rebuild locally
 
-The editable narration and actions are `unit-00-introduction/scenes.json`.
-Run `python -X utf8 video-course/build_intro.py --phase audio` to create synthetic narration;
-then `python -X utf8 video-course/prepare_script.py` exports the timed script and draft captions.
-The audio phase sends only the reviewed narration to Microsoft's speech endpoint via edge-tts.
-It reads no model credentials. Python requires PyMuPDF; voice generation requires edge-tts;
-rendering requires FFmpeg/ffprobe. Downloaded source PDFs are checked by SHA-256.
+`unit-00-foundations/lesson.py` contains narration, screen actions and source-slide references.
+The renderer exports scenes.json, the timed script, captions, chapters and the MP4.
 
-`--phase assets` renders original slide frames, code/setup cards, and clearly labeled cards from
-the saved actual Hub responses. It never creates a simulated screenshot or console transcript. Actual app captures must be
-supplied under the ignored unit assets folder using the names in scenes.json. `--phase video`
-refuses to render when any required capture is missing. Its still-capture edit is explicitly named
-`caesarea-unit-00-rough-cut.mp4`; a finished motion edit still needs recorded actions and review.
-Do not fill missing captures with generated app output.
+```powershell
+python -X utf8 video-course/build_foundations.py --phase assets
+python -X utf8 video-course/build_foundations.py --phase audio
+python -X utf8 video-course/build_foundations.py --phase video
+```
+
+Requires Python with PyMuPDF/Pillow, FFmpeg/ffprobe, and edge-tts (local vendor location supported).
+The audio phase sends only the reviewed narration to Microsoft's speech endpoint. It reads no
+model credentials. Downloaded source PDFs are checked by SHA-256. Raw captures, source downloads,
+speech and rendered media are ignored by Git. The renderer refuses missing required captures;
+it does not synthesize fake app or debugger evidence. Stop after Unit 00 for review.

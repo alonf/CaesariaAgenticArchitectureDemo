@@ -7,15 +7,15 @@ Page references below are PDF pages. Reviewed all chapter takeaways and the rele
 MAF, hosting and setup passages; this is a course alignment review, not a line-by-line technical
 audit of every assertion in the book.
 
-The book's Appendix A (p198) fixes its examples at commit
-`59cfd13ec32af7c6adc000e00cc56945d65e87c2`, .NET 10. Its September package and platform-status
-tables are historical. Do not copy them as November setup instructions or current availability
-claims. Use the course baseline, global.json, current source and observed execution instead.
+Production provenance: the downloaded book's Appendix A (p198) identifies commit
+`59cfd13ec32af7c6adc000e00cc56945d65e87c2`. Use the pinned course baseline, global.json,
+compiled source and observed execution for commands and signatures. Do not narrate comparisons
+between editions or dates; teach the architecture in present tense.
 
 | Learning problem | Book rationale | Course application |
 |---|---|---|
-| Who owns the city? | Ch4 pp39–52; Ch6 pp66–77 | Unit00: independent Hub read, desired versus reported state, simulator-confirmed receipt |
-| When is an agent useful? | Ch6 pp69–76; Ch7 pp78–89 | Fixed repair path first; agent added when intermediate evidence changes the next investigation step |
+| Who owns the city? | Ch4 pp39–52; Ch6 pp66–77 | Unit00: system of systems, domain Hubs, twin semantics, independent read; Lab01: confirmed repair |
+| When is an agent useful? | Ch6 pp69–76; Ch7 pp78–89 | Unit00 decision map before the app; Lab01 fixed repair; investigation grows when evidence changes the next step |
 | Can a conversation prove current facts? | Ch7 pp86–89 | Session continuity is context; every current operational assertion needs a fresh authoritative read |
 | Why is L-417 on? | Ch8 pp90–102 | Work order is evidence with provenance; memory is a hypothesis; skill is procedure |
 | Can the capability cross a boundary? | Ch9 pp103–115 | MCP discovery is not permission; correlate the request with the Hub |
@@ -25,11 +25,11 @@ claims. Use the course baseline, global.json, current source and observed execut
 | How do we know it worked? | Ch13 pp163–183 | Deterministic invariants and observed tools/outcomes alongside judged answer quality |
 | Can the learner reproduce it? | Ch14 pp184–197 | Pinned clone, exact setup, checkpoints, resets and failure recovery in every lab |
 
-Unit00 uses the book's deterministic foundation and lab structure. It does not narrate the entire
-book or all later framework features. Book p189's successful restore becomes a learner-verifiable
-Hub state/receipt check. Book p188's Director preparation becomes an explicit reset between attempts.
-The first intro draft spent too long on IDE setup; attachment and stepping now belong in Unit02.
+Unit00 teaches purpose, MAF, the deterministic foundation, Hubs/twins and the agentic layer before
+showing Aspire and the two UIs. It includes attach/step/inspect/continue/detach in VS Code followed
+by Visual Studio 2026 before any individual lab. Book p189's restore belongs in Lab01 with a
+learner-verifiable Hub receipt/state check. Book p188's preparation becomes an explicit reset.
 
-The November durable recovery beat is an extension beyond the frozen book baseline. Explain its
+The durable recovery beat needs its own executable evidence. Explain its
 persisted orchestration separately from the in-memory workflow/approval examples. Routines and
 Insights remain optional future units; require actual evidence before recording claims of execution.

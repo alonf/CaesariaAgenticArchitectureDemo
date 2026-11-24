@@ -1,8 +1,9 @@
 # Course storyboard
 
-Prepared November 24, 2026. Audience: C#/.NET developers who can build a web API and want to
+Audience: C#/.NET developers who can build a web API and want to
 understand, run and debug an agentic application. Primary language: English. First production:
-Unit 00, approximately 8–12 minutes. Later units are separate videos, normally 6–12 minutes.
+Unit 00, a chaptered foundation and environment/debugging lesson, approximately 20–30 minutes.
+Later units are separate videos, normally 6–12 minutes.
 
 ## Teaching contract
 
@@ -12,10 +13,15 @@ the conditions. The main Command Center is where the operator performs the demon
 The Energy Hub and deterministic services own operational truth and physical commands.
 
 This is a self-paced lab course, not a conference recording, product tour, or feature checklist.
-Open on an observable incident and a question the learner can answer by the end. Use an H08
+Unit 00 first lays the foundation: course purpose, MAF, system of systems, deterministic core,
+domain Hubs/digital twins, and the agentic layer. Then show Aspire, the two UIs, and actual
+attach/step/inspect/continue/detach in VS Code followed by Visual Studio 2026. Only then begin labs.
+Later labs open on an observable incident and a question the learner can answer by the end. Use an H08
 keyframe only when it explains that decision; the book supplies rationale, the pinned .NET 11
 checkout supplies commands, and actual execution settles discrepancies. See
-[book alignment](book-alignment.md) and [the Unit 00 shooting script](unit-00-introduction/shooting-script.md).
+[book alignment](book-alignment.md) and [the revised Unit 00 plan](unit-00-foundations/production-plan.md).
+Teach in present tense without historical date comparisons. Keep exact version provenance in
+the setup/source notes, not in the spoken explanation.
 
 Keep L-417 as the continuing case. After each repair, explicitly show the Director reapplying
 **Lights On Reported by a Client** before another investigation. L-528 is only a controlled
@@ -25,6 +31,9 @@ subject. Each lesson records what was observed, what was inferred, who may autho
 and the independent service evidence of its outcome. Never end with a pending approval or paused debugger.
 
 ## Repeatable unit structure
+
+This table applies to the labs after Unit 00. The foundation/onboarding unit follows its required
+architecture → environment → both debuggers sequence instead.
 
 | Segment | Approximate time | Picture and narration | Evidence |
 |---|---:|---|---|
@@ -51,7 +60,7 @@ or publishing is authorized as part of this local course-production task.
 
 | Unit | Title / purpose | Published slide pages | Scenario / stage | Code anchor and completion evidence |
 |---|---|---|---|---|
-| 00 | Repair L-417 and prove it happened | H08 7, 13, 15 only where useful | Lights On / Deterministic | Start pinned lab, prepare fixture, restore in main UI, GET Hub state/receipt, reset and repeat; debugger setup deferred |
+| 00 | Understand, run and debug the system | H08 3–8, 11–15; supplied H08 recording | Foundations, then Lights On / InvestigationAgent for a read-only debugger exercise | Purpose; MAF; system of systems; Hubs/twins; deterministic and agentic layers; Aspire → Director → Command Center → VS Code attach/inspect/detach → VS2026 attach/step/result/detach |
 | 01 | The deterministic foundation | H08 7, 11–13 | Lights On / Deterministic | `CommandCenterService.cs`, `HttpEnergyHubGateway.cs`; restore schedule, receipt succeeds, lamp off, no invented investigation |
 | 02 | The first agent and its function tool | H08 15–18 | Lights On / InvestigationAgent | `AGENT_CREATION`, `FUNCTION_TOOL`; real `get_streetlight_state` invocation and unchanged authoritative state |
 | 03 | A conversation that remembers | H08 20–21 | Lights On / Session | `AGENT_SESSION`, `AgentSessionStore.cs`; ask then Why in the same session, compare a new session |
@@ -72,26 +81,26 @@ or publishing is authorized as part of this local course-production task.
 
 ## Detailed shooting beats
 
-### 00 — Repair L-417 and prove it happened (produce first)
+### 00 — Foundations and practical onboarding (revise first)
 
-Open within the first 30 seconds on L-417 reported On in daylight. Promise one outcome: the learner
-will restore scheduled mode and prove the simulator-confirmed result at the Energy Hub. Follow
-the [timed shooting script](unit-00-introduction/shooting-script.md) and
-[copyable lab](unit-00-introduction/lab.md). These replace the earlier slide-led introduction.
-Use no model call or cloud deployment. Show the exact local baseline and prerequisites, Director
-preparation, Command Center action, actual Hub JSON before/after, a short readable code excerpt,
-and an explicit reset. Close with pause-and-do, expected receipt/state, and recovery from the wrong
-fixture. Mark SmartPole as simulated and the pilot as a rough cut if it uses edited screen captures.
+Follow [the revised production plan](unit-00-foundations/production-plan.md). First explain what
+the learner will build and why the architecture is divided this way. Define MAF and its model/tool
+loop; explain domain Hubs and operational twins before adding agentic investigation. Introduce the
+learning journey through requirements, tradeoffs and verification, then teach environment use.
 
-Pilot production status: actual Director preparation and the main-app repair were executed and
-captured as stills. The rough cut uses actual Hub responses for after-state/activity and an explicitly
-labeled API reset after the capture connection closed. Startup/Aspire and Director-reset motion
-shots remain pickups before a finished release. See Unit00 execution-evidence.md; do not present
-the rough cut as fulfillment of those missing shots.
+The first live environment view is Aspire, followed by Director and Command Center. Use a simple
+read-only InvestigationAgent request to teach the mechanics of debugging: attach VS Code, arm a
+stop, ask in the main app, inspect tool arguments and real model results, resume and detach. Repeat
+in Visual Studio 2026 with single stepping and variable inspection. Confirm the service remains
+alive and no lamp command ran. This orientation uses existing model inference; it does not deploy.
+
+The earlier repair-first rough cut under `unit-00-introduction/` is archived review material.
+Its deterministic repair content is useful for Lab 01, but does not satisfy the revised introduction.
+Do not present old captures as new debugger footage. Finish only revised Unit00, then stop for review.
 
 ### 01 — Deterministic city
 
-Continue from the Unit 00 repair: reset L-417 explicitly, then explain the distinction between
+Continue from the Unit 00 environment orientation: prepare L-417 explicitly, then explain the distinction between
 detecting an anomaly and investigating its cause. Use H08 11 if helpful.
 In Director select **1 Deterministic**, accept the listed preparation, and open Command Center.
 Show reported On, schedule Off, override Yes. Click **Restore Scheduled Mode**. Follow the
@@ -238,7 +247,8 @@ record a clearly labeled explanation of setup and limitations; never fabricate a
 ## Capture and editing rules
 
 - Preserve Alon Fliess's deck attribution. Show original slides, not rewritten approximations.
-- Use the current code for executable API details and label September deck examples as historical.
+- Use the compiled course checkout for executable API details; teach the deck's architecture in
+  present tense without historical date comparisons.
 - Keep tenant IDs, tokens, private work orders, notifications and unrelated desktop content out.
 - Crop to the relevant app. Include readable code at 1080p, with a tighter crop when needed.
 - Every chapter has narration and subtitles. Explain the outcome before changing screens.

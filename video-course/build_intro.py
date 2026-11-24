@@ -22,6 +22,7 @@ ASSETS = UNIT / "assets"
 OUT = UNIT / "output"
 SCENES = json.loads((UNIT / "scenes.json").read_text(encoding="utf-8"))
 VOICE = "en-US-AndrewNeural"
+SPEECH_RATE = "+8%"
 
 
 def run(*args, cwd=BUILD):
@@ -42,7 +43,7 @@ async def speech():
     for scene in SCENES:
         target = ASSETS / f"{scene['id']}.mp3"
         boundary = ASSETS / f"{scene['id']}-words.json"
-        digest = hashlib.sha256((VOICE + "+8%" + scene["narration"]).encode()).hexdigest()
+        digest = hashlib.sha256((VOICE + SPEECH_RATE + scene["narration"]).encode()).hexdigest()
         stamp = ASSETS / f"{scene['id']}-voice.sha256"
         if target.exists() and boundary.exists() and stamp.exists() and stamp.read_text() == digest:
             print(f"Speech {scene['id']}: cached", flush=True)
@@ -52,7 +53,7 @@ async def speech():
                 words = []
                 temporary = target.with_suffix(".part")
                 with temporary.open("wb") as stream:
-                    async for event in edge_tts.Communicate(scene["narration"], VOICE, rate="+8%", boundary="WordBoundary").stream():
+                    async for event in edge_tts.Communicate(scene["narration"], VOICE, rate=SPEECH_RATE, boundary="WordBoundary").stream():
                         if event["type"] == "audio":
                             stream.write(event["data"])
                         elif event["type"] == "WordBoundary":
@@ -173,7 +174,7 @@ def render_video():
         length = math.ceil(max(duration(audio) + 0.8, scene.get("planned_seconds", 0)) * 15) / 15
         title = BUILD / f"title-{scene['id']}.txt"
         title.write_text(f"CAESAREA  /  UNIT 00     {scene['title']}", encoding="utf-8", newline="\n")
-        source = "Alon Fliess | H08, September 2026 | PDF page " + scene["visual"].split(":")[1] if scene["visual"].startswith("H08:") else "ROUGH CUT | Edited still captures and evidence cards | Simulated device | 89d5a51"
+        source = scene.get("credit") or ("Alon Fliess | H08 | PDF page " + scene["visual"].split(":")[1] if scene["visual"].startswith("H08:") else "ROUGH CUT | Edited still captures and evidence cards | Simulated device | 89d5a51")
         credit = BUILD / f"credit-{scene['id']}.txt"
         credit.write_text(source, encoding="utf-8", newline="\n")
         clip = BUILD / f"clip-{scene['id']}.mp4"
