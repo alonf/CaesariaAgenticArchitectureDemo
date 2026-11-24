@@ -1,0 +1,42 @@
+{
+  "durationSeconds": 1523.488,
+  "sizeBytes": 47639267,
+  "sha256": "89a412b046193de57daa49a2365728022830f89fe57025de50d33491c1422ab5",
+  "completeDecode": "passed",
+  "captionCues": 323,
+  "captionTiming": "monotonic, inside duration",
+  "scenes": 29,
+  "chapters": 6,
+  "streams": [
+    {
+      "codec_type": "video",
+      "codec_name": "h264",
+      "width": 1920,
+      "height": 1080,
+      "sample_rate": null
+    },
+    {
+      "codec_type": "audio",
+      "codec_name": "aac",
+      "width": null,
+      "height": null,
+      "sample_rate": "48000"
+    },
+    {
+      "codec_type": "subtitle",
+      "codec_name": "mov_text",
+      "width": null,
+      "height": null,
+      "sample_rate": null
+    },
+    {
+      "codec_type": "data",
+      "codec_name": "bin_data",
+      "width": null,
+      "height": null,
+      "sample_rate": null
+    }
+  ],
+  "visualReview": "All 29 scene midpoints reviewed; source trims additionally inspected for both debugger sequences, successful retry, and reset. Card safe bounds validated.",
+  "scope": "Local rough cut; synthetic review narration; real motion and labeled freeze holds."
+}

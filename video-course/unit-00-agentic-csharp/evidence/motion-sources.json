@@ -1,0 +1,44 @@
+[
+  {
+    "file": "aspire-live.mp4",
+    "sha256": "a71ac4c2b1abffa4209cd96f555b9a6797fe8862df691e4ad106aa3b12f60db7",
+    "duration": "35.666667",
+    "size": "670657"
+  },
+  {
+    "file": "director-live.mp4",
+    "sha256": "381272103a4448a082cf68346fbd8fae2d5e57060db189121cd3b75f91f5fe23",
+    "duration": "89.866667",
+    "size": "5419431"
+  },
+  {
+    "file": "vscode-live.mp4",
+    "sha256": "e19c043a247ec83c1db5dae102774f34a42c37a338fe68006275cc197a2002f6",
+    "duration": "167.666667",
+    "size": "3842569"
+  },
+  {
+    "file": "vscode-take2.mp4",
+    "sha256": "478ebee138d32128da600d5da150eb405aef645ebf327dc153c2a8ca28fd352b",
+    "duration": "193.000000",
+    "size": "11005364"
+  },
+  {
+    "file": "vs-take2.mp4",
+    "sha256": "eb8112e86325583130e4a19fe4be20b8d317074ac047fa3ef00ce1bb19e7f403",
+    "duration": "253.800000",
+    "size": "12181602"
+  },
+  {
+    "file": "retry-live.mp4",
+    "sha256": "6a82e4c17f0dba4188bc4470ed56d843173073d461f0afe335264f33bac0613b",
+    "duration": "53.200000",
+    "size": "1582873"
+  },
+  {
+    "file": "reset-live.mp4",
+    "sha256": "1274527441845f7bacf552885230bcfc212bd7ca4389aa552bc4998e707e23f2",
+    "duration": "66.533333",
+    "size": "2357568"
+  }
+]

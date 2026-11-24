@@ -1,0 +1,1554 @@
+Slide 1
+Alon Fliess
+CTO, RD & Foundry MVP
+ZioNet
+Level: Intermediate to Advanced
+Developing Agentic Systems in .NET
+From Concept to Code
+Architecting Scalable Solutions
+AI-generated content may be incorrect.
+A qr code with black squares  AI-generated content may be incorrect.
+
+
+Slide 2
+About Me
+•
+Alon Fliess:
+▪
+CTO - ZioNet
+▪
+More than 40 years of hands-on
+experience
+▪
+Microsoft Regional Director & Microsoft
+Foundry MVP
+▪
+Renowned speaker at both international
+and domestic events
+A qr code with black squares  AI-generated content may be incorrect.
+
+
+Slide 3
+Two Agentic Systems Are In The Room
+• The agentic application we build & the AI coding agent that builds it
+
+
+Slide 4
+What This Session Promises
+
+
+Slide 5
+The New Development Loop
+
+
+Slide 6
+The Agentic
+Decision Map
+
+
+Slide 7
+Composing Deterministic and Agentic Systems
+
+
+Slide 8
+
+
+Slide 9
+Give the Coding Agent the Knowledge It Was Missing
+Microsoft Skills brings platform knowledge into the coding loop
+> npx skills add microsoft/skills
+> Copilot
+/plugin marketplace add microsoft/azure-skills
+/plugin install azure@azure-skills
+The image is a visual representation of Microsoft Skills Explorer, showcasing various programming languages, tools, and skills, such as Azure, .NET, Python, and TypeScript, with statistics on the number of skills, and a callout to GitHub and Azure SDK.
+AI-generated content may be incorrect.
+The image is a visual representation of Microsoft Skills Explorer, showcasing various programming languages, tools, and skills, such as Azure, .NET, Python, and TypeScript, with statistics on the number of skills, and a callout to GitHub and Azure SDK.
+AI-generated content may be incorrect.
+
+
+Slide 10
+My Agentic Architecture Skills
+Add the architectural judgment that the coding agent was missing
+MAF Architecture Mapping
+Agentic Architecture Router
+•
+ Analyze the requirements and
+context
+•
+Choose the least autonomous
+mechanism
+•
+ Check alternatives and tradeoffs
+•
+Evaluate Workflow and MCP
+usage
+• Map the architecture decisions to
+MAF mechanisms:
+▪
+Agent
+▪
+Session
+▪
+Knowledge – tool, skills, memory
+▪
+MCP
+▪
+WF
+▪
+A2A
+▪
+Hosting, Governance Assurance
+Our Agentic Architecture Skills,
+AI-generated content may be incorrect.
+/plugin marketplace add alonf/agentic-architecture-skills
+/plugin install agentic-architecture@agentic-architecture-skills
+
+
+Slide 11
+Why Is The Street Light On During the Day?
+• We have an existing C&C
+System:
+▪
+Hubs:
+•
+Energy
+•
+Security
+•
+Mobility
+▪Events
+•
+Lights are on
+•
+The parking lot is full
+▪
+Incident management:
+•
+Workflows with  Predefined
+activities
+▪Turn lights on/off
+▪Connectors - Internal &
+external knowledge systems
+The system knows what happened (the light is on)
+We need intelligence to investigate why!
+
+
+Slide 12
+Our Running Scenario:
+Caesarea Smart City Operations
+
+
+Slide 13
+Applying the Model: Caesarea Smart City
+
+
+Slide 14
+
+
+Slide 15
+MAF Agent
+Delegate the next decision to AI
+• MAF in C# (Agent)
+▪AIAgent = Model + Instructions + Capabilities:
+• An agent owns the next-step decision:
+▪What should I inspect next?
+▪Which capability should I use?
+▪When do I have enough information?
+AIAgent agent = projectClient.AsAIAgent(
+model: modelName,
+name: "CaesareaOperations",
+instructions: """
+You assist operators in the Caesarea C&C center.
+Use available capabilities and evidence
+to answer operational questions.
+Never invent operational facts.
+If you don't have enough evidence, say so.
+""");
+MAF Agent
+
+
+Slide 16
+MAF Agent
+Delegate the next decision to AI
+• MAF in C# (Agent)
+▪AIAgent = Model + Instructions + Capabilities:
+• An agent owns the next-step decision:
+▪What should I inspect next?
+▪Which capability should I use?
+▪When do I have enough information?
+//AIProjectClient projectClient is injected
+AIAgent agent = projectClient.AsAIAgent(
+model: modelName,
+name: "CaesareaOperations",
+instructions: """
+You assist operators in the Caesarea C&C center.
+Use available capabilities and evidence
+to answer operational questions.
+Never invent operational facts.
+If you don't have enough evidence, say so.
+""");
+
+
+Slide 17
+MAF Function Tool
+Deterministic hands for the agent
+• MAF in C# (Tools)
+▪Tools = get info + actions
+• The agent can reason, but it cannot see the
+city
+▪We register a deterministic capability
+▪The agent decides when to use it
+▪The tool returns trusted, real data
+tools:
+[
+AIFunctionFactory.Create(
+energyTools.GetStreetlightStateAsync)
+]
+[Description("Gets the current state of a
+streetlight.")]
+Task<StreetlightState> GetStreetlightStateAsync(
+string assetId);
+AIAgent agent = projectClient.AsAIAgent(
+model: modelName,
+name: "CaesareaOperations",
+instructions: operationInstructions,
+tools: tools
+);
+MAF Function Tool
+
+
+Slide 18
+MAF Function Tool
+Deterministic hands for the agent
+• MAF in C# (Tools)
+▪Tools = get info + actions
+• The agent can reason, but it cannot see the
+city
+▪We register a deterministic capability
+▪The agent decides when to use it
+▪The tool returns trusted, real data
+tools:
+[
+AIFunctionFactory.Create(
+energyTools.GetStreetlightStateAsync)
+]
+[Description("Gets the current state of a
+streetlight.")]
+Task<StreetlightState> GetStreetlightStateAsync(
+string assetId);
+AIAgent agent = projectClient.AsAIAgent(
+model: modelName,
+name: "CaesareaOperations",
+instructions: operationInstructions,
+tools: tools
+);
+
+
+Slide 19
+MAF Agent Harness
+Reuse an operating loop instead of rebuilding one
+•
+MAF in C# (MAF Agent Harness)
+▪
+Harness Agent = Model + Instructions + Compaction +
+Plan + Memory + Skills + Web Search ➔ out of the box
+•
+A harness gives us a ready-made operating
+loop
+▪
+Gain
+•
+Planning, context management, tools, approvals,
+long-running execution
+▪
+Trade-off
+•
+Less control over loop, state, permissions, and
+provider semantics
+▪
+Rule
+•
+Reuse the harness when the loop is infrastructure
+•
+Build it when the loop is your differentiation
+AIAgent agent =
+  chatClient.AsHarnessAgent();
+await using var copilot = new CopilotClient();
+await copilot.StartAsync();
+AIAgent agent =
+  copilot.AsAIAgent();
+.NET today: MAF Harness + GitHub Copilot SDK
+Claude Agent SDK integration is currently Python-only
+
+
+Slide 20
+MAF Session
+The session keeps conversational context
+• MAF in C# (Session)
+▪AgentSession = conversation state
+across runs
+•
+A session lets the conversation continue naturally
+▪
+Same context across multiple agent runs
+▪
+Follow-up questions can refer to previous turns
+▪
+Session state is not the authoritative operational state
+AgentSession session =
+await agent.CreateSessionAsync();
+await agent.RunAsync(
+"Is L-417 on?", session);
+await agent.RunAsync(
+"Why?", session);
+MAF Session
+
+
+Slide 21
+MAF Session
+The session keeps conversational context
+• MAF in C# (Session)
+▪AgentSession = conversation state
+across runs
+•
+A session lets the conversation continue naturally
+▪
+Same context across multiple agent runs
+▪
+Follow-up questions can refer to previous turns
+▪
+Session state is not the authoritative operational state
+AgentSession session =
+await agent.CreateSessionAsync();
+await agent.RunAsync(
+"Is L-417 on?", session);
+await agent.RunAsync(
+"Why?", session);
+
+
+Slide 22
+MAF Knowledge
+Bring current evidence into reasoning
+• MAF in C# (Knowledge)
+▪
+AIContextProvider = access knowledge for
+relevant context
+•
+Operational systems tell us what is happening. Knowledge
+may explain why
+▪
+Retrieve relevant external evidence
+▪
+Ground the answer in documents, notes, and work info
+▪
+Correlate supporting evidence with current operational state
+TextSearchProvider knowledge = new(
+SearchWorkKnowledgeAsync,
+new TextSearchProviderOptions
+{
+SearchTime =
+TextSearchProviderOptions.TextSearchBehavior
+.OnDemandFunctionCalling,
+FunctionToolName = "search_work_knowledge",
+FunctionToolDescription =
+"Searches organizational work knowledge."
+},
+loggerFactory);
+AIContextProviders =
+[
+knowledge
+];
+MAF Knowledge
+
+
+Slide 23
+MAF Knowledge
+Bring current evidence into reasoning
+• MAF in C# (Knowledge)
+▪
+AIContextProvider = access knowledge for
+relevant context
+•
+Operational systems tell us what is happening. Knowledge
+may explain why
+▪
+Retrieve relevant external evidence
+▪
+Ground reasoning in documents, notes, and work info
+▪
+Correlate evidence with current operational state
+TextSearchProvider knowledge = new(
+SearchWorkKnowledgeAsync,
+new TextSearchProviderOptions
+{
+SearchTime =
+TextSearchProviderOptions.TextSearchBehavior
+.OnDemandFunctionCalling,
+FunctionToolName = "search_work_knowledge",
+FunctionToolDescription =
+"Searches organizational work knowledge."
+},
+loggerFactory);
+AIContextProviders =
+[
+knowledge
+];
+
+
+Slide 24
+MAF Memory
+Keep useful information across sessions
+• MAF in C# (Memory)
+▪
+AIContextProvider = retrieve + store relevant
+context
+•
+Memory lets the agent reuse relevant information from
+previous interactions
+▪
+Store information worth remembering
+▪
+Retrieve relevant past experience
+▪
+Inject it into future reasoning
+sealed class CaseMemoryProvider : AIContextProvider
+{
+protected override ValueTask<AIContext>
+ProvideAIContextAsync(
+InvokingContext context,
+CancellationToken cancellationToken = default)
+{
+// Retrieve relevant previous cases
+}
+protected override ValueTask StoreAIContextAsync(
+InvokedContext context,
+CancellationToken cancellationToken = default)
+{
+// Store useful experience
+}
+}
+MAF Memory
+
+
+Slide 25
+MAF Memory
+Keep useful information across sessions
+• MAF in C# (Memory)
+▪
+AIContextProvider = retrieve + store relevant
+context
+•
+Memory lets the agent reuse relevant information from
+previous interactions
+▪
+Store information worth remembering
+▪
+Retrieve relevant past experience
+▪
+Inject it into future reasoning
+sealed class CaseMemoryProvider : AIContextProvider
+{
+protected override ValueTask<AIContext>
+ProvideAIContextAsync(
+InvokingContext context,
+CancellationToken cancellationToken = default)
+{
+// Retrieve relevant previous cases
+}
+protected override ValueTask StoreAIContextAsync(
+InvokedContext context,
+CancellationToken cancellationToken = default)
+{
+// Store useful experience
+}
+}
+
+
+Slide 26
+var skillsProvider = new AgentSkillsProvider(
+Path.Combine(
+AppContext.BaseDirectory,
+"skills"), SubprocessScriptRunner.RunAsync);
+AIAgent agent = projectClient.AsAIAgent(
+model: modelName,
+name: "CaesareaOperations",
+options: new ChatClientAgentOptions
+{
+ChatOptions = new()
+{
+Instructions = instructions
+},
+AIContextProviders =
+[
+skillsProvider
+]
+});
+MAF Agent Skills
+Teach reusable procedures without creating another agent
+• MAF in C# (Skills)
+▪
+AgentSkillsProvider = discover + load Agent
+Skills
+•
+The agent has capabilities, but not our methodology
+▪
+We package reusable procedures as Agent Skills
+▪
+The agent loads the relevant skill when needed
+▪
+The skill guides how the agent approaches the problem
+▪
+Capable of running scripts with SubprocessScriptRunner.RunAsync
+
+
+Slide 27
+MAF Agent Skills
+Teach reusable procedures without creating another agent
+• MAF in C# (Skills)
+▪
+AgentSkillsProvider = discover + load Agent
+Skills
+•
+The agent has capabilities, but not our methodology
+▪
+We package reusable procedures as Agent Skills
+▪
+The agent loads the relevant skill when needed
+▪
+The skill guides how the agent approaches the problem
+▪
+Capable of running scripts with SubprocessScriptRunner.RunAsync
+var skillsProvider = new AgentSkillsProvider(
+Path.Combine(
+AppContext.BaseDirectory,
+"skills"), SubprocessScriptRunner.RunAsync);
+AIAgent agent = projectClient.AsAIAgent(
+model: modelName,
+name: "CaesareaOperations",
+options: new ChatClientAgentOptions
+{
+ChatOptions = new()
+{
+Instructions = instructions
+},
+AIContextProviders =
+[
+skillsProvider
+]
+});
+
+
+Slide 28
+MAF MCP Client
+Consume remote agentic capabilities
+• MAF in C# (MCP Client)
+•
+The agent can use local tools, but some capabilities live
+elsewhere
+▪
+Connect to a local/remote MCP server
+▪
+Discover the server capabilities and use them when needed
+▪
+The agent can use remote tools just like other capabilities
+var transport = new HttpClientTransport(
+new HttpClientTransportOptions
+{
+Endpoint = new Uri("https://energy-hub/mcp"),
+TransportMode = HttpTransportMode.StreamableHttp
+});
+await using McpClient client =
+await McpClient.CreateAsync(transport);
+IList<McpClientTool> tools =
+await client.ListToolsAsync();
+AIAgent agent = projectClient.AsAIAgent(
+model: modelName,
+name: "CaesareaOperations",
+instructions: instructions,
+tools: tools);
+MAF MCP Client
+
+
+Slide 29
+MAF MCP Client
+Consume remote agentic capabilities
+• MAF in C# (MCP Client)
+•
+The agent can use local tools, but some capabilities live
+elsewhere
+▪
+Connect to a local/remote MCP server
+▪
+Discover the server capabilities and use them when needed
+▪
+The agent can use remote tools just like other capabilities
+var transport = new HttpClientTransport(
+new HttpClientTransportOptions
+{
+Endpoint = new Uri("https://energy-hub/mcp"),
+TransportMode = HttpTransportMode.StreamableHttp
+});
+await using McpClient client =
+await McpClient.CreateAsync(transport);
+IList<McpClientTool> tools =
+await client.ListToolsAsync();
+AIAgent agent = projectClient.AsAIAgent(
+model: modelName,
+name: "CaesareaOperations",
+instructions: instructions,
+tools: tools);
+
+
+Slide 30
+.NET MCP Server
+Provide remote agentic capabilities
+• MCP in C# (SDK)
+•
+The capabilities belong to a service
+▪
+Expose selected operations as MCP tools
+▪
+Reuse the same application/domain services
+▪
+Keep the existing REST API for normal clients
+▪
+Do not duplicate business logic in the MCP layer
+var builder = WebApplication.CreateBuilder(args);
+builder.Services
+.AddMcpServer().WithHttpTransport(options => {
+options.SessionMode =
+HttpServerSessionMode.Stateless;
+})
+.WithTools<EnergyHubTools>();
+var app = builder.Build();
+app.MapMcp("/mcp");
+app.Run();
+[McpServerToolType]
+public sealed class EnergyHubTools
+{
+[McpServerTool,
+Description("Current state of streetlights")]
+public Task<StreetlightState>
+GetStreetlightStateAsync(string assetId,
+CancellationToken cancellationToken)
+{
+return energyService.GetStreetlightStateAsync(
+assetId, cancellationToken);
+}
+}
+.NET MCP Server
+
+
+Slide 31
+.NET MCP Server
+Provide remote agentic capabilities
+• MCP in C# (SDK)
+•
+The capabilities belong to a service
+▪
+Expose selected operations as MCP tools
+▪
+Reuse the same application/domain services
+▪
+Keep the existing REST API for normal clients
+▪
+Do not duplicate business logic in the MCP layer
+var builder = WebApplication.CreateBuilder(args);
+builder.Services
+.AddMcpServer().WithHttpTransport(options => {
+options.SessionMode =
+HttpServerSessionMode.Stateless;
+})
+.WithTools<EnergyHubTools>();
+var app = builder.Build();
+app.MapMcp("/mcp");
+app.Run();
+[McpServerToolType]
+public sealed class EnergyHubTools
+{
+[McpServerTool,
+Description("Current state of streetlights")]
+public Task<StreetlightState>
+GetStreetlightStateAsync(string assetId,
+CancellationToken cancellationToken)
+{
+return energyService.GetStreetlightStateAsync(
+assetId, cancellationToken);
+}
+}
+
+
+Slide 32
+MCP Interactive Input
+MRTR – Multi-Round-Trip Requests
+•
+The MCP server may need more input before it
+can complete the request
+▪
+Return Input Required
+▪
+The client obtains the missing input from the user or
+application
+▪
+MRTR enables interaction and replaces old Elicitation,
+Sampling & Roots calls.
+[McpServerTool]
+public async Task<string> RestoreScheduledModeAsync(
+McpServer server,
+RequestContext<CallToolRequestParams> context,
+string assetId,
+CancellationToken cancellationToken) {
+if (TryGetApproval(context, out bool approved))
+return approved ?
+await RestoreAsync(assetId, cancellationToken) : "Cancelled";
+if (!server.IsMrtrSupported)
+return "Interactive input not supported";
+throw new InputRequiredException(
+inputRequests: new Dictionary<string, InputRequest> {
+["approval"] = InputRequest.ForElicitation(
+new ElicitRequestParams
+{
+Message =
+$"Restore {assetId} to scheduled mode?",
+RequestedSchema = approvalSchema
+})
+});
+}
+private static bool TryGetApproval(
+RequestContext<CallToolRequestParams> context,
+out bool approved)
+{
+approved = false;
+if (context.Params?.InputResponses?.TryGetValue(
+"approval", out var response) != true)
+{
+return false;
+}
+var result = response.Deserialize(
+InputResponse.ElicitResultJsonTypeInfo);
+approved = result?.Action == "accept";
+return true;
+}
+MCP Interactive Input
+
+
+Slide 33
+MCP Interactive Input
+MRTR – Multi-Round-Trip Requests
+•
+The MCP server may need more input before it
+can complete the request
+▪
+Return Input Required
+▪
+The client obtains the missing input from the user or
+application
+▪
+MRTR enables interaction and replaces old Elicitation,
+Sampling & Roots calls
+[McpServerTool]
+public async Task<string> RestoreScheduledModeAsync(
+McpServer server,
+RequestContext<CallToolRequestParams> context,
+string assetId,
+CancellationToken cancellationToken) {
+if (TryGetApproval(context, out bool approved))
+return approved ?
+await RestoreAsync(assetId, cancellationToken) : "Cancelled";
+if (!server.IsMrtrSupported)
+return "Interactive input not supported";
+throw new InputRequiredException(
+inputRequests: new Dictionary<string, InputRequest> {
+["approval"] = InputRequest.ForElicitation(
+new ElicitRequestParams
+{
+Message =
+$"Restore {assetId} to scheduled mode?",
+RequestedSchema = approvalSchema
+})
+});
+}
+private static bool TryGetApproval(
+RequestContext<CallToolRequestParams> context,
+out bool approved)
+{
+approved = false;
+if (context.Params?.InputResponses?.TryGetValue(
+"approval", out var response) != true)
+{
+return false;
+}
+var result = response.Deserialize(
+InputResponse.ElicitResultJsonTypeInfo);
+approved = result?.Action == "accept";
+return true;
+}
+
+
+Slide 34
+MAF Workflow
+Make orchestration explicit
+•
+Some tasks need orchestration beyond a single agent or
+tool call
+▪
+Define execution steps and transitions
+▪
+Combine deterministic code and agent activities
+▪
+Make state, branching, and recovery explicit
+▪
+Workflow owns orchestration
+Workflow workflow =
+  new WorkflowBuilder(validate)
+    .AddEdge(validate, policy)
+    .AddEdge<PolicyResult>(policy, approval,
+      r => r.RequiresApproval)
+    .AddEdge<PolicyResult>(
+      policy, execute,
+      r => !r.RequiresApproval)
+    .AddEdge(approval, execute)
+    .AddEdge(execute, verify)
+    .WithOutputFrom(verify)
+    .Build();
+kind: Workflow
+trigger:
+ kind: OnConversationStart
+ actions:
+  - kind: InvokeFunctionTool
+   id: validate
+  - kind: ConditionGroup
+   condition: =Local.requiresApproval
+  - kind: Question
+   id: approval
+  - kind: InvokeMcpTool
+   id: restore
+
+
+Slide 35
+MAF Workflow
+Make orchestration explicit
+•
+Some tasks need orchestration beyond a single agent or
+tool call
+▪
+Define execution steps and transitions
+▪
+Combine deterministic code and agent activities
+▪
+Make state, branching, and recovery explicit
+▪
+Workflow owns orchestration
+Workflow workflow =
+  new WorkflowBuilder(validate)
+    .AddEdge(validate, policy)
+    .AddEdge<PolicyResult>(policy, approval,
+      r => r.RequiresApproval)
+    .AddEdge<PolicyResult>(
+      policy, execute,
+      r => !r.RequiresApproval)
+    .AddEdge(approval, execute)
+    .AddEdge(execute, verify)
+    .WithOutputFrom(verify)
+    .Build();
+kind: Workflow
+trigger:
+ kind: OnConversationStart
+ actions:
+  - kind: InvokeFunctionTool
+   id: validate
+  - kind: ConditionGroup
+   condition: =Local.requiresApproval
+  - kind: Question
+   id: approval
+  - kind: InvokeMcpTool
+   id: restore
+
+
+Slide 36
+MAF Human Control
+Put the human at the right control boundary
+• MAF in C# (Human Control)
+▪
+Tool approval:
+•
+The agent chooses what to do; the human supervises and approves
+▪
+We already saw HITL with MCP MRTR
+▪
+Sensitive model-selected tools can require approval (reactive model)
+▪
+WF can contain explicit human gates (explicit in the orchestration)
+▪
+For autonomous operation, the human can stay on the loop
+▪
+HITL / HOTL are control patterns, not one API
+AIFunction restore =
+new ApprovalRequiredAIFunction(
+AIFunctionFactory.Create(
+energyTools.RestoreScheduledModeAsync));
+AgentResponse response =
+await agent.RunAsync(
+"Restore L-417 to scheduled mode", session);
+ToolApprovalRequestContent approval =
+response.Messages
+.SelectMany(m => m.Contents)
+.OfType<ToolApprovalRequestContent>()
+.First();
+var approvalMessage = new ChatMessage(
+ChatRole.User,
+[approval.CreateResponse(true)]);
+response = await agent.RunAsync(
+approvalMessage,
+session);
+MAF Human Control
+
+
+Slide 37
+MAF Human Control
+Put the human at the right control boundary
+• MAF in C# (Human Control)
+▪
+Tool approval:
+•
+The agent chooses what to do; the human supervises and approves
+▪
+We already saw HITL with MCP MRTR
+▪
+Sensitive model-selected tools can require approval (reactive model)
+▪
+WF can contain explicit human gates (explicit in the orchestration)
+▪
+For autonomous operation, the human can stay on the loop
+▪
+HITL / HOTL are control patterns, not one API
+AIFunction restore =
+new ApprovalRequiredAIFunction(
+AIFunctionFactory.Create(
+energyTools.RestoreScheduledModeAsync));
+AgentResponse response =
+await agent.RunAsync(
+"Restore L-417 to scheduled mode", session);
+ToolApprovalRequestContent approval =
+response.Messages
+.SelectMany(m => m.Contents)
+.OfType<ToolApprovalRequestContent>()
+.First();
+var approvalMessage = new ChatMessage(
+ChatRole.User,
+[approval.CreateResponse(true)]);
+response = await agent.RunAsync(
+approvalMessage,
+session);
+
+
+Slide 38
+MAF Multi-Agent
+Add another reasoning boundary only when it earns its cost
+• A single agent should be the default
+▪Add another agent for a real boundary: expertise, context, authority, model, ownership
+▪The agent may be ours, organizational, or external
+▪Do not mirror every service, Hub, team, or domain with an agent
+▪If you only need another capability — add a tool, not an agent
+MAF Multi-Agent
+
+
+Slide 39
+MAF Multi-Agent
+Add another reasoning boundary only when it earns its cost
+• A single agent should be the default
+▪Add another agent for a real boundary: expertise, context, authority, model, ownership
+▪The agent may be ours, organizational, or external
+▪Do not mirror every service, Hub, team, or domain with an agent
+▪If you only need another capability — add a tool, not an agent
+
+
+Slide 40
+MAF Multi-Agent Composition
+Choose the relationship before the communication boundary
+• Once another agent is justified, decide how the agents should relate
+▪Delegate: one agent keeps ownership and consults another
+▪Transfer: responsibility moves to another agent
+▪Collaborate: several agents reason together
+▪Orchestrate: an explicit workflow coordinates agents
+
+
+Slide 41
+MAF Multi-Agent Composition
+Choose the relationship before the communication boundary
+• Once another agent is justified, decide how the agents should relate
+▪Delegate: one agent keeps ownership and consults another
+▪Transfer: responsibility moves to another agent
+▪Collaborate: several agents reason together
+▪Orchestrate: an explicit workflow coordinates agents
+
+
+Slide 42
+MAF Multi-Agent in C#
+Compose agents through tools, workflows, and MCP
+Workflow handoff =
+AgentWorkflowBuilder
+.CreateHandoffBuilderWith(operationsAgent)
+.WithHandoffs(
+operationsAgent,
+[securityAgent])
+.WithHandoff(
+securityAgent,
+operationsAgent)
+.Build();
+AIAgent operationsAgent =
+projectClient.AsAIAgent(
+model: modelName,
+name: "CaesareaOperations",
+instructions: operationsInstructions,
+tools:
+[
+securityAgent.AsAIFunction()
+]);
+McpServerTool tool =
+McpServerTool.Create(
+securityAgent.AsAIFunction());
+builder.Services
+.AddMcpServer()
+.WithHttpTransport()
+.WithTools([tool]);
+Workflow groupChat =
+AgentWorkflowBuilder
+.CreateGroupChatBuilderWith(
+agents =>
+new RoundRobinGroupChatManager(agents)
+{
+MaximumIterationCount = 5
+})
+.AddParticipants(
+operationsAgent,
+securityAgent)
+.Build();
+
+
+Slide 43
+/* Expose agent for A2A
+builder.Services.AddKeyedSingleton<AIAgent>(agentName,
+(sp, _) => WorkforceAgentFactory.Create(
+/* project client, tools, model */));
+builder.Services.AddA2AServer(agentName);
+var app = builder.Build();
+app.MapA2AHttpJson(agentName, "/a2a");
+app.MapWellKnownAgentCard(
+WorkforceAgentCard.Create(
+agentName,
+BaseAddress(app)));
+/* Consume agent with A2A
+var resolver = new A2ACardResolver(peerBaseUri,
+httpClient);
+var card = await resolver.GetAgentCardAsync(ct);
+var peer = new A2AAgent(
+A2AClientFactory.Create(card, httpClient,
+new A2AClientOptions()),
+new A2AAgentOptions { Name = card.Name,
+Description = card.Description });
+var reply = await peer.RunAsync(
+"Do you have any work order related to L-417?",
+cancellationToken: ct);
+MAF A2A
+Expose an agent as an agent
+•
+MCP exposes capabilities; A2A keeps the agent abstraction.
+•
+Reach for A2A when:
+•
+You give a task, not call a function
+•
+The peer decides how to answer
+•
+Another owner — other team, org, or contract
+•
+You control neither their model nor their data
+•
+They own their context — tools, memory, execution; records stay theirs
+•
+Discovered at runtime — agent card and declared skills
+•
+Interoperable — across frameworks, languages, services
+
+
+Slide 44
+MAF A2A
+Expose an agent as an agent
+•
+MCP exposes capabilities; A2A keeps the agent abstraction.
+•
+Reach for A2A when:
+•
+You give a task, not call a function
+•
+The peer decides how to answer
+•
+Another owner — other team, org, or contract
+•
+You control neither their model nor their data
+•
+They own their context — tools, memory, execution; records stay theirs
+•
+Discovered at runtime — agent card and declared skills
+•
+Interoperable — across frameworks, languages, services
+/* Expose agent for A2A
+builder.Services.AddKeyedSingleton<AIAgent>(agentName,
+(sp, _) => WorkforceAgentFactory.Create(
+/* project client, tools, model */));
+builder.Services.AddA2AServer(agentName);
+var app = builder.Build();
+app.MapA2AHttpJson(agentName, "/a2a");
+app.MapWellKnownAgentCard(
+WorkforceAgentCard.Create(
+agentName,
+BaseAddress(app)));
+/* Consume agent with A2A
+var resolver = new A2ACardResolver(peerBaseUri,
+httpClient);
+var card = await resolver.GetAgentCardAsync(ct);
+var peer = new A2AAgent(
+A2AClientFactory.Create(card, httpClient,
+new A2AClientOptions()),
+new A2AAgentOptions { Name = card.Name,
+Description = card.Description });
+var reply = await peer.RunAsync(
+"Do you have any work order related to L-417?",
+cancellationToken: ct);
+
+
+Slide 45
+MAF Hosting
+Match the runtime to the agent lifecycle
+• Hosted Agents (Foundry)
+•
+The agent code does not determine where it must run
+▪
+Self-hosted — ASP.NET Core, containers, Kubernetes, workers
+▪
+Azure Functions + Durable Extension
+•
+Event-driven, durable, resumable, scale-to-zero
+▪
+Foundry Hosted Agent
+•
+Managed runtime, per-session isolation, identity, endpoints
+•
+Scale-to-zero is per session
+var builder = AgentHost.CreateBuilder(args);
+builder.Services.AddFoundryResponses(agent);
+builder.RegisterProtocol("responses",
+endpoints => endpoints.MapFoundryResponses());
+var app = builder.Build();
+app.Run();
+POST {projectEndpoint}/agents/caesarea-
+operations/versions?api-version=v1
+{ "definition": {
+    "kind": "hosted",
+    "container_configuration": { "image":
+"crcaesarea….azurecr.io/caesarea-operations@sha256:…"
+},
+    "cpu": "1", "memory": "2Gi",
+    "protocol_versions": [ { "protocol": "responses",
+"version": "2.0.0" } ],
+    "environment_variables": { "ENERGYHUB_BASE_URI":
+"…", "ENERGYHUB_SCOPE": "…" }
+} }
+
+
+Slide 46
+MAF Hosting
+Match the runtime to the agent lifecycle
+• Hosted Agents (Foundry)
+•
+Core agent logic can remain portable across hosting models
+▪
+Self-hosted — ASP.NET Core, containers, Kubernetes, workers
+▪
+Azure Functions + Durable Extension
+•
+Event-driven, durable, resumable, scale-to-zero
+▪
+Foundry Hosted Agent
+•
+Managed runtime, per-session isolation, identity, endpoints
+•
+Scale-to-zero is per session
+var builder = AgentHost.CreateBuilder(args);
+builder.Services.AddFoundryResponses(agent);
+builder.RegisterProtocol("responses",
+endpoints => endpoints.MapFoundryResponses());
+var app = builder.Build();
+app.Run();
+POST {projectEndpoint}/agents/caesarea-
+operations/versions?api-version=v1
+{ "definition": {
+    "kind": "hosted",
+    "container_configuration": { "image":
+"crcaesarea….azurecr.io/caesarea-operations@sha256:…"
+},
+    "cpu": "1", "memory": "2Gi",
+    "protocol_versions": [ { "protocol": "responses",
+"version": "2.0.0" } ],
+    "environment_variables": { "ENERGYHUB_BASE_URI":
+"…", "ENERGYHUB_SCOPE": "…" }
+} }
+
+
+Slide 47
+MAF Interaction Protocols
+Choose the interaction contract
+•
+MAF in C# (Protocol)
+•
+The protocol defines the interaction contract
+and semantics
+•
+The system boundary may adapt that
+contract before it reaches your runtime
+•
+MAF does not force one ingress protocol
+//C# - self hosted
+var agentRegistration =
+  builder.AddAIAgent(
+    "operations-agent",
+    (_, _) => agent);
+var app = builder.Build();
+app.MapOpenAIResponses(agentRegistration);
+Need
+Protocol
+Conversational/multi
+-turn agent
+OpenAI Responses
+Another agent call
+A2A
+Rich UI Interactions
+AG-UI
+Expose
+capabilities/tools
+MCP
+Custom application
+contract
+Your ASP.NET Core
+API
+
+
+Slide 48
+Foundry Hosted Agent Protocols
+Choose the managed ingress contract
+•
+MAF in C# (Protocol)
+•
+Foundry exposes managed protocol endpoints in
+front of your hosted agent
+•
+The selected protocol determines payload, session
+semantics, streaming, and lifecycle behavior
+//C# - Foundry hosted
+var builder =
+ WebApplication.CreateBuilder(args);
+builder.Services.
+     AddFoundryResponses(agent);
+var app = builder.Build();
+app.MapFoundryResponses();
+app.Run();
+Need
+Protocol
+Conversational / multi-
+turn agent
+Responses
+Background / async
+processing
+Responses
+Custom / non-chat
+payload
+Invocations
+Full-duplex voice/media
+Invocations WebSocket
+Another agent call
+A2A* (Preview)
+Teams / Microsoft 365
+Responses + Activity
+
+
+Slide 49
+MAF Runtime & Isolation
+Separate authority, context, and execution
+• One agent → many callers, many isolated sessions
+▪Authority
+• Who asks? Who acts?
+▪Context
+• Separate state, context,
+knowledge
+▪Execution
+• Version, session, sandbox
+▪Identity ≠ Context ≠ Execution
+Session isolation is not data authorization
+
+
+Slide 50
+Agent Governance
+Apply control at the right boundary
+• MAF in C# (Middleware)
+•
+Agent governance is layered — no single mechanism is enough
+▪
+Instructions — guide agent behavior
+▪
+Model Guardrails
+•
+Filter model input/output
+▪
+Runtime Policy
+•
+Intercept agent runs and tool calls
+•
+ACS - declarative runtime policy
+
+▪
+Authorization
+•
+Enforce who may perform
+actions and access data
+▪
+Enterprise Governance
+•
+Inventory, identity, security,
+compliance, lifecycle
+AIAgent governedAgent = agent
+.AsBuilder().Use(
+runFunc: PolicyMiddleware,
+runStreamingFunc: null)
+.Use(ToolPolicyMiddleware).Build();
+app.MapOpenAIResponses(governedAgent)
+.RequireAuthorization();
+async ValueTask<object?> ToolPolicyMiddleware(
+AIAgent agent, FunctionInvocationContext ctx,
+Func<FunctionInvocationContext,
+CancellationToken, ValueTask<object?>> next,
+CancellationToken cancellationToken)
+{
+if (!await policy.CanExecuteAsync(
+ctx.Function.Name, ctx.Arguments,
+cancellationToken))
+{
+throw new UnauthorizedAccessException(
+$"Blocked by policy: {ctx.Function.Name}");
+}
+return await next(ctx, cancellationToken);
+}
+Guidance, filtering, enforcement, authorization, and governance protect
+different boundaries.
+var governedAgent =
+agent.WithGovernance(…)
+
+
+Slide 51
+Microsoft Agent 365
+Govern the agent estate, not just one agent
+•
+Enterprise governance starts when agents become
+organizational assets
+•
+Registry & inventory: know which agents exist, who owns
+them, and where they run
+•
+Identity & access: govern agent identities, permissions, and
+access paths with Entra
+•
+Security: detect risky behavior, prompt attacks,
+misconfiguration, and excessive permissions with Defender
+•
+Data & compliance: protect sensitive data, apply DLP, audit,
+and compliance controls with Purview
+•
+Lifecycle & policy: approve, block, publish, assign owners, and
+retire agents consistently
+Runtime policy governs execution. Agent 365 governs the estate
+
+
+Slide 52
+Agent Assurance
+Test behavior, not just the final answer
+• MAF in C# (Evaluation)
+•
+A plausible answer can still come from the wrong
+behavior
+•
+Observe: trace model calls, tool calls, workflow paths, latency, failures
+•
+Evaluate: measure quality, safety, grounding, task completion, tool
+use
+•
+Verify behavior: assert expected tools, arguments, decisions, and
+forbidden actions
+•
+Regress continuously: rerun after model, prompt, tool, workflow, or
+policy changes
+var evaluator = new LocalEvaluator(
+EvalChecks.ToolCalledCheck("get_streetlight_state"));
+AgentEvaluationResults results =
+await agent.EvaluateAsync(
+["Why is L-417 on during the day?"],
+evaluator, expectedToolCalls:
+[
+[new ExpectedToolCall(
+"get_streetlight_state")]
+]);
+results.AssertAllPassed();
+var foundry = new FoundryEvals(
+chatConfiguration,
+FoundryEvals.Relevance,
+FoundryEvals.ToolCallAccuracy);
+await agent.EvaluateAsync(
+testQueries,
+foundry);
+
+
+Slide 53
+ASSERT
+Turn behavioral requirements into
+ executable evaluations
+• Start from what the system is supposed to do, not from a
+generic benchmark
+•
+Specify behavior
+▪
+Requirements, policies, PRDs, launch criteria
+•
+Generate scenarios
+▪
+Derive behavior-specific single- and multi-turn tests
+•
+Run the real agent
+▪
+Capture outputs and traces: tools, routing, model calls
+•
+Judge against the requirement
+▪
+Not merely whether the answer sounds good
+•
+Regress continuously
+▪
+Freeze the suite and rerun after model, prompt, tool, workflow, or
+policy changes
+https://github.com/responsibleai/ASSERT
+
+
+Slide 54
+
+
+Slide 55
+Agent DevOps
+Close the loop between production behavior and engineering change
+•
+Deployment is the beginning of the next learning cycle
+▪
+Observe — traces reveal decisions, tool use, routing, latency, cost, and failures
+▪
+Evaluate — measure quality, safety, grounding, and behavioral requirements
+▪
+Learn from production — real usage exposes
+drift and edge cases we did not anticipate
+▪
+Optimize — improve instructions, skills,
+tools, models, workflows, or policies
+▪
+Prove & redeploy — rerun evaluations
+before promoting the change
+Production traces become tomorrow’s evaluation cases.
+
+
+Slide 56
+Production-Ready Agentic Systems
+Intelligence is only one part of the architecture
+•
+A production agentic system
+needs more than intelligence
+▪
+Use the least autonomy you need
+▪
+Keep consequential control explicit
+▪
+Separate reasoning from process,
+identity, state, and hosting
+▪
+Govern the runtime and the estate
+▪
+Prove the behavior you deploy
+▪
+Optimize based on real usage
+
+
+Slide 57
+There Is More
+Learn the capabilities when your architecture needs them
+•
+Agent capabilities
+▪
+Multimodal
+▪
+Structured output
+▪
+Background responses
+▪
+Declarative (Prompt) agents
+▪
+CodeAct/planning/TODOs
+•
+Tools & integrations
+▪
+Web Search
+▪
+Code Interpreter/File Search
+▪
+OpenAPI/MCP/A2A
+▪
+AG-UI/DevUI
+▪
+Foundry Toolboxes
+•
+Foundry services
+▪
+Model catalog
+▪
+Foundry IQ/Work IQ/Memory
+▪
+Agent optimization
+▪
+Fine-tuning/model optimization
+▪
+Observability & evaluation
+•
+Production engineering
+▪
+CI/CD
+▪
+Tracing/OpenTelemetry
+▪
+Guardrails
+▪
+Versioning
+▪
+ Cost/latency/scaling
+
+
+Slide 58
+What to Take Home
+The Agentic Architecture Checklist
+• Who owns the next decision?
+• What is deterministic, and what is delegated to AI?
+• Where are the control boundaries?
+• How is identity/state/isolation handled?
+• How do we prove behavior after every change?
+
+
+Slide 59
+The End
+Thank you!
+Get the Agentic Architecture Skills
+on GitHub
+github.com/alonf/agentic-architecture-skills
+QR code linking to github.com/alonf/agentic-architecture-skills
+Scan to open the repo

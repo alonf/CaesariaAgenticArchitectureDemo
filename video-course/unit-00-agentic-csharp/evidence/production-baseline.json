@@ -1,0 +1,13 @@
+{
+  "recordingCommit": "9d2f766cc19050495c52a601075df15870c4c0af",
+  "branch": "main",
+  "sourcePowerPoint": "C:/Users/alon.HOME/OneDrive - Zionet LTD/Lectures/AI/Developing Agentic Systems in .NET From Concept to Code.pptx",
+  "pdfSha256": "6e15081018c3a038489a23c118b7325c2267c6886b9cb973caefd389f6c70e69",
+  "sourcePptxSha256": "cad132e5b52094b8bae3ade869aad9bb1025759b85894c2c36a602ca8c14a47a",
+  "validation": {
+    "buildErrors": 0,
+    "buildWarnings": 0,
+    "testsPassed": 469,
+    "testsSkipped": 4
+  }
+}

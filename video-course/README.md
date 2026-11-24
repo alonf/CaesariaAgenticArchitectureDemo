@@ -1,61 +1,47 @@
-# Caesarea: building agentic systems in .NET
+# Agentic C#
 
-Course author and source presentations: Alon Fliess. Production branch:
-`video/maf-course-introduction`. All course files and generated media stay local.
+**Building C# Agentic Systems with MAF and Foundry by Alon Fliess**.
+A self-paced course for developers who want to build, inspect and justify agentic systems.
+The smart city is the recurring example; engineering judgment is the goal.
 
-Start with the [course storyboard](storyboard.md). Unit 00 now lays the foundation **before**
-the demo: course purpose, Microsoft Agent Framework, system of systems, deterministic core,
-domain Hubs and digital twins, then the agentic layer. The environment walkthrough follows
-**Aspire → Director → Command Center → VS Code → Visual Studio 2026**. Individual labs follow
-only after learners can run and debug the system. Later units are not recorded.
+The current Unit 00 uses Alon's branded slides and background, introduces the framework and
+platform before the city, and follows **Aspire → Director → Command Center → VS Code → Visual
+Studio 2026**. Application and debugger demonstrations use real motion recordings. Visual Studio
+2026 is Windows-only. The main app's top-right Walkthrough is shown. Only Unit 00 is produced.
 
-The revised Unit 00 materials are:
+- [Watch the local Unit 00 rough cut](unit-00-agentic-csharp/output/agentic-csharp-unit-00-rough-cut.mp4)
+- [Timestamped shooting script](unit-00-agentic-csharp/shooting-script.md)
+- [Companion lab: setup, debugger steps, checkpoints, reset and investigation questions](unit-00-agentic-csharp/lab.md)
+- [Captions — SRT](unit-00-agentic-csharp/output/agentic-csharp-unit-00.en.srt) · [WebVTT](unit-00-agentic-csharp/output/agentic-csharp-unit-00.en.vtt)
+- [Course storyboard and end-of-lab questions](storyboard.md)
+- [Production plan](unit-00-agentic-csharp/production-plan.md) · [Execution evidence](unit-00-agentic-csharp/execution-evidence.md)
+- [Book alignment](book-alignment.md) · [Architecture skills](https://github.com/alonf/agentic-architecture-skills)
 
-- [Production plan and H08 recording crosswalk](unit-00-foundations/production-plan.md)
-- [Timestamped shooting script](unit-00-foundations/shooting-script.md)
-- [Copyable setup/debugging lab and reset](unit-00-foundations/lab.md)
-- [Execution evidence and recording gaps](unit-00-foundations/execution-evidence.md)
-- [Local revised rough cut](unit-00-foundations/output/caesarea-unit-00-rough-cut.mp4)
-- [Captions](unit-00-foundations/output/unit-00-introduction.en.srt)
+The executable source is **local main**, with .NET 11 and the durable demo merged at
+`9d2f766cc19050495c52a601075df15870c4c0af`. Restore, format, build and tests passed: 469 passed,
+4 skipped, zero build errors/warnings. The merge and course remain local. Remote main has not
+been updated by this production task; see the lab's release gate before distributing clone steps.
 
-The revised cut uses original slides, edited **actual still captures**, and synthetic narration.
-It is not a continuous screencast or an imitation of the presenter's voice. Aspire, both UIs,
-and real VS Code and Visual Studio 2026 attach/step/inspect/detach cycles were captured.
-The debugger timeouts and separate
-successful read-only retry are explicitly distinguished. See the evidence file before recording
-or describing this as a finished intro.
+This is an edited rough cut with synthetic Andrew Neural narration, not Alon's recorded voice.
+Captured motion runs at normal speed; idle waits are cut and freeze holds are labeled. Debugger
+timeouts and the separate successful retry are explicitly distinguished. The operational device
+is simulated; model inference is real. No cloud deployment or shared settings change was made.
 
-The earlier 10:45 repair-first pilot under `unit-00-introduction/` is archived review material.
-Its repair walkthrough belongs in Lab 01; its deferred-debugger teaching order is superseded.
-
-## Source and executable baseline
-
-- [Book rationale and chapter alignment](book-alignment.md)
-- [H08 deck](https://github.com/alonf/CaesariaAgenticArchitectureDemo/releases/download/vslive-san-diego-2026/VSLive-SanDiego-2026-H08.pdf)
-- Supplied H08 recording: transcript reviewed; interval mapping in the production plan.
-- [VS Code helper](../tools/vscode-demo-attach/README.md)
-- [Visual Studio helper](../tools/visualstudio-demo-attach/README.md)
-- [Runtime stage catalog](../Services/DemoScenario.Api/Services/StageCatalog.cs)
-
-Use the book for rationale, the slides for visuals, and compiled source/observed execution for
-commands and signatures. Do not narrate historical date comparisons. PDF references are **page
-numbers**, including animation keyframes. The course baseline is the clean .NET 11 commit
-`89d5a513be97301857dd4f156ce0773103712d51`, not an assumption about `main`.
-No merge to main is needed for local production. Existing unrelated working changes are preserved.
+The older `unit-00-introduction/` and `unit-00-foundations/` pilots remain archived review
+material. Their branding, pinned-branch setup and still-capture approach are superseded here.
 
 ## Rebuild locally
 
-`unit-00-foundations/lesson.py` contains narration, screen actions and source-slide references.
-The renderer exports scenes.json, the timed script, captions, chapters and the MP4.
+Narration and screen actions: `unit-00-agentic-csharp/lesson.py`. Exact motion trims:
+`build_agentic_csharp.py`. Raw video, exported slide images, voice tracks and outputs are ignored
+by Git and remain on this machine.
 
 ```powershell
-python -X utf8 video-course/build_foundations.py --phase assets
-python -X utf8 video-course/build_foundations.py --phase audio
-python -X utf8 video-course/build_foundations.py --phase video
+python -X utf8 video-course/build_agentic_csharp.py --phase audio
+python -X utf8 video-course/build_agentic_csharp.py --phase video
 ```
 
-Requires Python with PyMuPDF/Pillow, FFmpeg/ffprobe, and edge-tts (local vendor location supported).
-The audio phase sends only the reviewed narration to Microsoft's speech endpoint. It reads no
-model credentials. Downloaded source PDFs are checked by SHA-256. Raw captures, source downloads,
-speech and rendered media are ignored by Git. The renderer refuses missing required captures;
-it does not synthesize fake app or debugger evidence. Stop after Unit 00 for review.
+Requires Python, Pillow, FFmpeg/ffprobe and the existing local edge-tts dependency. The audio
+phase sends narration only to Microsoft's speech endpoint; it does not read model credentials.
+The supplied PowerPoint is unchanged. Its local PDF export and hashes are recorded in the unit's
+evidence folder. Stop after this pilot for author review.
