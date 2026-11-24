@@ -7,6 +7,36 @@ the lamp remains on. Allow 45–60 minutes including first-time setup. Use the c
 the architecture rationale and the supplied Alon-branded deck for diagrams. This checkout supplies the executable
 commands and API signatures.
 
+This course is for C# developers designing new agentic systems or adding agentic capabilities to
+existing applications. You need C# development experience, not prior agent experience. If you
+already know the APIs, focus on the decisions, boundaries and evidence behind their use.
+
+## 0. Orient yourself: code, framework, platform
+
+1. Open the [GitHub repository](https://github.com/alonf/CaesariaAgenticArchitectureDemo).
+   Read the README introduction and cumulative-stage section. In your local checkout locate
+   `Apps`, `Services`, `Contracts`, `Caesarea.AppHost`, `Tests` and `docs`. Pick one visible
+   component and identify its project. The recorded local baseline differs from remote main
+   until the release gate below is completed.
+2. Open [Your First Agent (C#)](https://learn.microsoft.com/en-us/agent-framework/get-started/your-first-agent?pivots=programming-language-csharp)
+   and [Add Tools](https://learn.microsoft.com/en-us/agent-framework/get-started/add-tools?pivots=programming-language-csharp).
+   Identify construction, instructions, `RunAsync` input and returned response. Compare sample
+   package/API versions with the checkout before copying code. The video reads this example;
+   it does not claim a separate execution of the Learn console sample.
+3. In your authorized existing Foundry project, locate its model deployments and Agents page.
+   The recording visits `caesarea-dev` and `caesarea-operations` (Hosted, Running, version 13).
+   This is orientation to an existing deployment, not a requirement to create one. Learners
+   without access can use the recorded view. The local exercise needs model invocation access,
+   not a hosted-agent deployment. The hosted agent's cloud Hub is independent of the local city.
+4. In `Services/OperationsAgent.Api/Program.cs`, find `AskAsync` (line 482 at the baseline).
+   Follow `request.Question` into `agent.AskAsync` (517), then the typed response (528 onward).
+   Open `Services/OperationsAgent.Api/Services/FoundryOperationsAgent.cs`: agent creation is
+   around 225 and `agent.RunAsync` at 282. Line numbers are aids; use the method names if shifted.
+
+Checkpoint: explain which component receives the HTTP question, which invokes the agent, where
+model inference runs, and which service owns operational state. Framework, platform and domain
+service are separate responsibilities.
+
 ## Explain the boundaries first
 
 - A city is a system of independently owned systems. Domain Hubs normalize their interfaces.
@@ -30,7 +60,8 @@ git rev-parse HEAD
 ```
 
 Use a separate clone if you have work in progress. This video was recorded from local `main`
-at `9d2f766cc19050495c52a601075df15870c4c0af`, after merging .NET 11 and the durable demo.
+with the application merge `9d2f766cc19050495c52a601075df15870c4c0af` and the expanded captures
+at `90f14e6` (course changes only since that merge), after merging .NET 11 and the durable demo.
 Record your own commit; filenames and behavior can change as main evolves.
 
 **Local review / release gate:** this task did not push main or publish the course. A fresh GitHub
@@ -51,6 +82,7 @@ dotnet restore
 dotnet build
 dotnet test --project ./Tests/Caesarea.Deterministic.Tests/Caesarea.Deterministic.Tests.csproj
 code --install-extension ./tools/vscode-demo-attach/demo-attach-0.3.0.vsix
+# Windows only, if choosing Visual Studio 2026:
 dotnet build ./tools/visualstudio-demo-attach/src --configuration Release
 ```
 
@@ -125,7 +157,8 @@ Before using the main app, open **Walkthrough** at its upper right. Read Needs, 
    `currentStage`, and `composition.Tools`. The configured model receives only admitted tools.
 6. F5 reaches `EnergyTools.cs`, `GetStreetlightStateAsync`, FUNCTION_TOOL (line 44).
    Inspect `assetId` (`L-417`). The method calls `_energyReadGateway.GetStateAsync`; it does not
-   read a model-owned copy of city state.
+   read a model-owned copy of city state. Watch expressions belonging to `AskAsync` are out of
+   scope in this method; use Locals for its arguments. This is debugger scope, not an agent failure.
 7. F5 reaches the breakpoint after `RunAsync`. In Watch (or Debug Console) inspect:
 
 ```csharp
@@ -141,8 +174,8 @@ Expand the collections. The first model response requests the tool; the next req
 result. Count and wording are observations, not a universal framework guarantee. The recorder
 shows messages, arguments and results; it is not access to private model reasoning.
 
-8. F5 finishes. Remove the ordinary breakpoint. **Detach VS Code** in Director, or use the
-   attached session's Disconnect/Shift+F5. This is an attach session, not an IDE-launched server.
+8. F5 finishes. Remove the ordinary breakpoint. Use **Detach VS Code** in Director.
+   This is an attach session, not an IDE-launched server.
 
 **Timing:** keep the entire request under 100 seconds. The web client still has a 100-second
 attempt timeout while the agent is paused. Pause the *video* to study the code; do not hold a live
@@ -159,7 +192,15 @@ Ask the same read-only question in Command Center. F10 steps over; F5 continues.
 Watch to inspect `question`, `assetId`, `response.Text` and `modelFlightRecorder.Exchanges`.
 Expand the first response and next request; inspect the actual Hub result. Continue promptly,
 remove the ordinary breakpoint, then use **Detach Visual Studio** in Director. Do not terminate
-the service. The recorded native Visual Studio alternative is Debug → Attach to Process, filtered by the PID from `/api/demo-breakpoints`, followed by Debug → Detach All.
+the service. The improved recording uses the Director's attach and detach controls.
+
+**Variable drill-down:** expand `modelFlightRecorder.Exchanges` → `[0]` → `Received` → first
+string (under Results View if the debugger shows that wrapper). Expect a request resembling
+`get_streetlight_state({"assetId":"L-417"})`. Collapse `[0]`, expand `[1]` → `Sent` → first
+string. In VS Code's Debug Console evaluate `modelFlightRecorder.Exchanges[1].Sent[0]` to read
+the full payload; in Visual Studio use the string visualizer if needed. Verify `reportedIsOn`,
+`isDaylight`, `expectedScheduledState`, and `manualOverride`. These are observed protocol
+messages and Hub data. A content-type placeholder is not the model's private reasoning.
 
 ## 6. Prove what happened
 
@@ -180,7 +221,8 @@ service PID remains alive with no debugger. Do not expect identical prose from t
 
 Repeat one attach → stop → inspect → continue → detach cycle without following the video.
 Then explain: who observed state, what the model selected, where authority resides, and why the
-answer did not repair the lamp. For the second IDE, repeat after the first has detached.
+answer did not repair the lamp. On Windows, optionally repeat with the second IDE after the first
+has detached. On a Mac, complete this exercise in VS Code.
 
 ## Failure and recovery
 
@@ -220,3 +262,9 @@ returned an answer with one tool call and two model round trips (UI correlation 
 The independent Hub check still reported On and override true at revision 3. The visible Director
 reset selected Deterministic and reapplied Lights On, producing revision 5. Your IDs and revisions
 will differ. No repair was requested in Unit 00. See `evidence/` for the actual saved API responses.
+
+The expanded takes again used PID 27972. Both Director detach operations were verified by the
+service API; the Hub stayed On with override true at revision 5. The final Director stage was
+returned to Deterministic; because the anomaly fixture was already present, that stage change
+did not reapply the scenario. The earlier visible reset remains in the edit. The older successful
+detached retry and new debug takes are different requests, not one continuous transaction.

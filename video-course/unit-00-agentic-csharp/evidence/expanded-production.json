@@ -1,0 +1,58 @@
+{
+  "applicationMergeCommit": "9d2f766cc19050495c52a601075df15870c4c0af",
+  "expandedCaptureCommit": "90f14e6",
+  "branch": "main",
+  "scope": "Course files only; local media; no push, publication, deployment or shared-cloud changes",
+  "quality": {
+    "restore": "passed",
+    "format": "passed; no source changes",
+    "build": {
+      "result": "passed",
+      "warnings": 0,
+      "errors": 0
+    },
+    "tests": {
+      "passed": 469,
+      "skipped": 4,
+      "failed": 0
+    },
+    "diffCheck": "passed",
+    "initialBuildAttempt": "Stopped due to DLL locks held by the recording AppHost; stopped that AppHost, then fresh build and tests passed"
+  },
+  "finalRuntimeState": "Both IDEs detached, ordinary breakpoint removed, teaching stops consumed, Director at Deterministic. AppHost stopped after capture to release build locks.",
+  "foundryObservation": {
+    "project": "caesarea-dev",
+    "agent": "caesarea-operations",
+    "kind": "Hosted",
+    "status": "Running",
+    "activeVersion": 13,
+    "readOnly": true,
+    "invoked": false
+  },
+  "sources": {
+    "orientation-repo.mp4": {
+      "seconds": 57.266667,
+      "sha256": "eabd9a6540546ff21d570c17f7de9baf2983255a0fa8b4dab29b5b4772603088"
+    },
+    "orientation-code.mp4": {
+      "seconds": 90.2,
+      "sha256": "6ce1b30187c7fd460b0172a574af4872635e2a0574a5f4c78eeec0cc55a25580"
+    },
+    "orientation-learn.mp4": {
+      "seconds": 66.6,
+      "sha256": "d9d907ccac6e27cf158c51cbee7ed0c674483e9cd78da90b9ee732888d3e8776"
+    },
+    "orientation-foundry.mp4": {
+      "seconds": 72.733333,
+      "sha256": "f6fe9b5b32d54575fc88eeb057573e551334aec8618a447fa9cf45f32ff12881"
+    },
+    "vscode-values.mp4": {
+      "seconds": 415.8,
+      "sha256": "7760a360194d48a17a810350ed3b9ffe6814577c305e9fc6592fc31e1d8d2ee8"
+    },
+    "vs-values.mp4": {
+      "seconds": 600.0,
+      "sha256": "102660713e6c06e3944acf1070eb4407ecaae85865ea450778f0f6facb8d5d60"
+    }
+  }
+}

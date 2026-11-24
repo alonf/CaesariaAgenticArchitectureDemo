@@ -1,13 +1,18 @@
 # Agentic C#
 
 **Building C# Agentic Systems with MAF and Foundry by Alon Fliess**.
-A self-paced course for developers who want to build, inspect and justify agentic systems.
+A self-paced course for C# developers architecting, designing and implementing new agentic
+systems or adding agentic capabilities to existing applications. No prior agent knowledge required.
 The smart city is the recurring example; engineering judgment is the goal.
 
-The current Unit 00 uses Alon's branded slides and background, introduces the framework and
-platform before the city, and follows **Aspire → Director → Command Center → VS Code → Visual
-Studio 2026**. Application and debugger demonstrations use real motion recordings. Visual Studio
-2026 is Windows-only. The main app's top-right Walkthrough is shown. Only Unit 00 is produced.
+The improved Unit 00 preserves Alon's branded introduction and architecture foundation. It adds
+**GitHub/README/code structure → Microsoft Learn → the actual Foundry project and hosted agent →
+the simplest C# agent call**. The local walkthrough follows **Aspire → Director → Command Center →
+VS Code → Visual Studio 2026**. Both IDEs attach and detach through Director. Actual motion shows
+variable drill-down, the model-selected function call, and returned Hub data. The edit uses the
+full frame without permanent title/credit strips, with larger teaching-card text and relevant
+deck diagrams. Visual Studio 2026 is Windows-only; Mac learners use VS Code. The main app's
+top-right Walkthrough is shown. Only Unit 00 is produced.
 
 - [Watch the local Unit 00 rough cut](unit-00-agentic-csharp/output/agentic-csharp-unit-00-rough-cut.mp4)
 - [Timestamped shooting script](unit-00-agentic-csharp/shooting-script.md)
@@ -26,6 +31,9 @@ This is an edited rough cut with synthetic Andrew Neural narration, not Alon's r
 Captured motion runs at normal speed; idle waits are cut and freeze holds are labeled. Debugger
 timeouts and the separate successful retry are explicitly distinguished. The operational device
 is simulated; model inference is real. No cloud deployment or shared settings change was made.
+The Foundry portal visit is read-only orientation to an existing deployment. It does not switch
+the local debugging exercise to cloud hosting. The preceding branded cut is preserved locally
+under `unit-00-agentic-csharp/output/prior-branded-cut/`.
 
 The older `unit-00-introduction/` and `unit-00-foundations/` pilots remain archived review
 material. Their branding, pinned-branch setup and still-capture approach are superseded here.

@@ -1,42 +1,118 @@
 {
-  "durationSeconds": 1523.488,
-  "sizeBytes": 47639267,
-  "sha256": "89a412b046193de57daa49a2365728022830f89fe57025de50d33491c1422ab5",
-  "completeDecode": "passed",
-  "captionCues": 323,
-  "captionTiming": "monotonic, inside duration",
-  "scenes": 29,
-  "chapters": 6,
+  "durationSeconds": 1830.488,
+  "sha256": "88163bd353fa2870bf5fe6957b9bfe2f768ef01d8ff54834d9bf2984a2117858",
+  "bytes": 61077717,
+  "scenes": 33,
+  "captionCues": 385,
+  "captionOrderAndBounds": "pass",
+  "fullDecode": "pass",
   "streams": [
     {
-      "codec_type": "video",
       "codec_name": "h264",
+      "codec_type": "video",
       "width": 1920,
       "height": 1080,
-      "sample_rate": null
+      "r_frame_rate": "15/1"
     },
     {
-      "codec_type": "audio",
       "codec_name": "aac",
-      "width": null,
-      "height": null,
-      "sample_rate": "48000"
+      "codec_type": "audio",
+      "sample_rate": "48000",
+      "channels": 2,
+      "r_frame_rate": "0/0"
     },
     {
-      "codec_type": "subtitle",
       "codec_name": "mov_text",
-      "width": null,
-      "height": null,
-      "sample_rate": null
+      "codec_type": "subtitle",
+      "r_frame_rate": "0/0"
     },
     {
-      "codec_type": "data",
       "codec_name": "bin_data",
-      "width": null,
-      "height": null,
-      "sample_rate": null
+      "codec_type": "data",
+      "r_frame_rate": "0/0"
     }
   ],
-  "visualReview": "All 29 scene midpoints reviewed; source trims additionally inspected for both debugger sequences, successful retry, and reset. Card safe bounds validated.",
-  "scope": "Local rough cut; synthetic review narration; real motion and labeled freeze holds."
+  "chapters": [
+    {
+      "id": 0,
+      "time_base": "1/1000",
+      "start": 0,
+      "start_time": "0.000000",
+      "end": 441200,
+      "end_time": "441.200000",
+      "tags": {
+        "title": "Welcome to Agentic C#"
+      }
+    },
+    {
+      "id": 1,
+      "time_base": "1/1000",
+      "start": 441200,
+      "start_time": "441.200000",
+      "end": 665333,
+      "end_time": "665.333000",
+      "tags": {
+        "title": "The code, framework and platform"
+      }
+    },
+    {
+      "id": 2,
+      "time_base": "1/1000",
+      "start": 665333,
+      "start_time": "665.333000",
+      "end": 1007867,
+      "end_time": "1007.867000",
+      "tags": {
+        "title": "Architecture and operational authority"
+      }
+    },
+    {
+      "id": 3,
+      "time_base": "1/1000",
+      "start": 1007867,
+      "start_time": "1007.867000",
+      "end": 1287467,
+      "end_time": "1287.467000",
+      "tags": {
+        "title": "Start and navigate the lab"
+      }
+    },
+    {
+      "id": 4,
+      "time_base": "1/1000",
+      "start": 1287467,
+      "start_time": "1287.467000",
+      "end": 1566467,
+      "end_time": "1566.467000",
+      "tags": {
+        "title": "Debug in Visual Studio Code"
+      }
+    },
+    {
+      "id": 5,
+      "time_base": "1/1000",
+      "start": 1566467,
+      "start_time": "1566.467000",
+      "end": 1669267,
+      "end_time": "1669.267000",
+      "tags": {
+        "title": "Debug in Visual Studio 2026"
+      }
+    },
+    {
+      "id": 6,
+      "time_base": "1/1000",
+      "start": 1669267,
+      "start_time": "1669.267000",
+      "end": 1830467,
+      "end_time": "1830.467000",
+      "tags": {
+        "title": "Verify, practice, and reset"
+      }
+    }
+  ],
+  "renderStyle": "Full-frame; no permanent title or credit strips; normal-speed motion; labeled freeze holds",
+  "narration": "Synthetic Andrew Neural review voice",
+  "visualReview": "Sampled all 33 scenes, then inspected full-size tool-boundary, tool-request, tool-payload and Visual Studio Watch frames. Cut Quick Open history from the selected payload segment; labeled reading holds.",
+  "remainingReview": "Author review of pacing, pronunciation and synthetic review voice; Unit 00 only."
 }
