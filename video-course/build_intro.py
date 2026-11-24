@@ -105,6 +105,27 @@ def prepare_assets():
             "// Reported state comes from confirmedIsOn, not a model answer.")
     line = source[:assignment_start].count("\n") + 1
     CARDS["hub-code"] = (f"EnergyHubService.cs — line {line} (excerpt)", code)
+    before = json.loads((UNIT / "evidence/ui-before.json").read_text(encoding="utf-8-sig"))
+    after = json.loads((UNIT / "evidence/ui-after.json").read_text(encoding="utf-8-sig"))
+    receipt = after["lastCommand"]
+    activity = json.loads((UNIT / "evidence/ui-activity.json").read_text(encoding="utf-8-sig"))
+    reset = json.loads((UNIT / "evidence/api-reset-after-ui.json").read_text(encoding="utf-8-sig"))["state"]
+    if after["reportedIsOn"] or after["manualOverride"] or receipt["status"] != "Succeeded":
+        raise RuntimeError("Recorded evidence does not demonstrate a successful repair")
+    CARDS["hub-after"] = ("Actual Hub response after the UI click", json.dumps({
+        "assetId": after["assetId"], "reportedIsOn": after["reportedIsOn"],
+        "desiredIsOn": after["desiredIsOn"], "manualOverride": after["manualOverride"],
+        "stateRevision": after["stateRevision"], "lastCommand": receipt}, indent=2) +
+        f"\n\nSelected fields from evidence/ui-after.json\nBefore revision: {before['stateRevision']} — this run only")
+    CARDS["hub-activity"] = ("Actual correlated Hub events", "GET /api/energy/assets/L-417/activity?limit=20\n\n" +
+        "Command correlation:\n" + receipt["correlationId"] + "\n\n" +
+        "\n\n".join(f"{e['commandStatus']}\n{e['message']}" for e in reversed(activity)) +
+        "\n\nSource: evidence/ui-activity.json\nSelected actual response fields; not a terminal capture.")
+    CARDS["reset"] = ("Verified reset — API fallback in this rough cut", "Director reset click still needs a screen pickup.\nThe local API reset was executed and verified:\n\n" +
+        "POST /api/demo-scenarios/apply/ForgottenOverride\nGET  /api/energy/assets/L-417\n\n" +
+        json.dumps({k: reset[k] for k in ["reportedIsOn", "manualOverride", "stateRevision", "controllerHealth"]}, indent=2) +
+        "\n\nActual response: evidence/api-reset-after-ui.json\nLearner: reapply Scenario 1 in Director (lab step 7).")
+    CARDS["baseline-check"] = ("Clean baseline verification", "89d5a513be97301857dd4f156ce0773103712d51\n\nRestore and build succeeded.\nBuild: 1 AZFW0108 warning (Functions extensions restore).\nTests: 447 passed, 4 skipped.\nFormatting verification passed.\n\nRecorded check summary — not a console screenshot.\nDetails: baseline.md and execution-evidence.md\n\nStartup / Aspire screen pickup remains outstanding.\nThe app captures that follow are actual local execution.")
     shutil.copyfile("C:/Windows/Fonts/consola.ttf", BUILD / "mono.ttf")
     shutil.copyfile("C:/Windows/Fonts/segoeui.ttf", BUILD / "sans.ttf")
     for key, (heading, body) in CARDS.items():
@@ -113,12 +134,13 @@ def prepare_assets():
         canvas = Image.new("RGB", (1920, 1080), "#101a29")
         draw = ImageDraw.Draw(canvas)
         heading_font = ImageFont.truetype(str(BUILD / "sans.ttf"), 54)
-        body_font = ImageFont.truetype(str(BUILD / "mono.ttf"), 30)
+        body_font = ImageFont.truetype(str(BUILD / "mono.ttf"), 27 if key == "hub-after" else 30)
+        spacing = 9 if key == "hub-after" else 18
         draw.text((90, 90), heading, font=heading_font, fill="#72d5e7")
-        bounds = draw.multiline_textbbox((90, 230), body, font=body_font, spacing=18)
+        bounds = draw.multiline_textbbox((90, 230), body, font=body_font, spacing=spacing)
         if bounds[2] > 1830 or bounds[3] > 1020:
             raise RuntimeError(f"Card text overflows the safe area: {key}, {bounds}")
-        draw.multiline_text((90, 230), body, font=body_font, fill="white", spacing=18)
+        draw.multiline_text((90, 230), body, font=body_font, fill="white", spacing=spacing)
         canvas.save(ASSETS / f"card-{key}.png")
     print("Original slide frames and readable setup/code cards prepared", flush=True)
 
@@ -139,7 +161,7 @@ def visual_path(scene):
 
 
 def render_video():
-    missing = [str(visual_path(s)) for s in SCENES if not visual_path(s).exists()]
+    missing = [str(visual_path(v)) for s in SCENES for v in s.get("shots", [s]) if not visual_path(v).exists()]
     if missing:
         raise RuntimeError("Required real captures missing; no substitutes were generated:\n" + "\n".join(missing))
     clips = []
@@ -151,16 +173,33 @@ def render_video():
         length = math.ceil(max(duration(audio) + 0.8, scene.get("planned_seconds", 0)) * 15) / 15
         title = BUILD / f"title-{scene['id']}.txt"
         title.write_text(f"CAESAREA  /  UNIT 00     {scene['title']}", encoding="utf-8", newline="\n")
-        source = "Alon Fliess | H08, September 2026 | PDF page " + scene["visual"].split(":")[1] if scene["visual"].startswith("H08:") else "ROUGH CUT | Real local captures / simulated device | Baseline 89d5a51"
+        source = "Alon Fliess | H08, September 2026 | PDF page " + scene["visual"].split(":")[1] if scene["visual"].startswith("H08:") else "ROUGH CUT | Edited still captures and evidence cards | Simulated device | 89d5a51"
         credit = BUILD / f"credit-{scene['id']}.txt"
         credit.write_text(source, encoding="utf-8", newline="\n")
         clip = BUILD / f"clip-{scene['id']}.mp4"
-        vf = (f"scale=1800:900:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:80:color=0x081321,setsar=1,"
+        inputs = []
+        filters = []
+        shots = scene.get("shots", [{"visual": scene["visual"], "seconds": length}])
+        if abs(sum(s["seconds"] for s in shots) - length) > .01:
+            raise RuntimeError(f"Shot durations do not match scene {scene['id']}")
+        for i, shot in enumerate(shots):
+            inputs.extend(["-loop", "1", "-framerate", "15", "-i", visual_path(shot)])
+            crop = ""
+            if "crop" in shot:
+                x, y, w, h = shot["crop"]
+                crop = f"crop={w}:{h}:{x}:{y},"
+            filters.append(f"[{i}:v]{crop}scale=1800:900:force_original_aspect_ratio=decrease,"
+                           f"pad=1920:1080:(ow-iw)/2:80:color=0x081321,setsar=1,"
+                           f"trim=duration={shot['seconds']},setpts=PTS-STARTPTS[v{i}]")
+        labels = "".join(f"[v{i}]" for i in range(len(shots)))
+        vf = (f"{labels}concat=n={len(shots)}:v=1:a=0,"
               f"drawtext=fontfile=sans.ttf:textfile={title.name}:expansion=none:fontcolor=white:fontsize=29:x=60:y=22,"
               f"drawtext=fontfile=sans.ttf:textfile={credit.name}:expansion=none:fontcolor=0xa5bbc8:fontsize=20:x=60:y=1035,"
-              f"fade=t=in:st=0:d=0.25,fade=t=out:st={length - .25:.3f}:d=0.25")
-        run("ffmpeg", "-y", "-v", "error", "-loop", "1", "-framerate", "15", "-i", visual_path(scene), "-i", audio,
-            "-vf", vf, "-af", "adelay=300:all=1,apad", "-t", f"{length:.6f}", "-c:v", "libx264", "-preset", "veryfast",
+              f"fade=t=in:st=0:d=0.25,fade=t=out:st={length - .25:.3f}:d=0.25[outv]")
+        filters.append(vf)
+        run("ffmpeg", "-y", "-v", "error", *inputs, "-i", audio,
+            "-filter_complex", ";".join(filters), "-map", "[outv]", "-map", f"{len(shots)}:a",
+            "-af", "adelay=300:all=1,apad", "-t", f"{length:.6f}", "-c:v", "libx264", "-preset", "veryfast",
             "-tune", "stillimage", "-crf", "23", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "128k", "-ar", "48000", "-ac", "2", clip)
         clips.append(clip)
         timeline.append({**scene, "start": round(position, 3), "end": round(position + length, 3)})

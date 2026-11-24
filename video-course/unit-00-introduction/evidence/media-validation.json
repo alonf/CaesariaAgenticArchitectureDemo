@@ -1,0 +1,57 @@
+{
+  "kind": "Edited-still Unit00 rough cut; missing pickups listed in execution-evidence.md",
+  "applicationBaseline": "89d5a513be97301857dd4f156ce0773103712d51",
+  "durationSeconds": 645.021333,
+  "width": 1920,
+  "height": 1080,
+  "subtitleCues": 125,
+  "chapters": 5,
+  "checks": [
+    "Full FFmpeg decode completed without errors",
+    "Caption times ordered, non-overlapping, inside video",
+    "All narration word timings fit their scene",
+    "Representative rendered frames visually inspected"
+  ],
+  "audioMeasurement": {
+    "meanDb": -24.3,
+    "peakDb": -5.7,
+    "note": "Encoded audio levels measured; not a claim of a full listening review"
+  },
+  "files": [
+    {
+      "path": "output/caesarea-unit-00-rough-cut.mp4",
+      "bytes": 13870840,
+      "sha256": "e35e754e7be633be3211da528350d3aa1e5131ef70785629b767017f999009f3"
+    },
+    {
+      "path": "output/unit-00-introduction.en.srt",
+      "bytes": 14254,
+      "sha256": "b5d10fa5b66ff3b33324c58bd8cabf4df7489d5c23a447bf08968a07877be250"
+    },
+    {
+      "path": "assets/capture-city-before.png",
+      "bytes": 216828,
+      "sha256": "98d663ff12382e3f8ffa737b79f10073c905e1fd4823262782474005a68c9ed3"
+    },
+    {
+      "path": "assets/capture-director-preview.png",
+      "bytes": 265984,
+      "sha256": "c9936f5026824f0bcf7adb549e0d68dba577fa0477964075a5a8cc1120e0031b"
+    },
+    {
+      "path": "assets/capture-director.png",
+      "bytes": 255493,
+      "sha256": "df48944c3d3f5369c281ab7db91ef9feb790b14524fbb658c656b786ff019385"
+    },
+    {
+      "path": "assets/capture-hub-before.png",
+      "bytes": 171181,
+      "sha256": "1f7e54f062fa9b005691ff25bf8833458be2f508fa97f6f8f91a042be0cedece"
+    },
+    {
+      "path": "assets/capture-restore.png",
+      "bytes": 222881,
+      "sha256": "51cec4f742f2b71ac94dd074fd415bebdae48b3d752e4b2a7d261567bc8fc3d2"
+    }
+  ]
+}

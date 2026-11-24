@@ -1,6 +1,6 @@
-# Unit 00 narration — revised hands-on pilot
+# Unit 00 narration
 
-Synthetic voice; script, not a completed recording.
+Voice: Microsoft Andrew Neural, synthetic English narration.
 
 ## 01. L-417 is on in daylight
 
@@ -40,15 +40,15 @@ Switch to Command Center. Find L four seventeen on the North Promenade. Read the
 
 ## 10. Check the Energy Hub before acting
 
-Now make the independent check. In a second terminal, set hub base to the HTTPS Energy Hub address from Aspire, then run the read command in the lab. This calls the Hub's asset endpoint for L four seventeen. Compare reported state, schedule, override, and revision with the browser. Store this response as before. The revision is a version of authoritative state, not a value you should copy from my recording. Our read has its own correlation identifier; the repair will have another one. We will use the repair identifier when joining its events.
+Now make the independent check. Use the read command in the lab with the HTTPS Energy Hub address from Aspire. Here we opened that same asset endpoint in the browser so you can inspect the actual response. Compare reported state, schedule, override, and revision. In your terminal, store this response as before. The revision is a version of authoritative state, not a value to copy from my recording. This run is at revision nineteen. The repair will have its own correlation identifier, which we will use to join its events.
 
 ## 11. Restore scheduled mode
 
-Return to Command Center and click Restore Scheduled Mode once. Watch the request complete. The operator is initiating a narrow deterministic operation. There is no model deciding whether to press the button, and no claim here of a production identity deployment. The Hub computes the target, sends the device command, and waits for a result. A desired target can change while that work is pending. We must wait for confirmation before saying that the reported lamp state has changed.
+Return to Command Center and click Restore Scheduled Mode once. These captures show the app before and after the actual click; the short pending transition is not recorded. The operator initiates a narrow deterministic operation. No model decides whether to press the button. The Hub computes the target, sends the device command, and waits for a result. A desired target can change while that work is pending. We must wait for confirmation before saying the reported lamp state changed. This is a local demo, not a production identity deployment.
 
 ## 12. Verify the receipt and reported state
 
-Read the Hub again. The expected outcome is reported off, desired off, and manual override false. Inspect last command: it must say Succeeded, with a completion time and a correlation identifier. Check that the revision advanced from the snapshot you saved. Then filter the Hub activity by this command's identifier and read the confirmation. The lab includes checks that fail if these conditions are missing. This combination is our evidence. The browser changing color, or an HTTP request being accepted, would not be enough. We have proven the local simulated repair, not delivery to a real streetlight.
+Read the Hub again. These evidence cards contain the actual response after our UI click. Reported off, desired off, and manual override false. Last command says Succeeded, with a completion time and a correlation identifier. Revision advanced from nineteen to twenty. Now filter Hub activity by that command identifier. It records the pending target, then SmartPole confirmation. The lab includes checks that fail if the required conditions are missing. This is our evidence. A browser changing color, or an HTTP request being accepted, would not be enough. We proved the local simulated repair, not delivery to a real streetlight.
 
 ## 13. Why this code waits for confirmation
 
@@ -60,7 +60,7 @@ Back in Command Center, the lamp is off. We have corrected the condition, but we
 
 ## 15. Reset is part of the lab
 
-Before repeating the exercise, reset the lab deliberately. Go back to the Director and reapply Lights On Reported by a Client, with Deterministic still selected. Return to the main app and read the Hub again. The lamp should be on with the override active and the controller healthy. Save a new before snapshot. Do not compare a new repair with a snapshot from an earlier scenario. This visible reset is how we reuse the incident in every lesson without hiding a preparation step from you.
+Before repeating the exercise, reset deliberately. In your lab, return to the Director and reapply Lights On Reported by a Client, keeping Deterministic selected. The capture connection failed before that browser reset shot. For this rough cut, we executed the local scenario API instead. This card shows its actual verified Hub result: lamp on, override active, healthy controller, revision twenty two. Save a fresh before snapshot. Do not compare a new repair with an earlier scenario. The finished browser reset sequence still needs recording; the copyable lab explains your steps.
 
 ## 16. Pause and do
 

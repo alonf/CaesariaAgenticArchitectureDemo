@@ -7,9 +7,13 @@ Start with [the course storyboard](storyboard.md). The first deliverable is
 [Unit 00: MAF and the Caesarea lab](unit-00-introduction/storyboard.md).
 Subsequent units are storyboarded, not recorded yet.
 
-**Current status:** Unit00's revised 10:45 shooting script, lab, narration and draft captions are
-ready. Local API rehearsal passed. Screen capture is blocked, so no pilot MP4 is complete;
-see [exact evidence and missing shots](unit-00-introduction/execution-evidence.md).
+**Current deliverable:** Unit00's 10:45 narrated **edited-still rough cut**, with real app captures,
+saved Hub evidence, captions and a companion lab. Open the local
+[MP4](unit-00-introduction/output/caesarea-unit-00-rough-cut.mp4) and
+[captions](unit-00-introduction/output/unit-00-introduction.en.srt).
+This is not a continuous screencast. Startup/Aspire footage and the Director reset sequence still
+need pickups; a verified API reset is explicitly labeled in this cut. See
+[execution evidence and limitations](unit-00-introduction/execution-evidence.md).
 
 The source decks are the unchanged September 2026 H08 and W20 release PDFs. This course uses
 the pinned November .NET 11 baseline. PDF **page numbers**, including animation keyframes, are
@@ -23,7 +27,7 @@ No merge to main is needed. Do not tell viewers a local-only course branch is av
 The revised course is a self-paced lab around L-417, not a feature checklist. Start with the
 [timestamped shooting script](unit-00-introduction/shooting-script.md) and
 [companion lab](unit-00-introduction/lab.md). Produce only Unit00 and stop for review.
-Draft captions are `unit-00-introduction/unit-00-draft.en.srt`; retime them after recording.
+Final rough-cut captions are in `unit-00-introduction/output/`; the draft file remains a script export.
 
 Production sources, narration, chapter metadata and rebuild tools live here. Downloaded decks,
 raw captures, generated speech and rendered videos are ignored to keep large binaries and local
@@ -56,7 +60,8 @@ The audio phase sends only the reviewed narration to Microsoft's speech endpoint
 It reads no model credentials. Python requires PyMuPDF; voice generation requires edge-tts;
 rendering requires FFmpeg/ffprobe. Downloaded source PDFs are checked by SHA-256.
 
-`--phase assets` renders original slide frames and code/setup cards. Actual app captures must be
+`--phase assets` renders original slide frames, code/setup cards, and clearly labeled cards from
+the saved actual Hub responses. It never creates a simulated screenshot or console transcript. Actual app captures must be
 supplied under the ignored unit assets folder using the names in scenes.json. `--phase video`
 refuses to render when any required capture is missing. Its still-capture edit is explicitly named
 `caesarea-unit-00-rough-cut.mp4`; a finished motion edit still needs recorded actions and review.

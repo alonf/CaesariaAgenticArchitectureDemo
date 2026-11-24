@@ -83,6 +83,12 @@ preparation, Command Center action, actual Hub JSON before/after, a short readab
 and an explicit reset. Close with pause-and-do, expected receipt/state, and recovery from the wrong
 fixture. Mark SmartPole as simulated and the pilot as a rough cut if it uses edited screen captures.
 
+Pilot production status: actual Director preparation and the main-app repair were executed and
+captured as stills. The rough cut uses actual Hub responses for after-state/activity and an explicitly
+labeled API reset after the capture connection closed. Startup/Aspire and Director-reset motion
+shots remain pickups before a finished release. See Unit00 execution-evidence.md; do not present
+the rough cut as fulfillment of those missing shots.
+
 ### 01 — Deterministic city
 
 Continue from the Unit 00 repair: reset L-417 explicitly, then explain the distinction between

@@ -25,31 +25,66 @@ The numbers above describe this saved run, not constants a learner should expect
 is simulated by SmartPole. This is an **API rehearsal**, not evidence that the browser button was
 clicked or screen footage recorded. `rehearse_unit00.ps1` deliberately makes that distinction.
 
-## Capture blocker and missing work
+## Actual UI repair and capture
 
-The native capture tool could not control Chrome's Open file dialog. It first rejected its Cancel
-button as belonging to a different target window; later it returned **“foreground window did not
-report a process id.”** Browser automation access was unavailable in this session. A request to
-close the dialog manually was sent; no confirmation of a usable recording surface was received.
+The user correctly reported that Chrome was not running: the earlier dialog report came from
+stale computer-control state. Resetting the capture connection and launching a fresh Chrome
+window resolved that first blocker. It did not require the user to close a nonexistent dialog.
 
-The current deliverable is the revised shooting script, lab, narration, draft captions and verified
-API evidence. **There is no completed pilot MP4 or recorded rough cut yet.** Old narration/capture
-plans are superseded by the current scenes.json and shooting-script.md.
+The following actions were performed through the native browser UI and captured as still images:
 
-Missing shots before the pilot can be edited:
+1. Open Command Center at its actual HTTPS resource URL.
+2. In Director reset Normal Operation, select Deterministic, inspect the preparation preview,
+   confirm it, and observe readiness for Lights On Reported by a Client.
+3. Read the Hub endpoint in the browser. [Before evidence](evidence/ui-before.json): revision19,
+   reported On, desired On, override active, healthy controller, schedule Off.
+4. Click **Restore Scheduled Mode in Command Center**. The captured resulting screen reports Off
+   and includes the events for the operator request and SmartPole confirmation. No API restore
+   was substituted for this click. Its brief pending transition was not captured.
 
-1. Command Center cold open on L-417 (shots 01–02, 09).
-2. Actual startup/resource view, excluding the login token (shot 06).
-3. Director preparation preview, confirmation and readiness (shot 08).
-4. Readable terminal Hub-before capture (shot 10).
-5. Main-app Restore Scheduled Mode click, wait and completion (shot 11).
-6. Hub-after receipt/correlated activity and completed main UI (shots 12, 14).
-7. Director reset and fresh Hub/main-app anomaly (shot 15).
+After this click, the computer-control transport closed. Reconnecting/resetting returned
+`Transport closed`. The completed repair screenshot had already been saved. A direct read of
+the Hub verified the same command; no second repair command was sent:
 
-A source excerpt from the clean baseline is prepared for shot13. Code/source cards and narration
-are production assets, not substitutes for the missing app execution footage. After capture,
-retime captions, assemble the edit, inspect readable frames/audio/privacy, and deliver only Unit00
-for review. Later units must not start until that review.
+- [After state](evidence/ui-after.json): revision20, reported/desired Off, override cleared,
+  `Restore scheduled mode`, Succeeded.
+- Command correlation: `e4980ed381f84ef192c787e7af460674`.
+- [Matching activity](evidence/ui-activity.json): pending desired-state event followed by
+  `SmartPole confirmed the reported state as Off.` with Succeeded status.
+- [Actual API reset](evidence/api-reset-after-ui.json): ForgottenOverride reapplied locally,
+  revision22, reported On, override active and controller Healthy. This is explicitly labeled as
+  an API reset in the narration and picture, not a recorded Director reset click.
+
+The rough cut uses the real before/after app stills, preparation captures, original H08 visuals,
+readable baseline source, command instructions and clearly labeled saved-response cards.
+It is a narrated **edited-still rough cut**, not a continuous screen recording. The Hub after/reset
+cards are generated from the saved JSON; they are not fabricated outputs or imitation terminals.
+
+## Pickups still required for a finished motion edit
+
+1. Actual launch terminal and Aspire resource view, with token-bearing addresses excluded.
+   The rough cut currently shows instructions and a labeled verification summary.
+2. Continuous Director preparation/confirmation and main-app click/completion footage.
+   Actual stills and the successful UI command are available; cursor motion/pending footage is not.
+3. Browser/terminal Hub-after and activity read. The rough cut shows saved actual response cards.
+4. Director reapply scenario, main-app refresh and fresh Hub read for reset.
+   The rough cut instead shows the verified API fallback, with that limitation spoken aloud.
+
+The script, lab and captions accompany the local MP4. Review Unit00 before producing later units.
+
+## Rough-cut export validation
+
+The local MP4 is 1920×1080 H.264 with AAC audio, embedded English captions, a separate SRT,
+five chapter markers, and a duration of 645.02 seconds (10:45). It contains 125 caption cues.
+Full FFmpeg decoding completed without errors. Caption times are ordered, non-overlapping and
+within the video; every narration word boundary fits its scene. Representative cold-open,
+preparation, restore, receipt, source-code and reset frames were visually inspected. Audio was
+measured at -24.3 dB mean / -5.7 dB peak; a full listening review remains part of pilot review.
+
+[Media validation and SHA-256 hashes](evidence/media-validation.json) identify the exact MP4,
+captions and source captures. Raw captures and the MP4 remain local and ignored by Git.
+Python compilation and `git diff --check` passed for the production edits. Application code
+was unchanged by this production work; the clean-baseline application checks are recorded above.
 
 ## Local startup finding
 

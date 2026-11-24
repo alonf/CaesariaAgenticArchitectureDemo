@@ -1,7 +1,7 @@
 # Unit 00 — timestamped shooting script
 
-**Status: shooting script; capture incomplete.** Planned 10-minute edit; timings are
-targets, not claims of recorded footage. English synthetic narration. Stop after this
+**Status: Unit 00 still-capture rough cut.** Timings describe the planned 10:45 edit;
+see execution-evidence.md for captured shots and missing pickups. English synthetic narration. Stop after this
 pilot for review. Use the clean application baseline in baseline.md and the copyable
 steps in lab.md. All app shots must come from actual execution. SmartPole is simulated.
 
@@ -19,6 +19,8 @@ still captures must say so on screen; do not call it continuous footage.
 
 **Shot source:** `capture:city-before`. **Check:** Cold-open footage must come from this run, with the healthy Lights On fixture.
 
+**Edit:** 10s capture:city-before; 15s capture:city-before (crop)
+
 **Narration:**
 
 This streetlight is on in daylight. The schedule says it should be off. You are the operator: can you restore it, and prove that the command actually worked? In this unit, you will start the Caesarea lab, repair L four seventeen, check the result at the Energy Hub, and reset the incident so you can repeat it. The streetlight is simulated. The services and commands you will inspect are real local execution.
@@ -28,6 +30,8 @@ This streetlight is on in daylight. The schedule says it should be off. You are 
 **Screen action:** Hold a readable close view of reported, desired, schedule, override and controller state. Identify evidence without clicking restore.
 
 **Shot source:** `capture:city-before`. **Check:** Do not present the manual override as proof of a technician's reason.
+
+**Edit:** 15s capture:city-before (crop); 15s capture:hub-before (crop)
 
 **Narration:**
 
@@ -39,15 +43,19 @@ Success is more than a green screen. We want the Hub to report that the lamp is 
 
 **Shot source:** `H08:15`. **Check:** Explicitly say Unit00 runs no model; identify observation, inference and authority separately.
 
+**Edit:** 35s H08:15
+
 **Narration:**
 
 Microsoft Agent Framework gives our C sharp application agents, tools, sessions, and workflows. An agent can choose what to inspect next when the evidence changes the investigation. But the known repair path we need today is deterministic. We do not need a model to restore a schedule. The companion book starts with this architectural choice: use the least autonomy that solves the requirement. Later, the agent will observe through tools and infer an explanation. Permission to change city state still belongs at an enforced service boundary.
 
 ## 04 · 01:30–02:05 · Use the exact course revision
 
-**Screen action:** Show copyable clone/fetch/checkout from lab.md, then actual git rev-parse HEAD and global.json from the clean worktree. Do not claim to record a fresh download.
+**Screen action:** Show copyable clone/fetch/checkout commands. This is an instruction card, not a recorded fresh clone; verification is in baseline.md.
 
 **Shot source:** `card:clone`. **Check:** Full revision 89d5a513be97301857dd4f156ce0773103712d51; clean application worktree.
+
+**Edit:** 35s card:clone
 
 **Narration:**
 
@@ -55,9 +63,11 @@ Start with the companion lab beside the video. It gives you the repository URL a
 
 ## 05 · 02:05–02:45 · Build before running
 
-**Screen action:** Show actual SDK version and successful clean build/test summary, with exact commands from lab.md. Label long install/build waits as edited.
+**Screen action:** Show exact commands followed by a labeled summary of the actual clean-worktree checks. Console footage still needs a pickup.
 
 **Shot source:** `card:build`. **Check:** Only insert captured results after clean-worktree checks complete; never copy the earlier working-tree test count.
+
+**Edit:** 30s card:build; 10s card:baseline-check
 
 **Narration:**
 
@@ -65,9 +75,11 @@ You need Git, PowerShell seven, a browser, and the SDK selected by global dot js
 
 ## 06 · 02:45–03:20 · Start Aspire locally
 
-**Screen action:** Show dotnet run command, then actual Aspire resources. Exclude the token-bearing address from the recording. Keep an interactive launch terminal alive.
+**Screen action:** Show exact launch command and resource names. Startup/Aspire UI capture remains a pickup; do not imply it was recorded.
 
 **Shot source:** `card:start`. **Check:** Deterministic resources running and Hub endpoint reachable. Use actual current resource links.
+
+**Edit:** 35s card:start
 
 **Narration:**
 
@@ -79,15 +91,19 @@ Start the AppHost with the command in the lab and keep that terminal open. For t
 
 **Shot source:** `H08:13`. **Check:** Describe SmartPole as a simulator and distinguish preparation from operation.
 
+**Edit:** 30s H08:13
+
 **Narration:**
 
 There are two browser surfaces. Demo Director is our lab bench: it creates the starting conditions and selects a stage. Command Center is the operator's application: that is where we perform the repair. Behind it, the Command Center API calls the Energy Hub, and only the Hub talks to SmartPole. SmartPole simulates the physical device. We will read the Hub directly to check what the operational system knows, rather than treating the browser's presentation as independent proof.
 
 ## 08 · 03:50–04:30 · Prepare the starting fixture
 
-**Screen action:** Click Director 1 Deterministic, show preparation preview, confirm, then show readiness. Capture the actual interaction sequence.
+**Screen action:** Edit actual Director preview, enlarged confirmation and ready-state still captures. The click was executed; this is not continuous footage.
 
 **Shot source:** `capture:director`. **Check:** Lights On Reported by a Client / ForgottenOverride, Deterministic, healthy controller.
+
+**Edit:** 7s capture:director-preview (crop); 10s capture:director-preview (crop); 23s capture:director (crop)
 
 **Narration:**
 
@@ -99,45 +115,55 @@ In the Director, choose beat one, Deterministic. Read the preparation preview be
 
 **Shot source:** `capture:city-before`. **Check:** No agent question or cloud result is implied; facts match fresh Hub read next.
 
+**Edit:** 10s capture:city-before; 20s capture:city-before (crop)
+
 **Narration:**
 
 Switch to Command Center. Find L four seventeen on the North Promenade. Read the customer report and the operational fields before touching the action. The lamp is reported on, it is daylight, the schedule expects off, and the override is active. The controller is healthy. At this stage we have no agent investigation. The system can detect the discrepancy and execute a predefined correction. It cannot explain the maintenance decision merely because we gave the scenario a suggestive name.
 
 ## 10 · 05:00–05:40 · Check the Energy Hub before acting
 
-**Screen action:** Execute lab step4 in a second terminal; show the actual selected fields and save before snapshot. Copy the Hub URL from Aspire.
+**Screen action:** Show the actual browser response from the Hub endpoint. Lab step4 provides the equivalent PowerShell read and saved before variable.
 
 **Shot source:** `capture:hub-before`. **Check:** Actual JSON: reportedIsOn true, expectedScheduledState false, manualOverride true; retain real revision.
 
+**Edit:** 40s capture:hub-before (crop)
+
 **Narration:**
 
-Now make the independent check. In a second terminal, set hub base to the HTTPS Energy Hub address from Aspire, then run the read command in the lab. This calls the Hub's asset endpoint for L four seventeen. Compare reported state, schedule, override, and revision with the browser. Store this response as before. The revision is a version of authoritative state, not a value you should copy from my recording. Our read has its own correlation identifier; the repair will have another one. We will use the repair identifier when joining its events.
+Now make the independent check. Use the read command in the lab with the HTTPS Energy Hub address from Aspire. Here we opened that same asset endpoint in the browser so you can inspect the actual response. Compare reported state, schedule, override, and revision. In your terminal, store this response as before. The revision is a version of authoritative state, not a value to copy from my recording. This run is at revision nineteen. The repair will have its own correlation identifier, which we will use to join its events.
 
 ## 11 · 05:40–06:15 · Restore scheduled mode
 
-**Screen action:** Record the actual Command Center click Restore Scheduled Mode and its pending/completed transition. Preserve meaningful wait; label any cut.
+**Screen action:** Cut from the pre-click button to the actual post-click result, then the completed main app. Pending transition was too brief to capture; no fabricated wait.
 
 **Shot source:** `capture:restore`. **Check:** Command is issued from main UI, not secretly from a test/API script substituted for this shot.
 
+**Edit:** 5s capture:city-before (crop); 12s capture:restore (crop); 18s capture:restore
+
 **Narration:**
 
-Return to Command Center and click Restore Scheduled Mode once. Watch the request complete. The operator is initiating a narrow deterministic operation. There is no model deciding whether to press the button, and no claim here of a production identity deployment. The Hub computes the target, sends the device command, and waits for a result. A desired target can change while that work is pending. We must wait for confirmation before saying that the reported lamp state has changed.
+Return to Command Center and click Restore Scheduled Mode once. These captures show the app before and after the actual click; the short pending transition is not recorded. The operator initiates a narrow deterministic operation. No model decides whether to press the button. The Hub computes the target, sends the device command, and waits for a result. A desired target can change while that work is pending. We must wait for confirmation before saying the reported lamp state changed. This is a local demo, not a production identity deployment.
 
 ## 12 · 06:15–07:00 · Verify the receipt and reported state
 
-**Screen action:** Execute lab step5 read/assertions. Show actual lastCommand and correlated activity. Hold readable fields; no invented receipt or fixed timestamp.
+**Screen action:** Render selected fields from actual saved ui-after.json and ui-activity.json, clearly labeled evidence cards. Browser-after shot was blocked; do not simulate a terminal.
 
-**Shot source:** `capture:hub-after`. **Check:** Reported/desired/override false; receipt Succeeded; newer revision; matching correlation and simulator confirmation.
+**Shot source:** `card:hub-after`. **Check:** Reported/desired/override false; receipt Succeeded; newer revision; matching correlation and simulator confirmation.
+
+**Edit:** 26s card:hub-after; 19s card:hub-activity
 
 **Narration:**
 
-Read the Hub again. The expected outcome is reported off, desired off, and manual override false. Inspect last command: it must say Succeeded, with a completion time and a correlation identifier. Check that the revision advanced from the snapshot you saved. Then filter the Hub activity by this command's identifier and read the confirmation. The lab includes checks that fail if these conditions are missing. This combination is our evidence. The browser changing color, or an HTTP request being accepted, would not be enough. We have proven the local simulated repair, not delivery to a real streetlight.
+Read the Hub again. These evidence cards contain the actual response after our UI click. Reported off, desired off, and manual override false. Last command says Succeeded, with a completion time and a correlation identifier. Revision advanced from nineteen to twenty. Now filter Hub activity by that command identifier. It records the pending target, then SmartPole confirmation. The lab includes checks that fail if the required conditions are missing. This is our evidence. A browser changing color, or an HTTP request being accepted, would not be enough. We proved the local simulated repair, not delivery to a real streetlight.
 
 ## 13 · 07:00–07:40 · Why this code waits for confirmation
 
 **Screen action:** Readable actual EnergyHubService.cs excerpt, RestoreScheduledModeAsync: SetLampStateAsync and success branch. Show filename and real line numbers.
 
 **Shot source:** `card:hub-code`. **Check:** Excerpt taken from clean baseline; emphasize actual reported-state assignment after succeeded confirmation.
+
+**Edit:** 40s card:hub-code
 
 **Narration:**
 
@@ -147,7 +173,9 @@ Open Energy Hub Service dot cs, in Restore Scheduled Mode Async. Look at the cal
 
 **Screen action:** Return to completed main UI; briefly highlight absence of a newly established causal explanation.
 
-**Shot source:** `capture:city-after`. **Check:** Do not imply incident closure or evidence-backed diagnosis merely from restore.
+**Shot source:** `capture:restore`. **Check:** Do not imply incident closure or evidence-backed diagnosis merely from restore.
+
+**Edit:** 15s capture:restore; 15s capture:restore (crop)
 
 **Narration:**
 
@@ -155,19 +183,23 @@ Back in Command Center, the lamp is off. We have corrected the condition, but we
 
 ## 15 · 08:10–08:45 · Reset is part of the lab
 
-**Screen action:** Show Director reapply Lights On Reported by a Client while Deterministic stays selected. Return to main UI and fresh Hub snapshot.
+**Screen action:** Show explicitly labeled actual API reset and fresh Hub response. Director reset click/main-app refresh are missing pickups because capture connection closed.
 
-**Shot source:** `capture:reset`. **Check:** Actual On/override on restored; acknowledge reset mutates the revision and clears prior command context as implemented.
+**Shot source:** `card:reset`. **Check:** Actual API reset verified On/override/healthy at revision22. Explicitly disclose missing Director reset footage.
+
+**Edit:** 35s card:reset
 
 **Narration:**
 
-Before repeating the exercise, reset the lab deliberately. Go back to the Director and reapply Lights On Reported by a Client, with Deterministic still selected. Return to the main app and read the Hub again. The lamp should be on with the override active and the controller healthy. Save a new before snapshot. Do not compare a new repair with a snapshot from an earlier scenario. This visible reset is how we reuse the incident in every lesson without hiding a preparation step from you.
+Before repeating the exercise, reset deliberately. In your lab, return to the Director and reapply Lights On Reported by a Client, keeping Deterministic selected. The capture connection failed before that browser reset shot. For this rough cut, we executed the local scenario API instead. This card shows its actual verified Hub result: lamp on, override active, healthy controller, revision twenty two. Save a fresh before snapshot. Do not compare a new repair with an earlier scenario. The finished browser reset sequence still needs recording; the copyable lab explains your steps.
 
 ## 16 · 08:45–09:25 · Pause and do
 
 **Screen action:** Exercise card with three short tasks and lab link. Hold a quiet 5-second pause after narration if needed.
 
 **Shot source:** `card:exercise`. **Check:** Learner repeats prepared fixture, main-app restore and Hub verification independently.
+
+**Edit:** 40s card:exercise
 
 **Narration:**
 
@@ -179,6 +211,8 @@ Pause the video now. Starting from the reset fixture, read and save the Hub stat
 
 **Shot source:** `card:recovery`. **Check:** A failure case described rather than executed is labeled explanation. Actual receipt remains distinguishable from expectation.
 
+**Edit:** 45s card:recovery
+
 **Narration:**
 
 Your answer should name the Energy Hub as owner of the operational twin. Success requires the confirmed off state and a succeeded correlated command, not just a changed desired target. We still need evidence for the cause. If your result differs, check the fixture first. Controller Fault is designed to fail the healthy-device expectation, while Normal Operation is already off. Reapply Lights On Reported by a Client, verify a healthy controller and Deterministic stage, reread the Hub, and retry. Do not keep clicking against an unexplained failed receipt. Inspect it and restore the starting conditions.
@@ -189,16 +223,18 @@ Your answer should name the Energy Hub as owner of the operational twin. Success
 
 **Shot source:** `card:next`. **Check:** No claims of recorded debugging/cloud deployment. Stop course production after Unit00 review.
 
+**Edit:** 35s card:next
+
 **Narration:**
 
 You can read this solution in Visual Studio 2026 or VS Code. We will attach a debugger and single step when the first agent's tool call gives us a useful decision to inspect; you do not need that setup to finish today's lab. Read chapters six and fourteen of the companion book for the rationale and lab pattern. Reset the anomaly for the next lesson, or stop the AppHost using the lab's cleanup instructions. You can now operate and verify the city. Next we will ask what the agent actually observed, and what it is justified in concluding.
 
 ## Recording completion checklist
 
-- [ ] Cold open, Director preparation and Command Center restore recorded.
-- [ ] Actual Hub before/after and correlated receipt captured legibly.
-- [ ] Clean-baseline code excerpt and explicit scenario reset captured.
-- [ ] Exercise, expected outcome and failure recovery edited in.
-- [ ] Captions retimed to final edit; no overlapping cues or clipped words.
-- [ ] MP4 inspected for readable screens, audio, privacy and correct claims.
-- [ ] Pilot delivered locally for review; no subsequent unit produced.
+- [x] Actual anomaly, Director preparation and post-click main-app result captured as stills.
+- [x] Hub before captured in browser; after/receipt/activity saved and rendered as labeled evidence cards.
+- [x] Clean-baseline source excerpt and verified API reset prepared.
+- [x] Exercise, expected outcome and failure recovery included.
+- [ ] Pickup: startup/Aspire resource view and Director reset with main-app refresh.
+- [ ] Pickup: continuous click/pending/completion footage for a finished motion edit.
+- [ ] Pilot review before any later unit is produced.

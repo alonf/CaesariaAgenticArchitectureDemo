@@ -22,8 +22,8 @@ def stamp(seconds, srt=False):
 def main():
     scenes = json.loads((UNIT / "scenes.json").read_text(encoding="utf-8"))
     script = ["# Unit 00 — timestamped shooting script", "",
-              "**Status: shooting script; capture incomplete.** Planned 10-minute edit; timings are",
-              "targets, not claims of recorded footage. English synthetic narration. Stop after this",
+              "**Status: Unit 00 still-capture rough cut.** Timings describe the planned 10:45 edit;",
+              "see execution-evidence.md for captured shots and missing pickups. English synthetic narration. Stop after this",
               "pilot for review. Use the clean application baseline in baseline.md and the copyable",
               "steps in lab.md. All app shots must come from actual execution. SmartPole is simulated.", "",
               "H08 slide pages include animation keyframes; retain Alon Fliess attribution. Book",
@@ -39,6 +39,7 @@ def main():
         script += [f"## {scene['id']} · {stamp(position)}–{stamp(position + length)} · {scene['title']}", "",
                    f"**Screen action:** {scene['action']}", "",
                    f"**Shot source:** `{scene['visual']}`. **Check:** {scene['verify']}", "",
+                   "**Edit:** " + "; ".join(f"{s['seconds']}s {s['visual']}" + (" (crop)" if "crop" in s else "") for s in scene.get("shots", [{"visual": scene['visual'], "seconds": length}])), "",
                    "**Narration:**", "", scene["narration"], ""]
         words_path = UNIT / "assets" / f"{scene['id']}-words.json"
         if words_path.exists():
@@ -56,17 +57,17 @@ def main():
                 group = []
         position += length
     script += ["## Recording completion checklist", "",
-               "- [ ] Cold open, Director preparation and Command Center restore recorded.",
-               "- [ ] Actual Hub before/after and correlated receipt captured legibly.",
-               "- [ ] Clean-baseline code excerpt and explicit scenario reset captured.",
-               "- [ ] Exercise, expected outcome and failure recovery edited in.",
-               "- [ ] Captions retimed to final edit; no overlapping cues or clipped words.",
-               "- [ ] MP4 inspected for readable screens, audio, privacy and correct claims.",
-               "- [ ] Pilot delivered locally for review; no subsequent unit produced.", ""]
+               "- [x] Actual anomaly, Director preparation and post-click main-app result captured as stills.",
+               "- [x] Hub before captured in browser; after/receipt/activity saved and rendered as labeled evidence cards.",
+               "- [x] Clean-baseline source excerpt and verified API reset prepared.",
+               "- [x] Exercise, expected outcome and failure recovery included.",
+               "- [ ] Pickup: startup/Aspire resource view and Director reset with main-app refresh.",
+               "- [ ] Pickup: continuous click/pending/completion footage for a finished motion edit.",
+               "- [ ] Pilot review before any later unit is produced.", ""]
     (UNIT / "shooting-script.md").write_text("\n".join(script), encoding="utf-8")
     (UNIT / "unit-00-draft.en.srt").write_text("\n\n".join(
         f"{i}\n{stamp(a, True)} --> {stamp(b, True)}\n{t}" for i, (a, b, t) in enumerate(cues, 1)) + "\n", encoding="utf-8")
-    (UNIT / "narration.md").write_text("# Unit 00 narration — revised hands-on pilot\n\nSynthetic voice; script, not a completed recording.\n\n" +
+    (UNIT / "narration.md").write_text("# Unit 00 narration — revised hands-on pilot\n\nSynthetic voice for the edited-still rough cut; see execution-evidence.md for limitations.\n\n" +
         "\n\n".join(f"## {s['id']}. {s['title']}\n\n{s['narration']}" for s in scenes), encoding="utf-8")
     print(f"Exported script and draft captions: {stamp(position)}, {len(scenes)} shots")
 
