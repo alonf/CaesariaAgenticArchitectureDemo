@@ -1,0 +1,24 @@
+[
+  {
+    "id": "b47257c669884997af547941405df435",
+    "assetId": "L-417",
+    "correlationId": "e4980ed381f84ef192c787e7af460674",
+    "source": "EnergyHub",
+    "kind": "Command",
+    "message": "SmartPole confirmed the reported state as Off.",
+    "occurredAt": "2026-11-24T02:19:13.8289322+02:00",
+    "isSuccess": true,
+    "commandStatus": "Succeeded"
+  },
+  {
+    "id": "6d8de02b27d949db95e4125010795c33",
+    "assetId": "L-417",
+    "correlationId": "e4980ed381f84ef192c787e7af460674",
+    "source": "EnergyHub",
+    "kind": "Command",
+    "message": "Desired state set to Off before SmartPole confirmation.",
+    "occurredAt": "2026-11-24T02:19:13.8272791+02:00",
+    "isSuccess": true,
+    "commandStatus": "Pending"
+  }
+]

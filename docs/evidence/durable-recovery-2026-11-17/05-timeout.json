@@ -1,0 +1,10 @@
+{
+  "instanceId": "repair-evidence-timeout",
+  "runtimeStatus": "Completed",
+  "progress": {
+    "State": "TimedOut",
+    "Summary": "The supervisor approval window expired.",
+    "Review": null
+  },
+  "outcome": "{\"State\":\"TimedOut\",\"CommandExecuted\":false,\"Resolved\":false,\"Summary\":\"The supervisor approval window expired.\"}"
+}

@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using Microsoft.Agents.AI;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -212,11 +213,18 @@ public sealed class A2ADelegationTests
             return new ChatResponse(new ChatMessage(ChatRole.Assistant, Answer));
         }
 
-        public IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(
+        public async IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(
             IEnumerable<ChatMessage> messages,
             ChatOptions? options = null,
-            CancellationToken cancellationToken = default) =>
-            throw new NotSupportedException();
+            [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            // MAF 1.28's A2A server consumes the streaming model path even for a blocking request.
+            var response = await GetResponseAsync(messages, options, cancellationToken);
+            foreach (var update in response.ToChatResponseUpdates())
+            {
+                yield return update;
+            }
+        }
 
         public object? GetService(Type serviceType, object? serviceKey = null) => null;
 

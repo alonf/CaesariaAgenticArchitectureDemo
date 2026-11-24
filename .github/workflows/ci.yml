@@ -28,11 +28,11 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6.1.0
         with:
-          dotnet-version: 10.0.x
+          dotnet-version: 11.0.x
 
       - name: Restore
         run: dotnet restore
@@ -41,7 +41,7 @@ jobs:
         run: dotnet build --no-restore --configuration Release
 
       - name: Test
-        run: dotnet test Tests/Caesarea.Deterministic.Tests --no-build --configuration Release
+        run: dotnet test --project Tests/Caesarea.Deterministic.Tests/Caesarea.Deterministic.Tests.csproj --no-build --configuration Release
 
       - name: Formatting
         if: matrix.os == 'ubuntu-latest'
@@ -52,7 +52,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: node --test tools/vscode-demo-attach/extension.test.js
 
-      # Windows only, by design: the helper targets net10.0-windows and drives Visual Studio over
+      # Windows only, by design: the helper targets net11.0-windows and drives Visual Studio over
       # COM. It is built and unit-tested here so a change to it cannot land broken, and it is
       # built separately so the steps above stay exactly what a Linux or macOS machine runs.
       - name: Build the Visual Studio helper
@@ -61,17 +61,30 @@ jobs:
 
       - name: Test the Visual Studio helper
         if: matrix.os == 'windows-latest'
-        run: dotnet test tools/visualstudio-demo-attach/tests/VisualStudioDemoAttach.Tests.csproj --no-build --configuration Release
+        run: dotnet test --project tools/visualstudio-demo-attach/tests/VisualStudioDemoAttach.Tests.csproj --no-build --configuration Release
 
       - name: Helper formatting
         if: matrix.os == 'windows-latest'
         run: dotnet format tools/visualstudio-demo-attach/VisualStudioDemoAttach.slnx --verify-no-changes
 
+  assert-adapter:
+    name: ASSERT adapter
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-python@v7.1.0
+        with:
+          python-version: '3.13'
+      - name: Install the pinned evaluation integration
+        run: python -m pip install -r evaluation/assert_demo/requirements.txt
+      - name: Test the adapter without model calls
+        run: python -m unittest evaluation.assert_demo.test_adapter
+
   bicep:
     name: Compile templates
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
 
       - name: Compile every template
         run: |

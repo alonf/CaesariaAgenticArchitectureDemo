@@ -54,10 +54,29 @@ builder.Services.AddHttpClient<HostedOperationsAgentClient>(client => client.Tim
         resilience.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(340);
     });
 #pragma warning restore EXTEXP0001
+#pragma warning disable EXTEXP0001 // Model turns and supervisor decisions must not be automatically retried.
+builder.Services.AddHttpClient<DurableRecoveryClient>(client => client.Timeout = TimeSpan.FromMinutes(5))
+    .RemoveAllResilienceHandlers();
+#pragma warning restore EXTEXP0001
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    app.Use(async (context, next) =>
+    {
+        var address = context.Connection.RemoteIpAddress;
+        if (address is null || !System.Net.IPAddress.IsLoopback(address))
+        {
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            return;
+        }
+
+        await next(context);
+    });
+}
 
 if (!app.Environment.IsDevelopment())
 {

@@ -1,0 +1,33 @@
+{
+  "assetId": "L-417",
+  "area": "North Promenade",
+  "reportedIsOn": false,
+  "desiredIsOn": false,
+  "isDaylight": true,
+  "expectedScheduledState": false,
+  "manualOverride": false,
+  "controllerHealth": {
+    "status": "Healthy",
+    "summary": "Controller healthy"
+  },
+  "lastCommand": {
+    "operation": "Restore scheduled mode",
+    "desiredIsOn": false,
+    "status": "Succeeded",
+    "correlationId": "e4980ed381f84ef192c787e7af460674",
+    "requestedAt": "2026-11-24T02:19:13.8024212+02:00",
+    "completedAt": "2026-11-24T02:19:13.8283806+02:00",
+    "summary": "SmartPole confirmed the scheduled state."
+  },
+  "lastMaintenanceTime": "2026-11-24T01:47:57.6509788+02:00",
+  "hasRecentMaintenance": true,
+  "openIncidentId": null,
+  "lastReportedAt": "2026-11-24T02:19:13.8283806+02:00",
+  "operationContext": {
+    "requiresLighting": false,
+    "summary": "No cross-domain lighting requirement."
+  },
+  "stateRevision": 20,
+  "effectiveTargetIsOn": false,
+  "isAnomalous": false
+}

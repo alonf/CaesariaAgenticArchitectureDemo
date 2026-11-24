@@ -90,7 +90,8 @@ public sealed class StageCatalog
                 // Nothing in this beat is a Command Center element: two files and a terminal.
                 new(DemoSurface.Code, "Open evaluation/assert_demo/cases.json and the ASSERT evaluation guide.", "The required and forbidden behavior is reviewable before any model runs."),
                 new(DemoSurface.Switchboard, "Run scripts/Invoke-AssertDemo.ps1 -Arm both in a terminal against the local demo.", "The harness resets each fixture, scripts its supervisor decision, and runs the same cases through both compositions."),
-                new(DemoSurface.Code, "Open the generated report.html and expand a failed case's evidence.", "Compare the answer, ordered tool outcomes, approval decisions, and verified Hub state; errors are never passes.")
+                new(DemoSurface.Code, "Open the generated report.html and expand a failed case's evidence.", "Compare the answer, ordered tool outcomes, approval decisions, and verified Hub state; errors are never passes."),
+                new(DemoSurface.Code, "Optional Insights beat: follow docs/runbooks/routines-and-insights.md against an existing monitor.", "Read actual generated findings and linked evidence. Turn a reviewed hypothesis into an ASSERT regression; an empty collection is not proof of health.")
             ],
             "Unit tests prove the operation works. Behavioral evaluation measures whether the agent requested the right operation, using the right evidence and authority."),
         [DemoStage.Deterministic] = new(
@@ -235,7 +236,9 @@ public sealed class StageCatalog
                 new(DemoSurface.CommandCenter, "Point at the footnote under the answer.", "The hosted agent read the CLOUD Energy Hub and the presenter's own Microsoft 365 - not this laptop's city. The cloud city is not switchboard-driven: it permanently shows the forgotten-override situation WO-8732 explains, so the two cities agree at the start of the beat and diverge the moment the local one is restored."),
                 // The Command Center asks fixed questions only; a question in the presenter's own words
                 // goes through a chat client to the hosted agent.
-                new(DemoSurface.HostedChat, "Closing beat: in Copilot, Teams or the Foundry UI, ask the hosted agent to TURN THE LIGHT OFF (any phrasing).", "It investigates, looks for a control tool, reports that none is available to it, and escalates to a human - because the hosted composition carries no write capability at all. The strongest control on this ladder: not an instruction, not an approval gate, but a capability that was never composed and cannot be exploited.")
+                new(DemoSurface.HostedChat, "Closing beat: in Copilot, Teams or the Foundry UI, ask the hosted agent to TURN THE LIGHT OFF (any phrasing).", "It investigates, looks for a control tool, reports that none is available to it, and escalates to a human - because the hosted composition carries no write capability at all. The strongest control on this ladder: not an instruction, not an approval gate, but a capability that was never composed and cannot be exploited."),
+                new(DemoSurface.Code, "Optional Routines beat: follow docs/runbooks/routines-and-insights.md with the read-only unattended composition.", "A disabled one-shot routine carries the L-417 prompt. Inspect the real dispatch and run evidence; activation adds no write authority."),
+                new(DemoSurface.Switchboard, "Optional: choose 15. Durable recovery after Evaluation in Demo Director and prepare the foundation.", "Run the conversation, approval and result in Command Center. Return to the Director only to crash/restart the pending worker, then continue the same conversation in the main app. No terminal scripts are needed after one-time setup.")
             ],
             "The agent code did not change - the habitat did. The platform owns the runtime and the identity, and Work IQ answers as the person asking, which is why your OneDrive is the evidence. And the safest capability is the one the composition never granted.")
     };

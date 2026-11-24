@@ -1,0 +1,37 @@
+{
+  "kind": "Actual local API reset; Director click not captured",
+  "capturedAtUtc": "2026-11-24T00:22:12.3614046+00:00",
+  "state": {
+    "assetId": "L-417",
+    "area": "North Promenade",
+    "reportedIsOn": true,
+    "desiredIsOn": true,
+    "isDaylight": true,
+    "expectedScheduledState": false,
+    "manualOverride": true,
+    "controllerHealth": {
+      "status": "Healthy",
+      "summary": "Controller healthy"
+    },
+    "lastCommand": {
+      "operation": "Apply scenario",
+      "desiredIsOn": true,
+      "status": "Succeeded",
+      "correlationId": "unit00-rough-cut-api-reset",
+      "requestedAt": "2026-11-24T02:22:12.2724462+02:00",
+      "completedAt": "2026-11-24T02:22:12.2724462+02:00",
+      "summary": "Scenario state applied to the SmartPole simulator."
+    },
+    "lastMaintenanceTime": "2026-11-24T01:52:12.2602998+02:00",
+    "hasRecentMaintenance": true,
+    "openIncidentId": null,
+    "lastReportedAt": "2026-11-24T02:22:12.2724462+02:00",
+    "operationContext": {
+      "requiresLighting": false,
+      "summary": "No cross-domain lighting requirement."
+    },
+    "stateRevision": 22,
+    "effectiveTargetIsOn": false,
+    "isAnomalous": true
+  }
+}

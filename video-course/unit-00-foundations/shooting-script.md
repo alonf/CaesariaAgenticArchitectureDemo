@@ -1,0 +1,147 @@
+# Unit 00 — foundations, environment, and debugging
+
+Timestamped production script. Timing follows generated narration when available. The rough cut uses edited actual still captures with synthetic narration; it is not a continuous screencast. Both IDE sequences use actual captures. Visual Studio's first expired request and fresh retry are distinguished. The long-pause timeout and successful detached retry are separate requests.
+
+## 00:00:00,000–00:00:49,867 | Purpose
+
+**Screen:** `H08:4`. Show H08 session promises. Keep the opening on purpose and outcomes, before any app demonstration.
+
+**Narration:** Welcome to Caesarea: building agentic systems in dot net. This is a hands-on course for C sharp developers who want to build systems they can explain, inspect, and operate. We will follow one city incident: streetlight L four seventeen is on during daylight. That simple observation will lead us through a much larger engineering question. How can a system use a model's judgment while keeping operational authority in software we can test? By the end, you should be able to run each exercise yourself, inspect what the agent actually did, and explain why the architecture uses that particular capability. First we need a foundation. We will understand the framework and the city architecture, learn to start the environment, and debug a real request in both Visual Studio Code and Visual Studio twenty twenty-six. Only then do the individual labs begin.
+
+## 00:00:49,867–00:01:39,267 | The questions behind the labs
+
+**Screen:** `card:outcomes`. Reveal the four learning questions. Explain the repeated lesson pattern.
+
+**Narration:** Every lab starts with an observable outcome, not a package name. We prepare a known starting fixture and stage. We walk through the behavior, then connect it to a small piece of code. You pause and reproduce it, check the expected result, and investigate one failure path. Keep four questions in mind. What did the system observe? What did the agent infer? Who can authorize a change? And what evidence proves that change happened? A plausible answer is not an execution receipt. A remembered incident is a lead to investigate, not proof of today's cause. This distinction will connect all the lessons, from the first read-only tool to protected actions, collaboration, and recovery. The goal is not to memorize the Director's buttons. It is to know when a capability solves a real requirement and when simpler deterministic code is sufficient.
+
+## 00:01:39,267–00:02:32,867 | Runtime agents and coding assistants
+
+**Screen:** `H08:3`. Use the two-agentic-systems slide; point to the runtime side.
+
+**Narration:** There are two different uses of agents around this repository. A coding assistant can help us write, review, or change the software. The Operations Agent inside the running city application is a runtime component serving an operator. Our course is about that second system. Its inputs are an operator question, instructions, allowed tools, and relevant context. Its output may be an answer, a request for more information, or a proposed action. It operates inside an application with service boundaries, permissions, timeouts, and failure modes. Using a coding assistant to produce a tool does not make that tool's runtime behavior correct. We still inspect its contracts, verify what it reads and writes, and test the outcome. During debugging, we will follow the runtime agent's actual model calls and tool results, rather than treating an impressive chat answer as proof that the system works.
+
+## 00:02:32,867–00:03:27,733 | What Microsoft Agent Framework provides
+
+**Screen:** `H08:15`. Show the agent model/instructions/capabilities diagram. Reserve exact signatures for current source.
+
+**Narration:** Microsoft Agent Framework gives us application building blocks for agents and workflows. In this C sharp application, an agent combines a model connection, instructions, and capabilities such as callable tools. Sessions carry conversational context between related interactions. Context providers can add the information a request needs. Workflow code can coordinate steps and explicit gates. These are useful building blocks, but they do not decide our domain architecture for us. We choose which tools are available at each stage, how those tools cross service boundaries, which actions require approval, and how outcomes are verified. The first agent in this course has one narrow read tool. That small starting point is intentional: it lets us see the complete model and tool loop without hiding the responsibility of each component behind a large toolbox. Later lessons add capabilities only when the incident gives us a reason to add them.
+
+## 00:03:27,733–00:04:16,533 | Choose the smallest sufficient mechanism
+
+**Screen:** `H08:6`. Explain the decision map in order: code, model call, agent, workflow and multiple agents.
+
+**Narration:** Start with deterministic code when the rules and sequence are known. Comparing a reported lamp state with its schedule does not require a language model. A direct model call is useful when a bounded interpretation or generation task is enough. An agent becomes useful when the next information-gathering step depends on what it discovers and it must choose among permitted tools. A workflow is useful when required steps and gates must be explicit even though individual steps may use an agent. Multiple agents become useful when there are real responsibility, permission, or context boundaries. They are not automatically an improvement over one well-designed agent. Ask what the added boundary buys you and what new failure modes it introduces. We will revisit this decision map throughout the course. Learning when not to add an agent is part of learning to build an agentic system well.
+
+## 00:04:16,533–00:05:17,333 | Caesarea is a system of systems
+
+**Screen:** `H08:11`. Use the city-domain diagram. Distinguish implemented services from conceptual breadth.
+
+**Narration:** A city is not one application with one database. Energy, security, mobility, maintenance, and other operational domains already have systems, owners, and policies. They may use different vendors and different representations of the same physical place. Our architecture connects these systems without pretending that one model owns them all. Domain Hubs provide focused interfaces and normalize the operational information that their domain is responsible for. A city operator can ask a cross-domain question while each domain still controls what it discloses and what commands it accepts. The diagram shows the architectural breadth. The executable lab deliberately implements a smaller slice: a lamp, a simulator, the Energy Hub, Command Center, and agent services, with additional domain capabilities introduced as the stages grow. For example, the main UI explicitly labels Mobility as not connected. We will always distinguish the architectural idea from behavior this checkout actually demonstrates.
+
+## 00:05:17,333–00:06:12,400 | The deterministic core
+
+**Screen:** `H08:13`. Trace simulator → Energy Hub → Command Center; then locate the agent service beside that path.
+
+**Narration:** At the bottom of our running slice, the Smart Pole simulator stands in for a device controller. The Energy Hub exposes the operational twin and the permitted energy commands. Command Center assembles the operator's view and manages its own incident responsibilities. These services form the deterministic core. They continue to own operational facts when we enable an agent. The agent layer uses focused endpoints and tools instead of reaching around the Hub into its internals. That separation has practical value. We can reason about a command's validation independently of the model's wording. We can correlate a request across HTTP boundaries. We can test stale-state rejection and device failure without hoping that a prompt will enforce them. In a system of systems, integration and authority are software contracts. The model can help decide what to investigate, but those contracts still determine what the application is allowed to do.
+
+## 00:06:12,400–00:07:08,133 | What the operational twin means
+
+**Screen:** `card:twin`. Show reported/desired/schedule/receipt diagram. Explain the simulator boundary.
+
+**Narration:** An operational digital twin is a representation of an asset with explicit state and confirmation semantics. Reported state tells us what the controller has reported. Desired state expresses a requested target. The schedule expresses a rule for expected operation, and an override can explain why operation differs from that rule. Health tells us something about the controller's condition. Revisions help detect that state changed between observation and action. A command receipt records the progress and outcome of a particular request. These values answer different questions. Setting a desired target does not prove that a device acknowledged it. A successful user-interface message alone does not establish the authoritative state. In this lab, the device is simulated, so the strongest demonstrated claim is a confirmed transition through the simulator and Hub. That is valuable evidence for the software path, while remaining distinct from delivery to real equipment.
+
+## 00:07:08,133–00:08:00,867 | Adding the agentic layer
+
+**Screen:** `H08:7`. Overlay observe → infer → request action → verify on the deterministic architecture.
+
+**Narration:** Now we can add the agentic layer without moving the source of truth. The Operations Agent observes current state through a tool. It may retrieve evidence, infer a likely explanation, recommend a next step, or request a bounded action. The model chooses among the capabilities the application admits. The runtime invokes the selected tool, and the domain service still applies its rules. When an action completes, the system must verify the receipt and resulting state. This is why observation, inference, authority, and verification remain separate in our lesson structure. The model's ability to keep a conversation does not make it a digital twin. A session can remember what the operator said; a Hub tells us what the operational system currently reports. Likewise, a remembered case can suggest where to look, but current evidence and policy must decide whether the same explanation applies today.
+
+## 00:08:00,867–00:08:49,400 | The model and tool loop
+
+**Screen:** `H08:17`. Show function-tool slide; connect descriptors and arguments to the later EnergyTools capture.
+
+**Narration:** A tool in this first stage is an ordinary C sharp method exposed with a name, description, and arguments. The application supplies the question and available tools to the model. The model can return a request to call a tool. The runtime executes that request through our code and supplies the result to a subsequent model interaction. The model can then answer using the returned information. In our recorded read-only request, one tool invocation required two model round trips. That is an observation about this request, not a promise that every agent always uses two calls. We will inspect both round trips in the debugger: what the model requested and what information came back from the Hub. This makes the loop concrete. We are inspecting observable messages and results, not claiming access to the model's private internal reasoning.
+
+## 00:08:49,400–00:09:49,267 | How the course grows
+
+**Screen:** `card:journey`. Reveal four groups of learning needs, not seventeen feature boxes.
+
+**Narration:** The labs grow along four practical needs. First, investigate with the right context. We begin with current state, then study sessions, retrieved knowledge, remembered cases, skills, and remote tool boundaries. Second, control consequential action. We separate a tool asking for missing input, a workflow stopping at a planned gate, and the runtime intercepting a protected tool selected by the model. Those are different mechanisms with different guarantees. Third, collaborate across responsibility boundaries, including specialist agents and delegation. Fourth, operate and improve the system: hosting, durable recovery, evaluation, and optional cloud capabilities. Each step asks why this capability belongs here, when it is appropriate, how the code implements it, and how a learner proves it worked. We will not imply that ordinary in-memory approvals survive a restart. Cloud-only and preview paths will be labeled and kept optional when the local lesson does not require them.
+
+## 00:09:49,267–00:10:43,667 | Prepare a reproducible checkout
+
+**Screen:** `card:setup`. Show copyable clone/build commands from lab.md, then the exact baseline hash without date comparisons.
+
+**Narration:** With that foundation in place, let us prepare the lab. Use the exact course commit listed in the companion lab, in a separate clone if you have existing work. The course recording uses a dot net eleven checkout; do not assume another branch has the same behavior. Read global dot json, select the SDK, restore, build, and run the test project using the commands in the lab. Open this same checkout in both editors so the source matches the binaries you will attach to. Install the repository's Visual Studio Code attach helper and build its Visual Studio helper. For the AI exercise, configure an existing Foundry project endpoint and model deployment that your account can invoke. We run the application services locally, but model inference is remote. This lesson does not deploy resources or change shared cloud settings. Keep credentials and the private Aspire login token out of screenshots and recordings.
+
+## 00:10:43,667–00:11:33,067 | Aspire is our starting point
+
+**Screen:** `capture:aspire-resources`. Show actual running resources; use this run's token off camera. Point to the two web resources and Operations Agent.
+
+**Narration:** Start the AppHost from the configured shell using the direct command in the lab, and keep that shell running. Open the private dashboard link printed by this run. Aspire is the first live environment screen because it shows the processes that make up our system. Find the simulator, Energy Hub, Command Center API, Operations Agent, and the two web applications. Check their status, then use their endpoint links rather than memorizing ports. A running process is a useful first checkpoint, but it does not prove that the model endpoint or permissions work. When a request fails, select the relevant resource and inspect its logs and traces. The request correlation helps connect activity across boundaries. Starting here also avoids the common mistake of opening an old browser tab against an application instance that is no longer the one you are debugging.
+
+## 00:11:33,067–00:12:23,067 | Read the resource graph
+
+**Screen:** `capture:aspire-graph`. Show real graph, then identify the operational path and the agent's dependency on the Hub.
+
+**Narration:** The Aspire graph makes the architecture visible as running services. Follow the application's dependencies and compare them with the slide diagram. The operator uses Command Center. The Operations Agent reaches domain information through its service clients and tools. The Energy Hub connects to the simulated device. These process boundaries matter when you choose a debugger target. Attaching to Command Center Web will not automatically stop inside the Operations Agent service. Likewise, an agent-side breakpoint does not pause every service in the city. We will attach to the process that owns the code we want to inspect and leave the rest of the environment running. Before moving on, locate the two web application links. One is the Director used to prepare the lesson, and the other is the main operator application where we will ask the question and inspect the result.
+
+## 00:12:23,067–00:13:17,800 | Director prepares the starting fixture
+
+**Screen:** `capture:director-preview`. Show actual Investigation Agent preparation preview, then ready state. Explain scenario versus stage.
+
+**Narration:** The Demo Director is our laboratory control panel. A scenario sets the operational starting conditions. A stage controls which implemented capabilities participate. For this onboarding exercise, select Investigation Agent and review the preparation preview. It applies Lights On Reported by a Client and selects the read-only investigation stage. Confirm, then check the ready state. The scenario and the stage are related, but they are not the same thing. Reusing an already-repaired lamp without resetting the fixture would change the meaning of the next demonstration. The Director also provides teaching breakpoints and debugger attachment controls under Advanced controls. Those prepare the investigation; the Director is not where we perform the operator's work. Keep the local function and local Aspire habitat for this exercise. We do not need a cloud-hosted agent to learn how this local request crosses the service boundaries.
+
+## 00:13:17,800–00:14:11,333 | Command Center is the operator's application
+
+**Screen:** `capture:command-center`. Show main UI; point to L-417, reported/schedule/override, agent question, and deterministic action without clicking repair.
+
+**Narration:** Now switch to the main Command Center. The map identifies L four seventeen at North Promenade. The operational panel reports that the lamp is on, while the daylight schedule expects it to be off. The override is set and the controller is healthy. These are observations from the deterministic system. They do not yet prove why someone left the override in place. The agent panel asks a deliberately small question: is streetlight L four seventeen on? We will use that question to learn the debugging workflow. Leave Restore Scheduled Mode alone for now; repair is the first lab after onboarding. Notice that the operator workflow and the agent panel coexist. Enabling the agent did not replace the core. Before the debugger exercise, read the Energy Hub endpoint using the companion lab's command and save the process ID. Those checkpoints let us verify both operational state and detach behavior later.
+
+## 00:14:11,333–00:15:03,000 | Attach VS Code
+
+**Screen:** `capture:vscode-attached`. Show arming and attached captures. Explain attach versus launch and one-shot teaching stops.
+
+**Narration:** Open the same checkout in Visual Studio Code. In the Director, expand Advanced controls and Demo Breakpoints. Verify that the attach extension is ready. Attach the Operations Agent row, then arm Agent Creation and Function Tool. The attached status matters: arming a checkbox by itself does not connect a debugger. These teaching stops are consumed on the next matching execution. We will also set an ordinary breakpoint in Foundry Operations Agent, immediately after the awaited Run Async call, so we can inspect its returned result. This is an attach session to an existing process started by Aspire. We are not launching a second copy of the application. Prepare the expressions you want to inspect before asking the question. Keep the live pauses short; we can freeze the edited video to explain the source without holding a real HTTP request open for several minutes.
+
+## 00:15:03,000–00:15:54,733 | Stop and single-step in C sharp
+
+**Screen:** `capture:vscode-question`. Show actual breakpoint and F10 transition from Pause to AsAIAgent. Highlight question, stage and tools.
+
+**Narration:** Click Ask agent in Command Center. Visual Studio Code stops at the Agent Creation teaching point. The yellow execution marker shows where this request is paused. Press F ten to step over to the next statement. In the captured request, the question variable is exactly: is streetlight L four seventeen on? The stage has already determined which capabilities were composed. Read the agent construction code: it supplies the model, instructions, tools, and any applicable context providers. This is the connection between the framework diagram and ordinary application code. We can inspect the request and admitted tools before allowing the model call to proceed. Press F five to continue. Because Function Tool is armed, the next relevant stop will show the C sharp method that the model selected, rather than asking us to infer tool execution from the final answer alone.
+
+## 00:15:54,733–00:16:43,667 | Inspect the tool boundary
+
+**Screen:** `capture:vscode-tool`. Show actual EnergyTools stop and assetId; point to gateway call.
+
+**Narration:** We are now in Energy Tools, inside Get Streetlight State Async. The asset ID is L four seventeen. The model selected the narrow state-reading tool, and the runtime arrived at this method with its arguments. Follow the code: it checks the input, gets the correlation ID, logs the invocation, and calls the Energy read gateway. The gateway obtains current state through the Hub boundary. There is no direct database shortcut and no model-owned lamp state. This is a useful place to distinguish selection from execution. A requested tool is a model output; reaching this method shows invocation, and the returned Hub data provides the evidence that can support the answer. Continue with F five to the breakpoint after Run Async. That next stop lets us compare the model's final response with the intermediate tool exchange that produced it.
+
+## 00:16:43,667–00:17:37,067 | Inspect AI results and model exchanges
+
+**Screen:** `capture:vscode-exchanges`. Show response.Text and recorded Exchanges. Crop to readable code/console; do not expose unrelated IDE notifications.
+
+**Narration:** After Run Async returns, inspect response dot Text. The captured model answered that streetlight L four seventeen is currently on. Now expand model Flight Recorder dot Exchanges. There are two recorded model round trips for this request. In the first received message, the model requested get streetlight state with the L four seventeen argument. The next sent message contains the tool result, including reported Is On set to true. That is the bridge from the Hub's observation to the model's answer. The recorder preserves readable message and tool-result information for this demonstration. It does not reveal private model reasoning. An answer can vary in wording across runs, so the learner checkpoint is the supported claim and the observed tool path, not exact prose. Continue the request, remove the ordinary breakpoint, and detach from the service. We will verify that the same process remains running.
+
+## 00:17:37,067–00:18:29,400 | A real timeout and recovery
+
+**Screen:** `capture:debug-timeout`. Label this as the long-pause rehearsal failure. Cut explicitly to the separate detached retry; never imply same successful request.
+
+**Narration:** This rehearsal also exposed a real limit worth teaching. I held the debugger long enough that the web client's one-hundred-second attempt timeout expired. The agent's model call did succeed, and we inspected its answer in the debugger, but the waiting user interface had already timed out. Those are different outcomes. Do not edit them together as if the original browser request succeeded. To recover from this read-only exercise, continue the paused request, remove the ordinary breakpoint, and detach. Check the Hub, then ask the read-only question again. The next capture is that separate retry. It returned an answer and a trace showing one state-reading tool over two model round trips. For write operations, this retry advice would be insufficient: you must reconcile the command receipt and current state before resending. This is why the course teaches failure paths alongside successful behavior.
+
+## 00:18:29,400–00:20:05,667 | Switch debuggers without restarting the service
+
+**Screen:** `capture:vs-attached`. Actual Director attach, question evaluation, F10, tool argument, returned response and detach. Creation/step came from the expired request; tool/result came from the explicitly identified fresh retry. Zoom into Immediate Window for the result.
+
+**Narration:** Now repeat with Visual Studio twenty twenty-six. Visual Studio Code is detached. Open the exact same Caesarea solution, verify the Director reports the Visual Studio instance as ready, and attach the Operations Agent. The process ID is still one one seven zero three two. Arm Agent Creation and Function Tool, and set the same ordinary breakpoint after Run Async. Ask the read-only question from Command Center. Here is the actual Agent Creation stop. In the Immediate Window, question contains the operator's words. Press F ten to move to agent construction. Autos shows the values in the current context; Locals and Watch are also available. This first Visual Studio request expired during the long inspection and its authentication was canceled. I continued it and started a fresh read-only request. The next captures are that retry, not a continuation of the expired request. At Function Tool, the asset ID is L four seventeen. Press F five. After Run Async returns, response dot Text says the lamp is currently reported on. The exchange count is two. The first received message requests get streetlight state, and the next sent message contains the Hub's tool result. The Immediate Window can evaluate these expressions with a question mark prefix. This is ordinary C sharp debugging around an actual model interaction. Continue, remove the regular breakpoint, and select Detach Visual Studio in the Director. Its status changes to debugger not attached. An independent check confirms that the same service process remains alive and the Hub state has not changed.
+
+## 00:20:05,667–00:20:54,800 | Verify the outcome at the Hub
+
+**Screen:** `capture:read-answer`. Show real detached retry answer and RAN trace. Pair with saved Hub and PID evidence in lab.
+
+**Narration:** The main application now shows the answer from the separate read-only retry. The trace marks get streetlight state as ran. The Hub still reports that the lamp is on, and the operator has not issued a repair command. The Operations Agent process is still alive after detaching the debugger. These observations answer our four questions. The Hub supplied operational state. The model selected a read tool and formed an answer from its result. No authority to change the lamp was exercised in this onboarding request. And the fresh Hub read confirms that we did not silently turn the investigation into a repair. This is how the course will treat results: a UI message, a tool trace, and authoritative state each contribute evidence, but they answer different questions. Keep that habit when later labs introduce actions that can actually change the city.
+
+## 00:20:54,800–00:21:51,400 | Pause, practice, and prepare Lab 01
+
+**Screen:** `card:practice`. Hold the exercise card; learner repeats an IDE cycle, checks Hub/PID, resets Deterministic fixture. Stop after Unit00 review.
+
+**Narration:** Pause here and repeat one attach, stop, inspect, continue, and detach cycle without following the video. Use the companion lab's copyable commands to check the Hub and the process ID. Explain aloud where the operational truth lives, what the model selected, and why an answer did not repair the lamp. Then repeat with the other IDE after the first is detached. If the user interface times out during a long pause, use the read-only recovery procedure we just demonstrated. When you are ready for Lab one, finish outstanding requests, clear the teaching stops and ordinary breakpoints, and choose Deterministic in the Director. Review and confirm the preparation preview, then verify the daylight anomaly again. A reset can change the revision, so discard old snapshots before the next exercise. You now have the architectural foundation and an inspectable environment. The next lab begins with the deterministic system and proves a repair through the Energy Hub.

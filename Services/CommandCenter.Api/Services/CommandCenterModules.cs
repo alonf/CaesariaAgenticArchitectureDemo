@@ -5,7 +5,7 @@ namespace CommandCenter.Api.Services;
 /// </summary>
 public sealed class IncidentModule
 {
-    private readonly object _gate = new();
+    private readonly Lock _gate = new();
     private readonly Dictionary<string, IncidentRecord> _incidents = [];
 
     /// <summary>
@@ -74,7 +74,7 @@ public sealed class IncidentModule
 /// </summary>
 public sealed class ActivityTimelineModule
 {
-    private readonly object _gate = new();
+    private readonly Lock _gate = new();
     private readonly List<ActivityRecord> _activity = [];
 
     /// <summary>
@@ -141,7 +141,7 @@ public sealed class ActivityTimelineModule
 /// </summary>
 public sealed class CustomerReportModule
 {
-    private readonly object _gate = new();
+    private readonly Lock _gate = new();
     private CustomerReportRecord? _current;
 
     /// <summary>
@@ -209,7 +209,7 @@ public sealed class CustomerReportModule
 /// <param name="timeProvider">The clock used to stamp scenario state changes.</param>
 public sealed class ScenarioContextModule(TimeProvider timeProvider)
 {
-    private readonly object _gate = new();
+    private readonly Lock _gate = new();
     private readonly TimeProvider _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
     private ScenarioStatus _currentScenario = CreateNormalOperationScenario(timeProvider.GetUtcNow(), "startup");
 
@@ -271,7 +271,7 @@ public sealed class ScenarioContextModule(TimeProvider timeProvider)
 /// </summary>
 public sealed class StageContextModule
 {
-    private readonly object _gate = new();
+    private readonly Lock _gate = new();
     private DemoStageStatus _currentStage;
 
     /// <summary>

@@ -1,0 +1,172 @@
+[
+  {
+    "visual": "H08:11",
+    "file": "assets/H08-11.png",
+    "sha256": "1bc696fd4d10800daf288caafd5e48b4cc57b4938323ad7d82c96325ce425c13"
+  },
+  {
+    "visual": "H08:13",
+    "file": "assets/H08-13.png",
+    "sha256": "74155ba59ea652b91ed15ac596218e63180558f4aa780f8591280bb5d4e7db5b"
+  },
+  {
+    "visual": "H08:15",
+    "file": "assets/H08-15.png",
+    "sha256": "3f1c11791a9bed1301b8336045dae16186e965a2221b983a7119c65d55f21357"
+  },
+  {
+    "visual": "H08:17",
+    "file": "assets/H08-17.png",
+    "sha256": "c58fc938679c4c77c4128f61cc51edd353bfaf4441b4bb7ca9b99ecef9b95361"
+  },
+  {
+    "visual": "H08:3",
+    "file": "assets/H08-3.png",
+    "sha256": "9470519256bf16546886c0091fbd142fc48b01a39684fbd88ffda1bb53d5ac63"
+  },
+  {
+    "visual": "H08:4",
+    "file": "assets/H08-4.png",
+    "sha256": "2f895271a8c93b957c8a34bb2d19947064cd1204075dcec709d86003ebfeb9af"
+  },
+  {
+    "visual": "H08:6",
+    "file": "assets/H08-6.png",
+    "sha256": "b123cac0f6e05e1523bcd94f5ba5d5d314b7f8bbd590c6ef161f1a08d6193a4f"
+  },
+  {
+    "visual": "H08:7",
+    "file": "assets/H08-7.png",
+    "sha256": "18f06078e958cad02e8d7f524a6cb5b4bb31cc77c3471486ebb77ad1eeb117c3"
+  },
+  {
+    "visual": "capture:aspire-graph",
+    "file": "assets/capture-aspire-graph.png",
+    "sha256": "e39dc012307f7752e2967a8b9d7d7e8c1233e90681884845b93a72e71ff2a8f5"
+  },
+  {
+    "visual": "capture:aspire-resources",
+    "file": "assets/capture-aspire-resources.png",
+    "sha256": "730c5aec05735c6347e7d2a331ab23090e45e7577c8463e837becfc2d4c0e748"
+  },
+  {
+    "visual": "capture:command-center",
+    "file": "assets/capture-command-center.png",
+    "sha256": "22104739648d46634940b33b56f934e97784191d5a3b59212963aad1172bd8cf"
+  },
+  {
+    "visual": "capture:debug-timeout",
+    "file": "assets/capture-debug-timeout.png",
+    "sha256": "55721709109c251943c8d3460ad1274b22a3570d676ac7ed5f3c9ac88f3dec31"
+  },
+  {
+    "visual": "capture:director-preview",
+    "file": "assets/capture-director-preview.png",
+    "sha256": "84f11825faf893a9cb50b446a335500b93b39a5a6fc7d5f3b5ef4f575fd91a46"
+  },
+  {
+    "visual": "capture:director-ready",
+    "file": "assets/capture-director-ready.png",
+    "sha256": "c22a35f2fa4f3641617822da1bd1c415761ba4e9820cff72cd17a0276491eb85"
+  },
+  {
+    "visual": "capture:read-answer",
+    "file": "assets/capture-read-answer.png",
+    "sha256": "2346b8eb3ed3e2baa16d6d4bf0ad9518e97e363b0c0cadfcd554ff9990005c62"
+  },
+  {
+    "visual": "capture:vs-attached",
+    "file": "assets/capture-vs-attached.png",
+    "sha256": "43c3b7b212b2d963758bec8ff06aa525f2f03ee7b7c74ded26c072a40d7e0ed1"
+  },
+  {
+    "visual": "capture:vs-detached",
+    "file": "assets/capture-vs-detached.png",
+    "sha256": "ec434b44772ed4bdfc38cbbedbf7561ad9bee7e56d6c5a8c6bfc5da17c0f0817"
+  },
+  {
+    "visual": "capture:vs-question",
+    "file": "assets/capture-vs-question.png",
+    "sha256": "caae7ad9063c16c7eb9c488c4086e13dfbfa310ef7a55a76dc74da6977d81d42"
+  },
+  {
+    "visual": "capture:vs-result",
+    "file": "assets/capture-vs-result.png",
+    "sha256": "82f9b9a69c2e572eed6373f1c55036d59dfb9b36e607d48bae918a0fcffb9a26"
+  },
+  {
+    "visual": "capture:vs-step",
+    "file": "assets/capture-vs-step.png",
+    "sha256": "8d98aafa639c79d1fdde2718579de90aa6a548b11681a370cc35a5d8a93bc291"
+  },
+  {
+    "visual": "capture:vs-tool",
+    "file": "assets/capture-vs-tool.png",
+    "sha256": "14043593c849f583a1cfc30ba62661412d11f541c13d5569f4a3c370f82eb286"
+  },
+  {
+    "visual": "capture:vscode-arm",
+    "file": "assets/capture-vscode-arm.png",
+    "sha256": "c87addc2ae676d02ccf550ec9508b3f70d459723abf46225f9d8291723585385"
+  },
+  {
+    "visual": "capture:vscode-attached",
+    "file": "assets/capture-vscode-attached.png",
+    "sha256": "8d03cb4cc44673819d02be2334818e0a8819378747bd8536bb902963f9d6a8c9"
+  },
+  {
+    "visual": "capture:vscode-creation-step",
+    "file": "assets/capture-vscode-creation-step.png",
+    "sha256": "2a9be6bd7379b150f5d0a2733d3d4f1df34f6a1f2ebe4d2abe22aaf9e918ba02"
+  },
+  {
+    "visual": "capture:vscode-exchanges",
+    "file": "assets/capture-vscode-exchanges.png",
+    "sha256": "a14e7c4212c1bbafe4c482dad7bd53d5e0b6feb50f5e95a36d2dde421cff9d37"
+  },
+  {
+    "visual": "capture:vscode-question",
+    "file": "assets/capture-vscode-question.png",
+    "sha256": "0e6be20df6032ce8c2c126989faf8258c8d11e7cfe3b03056562a706bd7ca51f"
+  },
+  {
+    "visual": "capture:vscode-response",
+    "file": "assets/capture-vscode-response.png",
+    "sha256": "3d03680b5209ae5343b05c5223715fb3a5a7f788386ee31cb7c6d51e656d1eda"
+  },
+  {
+    "visual": "capture:vscode-tool",
+    "file": "assets/capture-vscode-tool.png",
+    "sha256": "e2ea4f21c7aa07e0b2113479d93ed466d77948355021cf65e30288c9907554c8"
+  },
+  {
+    "visual": "card:hub-checkpoint",
+    "file": "assets/card-hub-checkpoint.png",
+    "sha256": "14649bd3edab4fb1ae98624af6cee2bfa5d251cef349d6dea613283e630411a0"
+  },
+  {
+    "visual": "card:journey",
+    "file": "assets/card-journey.png",
+    "sha256": "a4bd03825d89ed50849adb6c63580691403dc6dcd8667ca1bdba7638cffa743d"
+  },
+  {
+    "visual": "card:outcomes",
+    "file": "assets/card-outcomes.png",
+    "sha256": "dc03ccb548a6051b6ac1c49871ab433d1c10e207e1e4c7b6dbcddd43383e78c0"
+  },
+  {
+    "visual": "card:practice",
+    "file": "assets/card-practice.png",
+    "sha256": "1c60e5b43e70dbcded5425deb5181ede1862b26bd455dede5304b80eba900394"
+  },
+  {
+    "visual": "card:setup",
+    "file": "assets/card-setup.png",
+    "sha256": "802509f015f307600c5f31be1b504f8d8ab0b931b0bcb079782f6f95930b4897"
+  },
+  {
+    "visual": "card:twin",
+    "file": "assets/card-twin.png",
+    "sha256": "b3ee41cc7466d487d96033d5e0cce66ce9ee97436680312447323963b783fe1d"
+  }
+]

@@ -249,6 +249,9 @@ public sealed partial class FoundryOperationsAgent(
                     };
                 },
                 loggerFactory: _loggerFactory);
+            agent = agent.AsBuilder()
+                .UseOpenTelemetry("OperationsAgent.Api", telemetry => telemetry.EnableSensitiveData = false)
+                .Build();
             #endregion
 
             foreach (var capability in active)

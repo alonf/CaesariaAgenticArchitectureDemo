@@ -43,7 +43,7 @@ file sealed class DataAnnotationsEndpointFilter<TRequest> : IEndpointFilter
         var validationContext = new ValidationContext(request);
         List<ValidationResult> validationResults = [];
 
-        if (Validator.TryValidateObject(request, validationContext, validationResults, validateAllProperties: true))
+        if (await Validator.TryValidateObjectAsync(request, validationContext, validationResults, validateAllProperties: true))
         {
             return await next(context);
         }

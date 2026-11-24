@@ -1,0 +1,13 @@
+{
+  "durationSeconds": 1311.420333,
+  "resolution": "1920x1080",
+  "scenes": 24,
+  "chapters": 6,
+  "captionCues": 282,
+  "captionTiming": "ordered, nonoverlapping, within duration",
+  "fullDecode": "passed without error",
+  "videoSha256": "fc74097bd42855b5c5e8f7e0711c0b497e355b583616245e700932b7511a7f42",
+  "representativeFrames": "Eight frames visually inspected: opening, system of systems, twin, Aspire, VS Code stepping/exchanges, Visual Studio result, Hub checkpoint. No layout overflow observed.",
+  "format": "edited actual still captures, original slides, evidence cards, synthetic Andrew narration",
+  "baseline": "89d5a513be97301857dd4f156ce0773103712d51"
+}

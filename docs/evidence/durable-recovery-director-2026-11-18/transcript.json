@@ -1,0 +1,81 @@
+{
+  "capturedAt": "2026-11-17T23:51:08.8940879+00:00",
+  "timezone": "Asia/Jerusalem",
+  "sessionId": "@dafx-v2-caesarearecovery@0abf8d7a3d684cd2a788d09fffe32c00",
+  "operationId": "repair-a0f2ec73a91c04bc89bf8025-2ec3918049dac2385cff4b43",
+  "firstReply": "Investigated L-417 authoritative state:\n\n- Area: North Promenade\n- Reported on: yes\n- Desired/on override: yes\n- Daylight: yes\n- Expected scheduled state: off\n- Manual override: active\n- Controller health: healthy\n- Effective target: off\n- Anomalous: yes\n- Recent maintenance: yes\n\nI started supervised recovery and did not approve it.\n\nOperation ID: `repair-a0f2ec73a91c04bc89bf8025-2ec3918049dac2385cff4b43`\n\nNote: acceptance only means the supervised recovery request was opened. A separate supervisor must review it outside this conversation; this is not proof of repair completion.",
+  "resumedReply": "The supervised recovery operation is still running.\n\nOperation ID: `repair-a0f2ec73a91c04bc89bf8025-2ec3918049dac2385cff4b43`\n\nCurrent status:\n- Runtime status: `Running`\n- State: `AwaitingApproval`\n- Summary: L-417 is on against its effective target under a manual override; operator approval is required to clear it.\n- Review challenge expires at: `2026-11-17T23:53:53.567007+00:00`\n\nNo completion is indicated. A separate supervisor still needs to review it outside this conversation.",
+  "recovered": true,
+  "reviewBeforeCrash": {
+    "assetId": "L-417",
+    "revision": 3,
+    "expiresAt": "2026-11-18T01:53:53.567007+02:00"
+  },
+  "events": [
+    {
+      "at": "2026-11-18T01:48:29.4017625+02:00",
+      "summary": "Functions ready (owned launcher 36472); scheduler remains separate."
+    },
+    {
+      "at": "2026-11-18T01:48:30.4651707+02:00",
+      "summary": "Lights On Reported by a Client prepared; Workflow capability available."
+    },
+    {
+      "at": "2026-11-18T01:48:33.0190723+02:00",
+      "summary": "Session identity retained before sending the repair request."
+    },
+    {
+      "at": "2026-11-18T01:48:54.1068618+02:00",
+      "summary": "Running / AwaitingApproval: L-417 is on against its effective target under a manual override; operator approval is required to clear it."
+    },
+    {
+      "at": "2026-11-18T01:48:54.1108088+02:00",
+      "summary": "Awaiting approval: a real unexpired supervisor review is available. Ready for worker crash."
+    },
+    {
+      "at": "2026-11-18T01:49:17.599247+02:00",
+      "summary": "Worker stopped: forced process termination confirmed; scheduler and city were not stopped."
+    },
+    {
+      "at": "2026-11-18T01:49:31.9973335+02:00",
+      "summary": "Worker restarted (owned launcher 78736)."
+    },
+    {
+      "at": "2026-11-18T01:49:46.1425147+02:00",
+      "summary": "Same session resumed without an operation ID in the prompt; original review and deadline are unchanged."
+    },
+    {
+      "at": "2026-11-18T01:50:19.4200209+02:00",
+      "summary": "Supervisor approval queued; waiting for the actual business outcome."
+    },
+    {
+      "at": "2026-11-18T01:50:19.4353379+02:00",
+      "summary": "Running / Revalidating: Checking the signed decision, stage and current Hub revision."
+    },
+    {
+      "at": "2026-11-18T01:50:21.4650735+02:00",
+      "summary": "Completed / Completed: The matching Hub receipt confirms success; verification reread its authoritative state."
+    }
+  ],
+  "result": {
+    "state": "Completed",
+    "commandExecuted": true,
+    "resolved": true,
+    "summary": "The matching Hub receipt confirms success; verification reread its authoritative state."
+  },
+  "hub": {
+    "reportedIsOn": false,
+    "manualOverride": false,
+    "stateRevision": 4,
+    "lastCommand": {
+      "operation": "Restore scheduled mode",
+      "desiredIsOn": false,
+      "status": "Succeeded",
+      "correlationId": "repair-a0f2ec73a91c04bc89bf8025-2ec3918049dac2385cff4b43",
+      "requestedAt": "2026-11-18T01:50:19.5208811+02:00",
+      "completedAt": "2026-11-18T01:50:19.5577995+02:00",
+      "summary": "SmartPole confirmed the scheduled state."
+    }
+  },
+  "privateSnapshotSha256": "10EC1E92E927956D35D7DA4C91502F67CE52EBCAC626BE318DD08969B93A226C"
+}

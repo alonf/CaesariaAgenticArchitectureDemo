@@ -1,0 +1,111 @@
+{
+  "capturedAt": "2026-11-18T00:41:51.0226602+00:00",
+  "timezone": "Asia/Jerusalem",
+  "surfaces": {
+    "preparationAndRestart": "Demo Director",
+    "conversationAndApproval": "Command Center"
+  },
+  "sessionId": "@dafx-v2-caesarearecovery@3a1b93a11ff244d88be6cb042a22e463",
+  "operationId": "repair-dd067253df88edae76ff39b4-e624ac6346d78b7f12c854a9",
+  "firstReply": "Investigated L-417.\n\nCurrent authoritative state:\n- Asset: L-417, North Promenade\n- Reported on: true\n- Desired on: true\n- Daylight: true\n- Expected scheduled state: off\n- Manual override: true\n- Controller health: Healthy\n- Effective target: off\n- Anomalous: true\n- Recent maintenance: true\n\nI started a supervised recovery request, without approving it.\n\nOperation ID: `repair-dd067253df88edae76ff39b4-e624ac6346d78b7f12c854a9`\n\nNote: acceptance is not completion. A separate supervisor must review the operation outside this conversation.",
+  "resumedReply": "The supervised recovery is still running.\n\nStatus:\n- Operation ID: `repair-dd067253df88edae76ff39b4-e624ac6346d78b7f12c854a9`\n- Runtime status: `Running`\n- Current state: `AwaitingApproval`\n- Summary: L-417 is on against its effective target under a manual override; operator approval is required to clear it.\n- Asset revision: `3`\n\nNo completion is confirmed. A separate supervisor still needs to review/approve it outside this conversation.",
+  "workerRestarted": true,
+  "recovered": true,
+  "reviewBeforeCrash": {
+    "expiresAt": "2026-11-18T02:44:50.5252142+02:00",
+    "assetId": "L-417",
+    "revision": 3
+  },
+  "events": [
+    {
+      "at": "2026-11-18T02:39:15.0624772+02:00",
+      "summary": "Functions ready (owned launcher 69368); scheduler remains separate."
+    },
+    {
+      "at": "2026-11-18T02:39:15.8822224+02:00",
+      "summary": "Lights On Reported by a Client prepared; Workflow capability available."
+    },
+    {
+      "at": "2026-11-18T02:39:15.8895425+02:00",
+      "summary": "Foundation ready. Open Command Center and start the durable recovery conversation there."
+    },
+    {
+      "at": "2026-11-18T02:39:31.3918788+02:00",
+      "summary": "Session identity retained before sending the repair request."
+    },
+    {
+      "at": "2026-11-18T02:39:52.1684888+02:00",
+      "summary": "Running / AwaitingApproval: L-417 is on against its effective target under a manual override; operator approval is required to clear it."
+    },
+    {
+      "at": "2026-11-18T02:39:52.171884+02:00",
+      "summary": "Awaiting approval: a real unexpired supervisor review is available. Ready for worker crash."
+    },
+    {
+      "at": "2026-11-18T02:40:07.4669735+02:00",
+      "summary": "Worker stopped: forced process termination confirmed; scheduler and city were not stopped."
+    },
+    {
+      "at": "2026-11-18T02:40:21.7791568+02:00",
+      "summary": "Worker restarted (owned launcher 49128). Continue the same conversation in Command Center."
+    },
+    {
+      "at": "2026-11-18T02:40:43.7914061+02:00",
+      "summary": "Same session resumed without an operation ID in the prompt; original review and deadline are unchanged."
+    },
+    {
+      "at": "2026-11-18T02:41:10.3175922+02:00",
+      "summary": "Supervisor approval queued; waiting for the actual business outcome."
+    },
+    {
+      "at": "2026-11-18T02:41:10.3315283+02:00",
+      "summary": "Running / Revalidating: Checking the signed decision, stage and current Hub revision."
+    },
+    {
+      "at": "2026-11-18T02:41:12.3575744+02:00",
+      "summary": "Completed / Completed: The matching Hub receipt confirms success; verification reread its authoritative state."
+    }
+  ],
+  "runtimeStatus": "Completed",
+  "result": {
+    "state": "Completed",
+    "commandExecuted": true,
+    "resolved": true,
+    "summary": "The matching Hub receipt confirms success; verification reread its authoritative state."
+  },
+  "hub": {
+    "assetId": "L-417",
+    "area": "North Promenade",
+    "reportedIsOn": false,
+    "desiredIsOn": false,
+    "isDaylight": true,
+    "expectedScheduledState": false,
+    "manualOverride": false,
+    "controllerHealth": {
+      "status": "Healthy",
+      "summary": "Controller healthy"
+    },
+    "lastCommand": {
+      "operation": "Restore scheduled mode",
+      "desiredIsOn": false,
+      "status": "Succeeded",
+      "correlationId": "repair-dd067253df88edae76ff39b4-e624ac6346d78b7f12c854a9",
+      "requestedAt": "2026-11-18T02:41:10.4011027+02:00",
+      "completedAt": "2026-11-18T02:41:10.4355638+02:00",
+      "summary": "SmartPole confirmed the scheduled state."
+    },
+    "lastMaintenanceTime": "2026-11-18T02:09:15.2437013+02:00",
+    "hasRecentMaintenance": true,
+    "openIncidentId": null,
+    "lastReportedAt": "2026-11-18T02:41:10.4355638+02:00",
+    "operationContext": {
+      "requiresLighting": false,
+      "summary": "No cross-domain lighting requirement."
+    },
+    "stateRevision": 4,
+    "effectiveTargetIsOn": false,
+    "isAnomalous": false
+  },
+  "hubObservedAt": "2026-11-18T02:41:12.3786491+02:00",
+  "privateSnapshotSha256": "8AF36BE5C6B4A4391EABB4D23CBA19F92C533AF59E21D4B65F546478ABD00771"
+}

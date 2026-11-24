@@ -32,6 +32,7 @@ artifacts/
 # Local configuration and anything that could carry a secret into a layer. Configuration reaches the
 # container through the platform's environment variables, never through the image.
 **/appsettings.Development.json
+**/local.settings.json
 **/*.env
 .env
 

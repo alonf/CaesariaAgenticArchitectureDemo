@@ -98,6 +98,7 @@ function Invoke-Checked {
 
 Write-Step 'Checking prerequisites'
 
+. (Join-Path $PSScriptRoot 'Use-CaesareaSdk.ps1')
 if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) { throw 'dotnet is not on PATH.' }
 Write-Note "Repository: $RepositoryRoot"
 

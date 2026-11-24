@@ -89,10 +89,39 @@ builder.Services.AddHttpClient<AgentHabitatApiClient>((serviceProvider, client) 
 builder.Services.AddSingleton<IDebuggerAdapter, VsCodeAttachService>();
 builder.Services.AddSingleton<IDebuggerAdapter, VisualStudioAttachService>();
 builder.Services.AddSingleton<DebuggerSelection>();
+builder.Services.AddSingleton<RecoveryLocalSettings>();
+builder.Services.AddHttpContextAccessor();
+#pragma warning disable EXTEXP0001 // Explicitly remove the global 30s pipeline: agent turns are long-running and must not be retried.
+builder.Services.AddHttpClient("recovery-rehearsal", client => client.Timeout = TimeSpan.FromSeconds(180))
+    .RemoveAllResilienceHandlers(); // Never replay a model turn or supervisor decision on a transport failure.
+builder.Services.AddHttpClient("recovery-probe", client => client.Timeout = TimeSpan.FromSeconds(2))
+    .RemoveAllResilienceHandlers();
+#pragma warning restore EXTEXP0001
+builder.Services.AddSingleton<IRecoveryLocalRuntime, RecoveryLocalRuntime>();
+builder.Services.AddSingleton<IRecoveryRehearsalApi, RecoveryRehearsalApi>();
+builder.Services.AddSingleton<RecoveryRehearsal>();
+builder.Services.AddHostedService(services => services.GetRequiredService<RecoveryRehearsal>());
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 var app = builder.Build();
+
+// The local presenter can manage a child process and act as the rehearsal supervisor.
+// Never expose those Blazor circuits to a remote client, even on a wildcard dev binding.
+if (app.Services.GetRequiredService<RecoveryLocalSettings>().Enabled)
+{
+    app.Use(async (context, next) =>
+    {
+        var address = context.Connection.RemoteIpAddress;
+        if (address is null || !System.Net.IPAddress.IsLoopback(address))
+        {
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            return;
+        }
+
+        await next(context);
+    });
+}
 
 if (!app.Environment.IsDevelopment())
 {
@@ -104,6 +133,7 @@ app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages:
 app.UseHttpsRedirection();
 app.UseAntiforgery();
 app.MapDefaultEndpoints();
+app.MapRecoveryDemo();
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();

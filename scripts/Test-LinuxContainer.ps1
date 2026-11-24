@@ -2,7 +2,7 @@
 
 <#
 .SYNOPSIS
-    Builds the demo and runs the deterministic suite inside the official .NET 10 SDK Linux
+    Builds the demo and runs the deterministic suite inside the official .NET 11 SDK Linux
     container, from this checkout, without touching the local build output.
 
 .DESCRIPTION
@@ -19,7 +19,7 @@
     the same steps as .github/workflows/ci.yml.
 
 .PARAMETER Image
-    The SDK image to use. Defaults to mcr.microsoft.com/dotnet/sdk:10.0.
+    The SDK image to use. Defaults to mcr.microsoft.com/dotnet/sdk:11.0.100-resolute.
 
 .PARAMETER Filter
     An optional xunit class or method filter, passed to the suite as --filter-query
@@ -34,7 +34,7 @@
 
 [CmdletBinding()]
 param(
-    [string] $Image = 'mcr.microsoft.com/dotnet/sdk:10.0',
+    [string] $Image = 'mcr.microsoft.com/dotnet/sdk:11.0.100-resolute',
     [string] $Filter
 )
 
@@ -75,7 +75,7 @@ try {
         'echo "== $(uname -srm), $(dotnet --version)"',
         'dotnet restore',
         'dotnet build --no-restore',
-        "dotnet test Tests/Caesarea.Deterministic.Tests $testArguments"
+        "dotnet test --project Tests/Caesarea.Deterministic.Tests/Caesarea.Deterministic.Tests.csproj $testArguments"
     ) -join ' && '
 
     & docker run --rm -v "${archive}:/src.tar:ro" $Image bash -c $script

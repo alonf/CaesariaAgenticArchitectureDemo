@@ -1,0 +1,4 @@
+{
+  "Message": "The supervised recovery I started is still **Running**.\n\nCurrent progress: **AwaitingApproval** — L-417 is on against its effective target under a manual override, and operator approval is required to clear it.\n\nOperation ID: `repair-evidence-success`\n\nI have not approved it or issued any device command.",
+  "SessionId": "session-evidence-success"
+}

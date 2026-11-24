@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><TargetFramework>net11.0</TargetFramework></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../DurableOperations.Contracts/DurableOperations.Contracts.csproj" />
+    <ProjectReference Include="../Energy.Contracts/Energy.Contracts.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,6 +1,7 @@
 using Azure.AI.Projects;
 using Azure.Core;
 using Azure.Identity;
+using Caesarea.ServiceDefaults;
 using Microsoft.Agents.AI;
 using Microsoft.Agents.AI.Foundry.Hosting;
 using Microsoft.Extensions.AI;
@@ -26,6 +27,7 @@ using OperationsAgent.Hosted;
 var injectedPort = Environment.GetEnvironmentVariable("PORT");
 
 var builder = AgentHost.CreateBuilder(args);
+builder.Services.AddHttpContextAccessor();
 
 // No credential in the image and none in configuration. The platform mints a dedicated Microsoft
 // Entra identity for this agent when its version is created, and DefaultAzureCredential picks it up
@@ -181,11 +183,12 @@ AIAgent CreateAgent(IServiceProvider serviceProvider)
         HostedAgentLog.SkillsDirectoryMissing(logger, skillsDirectory);
     }
 
-    // One session-scoped correlation is not available here the way it is behind an ASP.NET request,
-    // so the tool carries the agent's own identity for its logs. The platform correlates the run.
+    // This agent is a singleton. Resolve the request/trace at invocation time so concurrent users
+    // cannot inherit another request's correlation, and do not modify a response already streaming.
+    var httpContextAccessor = serviceProvider.GetRequiredService<IHttpContextAccessor>();
     var energyTools = new EnergyTools(
         serviceProvider.GetRequiredService<IEnergyReadGateway>(),
-        "hosted",
+        () => InvocationCorrelation.Resolve(httpContextAccessor.HttpContext),
         loggerFactory.CreateLogger<EnergyTools>());
 
     // The shared core plus the Work IQ boundary when the toolbox is registered. The composition

@@ -48,6 +48,12 @@ Lecture-ready prompts are maintained as standalone files under `docs/prompts`. I
 - [Stage 10 — MultiAgent](prompts/10-multi-agent.md)
 - [Stage 14 — ASSERT Evaluation](prompts/14-assert-evaluation.md)
 
+Optional presenter beats, composed within Hosting/Evaluation rather than new runtime stage grants:
+
+- [Beat 15 — Routines](prompts/15-routines.md)
+- [Beat 16 — Insights](prompts/16-insights.md)
+- [Beat 17 — Durable recovery](prompts/17-durable-recovery.md)
+
 As further stages are implemented, add one independently presentable prompt file per stage and link it here. Do not duplicate full prompt bodies in this overview after extraction.
 
 Keep stage-specific differences in the **composition root / dependency-registration layer**, not scattered through business code.

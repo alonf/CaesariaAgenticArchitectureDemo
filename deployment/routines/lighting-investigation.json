@@ -1,0 +1,14 @@
+{
+  "description": "Read-only L-417 investigation. No approval, remediation, or device-write authority.",
+  "triggers": {
+    "default": {
+      "type": "timer",
+      "at": "2099-01-01T00:00:00Z"
+    }
+  },
+  "action": {
+    "type": "invoke_agent_responses_api",
+    "agent_name": "REPLACE_WITH_DEPLOYED_AGENT",
+    "input": "Investigate streetlight L-417. Read its current authoritative state from the Energy Hub before answering. Explain any discrepancy using only evidence available to this invocation. State missing evidence and uncertainty. Return a bounded recommendation; do not request remediation, approval, a work item, or any state-changing action."
+  }
+}

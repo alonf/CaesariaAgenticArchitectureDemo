@@ -1,0 +1,17 @@
+{
+  "version": "2.0",
+  "extensions": {
+    "durableTask": {
+      "hubName": "caesarea-recovery-v2",
+      "tracing": {
+        "distributedTracingEnabled": true,
+        "version": "V2"
+      },
+      "storageProvider": {
+        "type": "AzureManaged",
+        "connectionStringName": "DURABLE_TASK_SCHEDULER_CONNECTION_STRING",
+        "workItemFilteringEnabled": true
+      }
+    }
+  }
+}

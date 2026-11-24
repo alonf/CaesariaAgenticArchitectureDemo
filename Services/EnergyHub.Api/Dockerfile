@@ -6,16 +6,14 @@
 
 # The runtime tag floats on purpose: patch releases carry security fixes and nothing here pins
 # against them.
-FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble AS base
+FROM mcr.microsoft.com/dotnet/aspnet:11.0-resolute AS base
 WORKDIR /app
 # The aspnet image listens here, and infra/apps.bicep points the container app's ingress at it.
 EXPOSE 8080
 
-# The build tag does NOT float, and must stay in step with global.json. That file asks for 10.0.103
-# with rollForward: latestPatch, which accepts 10.0.1xx and rejects everything else - so when MCR
-# moved the `10.0-noble` tag to 10.0.400, an unchanged build failed with "A compatible .NET SDK was
-# not found" while listing an SDK newer than the one requested. If you bump global.json, bump this.
-FROM mcr.microsoft.com/dotnet/sdk:10.0.103-noble AS build
+# Pin the build SDK to global.json; latestFeature permits newer .NET 11 feature bands.
+# Keep the explicit image version aligned with the minimum SDK when upgrading.
+FROM mcr.microsoft.com/dotnet/sdk:11.0.100-resolute AS build
 WORKDIR /src
 
 # Restore against the project graph before copying sources, so a source-only change does not

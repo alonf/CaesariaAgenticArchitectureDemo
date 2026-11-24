@@ -5,7 +5,7 @@ namespace DemoScenario.Api.Services;
 /// </summary>
 public sealed partial class ScenarioCoordinator : IScenarioApplier, IDisposable
 {
-    private readonly object _gate = new();
+    private readonly Lock _gate = new();
     private readonly SemaphoreSlim _applicationLock = new(1, 1);
     private readonly ISmartPoleScenarioClient _smartpoleScenarioClient;
     private readonly IEnergyScenarioClient _energyScenarioClient;

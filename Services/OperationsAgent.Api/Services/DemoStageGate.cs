@@ -9,7 +9,7 @@ namespace OperationsAgent.Api.Services;
 /// </summary>
 public sealed class DemoStageGate
 {
-    private readonly object _gate = new();
+    private readonly Lock _gate = new();
     private DemoStageStatus _currentStage;
 
     /// <summary>

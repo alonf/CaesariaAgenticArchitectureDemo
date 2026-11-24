@@ -5,22 +5,31 @@ namespace OperationsAgent.Api.Services;
 /// <summary>
 /// Exposes authoritative Energy Hub reads as ordinary C# function tools.
 /// </summary>
-public sealed partial class EnergyTools(
-    IEnergyReadGateway energyReadGateway,
-    string correlationId,
-    ILogger<EnergyTools> logger)
+public sealed partial class EnergyTools
 {
     /// <summary>
     /// Gets the stable name of the single Stage 1 tool.
     /// </summary>
     public const string StreetlightStateToolName = "get_streetlight_state";
 
-    private readonly IEnergyReadGateway _energyReadGateway =
-        energyReadGateway ?? throw new ArgumentNullException(nameof(energyReadGateway));
-    private readonly string _correlationId = string.IsNullOrWhiteSpace(correlationId)
-        ? throw new ArgumentException("A correlation identifier is required.", nameof(correlationId))
-        : correlationId;
-    private readonly ILogger<EnergyTools> _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    private readonly IEnergyReadGateway _energyReadGateway;
+    private readonly Func<string> _correlationId;
+    private readonly ILogger<EnergyTools> _logger;
+
+    /// <summary>Creates tools for one local invocation with its explicit correlation identifier.</summary>
+    public EnergyTools(IEnergyReadGateway energyReadGateway, string correlationId, ILogger<EnergyTools> logger)
+        : this(energyReadGateway, () => correlationId, logger)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(correlationId);
+    }
+
+    /// <summary>Creates reusable hosted tools that resolve correlation separately for each invocation.</summary>
+    public EnergyTools(IEnergyReadGateway energyReadGateway, Func<string> correlationId, ILogger<EnergyTools> logger)
+    {
+        _energyReadGateway = energyReadGateway ?? throw new ArgumentNullException(nameof(energyReadGateway));
+        _correlationId = correlationId ?? throw new ArgumentNullException(nameof(correlationId));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    }
 
     #region FUNCTION_TOOL
     /// <summary>
@@ -34,9 +43,11 @@ public sealed partial class EnergyTools(
     {
         DemoBreakpoints.Pause(DemoSnippets.FunctionTool);
         ArgumentException.ThrowIfNullOrWhiteSpace(assetId);
-        EnergyToolsLog.ToolInvoked(_logger, StreetlightStateToolName, assetId, _correlationId);
+        var correlationId = _correlationId();
+        ArgumentException.ThrowIfNullOrWhiteSpace(correlationId);
+        EnergyToolsLog.ToolInvoked(_logger, StreetlightStateToolName, assetId, correlationId);
 
-        return await _energyReadGateway.GetStateAsync(assetId, _correlationId, cancellationToken);
+        return await _energyReadGateway.GetStateAsync(assetId, correlationId, cancellationToken);
     }
     #endregion
 }

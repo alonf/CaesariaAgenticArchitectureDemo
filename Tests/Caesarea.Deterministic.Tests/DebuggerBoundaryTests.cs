@@ -13,7 +13,7 @@ public sealed class DebuggerBoundaryTests
     private static readonly string[] VisualStudioTokens = ["Microsoft.VisualStudio.", "EnvDTE", "envdte"];
 
     [Fact]
-    public void EveryPortableProjectTargetsPlainNet10()
+    public void EveryPortableProjectTargetsPlainNet11()
     {
         var repositoryRoot = FindRepositoryRoot();
 
@@ -25,7 +25,7 @@ public sealed class DebuggerBoundaryTests
                 .ToList();
 
             Assert.True(frameworks.Count > 0, $"{projectPath} declares no target framework.");
-            Assert.All(frameworks, framework => Assert.Equal("net10.0", framework));
+            Assert.All(frameworks, framework => Assert.Equal("net11.0", framework));
         }
     }
 
@@ -66,7 +66,7 @@ public sealed class DebuggerBoundaryTests
 
         Assert.DoesNotContain("visualstudio-demo-attach", solutionText, StringComparison.OrdinalIgnoreCase);
         Assert.True(File.Exists(helperProject), "The Visual Studio helper project is missing.");
-        Assert.Contains("<TargetFramework>net10.0-windows</TargetFramework>", File.ReadAllText(helperProject), StringComparison.Ordinal);
+        Assert.Contains("<TargetFramework>net11.0-windows</TargetFramework>", File.ReadAllText(helperProject), StringComparison.Ordinal);
     }
 
     [Fact]

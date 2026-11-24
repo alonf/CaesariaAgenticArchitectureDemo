@@ -10,6 +10,7 @@
 @inject SecurityConsultApiClient SecurityConsultClient
 @inject WorkforceRecordsApiClient WorkforceRecordsClient
 @inject DebuggerSelection Debuggers
+@inject RecoveryRehearsal Recovery
 @inject IConfiguration Configuration
 @inject IOptions<DemoControlWebOptions> WebOptions
 
@@ -25,7 +26,7 @@
         <div class="hero-actions">
             <label class="rehearsal-toggle"><input type="checkbox" @bind="_rehearsal" /> Rehearsal: no confirmations</label>
             <button class="button secondary" @onclick="RefreshAsync" disabled="@_busy">Refresh</button>
-            <button class="button primary" @onclick="ResetAsync" disabled="@_busy">Reset to Normal Operation</button>
+            <button class="button primary" @onclick="ResetAsync" disabled="@(_busy || Recovery.State.BlocksCityChanges)">Reset to Normal Operation</button>
         </div>
     </header>
 
@@ -117,6 +118,10 @@
                     <span class="card-tag">Scenario @(index + 1)</span>
                     <h2>@scenario.Name</h2>
                     <p>@scenario.Description</p>
+                    @if (scenario.Id == ScenarioId.ForgottenOverride)
+                    {
+                        <a class="beat-chip" href="#durable-recovery" @onclick="ShowRecovery">Durable recovery · approval survives a restart</a>
+                    }
                     @{
                         var beats = BeatsFor(scenario.Id);
                     }
@@ -147,7 +152,7 @@
                             }
                         </p>
                     }
-                    <button class="button @(isCurrent ? "primary" : "secondary")" @onclick="() => ApplyScenarioAsync(scenario.Id)" disabled="@_busy">
+                    <button class="button @(isCurrent ? "primary" : "secondary")" @onclick="() => ApplyScenarioAsync(scenario.Id)" disabled="@(_busy || Recovery.State.BlocksCityChanges)">
                         @(isCurrent ? "Apply again" : "Apply Scenario")
                     </button>
                 </article>
@@ -252,10 +257,19 @@
                         }
                     </button>
                 }
+                <a class="stepper-step" href="#durable-recovery" @onclick="ShowRecovery">
+                    <span class="stepper-index">15</span><span class="stepper-name">Durable recovery</span>
+                </a>
             </div>
             <p class="switchboard-note">Choosing a beat prepares it: the scenario it starts from, the stage, and the switches it starts with. The flip a beat performs on stage is left to you. Reset to Normal Operation keeps the stage.</p>
+            @if (Recovery.State.BlocksCityChanges)
+            {
+                <p class="switchboard-note">Durable recovery is active or its outcome is uncertain. Finish or inspect it before preparing another beat or resetting the scenario.</p>
+            }
         }
     </section>
+
+    <RecoveryPanel Expanded="@(_showRecovery || Recovery.State.SessionId is not null)" />
 
     @* The four switches the beats flip, side by side: they are steps of the script, so they stay in
        view. Everything a beat never asks for folds under Advanced. *@
@@ -645,6 +659,15 @@
 </div>
 
 @code {
+    private bool _showRecovery;
+    private void ShowRecovery() => _showRecovery = true;
+    private bool RecoveryBlocksChange()
+    {
+        if (!Recovery.State.BlocksCityChanges) { return false; }
+        _stageMessage = "A durable repair is pending or uncertain. Finish or inspect it before changing the scenario or stage.";
+        _stageMessageIsError = true;
+        return true;
+    }
     private ScenarioCatalogResponse? _catalog;
     private DemoStageCatalogResponse? _stageCatalog;
     private IReadOnlyList<DemoBreakpointSource>? _breakpoints;
@@ -776,6 +799,7 @@
 
     private async Task BeginPrepareAsync(DemoStage stage)
     {
+        if (RecoveryBlocksChange()) { return; }
         // While a preparation runs the chips and stepper are disabled. Otherwise every click is a
         // new choice: the panel opens at once for it, and if a readiness check for an earlier
         // choice is still in flight, its answer is dropped when it arrives.
@@ -835,6 +859,7 @@
 
     private async Task PrepareCoreAsync(DemoStage stage)
     {
+        if (RecoveryBlocksChange()) { return; }
         _prepareBusy = true;
         string message;
         bool isError;
@@ -1151,6 +1176,7 @@
 
     private async Task ApplyScenarioAsync(ScenarioId scenarioId)
     {
+        if (RecoveryBlocksChange()) { return; }
         _busy = true;
 
         try
@@ -1175,6 +1201,7 @@
 
     private async Task ResetAsync()
     {
+        if (RecoveryBlocksChange()) { return; }
         _busy = true;
 
         try
