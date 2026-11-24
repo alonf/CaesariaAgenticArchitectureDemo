@@ -11,6 +11,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Contracts\DemoDirector.Contracts\DemoDirector.Contracts.csproj" />
     <ProjectReference Include="..\..\Caesarea.ServiceDefaults\Caesarea.ServiceDefaults.csproj" />
     <ProjectReference Include="..\..\Shared\CanonicalModel\Caesarea.CanonicalModel.csproj" />
     <ProjectReference Include="..\..\Contracts\CommandCenter.Contracts\CommandCenter.Contracts.csproj" />

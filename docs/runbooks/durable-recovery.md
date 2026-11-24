@@ -19,6 +19,75 @@ the current `PendingApprovalStore`/`TaskCompletionSource` executor into a persis
 This first implementation uses an explicit Durable Task orchestrator, sharing `RemediationPolicy`
 and the narrow Hub gateways. Do not describe it as the unchanged Stage 8 graph running durably.
 
+## Present through Director and Command Center
+
+After one-time setup, choose **15. Durable recovery** at the end of Demo Director's beat list,
+after Evaluation. It is also linked from **Lights On Reported by a Client**. The presenter entry
+number is not a new runtime permission stage: the process still requires Workflow or later.
+
+1. In **Demo Director**, click **Prepare foundation**. It starts the existing local emulators and
+   its owned Functions worker, applies the forgotten-override scenario, and enables Workflow only
+   if the current stage is earlier. It does **not** call the model or start a repair.
+2. Open **Command Center**. Its investigation rail contains the durable-agent panel, using the
+   existing agent-answer, approval and workflow visual styles. Click **Ask the durable agent to
+   recover L-417**. Read the real model response and wait for **AwaitingApproval**.
+3. Switch briefly to **Demo Director** and click **Crash worker and restart**. This force-terminates
+   only its owned Functions process tree, confirms the port is down, then restarts it. It does not
+   stop the scheduler, Docker, Aspire or city services. It does not send a follow-up model turn.
+4. Return to **Command Center** and click **Continue the same conversation after restart**.
+   The prompt contains no operation ID. The controller verifies the same session and the exact
+   original review, including revision, challenge and expiry, before enabling approval.
+5. In **Command Center**, read the review and choose **Approve repair** or **Decline**. The separate
+   supervisor credential stays server-side and the agent has no approval tool. These human actions
+   are explicit even when the Director's rehearsal/no-confirmations toggle is selected.
+6. Watch the timeline, terminal business result and timestamped Hub evidence in **Command Center**.
+   Its existing city map follows authoritative state. Queued approval is not completion;
+   Completed orchestration is not proof of a successful repair. Null means **unknown**.
+
+Use **Crash worker and restart** in the Director for step 3. **Terminate** in the scheduler
+dashboard ends the orchestration itself; restarting a worker cannot resume it. The main app
+explains why continuation is disabled and displays terminal scheduler status even when its
+output is plain text (for example, `Terminated by user.`). A terminated or failed operation
+without a business result retains an unknown command outcome and blocks a new rehearsal
+until its Hub receipt and execution history have been inspected. Do not delete scheduler state
+or retry the repair merely to enable a button.
+
+Local snapshot replacement retries brief file-sharing failures for up to one second. This retry
+does not repeat model turns, repair requests or supervisor decisions. A persistent write failure
+still stops the action and retains evidence for inspection.
+
+Both pages read the same retained rehearsal. Page refresh does not start another operation.
+The Director owns process controls; Command Center exposes conversation/status/decision actions
+through a focused local API authenticated separately for operator and supervisor. The API does
+not expose shell commands, PIDs or process control. Both web apps restrict local Development
+clients to loopback. This presenter can act as both roles; separate keys do not prove separate
+Entra-authenticated human users.
+
+The Director's **Reconnect worker / refresh status** preserves the session and operation and
+never resends a model turn, repair request or approval. After a failed restart, reconnect there,
+then explicitly continue the conversation in the main app. Pending or uncertain operations block
+scenario reset and preparation of a new beat. Inspect uncertain outcomes before further work;
+they are never silently discarded. Manual state-change alternates below remain available outside
+the guided happy path.
+
+A private JSON snapshot/timeline and worker logs are saved in ignored
+`docs/runbooks/artifacts/director-recovery/`. Copy them to a dated folder before the next run;
+inspect/redact before publishing. Credentials are excluded from the JSON snapshot. A worker
+already started outside the Director must be stopped once; it is never adopted or killed.
+The Director restarts named existing containers but does not create containers, install tools,
+generate credentials, sign into Azure or rebuild the worker. The panel reports missing one-time
+setup; build the Functions output before starting the city demo.
+
+## Foundry hosting comparison
+
+Both hosting models can persist sessions. Current Foundry hosted agents also offer opt-in
+resilient execution: a replacement process re-enters the handler and application/framework
+checkpoints determine where to continue. Durable Functions supplies explicit orchestration
+replay, timers, events, activity retries and coordination. Neither automatically makes external
+device commands exactly-once. See [Foundry resilience](https://learn.microsoft.com/en-us/azure/foundry/agents/concepts/long-running-agent-resilience)
+and the [MAF Durable Extension](https://learn.microsoft.com/en-us/agent-framework/hosting/durable-extension).
+Place this explanation on a new slide immediately after Hosting, followed by this recovery beat.
+
 ## Prerequisites and start
 
 Use PowerShell 7, SDK **11.0.100**, Functions Core Tools **4.16.1**, Docker Desktop and a valid
@@ -219,8 +288,10 @@ References: [Durable extension](https://learn.microsoft.com/en-us/agent-framewor
 These are implementer observations, not an independent rerun. Selected original status and
 conversation outputs are saved in [the sanitized evidence bundle](../evidence/durable-recovery-2026-11-17/README.md).
 They are not a video or complete process-termination transcript. They predate the review fixes
-and do not establish a live v2 restart. The polling commands above save fresh checkpoints for
-the next rehearsal; capture the worker stop/restart alongside them before presenting that run.
+and do not establish a live v2 restart. The subsequent
+[November 18 Demo Director rehearsal](../evidence/durable-recovery-director-2026-11-18/README.md)
+records a real v2 worker crash/restart, unchanged approval and successful repair through the UI.
+The manual polling commands remain a fallback for capturing additional rehearsals.
 
 ## Review fixes and regression evidence
 

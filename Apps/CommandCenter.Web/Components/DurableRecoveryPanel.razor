@@ -1,0 +1,139 @@
+@using DemoControl.Contracts
+@implements IAsyncDisposable
+@inject DurableRecoveryClient Client
+
+@if (Client.Enabled)
+{
+    <details id="durable-recovery" class="investigation-panel durable-recovery-panel" open="@(_state is { Prepared: true } || _state?.SessionId is not null)">
+        <summary>Durable recovery · approval survives a restart</summary>
+        <div class="section-title"><span>Durable Operations Agent</span><small>Local Functions</small></div>
+        <p class="agent-footnote">A repair must survive a worker interruption while a supervisor considers it. The conversation and pending business process are persisted separately.</p>
+        <details class="durable-walkthrough"><summary>Walkthrough</summary>
+            <ol class="walkthrough-steps">
+                <li>Prepare foundation in Demo Director. <span class="walkthrough-expect">L-417 has a forgotten override; the worker and scheduler are ready.</span></li>
+                <li>Ask for recovery here. <span class="walkthrough-expect">The agent reads the Hub and starts an operation. Wait for AwaitingApproval.</span></li>
+                <li>Crash/restart the worker in Demo Director. <span class="walkthrough-expect">This page retains the session and pending review.</span></li>
+                <li>Continue the same conversation here. <span class="walkthrough-expect">The prompt contains no process ID; the original approval and deadline must survive.</span></li>
+                <li>Review and approve or decline. <span class="walkthrough-expect">Follow the business outcome, then check the map and authoritative Hub evidence.</span></li>
+            </ol>
+        </details>
+        <p class="agent-footnote"><a href="http://localhost:5187/#durable-recovery" target="_blank" rel="noopener">Open Demo Director — preparation and worker controls</a></p>
+        @if (_state is { } state)
+        {
+            <button class="action-button investigate-button" disabled="@(_acting || state.Busy || !state.Prepared)" @onclick="BeginAsync">Ask the durable agent to recover L-417</button>
+            <p class="agent-footnote" role="status">@(state.Busy ? "Working… " : string.Empty)@state.Message</p>
+            @if (state.FirstReply is not null)
+            {
+                <div class="agent-summary"><small>Initial conversation</small><div class="agent-answer durable-answer">@state.FirstReply</div></div>
+            }
+            @if (state.SessionId is not null)
+            {
+                <button class="action-button investigate-button" disabled="@(_acting || state.ContinueBlockedReason is not null)" @onclick="ResumeAsync">Continue the same conversation after restart</button>
+                @if (state.ContinueBlockedReason is { } reason)
+                {
+                    <p class="agent-footnote" role="status">@reason</p>
+                }
+                <p class="agent-footnote">Prompt: “What happened to the repair you started? Check its status.”</p>
+            }
+            @if (state.ResumedReply is not null)
+            {
+                <div class="agent-summary"><small>Same conversation after restart</small><div class="agent-answer durable-answer">@state.ResumedReply</div></div>
+            }
+            @if (state.Operation?.Progress?.Review is { } review && !state.Terminal)
+            {
+                <div class="agent-summary approval-panel">
+                    <small>Supervisor approval required</small>
+                    <p class="approval-message">Restore scheduled mode for @review.AssetId</p>
+                    <dl class="approval-capability">
+                        <div><dt>Hub revision</dt><dd>@review.Revision</dd></div>
+                        <div><dt>Deadline</dt><dd>@review.ExpiresAt.ToLocalTime().ToString("HH:mm:ss")</dd></div>
+                        <div><dt>Recovery</dt><dd>@(state.Recovered ? "Original review confirmed unchanged" : "Awaiting restart and conversation continuation")</dd></div>
+                    </dl>
+                    <p>@state.Operation.Progress.Summary</p>
+                    <div class="approval-actions">
+                        <button class="action-button approval-approve" disabled="@(_acting || !state.CanDecide || !state.Recovered)" @onclick="() => DecideAsync(review, true)">Approve repair</button>
+                        <button class="action-button approval-deny" disabled="@(_acting || !state.CanDecide)" @onclick="() => DecideAsync(review, false)">Decline</button>
+                    </div>
+                    <p class="agent-footnote">Local rehearsal supervisor: a separate server-side credential authorizes this exact review. The agent cannot approve.</p>
+                </div>
+            }
+            @if (state.Events.Count > 0)
+            {
+                <div class="agent-summary"><small>Durable process timeline</small><ol class="durable-timeline">
+                    @foreach (var entry in state.Events)
+                    {
+                        <li><time>@entry.At.ToLocalTime().ToString("HH:mm:ss")</time> @entry.Summary</li>
+                    }
+                </ol></div>
+            }
+            @if (state.Terminal)
+            {
+                <div class="agent-summary"><small>Terminal outcome · @state.Operation?.RuntimeStatus</small>
+                    <p><strong>@(state.Result?.State ?? "Outcome unknown")</strong>: @(state.Result?.Summary ?? "Inspect the Hub and scheduler before further work.")</p>
+                    <p>Command executed: @Known(state.Result?.CommandExecuted) · Resolved: @Known(state.Result?.Resolved)</p>
+                    @if (state.Hub is { } hub)
+                    {
+                        <p>Hub evidence @(state.HubObservedAt?.ToLocalTime().ToString("HH:mm:ss")): light @(hub.ReportedIsOn ? "ON" : "OFF") · override @(hub.ManualOverride ? "ON" : "OFF") · revision @hub.StateRevision.</p>
+                        <p>Receipt: @hub.LastCommand?.Status · <code>@hub.LastCommand?.CorrelationId</code></p>
+                    }
+                </div>
+            }
+            @if (state.SessionId is not null)
+            {
+                <details class="durable-identifiers"><summary>Session and operation identity</summary><p>Session: <code>@state.SessionId</code></p><p>Operation: <code>@(state.OperationId ?? "Not yet confirmed")</code></p></details>
+            }
+        }
+        @if (_error is not null) { <p class="agent-footnote" role="alert">@_error</p> }
+        <p class="agent-footnote">Both Foundry and Functions retain sessions. This beat shows workflow replay, approval events and deadlines. Only the local worker is interrupted; the scheduler and city remain available.</p>
+    </details>
+}
+
+@code {
+    private RecoveryRehearsalState? _state;
+    private string? _error;
+    private bool _acting;
+    private readonly CancellationTokenSource _stop = new();
+    private Task? _poll;
+    protected override void OnInitialized() => _poll = PollAsync();
+    private Task BeginAsync() => ActAsync(Client.BeginAsync);
+    private Task ResumeAsync() => ActAsync(Client.ResumeAsync);
+    private Task DecideAsync(DurableOperations.Contracts.RecoveryReview review, bool approved) => ActAsync(token => Client.DecideAsync(review, approved, token));
+    private async Task ActAsync(Func<CancellationToken, Task<RecoveryRehearsalState>> action)
+    {
+        if (_acting) { return; }
+        _acting = true;
+        try { _state = await action(_stop.Token); _error = _state.Error ? _state.Message : null; }
+        catch (Exception exception) when (exception is not OutOfMemoryException) { _error = $"The response could not be confirmed: {exception.Message} Polling continues; do not start another repair."; }
+        finally { _acting = false; }
+    }
+    private async Task PollAsync()
+    {
+        if (!Client.Enabled) { return; }
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(2));
+        try
+        {
+            do
+            {
+                try
+                {
+                    using var budget = CancellationTokenSource.CreateLinkedTokenSource(_stop.Token);
+                    budget.CancelAfter(TimeSpan.FromSeconds(5));
+                    var status = await Client.GetAsync(budget.Token);
+                    await InvokeAsync(() => { _state = status; _error = status.Error ? status.Message : null; StateHasChanged(); });
+                }
+                catch (Exception exception) when (!_stop.IsCancellationRequested)
+                {
+                    await InvokeAsync(() => { _error = $"Recovery status unavailable. Prepare foundation in Demo Director. {exception.Message}"; StateHasChanged(); });
+                }
+            } while (await timer.WaitForNextTickAsync(_stop.Token));
+        }
+        catch (OperationCanceledException) { /* Navigation stops polling, not the durable operation. */ }
+    }
+    private static string Known(bool? value) => value switch { true => "yes", false => "no", null => "unknown" };
+    public async ValueTask DisposeAsync()
+    {
+        await _stop.CancelAsync();
+        if (_poll is not null) { await _poll; }
+        _stop.Dispose();
+    }
+}

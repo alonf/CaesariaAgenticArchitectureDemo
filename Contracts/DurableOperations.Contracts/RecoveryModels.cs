@@ -6,6 +6,12 @@ public sealed record DurableAgentTurn(string Message, string? SessionId = null);
 /// <summary>A completed turn and the persisted session to use for the next turn.</summary>
 public sealed record DurableAgentReply(string Message, string SessionId);
 
+/// <summary>An allocated session, returned before model execution so a lost response cannot lose its identity.</summary>
+public sealed record RecoverySessionIdentity(string SessionId);
+
+/// <summary>Authoritative orchestration status; output remains serialized for compatibility with the runbook.</summary>
+public sealed record RecoveryOperationStatus(string InstanceId, string RuntimeStatus, RecoveryProgress? Progress, string? Outcome);
+
 /// <summary>A recovery request bound to one authoritative Hub revision and Command Center stage epoch.</summary>
 public sealed record RecoveryRequest(string AssetId, long ExpectedRevision, DateTimeOffset StageAppliedAt, string CorrelationId);
 

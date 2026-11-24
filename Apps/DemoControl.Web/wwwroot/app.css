@@ -11,6 +11,14 @@
     --error: #ff8e8e;
 }
 
+.recovery-panel { border-left: 4px solid var(--orange); }
+.recovery-answer { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.55; }
+.recovery-identifiers { overflow-wrap: anywhere; }
+.recovery-timeline { padding-left: 1.5rem; line-height: 1.6; }
+.recovery-timeline time { color: var(--muted); font-variant-numeric: tabular-nums; margin-right: .6rem; }
+.recovery-review { border-color: var(--orange); margin-top: 1rem; }
+a.stepper-step, a.beat-chip { text-decoration: none; }
+
 * {
     box-sizing: border-box;
 }

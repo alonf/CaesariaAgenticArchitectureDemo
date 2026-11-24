@@ -2225,3 +2225,11 @@ svg {
         display: none;
     }
 }
+
+.durable-recovery-panel { border-top: 3px solid var(--cp-warning); margin-bottom: 1rem; }
+.durable-recovery-panel > summary { cursor: pointer; font-weight: 600; margin-bottom: .75rem; }
+.durable-answer { white-space: pre-wrap; overflow-wrap: anywhere; }
+.durable-timeline { padding-left: 1.3rem; line-height: 1.6; }
+.durable-timeline time { color: var(--cp-text-soft); font-variant-numeric: tabular-nums; }
+.durable-identifiers { overflow-wrap: anywhere; font-size: .8rem; }
+.durable-walkthrough { margin: .75rem 0; }

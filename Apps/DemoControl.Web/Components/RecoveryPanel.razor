@@ -1,0 +1,60 @@
+@implements IAsyncDisposable
+@inject RecoveryRehearsal Recovery
+
+@{ var state = Recovery.State; }
+<details id="durable-recovery" class="panel recovery-panel" open="@Expanded">
+    <summary>15. Durable recovery · foundation and worker controls</summary>
+    <section class="switchboard-panel" aria-labelledby="recovery-title">
+        <div class="panel-heading"><h2 id="recovery-title">Prepare durable recovery</h2><span class="stamp">Local rehearsal · Workflow or later</span></div>
+        <p class="feature-line"><span class="feature-label">Shows</span>MAF durable session + durable approval and repair process</p>
+        <p class="panel-intro">The Director prepares the foundation. Run the conversation, review and approval in Command Center. Return here only to interrupt and restart the worker.</p>
+        <small class="section-label">Before the first step</small>
+        <p>City running · Docker Desktop · private Functions settings initialized · Functions project built · Azure model sign-in valid.</p>
+        <p class="switchboard-note">Preparation starts the existing emulators and owned Functions worker, applies Lights On Reported by a Client, and enables Workflow if needed. A later stage is retained. One-time setup: docs/runbooks/durable-recovery.md.</p>
+        <small class="section-label">Steps</small>
+        <ol class="beat-steps">
+            <li><span class="surface-tag">Director</span><span class="step-action">Prepare foundation, then open Command Center.</span><span class="step-expect">The lamp is on under an override. No model turn or repair is started by preparation.</span></li>
+            <li><span class="surface-tag">Command Center</span><span class="step-action">Ask the durable agent to recover L-417.</span><span class="step-expect">Read the answer and wait for a real AwaitingApproval review.</span></li>
+            <li><span class="surface-tag">Director</span><span class="step-action">Crash worker and restart.</span><span class="step-expect">Only the owned Functions process tree stops. The scheduler and city remain running.</span></li>
+            <li><span class="surface-tag">Command Center</span><span class="step-action">Continue the same conversation, then approve or decline.</span><span class="step-expect">No operation ID enters the follow-up prompt. Verify the original review, terminal outcome and Hub result in the main app.</span></li>
+        </ol>
+        <p class="beat-point">Conversation memory recalls the request; durable orchestration preserves the pending process. The Hub still owns authority and state.</p>
+        <div class="stage-switch-actions">
+            <button class="button primary" disabled="@(!Recovery.Enabled || state.BlocksCityChanges)" @onclick="Recovery.PrepareAsync">Prepare foundation</button>
+            <a class="button secondary" href="http://localhost:5249/#durable-recovery" target="_blank" rel="noopener">Open Command Center demo</a>
+            <button class="button secondary" disabled="@(!Recovery.Enabled || !state.CanDecide || state.WorkerRestarted || Recovery.WorkerProcessId is null)" @onclick="Recovery.CrashAndRecoverAsync">Crash worker and restart</button>
+            <button class="button secondary" disabled="@(!Recovery.Enabled || state.Busy)" @onclick="Recovery.ReconnectAsync">Reconnect worker / refresh status</button>
+        </div>
+        <p class="prepare-status @(state.Error ? "status-error" : string.Empty)" role="status">@(state.Busy ? "Working… " : string.Empty)@state.Message</p>
+        <p>Worker: @(Recovery.WorkerProcessId is { } pid ? $"running · owned launcher {pid}" : "stopped or not owned") · <a href="http://localhost:18082" target="_blank" rel="noopener">Scheduler dashboard</a></p>
+        <p class="switchboard-note">Use this panel's Crash worker and restart button for the interruption. The scheduler dashboard's Terminate action permanently ends the operation; starting the worker again cannot resume it.</p>
+        @if (state.Terminal)
+        {
+            <p class="prepare-status" role="status">@state.Operation?.RuntimeStatus · @state.ContinueBlockedReason</p>
+        }
+        <p class="switchboard-note">Review the conversation, timeline, supervisor decision and result in Command Center. Local evidence: docs/runbooks/artifacts/director-recovery.</p>
+    </section>
+</details>
+
+@code {
+    /// <summary>Gets or sets whether the presenter selected this optional beat.</summary>
+    [Parameter] public bool Expanded { get; set; }
+    private readonly CancellationTokenSource _stop = new();
+    private Task? _poll;
+    protected override void OnInitialized() => _poll = PollAsync();
+    private async Task PollAsync()
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+        try
+        {
+            while (await timer.WaitForNextTickAsync(_stop.Token)) { await InvokeAsync(StateHasChanged); }
+        }
+        catch (OperationCanceledException) { /* Page disposal stops only this view's timer. */ }
+    }
+    public async ValueTask DisposeAsync()
+    {
+        await _stop.CancelAsync();
+        if (_poll is not null) { await _poll; }
+        _stop.Dispose();
+    }
+}

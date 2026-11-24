@@ -8,6 +8,31 @@ earlier explanation of explicit orchestration. This beat uses a separate Functio
 an actual MAF agent backed by Durable Entities, and a Durable Task orchestration with activities.
 It introduces no new `DemoStage` grant.
 
+## Guided two-screen flow
+
+Add **15. Durable recovery** at the end of Demo Director's list, after Evaluation, and link it
+from Lights On Reported by a Client. This is a presenter beat number, not a new DemoStage grant.
+
+The Director prepares foundation only: check/start the worker and existing emulators, apply the
+scenario and enable Workflow if needed. It must not call the model or start a repair. The live
+conversation, approval, timeline and result belong in **Command Center**, using its existing
+agent-answer and approval styling. Return to the Director only to crash/restart the owned worker;
+then explicitly continue the same conversation in Command Center before approving there.
+
+Retain the session before model execution and discover operations through the typed session query.
+Require an unexpired AwaitingApproval review before crash. Confirm the original session, review
+and deadline after the main-app follow-up. Keep operator and supervisor credentials server-side,
+with distinct authorization on the local adapter and Functions boundaries. No arbitrary process,
+command or endpoint input. Page refresh preserves the rehearsal. Prevent accidental scenario/reset
+while a repair is pending; unknown outcomes require inspection before a new run.
+
+Recommend a slide after Hosting, regardless of the UI's final beat number. Both Foundry and
+Functions persist sessions; Foundry also offers opt-in resilient handler reentry. Explain explicit
+workflow replay, timers, approval events and revalidation rather than claiming only Functions
+remembers. A Foundry agent calling a Functions workflow remains an extension, not this demo.
+
+## Manual fallback flow
+
 1. Ask the Functions agent to recover L-417. The agent returns a real process ID and has no approval
    or command tool. Poll until `AwaitingApproval` with a valid review before restarting; an ID only
    proves scheduling. Show the separate session/process in the scheduler dashboard.
@@ -25,6 +50,6 @@ without resending. Explicit retries of terminal pre-dispatch failures create a n
 Use the isolated v2 task hub for this build; do not replay the earlier v1 activity history.
 
 The current composition is a **local rehearsal** with separate operator/supervisor credentials.
-It does not claim Entra user isolation, a deployed Functions app, durable Hub storage, or an
-integrated Command Center approval panel. See the [runbook](../runbooks/durable-recovery.md) for
+The Command Center approval panel uses local server-side credentials. It does not claim Entra
+user isolation, a deployed Functions app, or durable Hub storage. See the [runbook](../runbooks/durable-recovery.md) for
 setup, verified behavior and the remaining cloud gates.

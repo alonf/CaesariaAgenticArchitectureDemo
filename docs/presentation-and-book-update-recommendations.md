@@ -85,3 +85,25 @@ After the revised demonstrations and presentations are rehearsed, prepare a new 
 Update edition metadata, supported source commit, links, screenshots and glossary. Preserve the
 original book's release/hash. Editable deck and manuscript sources are still needed for actual
 layout changes; this file is the recommendation, not a rewritten presentation or book.
+
+## Slide after Hosting: durable recovery (November 18)
+
+Proposed title: **The worker stops. The approval survives.**
+
+Place immediately after the Hosting slide(s). Show the short sequence:
+**Request → Awaiting approval → Worker crash → Same session resumes → Supervisor decision → Hub result**.
+
+Use Director beat **15. Durable recovery**, after Evaluation. Prepare foundation in the Director, run the conversation and approval in Command Center, and switch back only to crash/restart the worker. Continue the same conversation explicitly in Command Center. Its panel supplies the narration, timeline, review and result. UI beat numbering does not dictate slide placement.
+
+Speaker notes: both Foundry and Functions can persist conversation/session state. Foundry's opt-in
+resilient execution re-enters a handler; framework/application checkpoints preserve progress.
+Durable Functions explicitly models process replay, timers and approval events. Our local rehearsal
+interrupts only the Functions worker; the scheduler and city remain available. The agent cannot
+approve. The workflow revalidates the bound Hub revision before issuing the command. Neither host
+alone guarantees exactly-once device effects. A Foundry agent calling a durable repair workflow is
+a possible combined architecture, not the current implementation.
+
+After the slide/demo is rehearsed, add the same comparison and screenshot sequence to the book's
+hosting/workflow discussion. Include decline, expiry and OutcomeUnknown, with the local boundary
+and links to the runbook and evidence. This is a recommendation; the published slides and book
+have not been edited here.

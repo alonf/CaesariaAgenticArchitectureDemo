@@ -21,6 +21,44 @@ public sealed class RecoveryHttpFunctions
     /// <summary>Creates the authenticated local endpoint boundary.</summary>
     public RecoveryHttpFunctions(RecoveryAuthorization authorization) => _authorization = authorization;
 
+    /// <summary>Allocates a session identity before the first turn, allowing the presenter to retain it.</summary>
+    [Function(nameof(CreateRecoverySession))]
+    public async Task<HttpResponseData> CreateRecoverySession(
+        [HttpTrigger(AuthorizationLevel.Function, "post", Route = "durable-agent/sessions")] HttpRequestData request,
+        [DurableClient] DurableTaskClient client, FunctionContext context)
+    {
+        if (!_authorization.IsOperator(Key(request)))
+        {
+            return request.CreateResponse(HttpStatusCode.Unauthorized);
+        }
+
+        var session = await client.AsDurableAgentProxy(context, AgentName).CreateSessionAsync(CancellationToken.None);
+        return await JsonAsync(request, HttpStatusCode.OK, new RecoverySessionIdentity(session.ToString()!));
+    }
+
+    /// <summary>Finds actual operations belonging to a session without parsing the model's prose.</summary>
+    [Function(nameof(GetRecoverySessionOperations))]
+    public async Task<HttpResponseData> GetRecoverySessionOperations(
+        [HttpTrigger(AuthorizationLevel.Function, "get", Route = "durable-agent/sessions/{sessionId}/operations")] HttpRequestData request,
+        string sessionId, [DurableClient] DurableTaskClient client)
+    {
+        if (!_authorization.IsOperator(Key(request)))
+        {
+            return request.CreateResponse(HttpStatusCode.Unauthorized);
+        }
+
+        var operations = new List<string>();
+        await foreach (var operation in client.GetAllInstancesAsync(new OrchestrationQuery
+        {
+            InstanceIdPrefix = RecoveryTools.SessionPrefix(sessionId) + "-"
+        }))
+        {
+            operations.Add(operation.InstanceId);
+        }
+
+        return await JsonAsync(request, HttpStatusCode.OK, operations);
+    }
+
     /// <summary>Runs or resumes a persisted agent conversation using the operator credential.</summary>
     [Function(nameof(RunRecoveryAgent))]
     public async Task<HttpResponseData> RunRecoveryAgent(
@@ -73,13 +111,8 @@ public sealed class RecoveryHttpFunctions
         }
 
         var status = await client.GetInstanceAsync(instanceId, getInputsAndOutputs: true);
-        return status is null ? request.CreateResponse(HttpStatusCode.NotFound) : await JsonAsync(request, HttpStatusCode.OK, new
-        {
-            instanceId,
-            runtimeStatus = status.RuntimeStatus.ToString(),
-            progress = status.ReadCustomStatusAs<RecoveryProgress>(),
-            outcome = status.SerializedOutput
-        });
+        return status is null ? request.CreateResponse(HttpStatusCode.NotFound) : await JsonAsync(request, HttpStatusCode.OK,
+            new RecoveryOperationStatus(instanceId, status.RuntimeStatus.ToString(), status.ReadCustomStatusAs<RecoveryProgress>(), status.SerializedOutput));
     }
 
     /// <summary>Authenticates the supervisor and signs the exact displayed review before raising the durable event.</summary>
@@ -128,7 +161,9 @@ public sealed class RecoveryHttpFunctions
     private static async Task<HttpResponseData> JsonAsync(HttpRequestData request, HttpStatusCode status, object body)
     {
         var response = request.CreateResponse(status);
-        response.Headers.Add(CorrelationHeaderNames.XCorrelationId, request.FunctionContext.InvocationId);
+        response.Headers.Add(CorrelationHeaderNames.XCorrelationId,
+            request.Headers.TryGetValues(CorrelationHeaderNames.XCorrelationId, out var correlations)
+                ? correlations.First() : request.FunctionContext.InvocationId);
         await response.WriteAsJsonAsync(body);
         return response;
     }

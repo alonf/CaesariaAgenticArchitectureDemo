@@ -86,7 +86,7 @@ live-IDE skips each, and six local HTTP tests for the PowerShell rehearsal polle
 build and whitespace checks passed. Windows build had zero warnings/errors; the clean Linux build
 emitted one `AZFW0108` warning while restoring the generated Functions extensions during build.
 The orchestration tests use a scheduler double; the in-flight command test uses the real Energy
-Hub HTTP endpoint. A fresh v2 DTS worker-restart rehearsal remains open.
+Hub HTTP endpoint. A fresh v2 DTS worker-restart rehearsal was still open at this checkpoint; the November 18 guided run below closes it.
 
 The revised runbook waits for `AwaitingApproval` before restart and a terminal business result
 after approval. [Historical sanitized captures](../evidence/durable-recovery-2026-11-17/README.md)
@@ -98,7 +98,7 @@ is an implementer observation, not an independent rerun or evidence of v2 live b
 Agreed scope: the current recovery demonstration stays local. Explain Azure hosting in the slides
 and book as a proposed architecture. Full Azure Functions deployment and its associated cloud
 identity/infrastructure work below are deferred to a separate task, not required for this update.
-Recording the v2 local worker restart remains required before presenting that behavior as verified.
+The November 18 guided v2 worker-crash/restart transcript now provides evidence for that local boundary.
 
 - Complete the live host/Work IQ/Teams regression and three-OS GitHub CI before merging.
 - Configure an Insights monitor and collect genuine evidence; rehearse timer activation with the
@@ -112,3 +112,22 @@ Recording the v2 local worker restart remains required before presenting that be
 On this machine the SDK is per-user. `Start-CaesareaDemo.ps1` selects it automatically; dot-source
 `scripts/Use-CaesareaSdk.ps1` before other CLI work. The helper changes only the current process's
 PATH and DOTNET_ROOT, preserving the machine's .NET 10 installation.
+
+## Guided Demo Director recovery — November 18
+
+The optional entry is **15. Durable recovery**, after Evaluation, and is linked from Lights On
+Reported by a Client. Demo Director prepares the foundation and controls the worker; Command Center
+hosts the conversation, timeline, supervisor review and authoritative Hub evidence using its existing UI patterns.
+The local controller owns only its Functions process tree. A session is retained before model
+execution; operation discovery is typed, not parsed from model text. Review freshness, changed
+reviews, uncertain outcomes, duplicate starts, lost model/decision responses, persistence and
+operator/supervisor credential separation have regression coverage.
+
+The initial all-Director dashboard rehearsal passed: AwaitingApproval → worker crash/restart → same-session status
+lookup without the process ID → unchanged review → explicit approval → matching successful Hub
+receipt, light OFF and override OFF. See [recorded evidence](../evidence/durable-recovery-director-2026-11-18/README.md).
+The final two-screen flow also passed live at 02:39–02:41: Director prepares and restarts;
+Command Center starts, continues and approves. Terminal scheduler output and temporary snapshot
+locks have regression coverage. Latest Windows validation: 469 passed, 4 existing skips.
+The pre-implementation checkpoint was committed/pushed as 89d5a51. Recommend the recovery slide
+immediately after Hosting, then update the book; published source artifacts remain unchanged.

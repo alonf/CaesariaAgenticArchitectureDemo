@@ -8,9 +8,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Contracts\DemoDirector.Contracts\DemoDirector.Contracts.csproj" />
     <ProjectReference Include="..\..\Caesarea.ServiceDefaults\Caesarea.ServiceDefaults.csproj" />
     <ProjectReference Include="..\..\Contracts\DemoScenario.Contracts\DemoScenario.Contracts.csproj" />
     <ProjectReference Include="..\..\Contracts\Workforce.Contracts\Workforce.Contracts.csproj" />
+    <ProjectReference Include="..\..\Contracts\DurableOperations.Contracts\DurableOperations.Contracts.csproj" />
+    <ProjectReference Include="..\..\Contracts\Energy.Contracts\Energy.Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>

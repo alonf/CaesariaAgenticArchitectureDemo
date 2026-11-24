@@ -4,6 +4,7 @@
     <Project Path="Apps/DemoControl.Web/DemoControl.Web.csproj" />
   </Folder>
   <Folder Name="/Contracts/">
+    <Project Path="Contracts/DemoDirector.Contracts/DemoDirector.Contracts.csproj" />
     <Project Path="Contracts/CommandCenter.Contracts/CommandCenter.Contracts.csproj" />
     <Project Path="Contracts/DemoScenario.Contracts/DemoScenario.Contracts.csproj" />
     <Project Path="Contracts/DurableOperations.Contracts/DurableOperations.Contracts.csproj" />

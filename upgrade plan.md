@@ -4,7 +4,7 @@ Prepared: 2026-11-17. Status: authorized implementation in progress. Sections 10
 work and review fixes; unchecked items below are remaining work, not a request to reapprove local updates.
 
 **Agreed scope — November 17:** keep the Durable Functions live demonstration local for this
-update. Record the v2 restart rehearsal before presenting it as verified. Explain Azure Function
+update. The v2 dashboard restart rehearsal is now recorded (November 18; see section 14). Explain Azure Function
 App operations, managed Durable Task Scheduler, identity, networking, scaling and monitoring in
 the presentations, then the book. Label the cloud architecture as proposed, not deployed or
 verified. Full Azure Functions deployment is deferred to a separate future task; the cloud gates
@@ -198,7 +198,7 @@ This is an additional Functions hosting composition. It is separate from the cur
 - [ ] Select/provision a compatible cloud Functions plan and protected DTS endpoint.
 - [x] Keep streaming separate: this slice uses completed-turn JSON. It makes no reliable-streaming claim and does not reuse the current chat streaming adapter.
 - [x] Record v1 local conversation/review restart and timeout observations; test admission/approval, stale revision, stage withdrawal and interrupted command execution. Preserve the evidence provenance and distinguish scheduler-double tests from live DTS.
-- [ ] Record a fresh v2 worker-restart rehearsal with explicit pending/terminal checkpoints and a process-restart transcript. Existing v1 history cannot be replayed with the changed activity schedule.
+- [x] Record a fresh v2 worker-restart rehearsal with explicit pending/terminal checkpoints and a process-restart transcript. See docs/evidence/durable-recovery-director-2026-11-18. Existing v1 history remains isolated.
 
 The assessment originally estimated a 0.5–1 day spike and 2–4 further implementation days.
 The local host and review fixes are now implemented (sections 11–12); cloud resources remain uncreated.
@@ -457,7 +457,7 @@ Addressed the two recovery findings before extending presentation claims:
 - New histories use `caesarea-recovery-v2`: activity scheduling changed, so v1 histories are not
   compatible. The initializer, host, launcher and this machine's ignored settings select v2;
   credentials were retained and v1 emulator/history was left untouched. A fresh v2 emulator/session
-  is required. No live v2 restart or cloud deployment is claimed.
+  is required. At this November 17 checkpoint no live v2 restart was claimed; the November 18 dashboard rehearsal below closes that gap. No cloud deployment is claimed.
 - Reconciled the earlier checklists and historical SDK/baseline wording. Updated presentation
   recommendations first, then the book map, with unknown outcomes and evidence requirements.
 
@@ -470,7 +470,7 @@ and PowerShell syntax checks passed. These are implementer results, not independ
 
 The [evidence bundle](docs/evidence/durable-recovery-2026-11-17/README.md) preserves selected
 sanitized v1 outputs and original hashes, plus the current regression verification record. It is
-not a complete restart transcript; capture a fresh v2 worker restart before presenting v2 as live-verified.
+not a complete restart transcript. The November 18 dashboard transcript now records a fresh v2 worker crash/restart and successful repair.
 All changes remain on the existing update branch, uncommitted; no publication or remote write occurred.
 
 ## 13. Ignite announcement review — November 18
@@ -496,6 +496,28 @@ feature-level availability, source discrepancies, repo gaps, specific PDF pages 
   registration alone is insufficient. No registration, monitor or telemetry deployment was done.
 - [ ] Apply book updates after the presentation/demo rehearsal, using the inventory's chapter map.
 
-The existing v2 recovery recording, Routines authentication/rehearsal and genuine Insights evidence
+The v2 recovery recording is now complete; Routines authentication/rehearsal and genuine Insights evidence
 remain the immediate demo work. Full AKS, Agent Grid, cloud Functions, training and model-default
 changes remain deferred. The local system was left running for the user's testing.
+
+## 14. Guided durable recovery in Demo Director (November 18)
+
+Checkpoint before implementation: `89d5a51`, pushed on `upgrade/net11-foundry-insights-routines`.
+
+- [x] Add 15. Durable recovery after Evaluation and link it from Lights On Reported by a Client.
+- [x] Reuse existing panels, numbered instructions, expected results and teaching-point styles.
+- [x] Implement server-side local worker lifecycle and separate operator/supervisor HTTP calls.
+- [x] Director prepares foundation only; Command Center starts/resumes the conversation and approves. Director alone crashes/restarts the worker.
+- [x] Preserve the exact review, require explicit decision, poll terminal status and fresh Hub evidence.
+- [x] Retain rehearsal across page refresh; block accidental scenario/reset and ambiguous retries.
+- [x] Add deterministic regression tests and complete repository quality checks and live rehearsal.
+- [x] Update the runbook; recommend a slide immediately after Hosting, then a book section.
+- [x] Handle scheduler termination/failure output without retaining stale AwaitingApproval UI;
+  explain disabled continuation and recheck authoritative status before another agent turn.
+- [x] Tolerate temporary Windows snapshot replacement locks without repeating external actions.
+  Final two-screen live flow passed; evidence saved alongside the initial all-Director transcript.
+  Latest Windows build: zero warnings/errors; 469 tests passed, 4 existing skips.
+
+The comparison must acknowledge Foundry session storage and opt-in resilient handler reentry.
+Durable Functions adds explicit workflow replay, durable timers/events and process coordination.
+Neither hosting option supplies exactly-once external device effects by itself.
