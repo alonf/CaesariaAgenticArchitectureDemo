@@ -3,7 +3,7 @@
 **Building C# Agentic Systems with MAF and Foundry by Alon Fliess**.
 The smart city is the teaching example; transferable engineering judgment is the goal.
 
-Production review: [Labs 02–17 local videos, captions and companion labs](review-index.md).
+Production review: [Introduction, Labs 01–17 and closing chapter: local videos, captions and companion labs](review-index.md).
 The review index records actual execution, optional preparation-only lessons and remaining pickups.
 
 Audience: C#/.NET developers who need to architect, design and implement new agentic systems,
@@ -117,6 +117,7 @@ or publishing is authorized as part of this local course-production task.
 | 15 | A durable agent and a surviving repair | Deck 45–46, refer back to 34–37; new explanatory insert needed | Director 15 / Workflow or later | `RecoveryHttpFunctions.cs`, `RecoveryOrchestration.cs`, `RecoveryActivities.cs`; same session, unchanged review, crash/restart, decision, terminal receipt |
 | 16 | Routines activate the agent | Deck 45–46 plus clearly labeled course insert | Prepared deployed agent and routine identity | `docs/runbooks/routines-and-insights.md`, actual routine invocation code; real run ID/status and read-only outcome |
 | 17 | Insights feed engineering improvement | Deck 52–55 plus clearly labeled course insert; W20 36–38 | Existing monitor with findings | Insights retrieval and reviewed ASSERT case; show evidence/version attribution and a bounded regression, not automatic production repair |
+| 18 | The journey and your next step | Deck 6, 12, 14; approved branded cards; reviewed earlier footage | Retrospective conclusion, no new stage or fixture | Retrace authority → context → governed action → collaboration → recovery/evaluation. Choose an existing-system layer or a new C# system; complete a design brief and share the course. [Storyboard](unit-18-summary/storyboard.md) · [Exercise](unit-18-summary/lab.md) |
 
 ## Detailed shooting beats
 

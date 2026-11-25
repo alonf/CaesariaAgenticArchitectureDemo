@@ -1,0 +1,215 @@
+{
+  "lab18-01": [
+    {
+      "source": "../unit-01-deterministic-foundation/output/agentic-csharp-lab-01-rough-cut.mp4",
+      "start": 0.0,
+      "seconds": 4
+    },
+    {
+      "source": "assets/journey.png",
+      "seconds": 1,
+      "narration_anchor": "Let us retrace"
+    }
+  ],
+  "lab18-02": [
+    {
+      "source": "../unit-00-agentic-csharp/assets/deck-12.png",
+      "seconds": 1
+    },
+    {
+      "source": "../unit-01-deterministic-foundation/output/agentic-csharp-lab-01-rough-cut.mp4",
+      "start": 305.6667,
+      "seconds": 8,
+      "narration_anchor": "In the first lab"
+    },
+    {
+      "source": "../unit-01-deterministic-foundation/output/agentic-csharp-lab-01-rough-cut.mp4",
+      "start": 326.8667,
+      "seconds": 8,
+      "narration_anchor": "The independent Hub read"
+    },
+    {
+      "source": "assets/authority.png",
+      "seconds": 1,
+      "narration_anchor": "Keep that separation"
+    }
+  ],
+  "lab18-03": [
+    {
+      "source": "../unit-00-agentic-csharp/assets/deck-14.png",
+      "seconds": 1
+    },
+    {
+      "source": "../unit-00-agentic-csharp/output/agentic-csharp-unit-00-rough-cut.mp4",
+      "start": 1572.0,
+      "seconds": 3.5,
+      "narration_anchor": "In the debugger"
+    },
+    {
+      "source": "../unit-00-agentic-csharp/output/agentic-csharp-unit-00-rough-cut.mp4",
+      "start": 1597.7333,
+      "seconds": 12,
+      "narration_anchor": "We then inspected"
+    }
+  ],
+  "lab18-04": [
+    {
+      "source": "../unit-04-knowledge/output/agentic-csharp-lab-04-rough-cut.mp4",
+      "start": 100.2,
+      "seconds": 7
+    },
+    {
+      "source": "../unit-04-knowledge/output/agentic-csharp-lab-04-rough-cut.mp4",
+      "start": 267.6,
+      "seconds": 3.5,
+      "narration_anchor": "When we removed"
+    },
+    {
+      "source": "assets/context.png",
+      "seconds": 1,
+      "narration_anchor": "We also learned"
+    }
+  ],
+  "lab18-05": [
+    {
+      "source": "assets/approval.png",
+      "seconds": 1
+    },
+    {
+      "source": "../unit-10-tool-approval/output/agentic-csharp-lab-10-rough-cut.mp4",
+      "start": 80.2,
+      "seconds": 4,
+      "narration_anchor": "The visible protected-call review",
+      "focus": [
+        940,
+        500,
+        960,
+        540
+      ]
+    },
+    {
+      "source": "../unit-10-tool-approval/output/agentic-csharp-lab-10-rough-cut.mp4",
+      "start": 95.3,
+      "seconds": 2,
+      "narration_anchor": "Denial meant",
+      "focus": [
+        940,
+        330,
+        960,
+        540
+      ]
+    },
+    {
+      "source": "assets/authority.png",
+      "seconds": 1,
+      "narration_anchor": "For the physical repair workflow"
+    }
+  ],
+  "lab18-06": [
+    {
+      "source": "../unit-11-specialist/output/agentic-csharp-lab-11-rough-cut.mp4",
+      "start": 130.0,
+      "seconds": 8
+    },
+    {
+      "source": "../unit-12-a2a/output/agentic-csharp-lab-12-rough-cut.mp4",
+      "start": 105.6667,
+      "seconds": 6,
+      "narration_anchor": "The workforce peer"
+    },
+    {
+      "source": "assets/boundaries.png",
+      "seconds": 1,
+      "narration_anchor": "These examples teach"
+    }
+  ],
+  "lab18-07": [
+    {
+      "source": "../unit-15-durable-recovery/output/agentic-csharp-lab-15-rough-cut.mp4",
+      "start": 79.6,
+      "seconds": 6
+    },
+    {
+      "source": "../unit-15-durable-recovery/output/agentic-csharp-lab-15-rough-cut.mp4",
+      "start": 97.6,
+      "seconds": 5,
+      "narration_anchor": "We interrupted only"
+    },
+    {
+      "source": "../unit-15-durable-recovery/output/agentic-csharp-lab-15-rough-cut.mp4",
+      "start": 120.6,
+      "seconds": 3,
+      "narration_anchor": "After continuation"
+    },
+    {
+      "source": "../unit-15-durable-recovery/output/agentic-csharp-lab-15-rough-cut.mp4",
+      "start": 157.7333,
+      "seconds": 8,
+      "narration_anchor": "Approval was followed"
+    },
+    {
+      "source": "assets/operations.png",
+      "seconds": 1,
+      "narration_anchor": "Remembering a conversation"
+    }
+  ],
+  "lab18-08": [
+    {
+      "source": "../unit-14-evaluation/output/agentic-csharp-lab-14-rough-cut.mp4",
+      "start": 104.7333,
+      "seconds": 12
+    },
+    {
+      "source": "assets/measure.png",
+      "seconds": 1,
+      "narration_anchor": "The optional Routines"
+    }
+  ],
+  "lab18-09": [
+    {
+      "source": "../unit-00-agentic-csharp/assets/deck-6.png",
+      "seconds": 1
+    },
+    {
+      "source": "assets/resources.png",
+      "seconds": 1,
+      "narration_anchor": "The Agentic Architecture Skills repository"
+    }
+  ],
+  "lab18-10": [
+    {
+      "source": "assets/existing.png",
+      "seconds": 1
+    },
+    {
+      "source": "../unit-02-agent-tool/output/agentic-csharp-lab-02-rough-cut.mp4",
+      "start": 204.2667,
+      "seconds": 12,
+      "narration_anchor": "The C sharp function"
+    }
+  ],
+  "lab18-11": [
+    {
+      "source": "assets/new-system.png",
+      "seconds": 1
+    }
+  ],
+  "lab18-12": [
+    {
+      "source": "assets/capstone.png",
+      "seconds": 1
+    }
+  ],
+  "lab18-13": [
+    {
+      "source": "../unit-01-deterministic-foundation/output/agentic-csharp-lab-01-rough-cut.mp4",
+      "start": 350.8667,
+      "seconds": 6
+    },
+    {
+      "source": "assets/closing.png",
+      "seconds": 1,
+      "narration_anchor": "Take that discipline"
+    }
+  ]
+}

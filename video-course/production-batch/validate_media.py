@@ -37,7 +37,7 @@ def check(unit):
     return dict(unit=unit.name,duration=round(duration,2),chapters=expected_chapters,captions=count,
         maxNarrationTailSeconds=round(max(tails),3),silencesOver2_5Seconds=0,
         decode='passed',streams='1080p video + audio + English subtitles')
-units=[p for p in sorted(root.glob('unit-*')) if p.name=='unit-00-agentic-csharp' or 1<=int(p.name.split('-')[1])<=17]
+units=[p for p in sorted(root.glob('unit-*')) if p.name=='unit-00-agentic-csharp' or 1<=int(p.name.split('-')[1])<=18]
 results=[]
 with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
     for r in pool.map(check,units):

@@ -178,5 +178,15 @@
     "silencesOver2_5Seconds": 0,
     "decode": "passed",
     "streams": "1080p video + audio + English subtitles"
+  },
+  {
+    "unit": "unit-18-summary",
+    "duration": 549.02,
+    "chapters": 13,
+    "captions": 124,
+    "maxNarrationTailSeconds": 1.142,
+    "silencesOver2_5Seconds": 0,
+    "decode": "passed",
+    "streams": "1080p video + audio + English subtitles"
   }
 ]
