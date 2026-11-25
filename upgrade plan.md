@@ -3,6 +3,12 @@
 Prepared: 2026-11-17. Status: authorized implementation in progress. Sections 10–12 record completed
 work and review fixes; unchecked items below are remaining work, not a request to reapprove local updates.
 
+**November 25 tooling follow-up:** migrated to Aspire 17.0.0 on `main` (`c5e346a`), including
+the standard .NET SDK AppHost format and `AddDotnetProject`. Windows and macOS Arm64 builds and
+tests pass (469 passed, 4 live IDE tests skipped on each). All eleven local service health checks
+pass on both machines. The original 13.6.5 security patch below remains historical; the current
+version and port investigation are recorded in [Aspire 17 validation](docs/product-status/aspire17-validation.md).
+
 **Agreed scope — November 17:** keep the Durable Functions live demonstration local for this
 update. The v2 dashboard restart rehearsal is now recorded (November 18; see section 14). Explain Azure Function
 App operations, managed Durable Task Scheduler, identity, networking, scaling and monitoring in

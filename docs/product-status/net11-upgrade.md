@@ -3,6 +3,13 @@
 Date: 2026-11-17. Branch: `upgrade/net11-foundry-insights-routines`, based on `7ad5369`.
 This records the implementation slices, not completion of every work package in the plan.
 
+November 25 follow-up: the AppHost now uses Aspire 17.0.0 on `main` (`c5e346a`).
+The standard `Microsoft.NET.Sdk` plus `Aspire.Hosting.AppHost` / `Aspire.Hosting.Dotnet`
+replaces the deprecated AppHost SDK and generated project references. All eleven services use
+`AddDotnetProject` with their existing names, paths, references and waits. This supersedes the
+13.6.5 version recorded in the original implementation below. See the
+[Windows/macOS validation record](aspire17-validation.md) and [Mac setup](../../README.md#macos-setup-vs-code).
+
 November 18 research follow-up: [Ignite announcement and gap review](ignite-2026-gap-review.md).
 Insights service is now announced GA; the selected SDK remains beta. New AKS, observability,
 IQ and optimization announcements update the material backlog, not the implemented feature list.

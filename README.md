@@ -250,7 +250,9 @@ user secrets, outside committed appsettings files.
 Prerequisites, on any OS: the .NET SDK named in [global.json](global.json) (11.0.100 or a later
 11.0 feature band); PowerShell 7 for the scripts; the Azure CLI, signed in to a tenant that holds
 a Foundry project with a `gpt-5.5` deployment, for every stage past Deterministic. Nothing else is
-installed: the Aspire host, the dashboard and every service are NuGet packages the build restores.
+installed for the core demo: Aspire 17.0.0 is pinned by the AppHost's hosting packages, and
+`dotnet run` obtains its matching CLI/dashboard bundle on first launch. Allow that first download
+to finish. A separate global Aspire installation is optional.
 [docs/deployment.md](docs/deployment.md) lists what the cloud half needs on top.
 
 ```powershell
@@ -282,6 +284,88 @@ replaces a previously stored hosted endpoint, for example when switching deploym
 Use `DemoControl.Web` (the presenter switchboard) to pick a scenario and stage, then open
 `CommandCenter.Web` and ask: **"Is streetlight L-417 on?"** — and follow the stage documents in
 [docs/prompts/](docs/prompts/) for each lecture beat.
+
+### macOS setup (VS Code)
+
+Install the .NET SDK specified in [global.json](global.json): Arm64 for Apple Silicon or x64 for
+an Intel Mac. Install VS Code and Microsoft's C# Dev Kit. Foundry Toolkit is optional for browsing
+your Foundry project; the Deterministic stage needs neither Azure credentials nor a model.
+Visual Studio 2026 is Windows-only; VS Code is available on both platforms.
+
+```bash
+git clone https://github.com/alonf/CaesariaAgenticArchitectureDemo.git
+cd CaesariaAgenticArchitectureDemo
+dotnet --version
+dotnet dev-certs https --trust
+dotnet dev-certs https --check --trust
+dotnet restore
+dotnet build
+dotnet test --project Tests/Caesarea.Deterministic.Tests/Caesarea.Deterministic.Tests.csproj
+dotnet run --project Caesarea.AppHost
+```
+
+Run these from your normal account, without `sudo`. Complete any macOS keychain/password prompt
+yourself. Open the repository folder in VS Code and review/trust your checkout. If .NET 11 is
+installed per user in `~/.dotnet11`, select it **before** the commands above:
+
+```bash
+export DOTNET_ROOT="$HOME/.dotnet11"
+export PATH="$DOTNET_ROOT:$PATH"
+dotnet --info
+```
+
+These exports affect the current terminal only. New terminals and VS Code launched from the Dock
+may still discover an older Homebrew SDK. Check the C# extension's output as well as `dotnet --info`;
+use the official SDK installer or configure the editor for your installation. Keep personal SDK
+paths out of committed workspace settings. PowerShell 7 is needed for the `.ps1` convenience
+scripts; the commands above work in zsh/bash.
+
+If certificate setup reports permission denied under `~/.aspnet/dev-certs`, inspect ownership with
+`ls -ld ~/.aspnet ~/.aspnet/dev-certs ~/.aspnet/dev-certs/https`. An earlier elevated SDK command
+can leave these owned by root. Repair only the affected per-user directory, then rerun the trust
+and check commands as your normal user. Do not disable certificate validation to hide the problem.
+See Microsoft's [development certificate command reference](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-dev-certs).
+
+Use the **complete Aspire login URL printed in the terminal**, including its token. From its
+resource list open Demo Control and Command Center. Select Deterministic for the first exercise.
+Verify HTTPS independently in another terminal:
+
+```bash
+curl --fail --silent --show-error https://localhost:7089/api/energy/assets/L-417
+```
+
+The response is the Energy Hub's authoritative snapshot. For the Director's VS Code Attach/Detach
+buttons, install this repository's Caesarea Demo Attach extension and reload VS Code; see
+[the extension guide](tools/vscode-demo-attach/README.md). The four live IDE tests are opt-in;
+ordinary test passes do not prove a live debugger session.
+
+### Port conflicts and restarting Aspire
+
+Run one AppHost for this checkout. Stop it with **Ctrl+C in its launching terminal** before
+starting another copy. The public demo ports are stable; Aspire allocates the backend ports.
+An `address already in use` error is a local listener conflict, not evidence of an Azure deployment
+failure. Inspect the exact port in the failing resource's console log:
+
+```bash
+# macOS: replace 22119 with the port from the error
+lsof -nP -iTCP:22119 -sTCP:LISTEN
+```
+
+```powershell
+# Windows: identify the owning process before stopping anything
+Get-NetTCPConnection -LocalPort 22119 -State Listen |
+    Select-Object LocalAddress, LocalPort, OwningProcess
+```
+
+If it is a previous demo instance, stop that instance normally. On Windows, the repository's
+`./scripts/Stop-CaesareaDemo.ps1` also cleans up orphaned demo processes. Do not kill all `dotnet`
+processes: editors and other projects use them too. If an unrelated service legitimately owns a
+fixed port, choose an unused port in the affected project's `Properties/launchSettings.json`.
+Dashboard, OTLP and resource-service ports live in the AppHost's launch settings; do not assign
+those ports to a city service. Restart the whole AppHost after changing configuration and use the
+new URLs from its dashboard. Keep service discovery references instead of hardcoding backend ports.
+See Aspire's [networking guidance](https://aspire.dev/fundamentals/networking-overview/)
+and [troubleshooting guide](https://aspire.dev/get-started/troubleshooting/).
 
 ## Quality commands
 
