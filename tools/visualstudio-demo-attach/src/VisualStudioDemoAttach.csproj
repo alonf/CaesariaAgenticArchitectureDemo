@@ -21,7 +21,7 @@
   <ItemGroup>
     <!-- The DTE automation interfaces (EnvDTE, EnvDTE80). Stable COM contracts since Visual Studio
          2003: the 17.x interop assemblies drive Visual Studio 2026 through the same IIDs. -->
-    <PackageReference Include="Microsoft.VisualStudio.Interop" Version="17.14.40260" />
+    <PackageReference Include="Microsoft.VisualStudio.Interop" Version="18.12.1603" />
   </ItemGroup>
 
   <ItemGroup>
