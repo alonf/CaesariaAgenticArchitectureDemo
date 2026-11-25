@@ -7,13 +7,14 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Azure.AI.Projects" Version="3.0.0-beta.6" />
+    <PackageReference Include="Azure.AI.Extensions.OpenAI" Version="3.0.0" />
+    <PackageReference Include="Azure.AI.Projects" Version="3.0.0" />
     <PackageReference Include="Azure.Identity" Version="1.21.0" />
     <PackageReference Include="Microsoft.Agents.AI.A2A" Version="1.28.0-preview.261106.1" />
     <PackageReference Include="Microsoft.Agents.AI.Foundry" Version="1.28.0-preview.261106.1" />
     <PackageReference Include="Microsoft.Agents.AI.Workflows" Version="1.28.0" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="11.0.0" />
-    <PackageReference Include="Microsoft.Extensions.AI" Version="11.0.0" />
+    <PackageReference Include="Microsoft.Extensions.AI" Version="11.0.1" />
     <PackageReference Include="ModelContextProtocol" Version="2.4.0" />
   </ItemGroup>
 

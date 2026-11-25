@@ -4,10 +4,10 @@
     <TargetFramework>net11.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Azure.AI.Projects" Version="3.0.0-beta.6" />
+    <PackageReference Include="Azure.AI.Projects" Version="3.0.0" />
     <!-- Projects beta.6 references an unpublished alpha minimum; use the same published bridge
          as the compiled MAF 1.28 integration instead of NuGet's nearest beta.1 fallback. -->
-    <PackageReference Include="Azure.AI.Extensions.OpenAI" Version="3.0.0-beta.5" />
+    <PackageReference Include="Azure.AI.Extensions.OpenAI" Version="3.0.0" />
     <PackageReference Include="Azure.Identity" Version="1.21.0" />
   </ItemGroup>
 </Project>
