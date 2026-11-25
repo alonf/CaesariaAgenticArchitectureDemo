@@ -1,0 +1,119 @@
+{
+  "inserts": [
+    {
+      "before": "lab11-02",
+      "id": "lab11-clarity-prepare",
+      "title": "Locate, select and confirm Multi-Agent under Security Operation",
+      "actions": "Actual source footage; deliberate close-up and editorial emphasis. Holds are labeled.",
+      "narration": "Let us make the preparation visible. In Demo Director, locate Multi-Agent under Security Operation. Select that named capability. Read the preparation review before confirming. The review selects Security Operation. Intentional lighting is a different fixture from a forgotten override. Start with Security Consult off. The selected chip is a pending choice until confirmation. After applying it, check the stage and the readiness message, then return to Command Center.",
+      "shots": [
+        {
+          "source": "../production-batch/assets/windows-11-12.mp4",
+          "start": 14,
+          "seconds": 5,
+          "focus": [
+            285,
+            40,
+            1344,
+            756
+          ]
+        },
+        {
+          "source": "../production-batch/assets/windows-11-12.mp4",
+          "start": 22,
+          "seconds": 0.2,
+          "focus": [
+            1120,
+            630,
+            800,
+            450
+          ],
+          "narration_anchor": "Read the preparation review"
+        },
+        {
+          "source": "../production-batch/assets/windows-11-12.mp4",
+          "start": 23,
+          "seconds": 3,
+          "narration_anchor": "After applying it"
+        },
+        {
+          "source": "../production-batch/assets/windows-11-12.mp4",
+          "start": 30,
+          "seconds": 0.2
+        }
+      ]
+    },
+    {
+      "before": "lab11-03",
+      "id": "lab11-clarity-consult",
+      "title": "Locate Security Consult before changing it",
+      "actions": "Actual source footage; deliberate close-up and editorial emphasis. Holds are labeled.",
+      "narration": "The comparison has one explicit switch. In Director, find Security Consult beside Tool Source. Consult Off leaves Operations with its own evidence. Select Consult On before a new daylight question to make the specialist available. The following trace must name the consulted specialist and its bounded result. A changed button alone is not proof that the model used the capability.",
+      "shots": [
+        {
+          "source": "../production-batch/assets/windows-11-12.mp4",
+          "start": 56,
+          "seconds": 1,
+          "focus": [
+            900,
+            460,
+            960,
+            540
+          ],
+          "point": [
+            970,
+            630,
+            300,
+            65
+          ]
+        },
+        {
+          "source": "../production-batch/assets/windows-11-12.mp4",
+          "start": 60,
+          "seconds": 0.8,
+          "focus": [
+            900,
+            460,
+            960,
+            540
+          ],
+          "point": [
+            970,
+            630,
+            300,
+            65
+          ],
+          "narration_anchor": "Select Consult On"
+        }
+      ]
+    }
+  ],
+  "revisions": {
+    "lab11-02": {
+      "narration": "With the starting conditions prepared, let us follow the recorded run. This resets the city to Security Operation and starts with consultation off. Read the main application Walkthrough. The lamp is on in daylight, yet its effective target is also on. There is no anomaly. In the earlier recorded off run, Operations correctly reports an external directive without claiming to know the private reason. That limited answer is useful. Do not confuse a missing explanation with a broken deterministic system, and do not restore the schedule just because daylight normally means off."
+    }
+  },
+  "shots": {
+    "lab11-05": [
+      {
+        "source": "../production-batch/assets/windows-11-12.mp4",
+        "start": 187,
+        "seconds": 4,
+        "hold": 12
+      },
+      {
+        "source": "../production-batch/assets/windows-11-12.mp4",
+        "start": 209,
+        "seconds": 9,
+        "hold": 18,
+        "focus": [
+          30,
+          55,
+          1568,
+          882
+        ]
+      }
+    ]
+  },
+  "phrase_markers": {}
+}

@@ -15,6 +15,7 @@ from pathlib import Path
 import build_foundations as speech
 import build_intro as r
 import render_privacy
+import teaching_clarity
 
 UNIT = Path(__file__).resolve().parent / 'unit-01-deterministic-foundation'
 r.UNIT, r.ASSETS, r.OUT = UNIT, UNIT / 'assets', UNIT / 'output'
@@ -30,8 +31,11 @@ for index, section in enumerate(re.split(r'^## ', script, flags=re.M)[1:], 1):
                          narration=' '.join(narration.split())))
 
 
+r.SCENES = teaching_clarity.scenes(UNIT, r.SCENES)
+
+
 def render():
-    manifest = json.loads((UNIT / 'shots.json').read_text(encoding='utf-8'))
+    manifest = teaching_clarity.manifest(UNIT, json.loads((UNIT / 'shots.json').read_text(encoding='utf-8')))
     clips, timeline, cues = [], [], []
     position = 0.0
     for scene in r.SCENES:
@@ -39,7 +43,7 @@ def render():
         voice_hash = hashlib.sha256((r.VOICE + r.SPEECH_RATE + scene['narration']).encode()).hexdigest()
         if (r.ASSETS / (scene['id'] + '-voice.sha256')).read_text() != voice_hash:
             raise RuntimeError('Narration changed; regenerate audio first')
-        shots = manifest[scene['id']]
+        shots = teaching_clarity.timed_shots(UNIT, scene, manifest[scene['id']])
         inputs, filters, identities = [], [], []
         motion_seconds = 0
         for i, shot in enumerate(shots):
@@ -59,6 +63,7 @@ def render():
                 inputs += ['-ss', start, '-t', duration, '-i', source]
             crop = shot.get('crop')
             prefix = render_privacy.source_filters(source, shot.get('start', 0), duration)
+            prefix += teaching_clarity.focus_filter(shot)
             prefix += f'crop={crop[2]}:{crop[3]}:{crop[0]}:{crop[1]},' if crop else ''
             shot_filter = (f'[{i}:v]{prefix}scale=1920:1080:force_original_aspect_ratio=decrease,'
                            f'pad=1920:1080:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=15,setpts=PTS-STARTPTS')
@@ -66,7 +71,7 @@ def render():
                 shot_filter += (f',tpad=stop_mode=clone:stop_duration={hold},'
                                 "drawtext=fontfile=sans.ttf:text='Paused for explanation':fontcolor=white:fontsize=24:"
                                 f"box=1:boxcolor=0x222222:x=w-tw-24:y=h-th-22:enable='gte(t,{duration})'")
-            filters.append(shot_filter + f'[v{i}]')
+            filters.append(shot_filter + teaching_clarity.guide_filter(shot) + f'[v{i}]')
         # Narration determines the cut. Extra visual handles must not create silent tails.
         length = math.ceil((r.duration(audio) + 1) * 15) / 15
         chain = ''.join(f'[v{i}]' for i in range(len(shots)))

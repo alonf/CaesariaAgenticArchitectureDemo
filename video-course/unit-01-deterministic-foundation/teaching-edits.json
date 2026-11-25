@@ -1,0 +1,88 @@
+{
+  "inserts": [
+    {
+      "before": "lab01-05",
+      "id": "lab01-clarity-prepare",
+      "title": "Prepare the deterministic fixture on the Mac",
+      "actions": "Actual source footage; deliberate close-up and editorial emphasis. Holds are labeled.",
+      "narration": "Before the operation, let us locate its starting fixture on the Mac. This is the recorded reset procedure. In Director, the first card is Lights On Reported by a Client. Deterministic is the selected capability. Apply again resets the scenario even if that capability is already selected. Watch the application timestamp and the Ready to Present check change. Then return to Command Center. We expect a healthy controller, reported on, and an active manual override. A prepared fixture is our starting condition, not the result of a repair.",
+      "shots": [
+        {
+          "source": "assets/mac-reset.mp4",
+          "start": 15,
+          "seconds": 1,
+          "focus": [
+            285,
+            35,
+            1344,
+            756
+          ],
+          "hold": 12
+        },
+        {
+          "source": "assets/mac-reset.mp4",
+          "start": 22,
+          "seconds": 11,
+          "focus": [
+            285,
+            35,
+            1344,
+            756
+          ]
+        },
+        {
+          "source": "assets/mac-reset.mp4",
+          "start": 40,
+          "seconds": 6
+        }
+      ]
+    },
+    {
+      "before": "lab01-09",
+      "id": "lab01-clarity-failure-controls",
+      "title": "Locate the failure fixture and the owning debugger row",
+      "actions": "Actual source footage; deliberate close-up and editorial emphasis. Holds are labeled.",
+      "narration": "Before the failure experiment, locate two controls in Director. Controller Fault is the third scenario card. Apply Scenario prepares it; the button reads Apply again when that fixture is already selected, as it is in this recorded view. This changes the operational fixture while our stage remains Deterministic. For debugging, expand Advanced controls and find the Energy Hub row. The attach buttons belong to that service. Choose Visual Studio 2026 on Windows, or VS Code on either platform. The next sequence shows the attachment and the confirmation guard. Preparing a fault and attaching a debugger are separate actions; neither requests the repair.",
+      "shots": [
+        {
+          "source": "assets/windows-screen.mp4",
+          "start": 217,
+          "seconds": 1,
+          "focus": [
+            310,
+            40,
+            1344,
+            756
+          ],
+          "point": [
+            830,
+            120,
+            260,
+            420
+          ]
+        },
+        {
+          "source": "assets/windows-orientation.mp4",
+          "start": 32,
+          "seconds": 4,
+          "focus": [
+            310,
+            70,
+            1344,
+            756
+          ],
+          "point": [
+            335,
+            150,
+            1250,
+            130
+          ],
+          "narration_anchor": "For debugging"
+        }
+      ]
+    }
+  ],
+  "revisions": {},
+  "shots": {},
+  "phrase_markers": {}
+}

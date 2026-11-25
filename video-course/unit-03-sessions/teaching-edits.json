@@ -1,0 +1,114 @@
+{
+  "inserts": [
+    {
+      "before": "lab03-02",
+      "id": "lab03-clarity-prepare",
+      "title": "Locate, select and confirm Session",
+      "actions": "Actual source footage; deliberate close-up and editorial emphasis. Holds are labeled.",
+      "narration": "Let us make the preparation visible. In Demo Director, locate Session. Select that named capability. Read the preparation review before confirming. This review changes the capability stage. It does not by itself prove that the daylight fixture was reset. Check L-417 separately before asking. The selected chip is a pending choice until confirmation. After applying it, check the stage and the readiness message, then return to Command Center.",
+      "shots": [
+        {
+          "source": "../production-batch/assets/windows-03-06.mp4",
+          "start": 12,
+          "seconds": 5,
+          "focus": [
+            285,
+            40,
+            1344,
+            756
+          ]
+        },
+        {
+          "source": "../production-batch/assets/windows-03-06.mp4",
+          "start": 17,
+          "seconds": 0.2,
+          "focus": [
+            1120,
+            630,
+            800,
+            450
+          ],
+          "narration_anchor": "Read the preparation review"
+        },
+        {
+          "source": "../production-batch/assets/windows-03-06.mp4",
+          "start": 18,
+          "seconds": 3,
+          "narration_anchor": "After applying it"
+        },
+        {
+          "source": "../production-batch/assets/windows-03-06.mp4",
+          "start": 25,
+          "seconds": 0.2
+        }
+      ]
+    },
+    {
+      "before": "lab03-05",
+      "id": "lab03-clarity-learn-session",
+      "title": "Connect Microsoft Learn sessions to our store",
+      "actions": "Actual source footage; deliberate close-up and editorial emphasis. Holds are labeled.",
+      "narration": "Before reading our store, here is the Session page on Microsoft Learn. A session carries conversational state between runs. How that state is kept and restored depends on the agent and the storage we provide. In this lab, the application serializes a session and saves it in an in-memory store. That is continuity within the running service, not durable recovery after a restart. Next, follow that choice into AgentSessionStore and the restoration code.",
+      "shots": [
+        {
+          "source": "../production-batch/assets/clarity/learn-session.png",
+          "seconds": 45
+        }
+      ]
+    },
+    {
+      "before": "lab03-04",
+      "id": "lab03-clarity-restore",
+      "title": "Locate the deterministic restore before the follow-up",
+      "actions": "Actual source footage; deliberate close-up and editorial emphasis. Holds are labeled.",
+      "narration": "Look at the operator workflow column. Restore Scheduled Mode is the deterministic action, separate from Ask Why in the agent column. The recorded click clears the override and the map changes. Keep the same conversation for the next Why question. The comparison is between remembered context and a new authoritative read; the conversation itself did not operate the light.",
+      "shots": [
+        {
+          "source": "../production-batch/assets/windows-03-06.mp4",
+          "start": 117,
+          "seconds": 9,
+          "focus": [
+            1056,
+            230,
+            864,
+            486
+          ],
+          "point": [
+            1190,
+            600,
+            370,
+            65
+          ]
+        }
+      ]
+    }
+  ],
+  "revisions": {
+    "lab03-02": {
+      "narration": "With the starting conditions prepared, let us follow the recorded run. The lamp is on in daylight with a manual override. Open Walkthrough before starting. Ask whether L-417 is on. The answer is yes, and the trace records a fresh Energy Hub read. Below it is the session identifier. The follow-up button will send that identifier with the next question. This is how our application connects two HTTP requests to one conversation. It is not a new permission to change the city."
+    }
+  },
+  "shots": {
+    "lab03-05": [
+      {
+        "source": "../production-batch/assets/windows-03-06.mp4",
+        "start": 170,
+        "seconds": 10,
+        "hold": 2,
+        "focus": [
+          30,
+          55,
+          1568,
+          882
+        ]
+      },
+      {
+        "source": "../production-batch/assets/windows-03-06.mp4",
+        "start": 204,
+        "seconds": 2,
+        "hold": 22
+      }
+    ]
+  },
+  "phrase_markers": {}
+}

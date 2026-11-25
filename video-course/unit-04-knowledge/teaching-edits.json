@@ -1,0 +1,178 @@
+{
+  "inserts": [
+    {
+      "before": "lab04-02",
+      "id": "lab04-clarity-prepare",
+      "title": "Locate, select and confirm Knowledge",
+      "actions": "Actual source footage; deliberate close-up and editorial emphasis. Holds are labeled.",
+      "narration": "Let us make the preparation visible. In Demo Director, locate Knowledge. Select that named capability. Read the preparation review before confirming. Here the review lists both the daylight scenario and the Knowledge stage. Confirming prepares those prerequisites; it does not ask the agent a question. The selected chip is a pending choice until confirmation. After applying it, check the stage and the readiness message, then return to Command Center.",
+      "shots": [
+        {
+          "source": "../production-batch/assets/windows-03-06.mp4",
+          "start": 378,
+          "seconds": 5,
+          "focus": [
+            285,
+            40,
+            1344,
+            756
+          ]
+        },
+        {
+          "source": "../production-batch/assets/windows-03-06.mp4",
+          "start": 390,
+          "seconds": 0.2,
+          "focus": [
+            1120,
+            630,
+            800,
+            450
+          ],
+          "narration_anchor": "Read the preparation review"
+        },
+        {
+          "source": "../production-batch/assets/windows-03-06.mp4",
+          "start": 391,
+          "seconds": 3,
+          "narration_anchor": "After applying it"
+        },
+        {
+          "source": "../production-batch/assets/windows-03-06.mp4",
+          "start": 398,
+          "seconds": 0.2
+        }
+      ]
+    },
+    {
+      "before": "lab04-04",
+      "id": "lab04-clarity-learn-rag",
+      "title": "Connect retrieval modes to KnowledgeCapability",
+      "actions": "Actual source footage; deliberate close-up and editorial emphasis. Holds are labeled.",
+      "narration": "Microsoft Learn describes two retrieval patterns here. Context can be supplied before a model invocation, or a search tool can let the model request evidence when needed. Our KnowledgeCapability uses the second pattern with TextSearchProvider. The callback searches the seeded work records and returns evidence with identifiers. This local demonstration does not require Azure AI Search. Now return to the C sharp composition and identify the on-demand setting, the callback, and the evidence that reaches the trace.",
+      "shots": [
+        {
+          "source": "../production-batch/assets/clarity/learn-rag-mechanism.png",
+          "seconds": 45
+        }
+      ]
+    },
+    {
+      "before": "lab04-05",
+      "id": "lab04-clarity-withhold",
+      "title": "Show the evidence switch before the empty search",
+      "actions": "Actual source footage; deliberate close-up and editorial emphasis. Holds are labeled.",
+      "narration": "Return to Director and find Work Knowledge, beside Agent Habitat. Watch the Seeded evidence checkbox change from checked to unchecked. The panel reports no evidence. This switch changes the synthetic retrieval source; it does not clear a previous conversation. Back in Command Center, start a new Ask, then use Why in that new session. Otherwise previously retrieved notes could still be part of the context and spoil the comparison.",
+      "shots": [
+        {
+          "source": "../production-batch/assets/windows-03-06.mp4",
+          "start": 526,
+          "seconds": 1,
+          "focus": [
+            900,
+            420,
+            960,
+            540
+          ],
+          "point": [
+            960,
+            605,
+            650,
+            100
+          ]
+        },
+        {
+          "source": "../production-batch/assets/windows-03-06.mp4",
+          "start": 533,
+          "seconds": 1.5,
+          "focus": [
+            900,
+            400,
+            960,
+            540
+          ],
+          "narration_anchor": "Watch the Seeded evidence checkbox"
+        }
+      ]
+    }
+  ],
+  "revisions": {
+    "lab04-02": {
+      "narration": "With the starting conditions prepared, let us follow the recorded run. Check that the daylight anomaly and work evidence are both present. Return to the Command Center and read the top-right Walkthrough. First ask whether L-417 is on. That narrow question needs only a Hub read in this run. Then ask Why in the same session. Now the trace adds search work knowledge alongside the fresh streetlight read. Two tools ran over two model round trips in this recording. The exact count is not the lesson; the new evidence boundary is."
+    }
+  },
+  "shots": {
+    "lab04-03": [
+      {
+        "source": "../production-batch/assets/windows-03-06.mp4",
+        "start": 486,
+        "seconds": 5,
+        "hold": 0
+      },
+      {
+        "source": "../production-batch/assets/windows-03-06.mp4",
+        "start": 496,
+        "seconds": 6,
+        "hold": 27,
+        "focus": [
+          1056,
+          486,
+          864,
+          486
+        ],
+        "point": [
+          1550,
+          740,
+          350,
+          250
+        ]
+      }
+    ],
+    "lab04-04": [
+      {
+        "source": "../production-batch/assets/windows-03-06.mp4",
+        "start": 612,
+        "seconds": 6,
+        "hold": 7,
+        "focus": [
+          30,
+          55,
+          1568,
+          882
+        ]
+      },
+      {
+        "source": "../production-batch/assets/windows-03-06.mp4",
+        "start": 621,
+        "seconds": 15,
+        "hold": 8,
+        "focus": [
+          30,
+          55,
+          1568,
+          882
+        ]
+      }
+    ],
+    "lab04-06": [
+      {
+        "source": "../production-batch/assets/windows-03-06.mp4",
+        "start": 587,
+        "seconds": 9,
+        "hold": 0
+      },
+      {
+        "source": "../production-batch/assets/windows-03-06.mp4",
+        "start": 596,
+        "seconds": 14,
+        "hold": 10,
+        "focus": [
+          1056,
+          486,
+          864,
+          486
+        ]
+      }
+    ]
+  },
+  "phrase_markers": {}
+}

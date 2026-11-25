@@ -78,6 +78,50 @@
           45
         ],
         "reason": "Incidental editor account avatar"
+      },
+      {
+        "rect": [
+          370,
+          73,
+          141,
+          19
+        ],
+        "start": 0,
+        "end": 100000,
+        "reason": "Personal shell account and machine identifier"
+      },
+      {
+        "rect": [
+          370,
+          549,
+          141,
+          20
+        ],
+        "start": 0,
+        "end": 90,
+        "reason": "Personal shell account and machine identifier"
+      },
+      {
+        "rect": [
+          370,
+          508,
+          141,
+          20
+        ],
+        "start": 90,
+        "end": 100000,
+        "reason": "Personal shell account and machine identifier"
+      },
+      {
+        "rect": [
+          370,
+          1010,
+          141,
+          22
+        ],
+        "start": 90,
+        "end": 100000,
+        "reason": "Personal shell account and machine identifier"
       }
     ],
     "unit-01-deterministic-foundation/assets/windows-screen.mp4": [
@@ -195,7 +239,13 @@
           1920,
           40
         ],
-        "reason": "Incidental editor status-bar account/profile identifiers"
+        "reason": "Conceal incidental editor status bar; reviewed fullscreen browser intervals have no editor bar and retain the actual confirmation buttons.",
+        "reviewedFullscreenIntervals": [
+          [
+            378,
+            396
+          ]
+        ]
       },
       {
         "rect": [
@@ -215,7 +265,17 @@
           1920,
           40
         ],
-        "reason": "Incidental editor status-bar account/profile identifiers"
+        "reason": "Conceal incidental editor status bar; reviewed fullscreen browser intervals have no editor bar and retain the actual confirmation buttons.",
+        "reviewedFullscreenIntervals": [
+          [
+            24,
+            32
+          ],
+          [
+            361,
+            374
+          ]
+        ]
       },
       {
         "rect": [
@@ -235,7 +295,17 @@
           1920,
           40
         ],
-        "reason": "Incidental editor status-bar account/profile identifiers"
+        "reason": "Conceal incidental editor status bar; reviewed fullscreen browser intervals have no editor bar and retain the actual confirmation buttons.",
+        "reviewedFullscreenIntervals": [
+          [
+            19,
+            32
+          ],
+          [
+            431,
+            444
+          ]
+        ]
       },
       {
         "rect": [
@@ -255,7 +325,17 @@
           1920,
           40
         ],
-        "reason": "Incidental editor status-bar account/profile identifiers"
+        "reason": "Conceal incidental editor status bar; reviewed fullscreen browser intervals have no editor bar and retain the actual confirmation buttons.",
+        "reviewedFullscreenIntervals": [
+          [
+            22,
+            37
+          ],
+          [
+            765,
+            775
+          ]
+        ]
       },
       {
         "rect": [
@@ -295,7 +375,17 @@
           1920,
           40
         ],
-        "reason": "Incidental editor status-bar account/profile identifiers"
+        "reason": "Conceal incidental editor status bar; reviewed fullscreen browser intervals have no editor bar and retain the actual confirmation buttons.",
+        "reviewedFullscreenIntervals": [
+          [
+            14,
+            27
+          ],
+          [
+            240,
+            254
+          ]
+        ]
       },
       {
         "rect": [
@@ -315,7 +405,13 @@
           1920,
           40
         ],
-        "reason": "Incidental editor status-bar account/profile identifiers"
+        "reason": "Conceal incidental editor status bar; reviewed fullscreen browser intervals have no editor bar and retain the actual confirmation buttons.",
+        "reviewedFullscreenIntervals": [
+          [
+            29,
+            38
+          ]
+        ]
       },
       {
         "rect": [
@@ -366,7 +462,17 @@
           1920,
           40
         ],
-        "reason": "Incidental editor status-bar account/profile identifiers"
+        "reason": "Conceal incidental editor status bar; reviewed fullscreen browser intervals have no editor bar and retain the actual confirmation buttons.",
+        "reviewedFullscreenIntervals": [
+          [
+            258,
+            278
+          ],
+          [
+            384,
+            402
+          ]
+        ]
       },
       {
         "rect": [
@@ -528,7 +634,13 @@
           1920,
           40
         ],
-        "reason": "Incidental editor status-bar account/profile identifiers"
+        "reason": "Conceal incidental editor status bar; reviewed fullscreen Director interval retains the actual confirmation button.",
+        "reviewedFullscreenIntervals": [
+          [
+            55,
+            72
+          ]
+        ]
       },
       {
         "rect": [

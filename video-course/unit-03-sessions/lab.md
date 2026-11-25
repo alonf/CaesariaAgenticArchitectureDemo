@@ -48,3 +48,7 @@ Investigate in code/documentation or with an AI chat, then verify its claims:
 4. What would require persistence, and why would persistence alone still not guarantee fresh operational facts?
 
 Book: chapter 7, session continuity; chapter 8 introduces evidence and memory.
+
+## Framework reference in the revised video
+
+Read [Session](https://learn.microsoft.com/en-us/agent-framework/concepts/agents/conversations/session), then return to the repository. Trace the session identifier through AgentSessionStore and serialization. Explain why conversation continuity does not replace a fresh Hub read or provide restart durability.

@@ -1,0 +1,145 @@
+{
+  "inserts": [
+    {
+      "before": "lab07-02",
+      "id": "lab07-clarity-prepare",
+      "title": "Locate, select and confirm MCP Tools",
+      "actions": "Actual source footage; deliberate close-up and editorial emphasis. Holds are labeled.",
+      "narration": "Let us make the preparation visible. In Demo Director, locate MCP Tools. Select that named capability. Read the preparation review before confirming. This adds a service boundary. Start with Local Function selected in Tool Source so that the first request remains a useful comparison. The selected chip is a pending choice until confirmation. After applying it, check the stage and the readiness message, then return to Command Center.",
+      "shots": [
+        {
+          "source": "../production-batch/assets/windows-07-08.mp4",
+          "start": 19,
+          "seconds": 5,
+          "focus": [
+            285,
+            40,
+            1344,
+            756
+          ]
+        },
+        {
+          "source": "../production-batch/assets/windows-07-08.mp4",
+          "start": 27,
+          "seconds": 0.2,
+          "focus": [
+            1120,
+            630,
+            800,
+            450
+          ],
+          "narration_anchor": "Read the preparation review"
+        },
+        {
+          "source": "../production-batch/assets/windows-07-08.mp4",
+          "start": 28,
+          "seconds": 3,
+          "narration_anchor": "After applying it"
+        },
+        {
+          "source": "../production-batch/assets/windows-07-08.mp4",
+          "start": 35,
+          "seconds": 0.2
+        }
+      ]
+    },
+    {
+      "before": "lab07-03",
+      "id": "lab07-clarity-source",
+      "title": "Show the Local to MCP switch",
+      "actions": "Actual source footage; deliberate close-up and editorial emphasis. Holds are labeled.",
+      "narration": "Here is the Tool Source panel in Director. Local Function is selected first. Watch the selection move to MCP remote. This changes where the tool is invoked, not who owns the streetlight state. Return to the same question in Command Center and inspect the MCP remote badge beside the trace. The protocol boundary changed; neither read is a repair.",
+      "shots": [
+        {
+          "source": "../production-batch/assets/windows-07-08.mp4",
+          "start": 104,
+          "seconds": 12,
+          "focus": [
+            285,
+            650,
+            1344,
+            430
+          ],
+          "point": [
+            325,
+            830,
+            620,
+            160
+          ]
+        }
+      ]
+    }
+  ],
+  "revisions": {
+    "lab07-02": {
+      "narration": "With the starting conditions prepared, let us follow the recorded run. Open the main application Walkthrough and ask whether L-417 is on. The local trace shows one read and two model round trips. Now switch Tool Source to MCP remote and ask the same question again. Look at the badge: MCP remote. The name and business capability are the same, but the tool was discovered at runtime from the Energy Hub. Both answers say the lamp is on. Neither read repairs it; the override and the operational anomaly remain."
+    }
+  },
+  "shots": {
+    "lab07-03": [
+      {
+        "source": "../production-batch/assets/windows-07-08.mp4",
+        "start": 375,
+        "seconds": 10,
+        "hold": 0,
+        "focus": [
+          30,
+          55,
+          1568,
+          882
+        ]
+      },
+      {
+        "source": "../production-batch/assets/windows-07-08.mp4",
+        "start": 391,
+        "seconds": 10,
+        "hold": 14,
+        "focus": [
+          30,
+          55,
+          1568,
+          882
+        ]
+      }
+    ],
+    "lab07-04": [
+      {
+        "source": "../production-batch/assets/windows-07-08.mp4",
+        "start": 278,
+        "seconds": 4,
+        "hold": 3,
+        "focus": [
+          310,
+          90,
+          1320,
+          742
+        ],
+        "point": [
+          330,
+          120,
+          1250,
+          120
+        ]
+      },
+      {
+        "source": "../production-batch/assets/windows-07-08.mp4",
+        "start": 315,
+        "seconds": 5,
+        "hold": 10
+      },
+      {
+        "source": "../production-batch/assets/windows-07-08.mp4",
+        "start": 322,
+        "seconds": 4,
+        "hold": 0
+      },
+      {
+        "source": "../production-batch/assets/windows-07-08.mp4",
+        "start": 333,
+        "seconds": 5,
+        "hold": 12
+      }
+    ]
+  },
+  "phrase_markers": {}
+}

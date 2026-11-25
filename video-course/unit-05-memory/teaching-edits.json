@@ -1,0 +1,127 @@
+{
+  "inserts": [
+    {
+      "before": "lab05-02",
+      "id": "lab05-clarity-prepare",
+      "title": "Locate, select and confirm Memory",
+      "actions": "Actual source footage; deliberate close-up and editorial emphasis. Holds are labeled.",
+      "narration": "Let us make the preparation visible. In Demo Director, locate Memory. Select that named capability. Read the preparation review before confirming. This transition adds memory to the already explained incident. Keep the work evidence available and finish the grounded explanation before recording a case. The selected chip is a pending choice until confirmation. After applying it, check the stage and the readiness message, then return to Command Center.",
+      "shots": [
+        {
+          "source": "../production-batch/assets/windows-05-06.mp4",
+          "start": 24,
+          "seconds": 5,
+          "focus": [
+            285,
+            40,
+            1344,
+            756
+          ]
+        },
+        {
+          "source": "../production-batch/assets/windows-05-06.mp4",
+          "start": 27,
+          "seconds": 0.2,
+          "focus": [
+            1120,
+            630,
+            800,
+            450
+          ],
+          "narration_anchor": "Read the preparation review"
+        },
+        {
+          "source": "../production-batch/assets/windows-05-06.mp4",
+          "start": 28,
+          "seconds": 3,
+          "narration_anchor": "After applying it"
+        },
+        {
+          "source": "../production-batch/assets/windows-05-06.mp4",
+          "start": 35,
+          "seconds": 0.2
+        }
+      ]
+    },
+    {
+      "before": "lab05-03",
+      "id": "lab05-clarity-close-case",
+      "title": "Record a case only after the grounded answer",
+      "actions": "Actual source footage; deliberate close-up and editorial emphasis. Holds are labeled.",
+      "narration": "After the grounded explanation, locate Close case, record to memory, in the agent panel. Watch the button change to Case recorded. This stores the incident explanation as a remembered case. It is not the Restore Scheduled Mode command and does not turn the lamp off. The next supported question names L-528 in a new session, so we can inspect how a previous case influences a different investigation.",
+      "shots": [
+        {
+          "source": "../production-batch/assets/windows-05-06.mp4",
+          "start": 176,
+          "seconds": 5,
+          "focus": [
+            1056,
+            200,
+            864,
+            486
+          ],
+          "point": [
+            1560,
+            445,
+            335,
+            50
+          ]
+        }
+      ]
+    },
+    {
+      "before": "lab05-05",
+      "id": "lab05-clarity-clear",
+      "title": "Show exactly which store is cleared",
+      "actions": "Actual source footage; deliberate close-up and editorial emphasis. Holds are labeled.",
+      "narration": "In Director, expand Advanced controls and find Case Memory. The list shows one case before the action. Watch Clear case memory, then read Empty. This clears the case store, not the Hub and not every conversation. Return to the application and ask about L-528 in a fresh session. Now the comparison tests whether the remembered lead is absent, while current operational facts still come from the Hub.",
+      "shots": [
+        {
+          "source": "../production-batch/assets/windows-05-06.mp4",
+          "start": 290,
+          "seconds": 12,
+          "focus": [
+            285,
+            490,
+            1344,
+            590
+          ],
+          "point": [
+            325,
+            580,
+            1270,
+            145
+          ]
+        }
+      ]
+    }
+  ],
+  "revisions": {
+    "lab05-02": {
+      "narration": "With the starting conditions prepared, let us follow the recorded run. Read the main-app Walkthrough. If you refreshed the page, use Ask agent, expand Earlier stages, and ask Why to obtain the explanation again. Check that the answer actually refers to the work order and technician note before saving it. Click Close case, record to memory. The UI confirms CASE one for L-417. This button stores the investigation conclusion. It does not repair the lamp, create a maintenance record, or prove that the conclusion will apply to another asset."
+    }
+  },
+  "shots": {
+    "lab05-03": [
+      {
+        "source": "../production-batch/assets/windows-05-06.mp4",
+        "start": 183,
+        "seconds": 5,
+        "hold": 0,
+        "focus": [
+          1056,
+          280,
+          864,
+          486
+        ]
+      },
+      {
+        "source": "../production-batch/assets/windows-05-06.mp4",
+        "start": 219,
+        "seconds": 7,
+        "hold": 18
+      }
+    ]
+  },
+  "phrase_markers": {}
+}

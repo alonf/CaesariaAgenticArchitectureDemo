@@ -33,3 +33,7 @@ If no skill loads, inspect its discovery/name/directory and the actual call trac
 3. Which constraints remain deterministic even if the model ignores the procedure?
 4. Propose a harmless report-format change in a disposable local copy. How would you test and review it? Do not change approval or authority rules for this exercise.
 5. Which evaluations would detect a convincing report that skipped a required fresh read?
+
+## Framework reference in the revised video
+
+Read [Agent Skills](https://learn.microsoft.com/en-us/agent-framework/agents/skills), then return to the repository. Find discovery, instruction loading and the loaded-skill trace. Explain why procedural guidance does not confer write authority or prove the incident cause.

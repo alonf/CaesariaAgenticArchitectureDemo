@@ -1,0 +1,73 @@
+{
+  "inserts": [],
+  "revisions": {},
+  "shots": {
+    "lab17-02": [
+      {
+        "hold": 28,
+        "source": "../production-batch/assets/windows-16-17.mp4",
+        "start": 130,
+        "seconds": 9,
+        "focus": [
+          30,
+          55,
+          1568,
+          882
+        ]
+      }
+    ],
+    "lab17-03": [
+      {
+        "source": "../production-batch/assets/windows-16-17.mp4",
+        "start": 146,
+        "seconds": 6,
+        "hold": 11
+      },
+      {
+        "source": "../production-batch/assets/windows-16-17.mp4",
+        "start": 154,
+        "seconds": 8,
+        "hold": 13,
+        "focus": [
+          30,
+          55,
+          1568,
+          882
+        ],
+        "point": [
+          100,
+          570,
+          1400,
+          280
+        ]
+      }
+    ],
+    "lab17-04": [
+      {
+        "source": "../production-batch/assets/windows-16-17.mp4",
+        "start": 178,
+        "seconds": 5,
+        "hold": 1,
+        "focus": [
+          0,
+          450,
+          1536,
+          630
+        ]
+      },
+      {
+        "source": "../production-batch/assets/windows-16-17.mp4",
+        "start": 198,
+        "seconds": 9,
+        "hold": 26,
+        "focus": [
+          0,
+          450,
+          1536,
+          630
+        ]
+      }
+    ]
+  },
+  "phrase_markers": {}
+}

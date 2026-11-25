@@ -1,0 +1,221 @@
+{
+  "inserts": [],
+  "revisions": {
+    "agentic-24": {
+      "narration": "The Demo Director prepares the teaching environment. Read the first scenario card: Lights On Reported by a Client. A scenario creates operational conditions; a capability stage controls what the application can do. The daylight fixture is already applied in this recording. We select Investigation Agent and inspect the preparation review. This review changes the stage only. It is not a repair and it is not a new investigation. Confirm the selection, then check Now playing and the readiness message. If you repaired the lamp in an earlier run, use Apply again to reset this fixture. Command Center is where we will ask the question and observe the result. Keep those two responsibilities separate: Director prepares; the main application demonstrates."
+    },
+    "agentic-10": {
+      "actions": "GitHub orientation, then a readable close-up of the actual local project tree."
+    },
+    "agentic-11": {
+      "actions": "Actual existing Foundry project, agent list and loaded details. Omit the loading-only interval."
+    }
+  },
+  "shots": {},
+  "phrase_markers": {
+    "agentic-24": [
+      {
+        "phrase": "Read the first scenario card",
+        "rect": [
+          315,
+          125,
+          270,
+          525
+        ],
+        "seconds": 6
+      }
+    ],
+    "agentic-22": [
+      {
+        "phrase": "Find the simulator",
+        "rect": [
+          65,
+          235,
+          570,
+          320
+        ],
+        "seconds": 6
+      },
+      {
+        "phrase": "use their endpoint links",
+        "rect": [
+          1310,
+          235,
+          340,
+          320
+        ],
+        "seconds": 5
+      }
+    ],
+    "agentic-26": [
+      {
+        "phrase": "Attach the Operations Agent row",
+        "rect": [
+          30,
+          970,
+          620,
+          80
+        ],
+        "seconds": 3
+      },
+      {
+        "phrase": "then arm Agent Creation and Function Tool",
+        "rect": [
+          30,
+          620,
+          680,
+          220
+        ],
+        "seconds": 6
+      },
+      {
+        "phrase": "The attached status matters",
+        "rect": [
+          1620,
+          560,
+          250,
+          65
+        ],
+        "seconds": 5
+      }
+    ],
+    "agentic-32": [
+      {
+        "phrase": "choose Detach VS Code",
+        "rect": [
+          35,
+          975,
+          230,
+          70
+        ],
+        "seconds": 3
+      }
+    ]
+  },
+  "motion": {
+    "Director prepares the starting fixture": [
+      [
+        "director-live",
+        10,
+        1,
+        null
+      ],
+      [
+        "director-live",
+        55,
+        2,
+        [
+          310,
+          180,
+          1300,
+          732
+        ]
+      ],
+      [
+        "director-live",
+        60,
+        0.2,
+        [
+          1120,
+          630,
+          800,
+          450
+        ]
+      ],
+      [
+        "director-live",
+        65,
+        6,
+        null
+      ]
+    ],
+    "Pause, practice, and prepare Lab 01": [
+      [
+        "card:practice",
+        0,
+        1,
+        null
+      ],
+      [
+        "reset-live",
+        15,
+        5,
+        null
+      ],
+      [
+        "reset-live",
+        52,
+        10,
+        null
+      ]
+    ],
+    "Find your way around the repository": [
+      [
+        "orientation-repo",
+        2,
+        18,
+        null
+      ],
+      [
+        "orientation-repo",
+        48,
+        8,
+        null
+      ],
+      [
+        "orientation-code",
+        24,
+        22,
+        [
+          0,
+          70,
+          1280,
+          720
+        ]
+      ]
+    ],
+    "Locate the project and its hosted agent": [
+      [
+        "orientation-foundry",
+        2,
+        10,
+        null
+      ],
+      [
+        "orientation-foundry",
+        28,
+        8,
+        [
+          250,
+          65,
+          1600,
+          900
+        ]
+      ],
+      [
+        "orientation-foundry",
+        60,
+        12,
+        [
+          250,
+          65,
+          1600,
+          900
+        ]
+      ]
+    ]
+  },
+  "motion_anchors": {
+    "agentic-24": [
+      null,
+      "We select Investigation Agent",
+      "inspect the preparation review",
+      "Confirm the selection"
+    ],
+    "agentic-36": [
+      null,
+      "When you are ready for Lab one",
+      "Review and confirm"
+    ]
+  }
+}

@@ -1,0 +1,102 @@
+{
+  "inserts": [
+    {
+      "before": "lab12-02",
+      "id": "lab12-clarity-prepare",
+      "title": "Locate, select and confirm A2A Delegation",
+      "actions": "Actual source footage; deliberate close-up and editorial emphasis. Holds are labeled.",
+      "narration": "Let us make the preparation visible. In Demo Director, locate A2A Delegation. Select that named capability. Read the preparation review before confirming. This review restores the reported daylight anomaly and selects peer delegation. An open work order can explain the override; it does not repair it. The selected chip is a pending choice until confirmation. After applying it, check the stage and the readiness message, then return to Command Center.",
+      "shots": [
+        {
+          "source": "../production-batch/assets/windows-11-12.mp4",
+          "start": 240,
+          "seconds": 5,
+          "focus": [
+            285,
+            40,
+            1344,
+            756
+          ]
+        },
+        {
+          "source": "../production-batch/assets/windows-11-12.mp4",
+          "start": 249,
+          "seconds": 0.2,
+          "focus": [
+            1120,
+            630,
+            800,
+            450
+          ],
+          "narration_anchor": "Read the preparation review"
+        },
+        {
+          "source": "../production-batch/assets/windows-11-12.mp4",
+          "start": 250,
+          "seconds": 3,
+          "narration_anchor": "After applying it"
+        },
+        {
+          "source": "../production-batch/assets/windows-11-12.mp4",
+          "start": 257,
+          "seconds": 0.2
+        }
+      ]
+    },
+    {
+      "before": "lab12-04",
+      "id": "lab12-clarity-projection",
+      "title": "Locate the full fixture for comparison",
+      "actions": "Actual source footage; deliberate close-up and editorial emphasis. Holds are labeled.",
+      "narration": "When comparing the refusal with the underlying synthetic fixture, use Director, Advanced controls, Workforce Records. Show work orders in full exposes the teaching data to us as instructors. It does not add fields to the agent tool. Compare that full record with the shareable result in code. This is how we demonstrate a data boundary rather than relying only on a model promise.",
+      "shots": [
+        {
+          "source": "../production-batch/assets/windows-11-12.mp4",
+          "start": 430,
+          "seconds": 12,
+          "focus": [
+            285,
+            400,
+            1344,
+            680
+          ],
+          "point": [
+            325,
+            860,
+            1270,
+            135
+          ],
+          "point_end": 4
+        }
+      ]
+    }
+  ],
+  "revisions": {
+    "lab12-02": {
+      "narration": "With the starting conditions prepared, let us follow the recorded run. This reapplies Lights On Reported by a Client, so the daylight override is back even though earlier lessons repaired it. Open the main app Walkthrough and ask the workforce domain about L-417. In this run the peer finds the open work order W O eight seven three two, explains post-maintenance verification, and distinguishes an older closed work order that does not explain the current override. Operations attributes its answer to the Workforce Agent. No command was requested or executed."
+    }
+  },
+  "shots": {
+    "lab12-03": [
+      {
+        "source": "../production-batch/assets/windows-11-12.mp4",
+        "start": 338,
+        "seconds": 10,
+        "hold": 0
+      },
+      {
+        "source": "../production-batch/assets/windows-11-12.mp4",
+        "start": 398,
+        "seconds": 4,
+        "hold": 20,
+        "focus": [
+          30,
+          55,
+          1568,
+          882
+        ]
+      }
+    ]
+  },
+  "phrase_markers": {}
+}

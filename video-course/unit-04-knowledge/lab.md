@@ -47,3 +47,7 @@ Reproduce both paths and explain one supported claim and one unverified claim. T
 4. What changes would a real search provider need for authorization, freshness, failure handling and provenance?
 
 Book alignment: chapter 8, knowledge versus memory. Use documentation or an AI chat to develop your answer, then check it against code and observed traces.
+
+## Framework reference in the revised video
+
+Read [RAG and TextSearchProvider](https://learn.microsoft.com/en-us/agent-framework/agents/rag), then return to the repository. Compare BeforeAIInvoke with OnDemandFunctionCalling, then find the mode and search callback in KnowledgeCapability. This local source is seeded work knowledge; it is not Azure AI Search.

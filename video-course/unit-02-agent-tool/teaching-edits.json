@@ -1,0 +1,135 @@
+{
+  "inserts": [
+    {
+      "before": "lab02-03",
+      "id": "lab02-clarity-prepare",
+      "title": "Locate, select and confirm Investigation Agent",
+      "actions": "Actual source footage; deliberate close-up and editorial emphasis. Holds are labeled.",
+      "narration": "Let us make the preparation visible. In Demo Director, locate Investigation Agent. Select that named capability. Read the preparation review before confirming. The review changes the capability stage. The daylight fixture is already applied in this take. If your lamp was repaired in Lab one, apply that fixture again first. The selected chip is a pending choice until confirmation. After applying it, check the stage and the readiness message, then return to Command Center.",
+      "shots": [
+        {
+          "source": "../production-batch/assets/windows-02-03.mp4",
+          "start": 12,
+          "seconds": 5,
+          "focus": [
+            285,
+            40,
+            1344,
+            756
+          ]
+        },
+        {
+          "source": "../production-batch/assets/windows-02-03.mp4",
+          "start": 20,
+          "seconds": 0.2,
+          "focus": [
+            1120,
+            630,
+            800,
+            450
+          ],
+          "narration_anchor": "Read the preparation review"
+        },
+        {
+          "source": "../production-batch/assets/windows-02-03.mp4",
+          "start": 21,
+          "seconds": 3,
+          "narration_anchor": "After applying it"
+        },
+        {
+          "source": "../production-batch/assets/windows-02-03.mp4",
+          "start": 31,
+          "seconds": 0.2
+        }
+      ]
+    },
+    {
+      "before": "lab02-08",
+      "id": "lab02-clarity-detach",
+      "title": "Show the service remaining after detach",
+      "actions": "Actual source footage; deliberate close-up and editorial emphasis. Holds are labeled.",
+      "narration": "Here is the detach action at a readable size. In the Operations Agent section, the button initially says Detach VS Code. Watch it return to Attach VS Code and the status become debugger not attached. Detaching leaves the existing service available. This is different from stopping the AppHost or launching a second service under a debugger. Clear any temporary snippet selections before the next exercise.",
+      "shots": [
+        {
+          "source": "../production-batch/assets/windows-02-03.mp4",
+          "start": 865,
+          "seconds": 1,
+          "focus": [
+            310,
+            440,
+            1320,
+            600
+          ],
+          "hold": 7
+        },
+        {
+          "source": "../production-batch/assets/windows-02-03.mp4",
+          "start": 866,
+          "seconds": 13,
+          "focus": [
+            310,
+            440,
+            1320,
+            600
+          ]
+        }
+      ]
+    }
+  ],
+  "revisions": {},
+  "shots": {
+    "lab02-04": [
+      {
+        "source": "../production-batch/assets/windows-02-03.mp4",
+        "start": 469,
+        "seconds": 12,
+        "hold": 6,
+        "focus": [
+          285,
+          170,
+          1344,
+          756
+        ]
+      },
+      {
+        "source": "../production-batch/assets/windows-02-03.mp4",
+        "start": 509,
+        "seconds": 5,
+        "hold": 0
+      },
+      {
+        "source": "../production-batch/assets/windows-02-03.mp4",
+        "start": 531,
+        "seconds": 18,
+        "hold": 0
+      }
+    ],
+    "lab02-05": [
+      {
+        "source": "../production-batch/assets/windows-02-03.mp4",
+        "start": 562,
+        "seconds": 10,
+        "hold": 17,
+        "focus": [
+          30,
+          55,
+          1568,
+          882
+        ]
+      },
+      {
+        "source": "../production-batch/assets/windows-02-03.mp4",
+        "start": 585,
+        "seconds": 7,
+        "hold": 12,
+        "focus": [
+          30,
+          55,
+          1568,
+          882
+        ]
+      }
+    ]
+  },
+  "phrase_markers": {}
+}

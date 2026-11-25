@@ -1,0 +1,114 @@
+{
+  "inserts": [
+    {
+      "before": "lab09-02",
+      "id": "lab09-clarity-prepare",
+      "title": "Locate, select and confirm Workflow",
+      "actions": "Actual source footage; deliberate close-up and editorial emphasis. Holds are labeled.",
+      "narration": "Let us make the preparation visible. In Demo Director, locate Workflow. Select that named capability. Read the preparation review before confirming. This review reapplies the daylight anomaly as well as changing the stage. That reset is necessary because the previous lesson repaired the lamp. The selected chip is a pending choice until confirmation. After applying it, check the stage and the readiness message, then return to Command Center.",
+      "shots": [
+        {
+          "source": "../production-batch/assets/windows-09-10.mp4",
+          "start": 22,
+          "seconds": 5,
+          "focus": [
+            285,
+            40,
+            1344,
+            756
+          ]
+        },
+        {
+          "source": "../production-batch/assets/windows-09-10.mp4",
+          "start": 30,
+          "seconds": 0.2,
+          "focus": [
+            1120,
+            630,
+            800,
+            450
+          ],
+          "narration_anchor": "Read the preparation review"
+        },
+        {
+          "source": "../production-batch/assets/windows-09-10.mp4",
+          "start": 33,
+          "seconds": 3,
+          "narration_anchor": "After applying it"
+        },
+        {
+          "source": "../production-batch/assets/windows-09-10.mp4",
+          "start": 40,
+          "seconds": 0.2
+        }
+      ]
+    },
+    {
+      "before": "lab09-04",
+      "id": "lab09-clarity-learn-workflow",
+      "title": "Locate the owner of the workflow wait",
+      "actions": "Actual source footage; deliberate close-up and editorial emphasis. Holds are labeled.",
+      "narration": "Microsoft Learn places this human interaction in workflow request and response handling. An executor requests input and the application supplies the response. The graph decides where that wait belongs. In our recorded workflow, the pending operator decision lives in the running process; we have not configured restart recovery for that gate. Now return to the actual graph and its approval executor. Later, the durable lesson will demonstrate a different persistence boundary.",
+      "shots": [
+        {
+          "source": "../production-batch/assets/clarity/learn-workflow.png",
+          "seconds": 45
+        }
+      ]
+    },
+    {
+      "before": "lab09-03",
+      "id": "lab09-clarity-stale",
+      "title": "Change the fixture while the old review remains open",
+      "actions": "Actual source footage; deliberate close-up and editorial emphasis. Holds are labeled.",
+      "narration": "For the stale-state experiment, leave the second approval unanswered in Command Center. In Director, watch Apply again on the daylight scenario. Reapplying the fixture advances the authoritative revision even when the visible situation looks similar. Return to the original review instead of requesting a new one. The following approval still refers to the old state, so the command must be refused.",
+      "shots": [
+        {
+          "source": "../production-batch/assets/windows-09-10.mp4",
+          "start": 125,
+          "seconds": 9.5,
+          "focus": [
+            285,
+            40,
+            1344,
+            756
+          ],
+          "point": [
+            325,
+            460,
+            235,
+            100
+          ]
+        }
+      ]
+    }
+  ],
+  "revisions": {
+    "lab09-02": {
+      "narration": "With the starting conditions prepared, let us follow the recorded run. This reapplies the daylight anomaly after our previous repair. In the main application read the Walkthrough and inspect the workflow definition. The diagram is generated from the code-built graph. The equivalent YAML is displayed for comparison; it is not the definition executing this run. Start remediation and wait for the approval node. Notice the asset and state revision in the request. Deny first. The timeline marks the gate declined and execution skipped. Verification remains unresolved, and refusal itself does not create a maintenance work item."
+    }
+  },
+  "shots": {
+    "lab09-06": [
+      {
+        "source": "../production-batch/assets/windows-09-10.mp4",
+        "start": 690,
+        "seconds": 9,
+        "hold": 1
+      },
+      {
+        "source": "../production-batch/assets/windows-09-10.mp4",
+        "start": 728,
+        "seconds": 8,
+        "hold": 19,
+        "focus": [
+          30,
+          55,
+          1568,
+          882
+        ]
+      }
+    ]
+  },
+  "phrase_markers": {}
+}

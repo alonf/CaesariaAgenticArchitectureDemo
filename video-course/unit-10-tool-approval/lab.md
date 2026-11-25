@@ -43,3 +43,7 @@ After a timeout, read the work-item records first. A missing final answer does n
 - Why validate arguments after approval, and why not silently rewrite an approved summary?
 - How would you design a persisted operation/status resource so a caller timeout can be reconciled without duplicate writes?
 - Why can discovering an existing incident improve approval quality without weakening policy?
+
+## Framework reference in the revised video
+
+Read [Function-tool approval](https://learn.microsoft.com/en-us/agent-framework/agents/tools/tool-approval), then return to the repository. Find ApprovalRequiredAIFunction and the approval resolver. Explain why the runtime intercepts a model-selected call, and why approval still does not guarantee deterministic execution succeeds.

@@ -1,0 +1,94 @@
+{
+  "inserts": [
+    {
+      "before": "lab06-02",
+      "id": "lab06-clarity-prepare",
+      "title": "Locate, select and confirm Skills",
+      "actions": "Actual source footage; deliberate close-up and editorial emphasis. Holds are labeled.",
+      "narration": "Let us make the preparation visible. In Demo Director, locate Skills. Select that named capability. Read the preparation review before confirming. This review changes the stage. The lesson still needs the daylight anomaly and work evidence. A stage selection is not an investigation result. The selected chip is a pending choice until confirmation. After applying it, check the stage and the readiness message, then return to Command Center.",
+      "shots": [
+        {
+          "source": "../production-batch/assets/windows-05-06.mp4",
+          "start": 361,
+          "seconds": 5,
+          "focus": [
+            285,
+            40,
+            1344,
+            756
+          ]
+        },
+        {
+          "source": "../production-batch/assets/windows-05-06.mp4",
+          "start": 369,
+          "seconds": 0.2,
+          "focus": [
+            1120,
+            630,
+            800,
+            450
+          ],
+          "narration_anchor": "Read the preparation review"
+        },
+        {
+          "source": "../production-batch/assets/windows-05-06.mp4",
+          "start": 370,
+          "seconds": 3,
+          "narration_anchor": "After applying it"
+        },
+        {
+          "source": "../production-batch/assets/windows-05-06.mp4",
+          "start": 377,
+          "seconds": 0.2
+        }
+      ]
+    },
+    {
+      "before": "lab06-04",
+      "id": "lab06-clarity-learn-skills",
+      "title": "Connect progressive disclosure to SKILL.md",
+      "actions": "Actual source footage; deliberate close-up and editorial emphasis. Holds are labeled.",
+      "narration": "The Agent Skills page on Microsoft Learn explains progressive disclosure. The agent can discover a skill before loading its fuller instructions and resources. That reduces the need to put every procedure into the initial context. Our example supplies the investigation procedure from SKILL dot M D. Loading it is observable in the trace, but loading a procedure does not prove that its factual conclusions are true. Next, locate the provider and the separately verified evidence in our code.",
+      "shots": [
+        {
+          "source": "../production-batch/assets/clarity/learn-skills.png",
+          "seconds": 45
+        }
+      ]
+    }
+  ],
+  "revisions": {
+    "lab06-02": {
+      "narration": "With the starting conditions prepared, let us follow the recorded run. Keep the daylight anomaly and work evidence present, and use the empty case-memory fixture from the previous comparison. Open Walkthrough in the main app, then click Investigate L-417, new session. This is a broader question than simply asking whether the lamp is on. Watch for the skill-load call in the trace. A skill being advertised does not prove that the model loaded it, and a loaded skill does not prove that every instruction was followed. We will check the resulting behavior."
+    }
+  },
+  "shots": {
+    "lab06-03": [
+      {
+        "source": "../production-batch/assets/windows-05-06.mp4",
+        "start": 453,
+        "seconds": 8,
+        "hold": 0,
+        "focus": [
+          1056,
+          486,
+          864,
+          486
+        ]
+      },
+      {
+        "source": "../production-batch/assets/windows-05-06.mp4",
+        "start": 465,
+        "seconds": 7,
+        "hold": 0
+      },
+      {
+        "source": "../production-batch/assets/windows-05-06.mp4",
+        "start": 471,
+        "seconds": 6,
+        "hold": 12
+      }
+    ]
+  },
+  "phrase_markers": {}
+}

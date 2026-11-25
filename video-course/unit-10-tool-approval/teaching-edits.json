@@ -1,0 +1,120 @@
+{
+  "inserts": [
+    {
+      "before": "lab10-02",
+      "id": "lab10-clarity-prepare",
+      "title": "Locate, select and confirm Tool Approval under Controller Fault",
+      "actions": "Actual source footage; deliberate close-up and editorial emphasis. Holds are labeled.",
+      "narration": "Let us make the preparation visible. In Demo Director, locate Tool Approval under Controller Fault. Select that named capability. Read the preparation review before confirming. Use the Controller Fault card, not the daylight override card. The model will investigate a fault, and the protected action is creating maintenance work. The selected chip is a pending choice until confirmation. After applying it, check the stage and the readiness message, then return to Command Center.",
+      "shots": [
+        {
+          "source": "../production-batch/assets/windows-09-10.mp4",
+          "start": 765,
+          "seconds": 5,
+          "focus": [
+            285,
+            40,
+            1344,
+            756
+          ]
+        },
+        {
+          "source": "../production-batch/assets/windows-09-10.mp4",
+          "start": 770,
+          "seconds": 0.2,
+          "focus": [
+            1120,
+            630,
+            800,
+            450
+          ],
+          "narration_anchor": "Read the preparation review"
+        },
+        {
+          "source": "../production-batch/assets/windows-09-10.mp4",
+          "start": 771,
+          "seconds": 3,
+          "narration_anchor": "After applying it"
+        },
+        {
+          "source": "../production-batch/assets/windows-09-10.mp4",
+          "start": 778,
+          "seconds": 0.2
+        }
+      ]
+    },
+    {
+      "before": "lab10-05",
+      "id": "lab10-clarity-learn-approval",
+      "title": "Locate the protected function boundary",
+      "actions": "Actual source footage; deliberate close-up and editorial emphasis. Holds are labeled.",
+      "narration": "Here is the function-tool approval mechanism on Microsoft Learn. ApprovalRequiredAIFunction wraps a callable function. If the model selects that protected capability, the caller receives an approval request and must provide a decision before execution can proceed. This differs from placing a fixed approval node in a workflow. In our code, find the wrapper around the maintenance function and then the resolver that binds the response to the requested call. The deterministic function still validates the actual write.",
+      "shots": [
+        {
+          "source": "../production-batch/assets/clarity/learn-approval-code.png",
+          "seconds": 45
+        }
+      ]
+    },
+    {
+      "before": "lab10-06",
+      "id": "lab10-clarity-existing",
+      "title": "Select the Existing Incident fixture deliberately",
+      "actions": "Actual source footage; deliberate close-up and editorial emphasis. Holds are labeled.",
+      "narration": "Find the Existing Incident card in Director. Watch Apply Scenario on that card. This prepares a controller fault that already has an incident and dispatch, so the next investigation should look before creating more work. After returning to Command Center, check the Active Incident panel before asking. We are changing the fixture for a new run, not replaying the previous approval.",
+      "shots": [
+        {
+          "source": "../production-batch/assets/windows-10b-11.mp4",
+          "start": 150,
+          "seconds": 10,
+          "focus": [
+            285,
+            40,
+            1344,
+            756
+          ],
+          "point": [
+            1090,
+            120,
+            250,
+            420
+          ]
+        }
+      ]
+    }
+  ],
+  "revisions": {
+    "lab10-02": {
+      "narration": "With the starting conditions prepared, let us follow the recorded run. Read the main application Walkthrough and choose Investigate the reported controller fault. The request does not name a function. The agent reads the live state, consults its procedure and evidence, and selects create maintenance work item. The review names the capability, L-417, and the exact proposed summary. Deny it. In this recorded run the model tries the same capability again with a shorter summary. The resolver applies the standing refusal without asking the operator a second time. Both write attempts are marked denied, did not run."
+    }
+  },
+  "shots": {
+    "lab10-04": [
+      {
+        "source": "../production-batch/assets/windows-09-10.mp4",
+        "start": 1165,
+        "seconds": 8,
+        "hold": 4
+      },
+      {
+        "source": "../production-batch/assets/windows-10b-11.mp4",
+        "start": 18,
+        "seconds": 5,
+        "hold": 5,
+        "focus": [
+          30,
+          55,
+          1568,
+          882
+        ]
+      },
+      {
+        "source": "../production-batch/assets/windows-10b-11.mp4",
+        "start": 29,
+        "seconds": 8,
+        "hold": 18
+      }
+    ]
+  },
+  "phrase_markers": {}
+}

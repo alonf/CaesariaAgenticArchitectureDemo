@@ -1,0 +1,123 @@
+{
+  "inserts": [
+    {
+      "before": "lab15-02",
+      "id": "lab15-clarity-foundation",
+      "title": "Locate beat fifteen and its preparation control",
+      "actions": "Actual source footage; deliberate close-up and editorial emphasis. Holds are labeled.",
+      "narration": "Find section fifteen in Director: Durable recovery, foundation and worker controls. Read Before the first step. Prepare foundation starts the local prerequisites and recreates the daylight anomaly. It does not ask the agent to act. Watch the preparation status change after the click. Once ready, Open Command Center demo takes us to the operator interface. That is where we start the conversation and inspect the approval. We return to Director only for the worker interruption.",
+      "shots": [
+        {
+          "source": "../production-batch/assets/windows-15b-durable.mp4",
+          "start": 258,
+          "seconds": 1,
+          "focus": [
+            300,
+            450,
+            1320,
+            630
+          ],
+          "hold": 15
+        },
+        {
+          "source": "../production-batch/assets/windows-15b-durable.mp4",
+          "start": 265,
+          "seconds": 12,
+          "focus": [
+            300,
+            450,
+            1320,
+            630
+          ]
+        }
+      ]
+    }
+  ],
+  "revisions": {
+    "lab15-02": {
+      "narration": "With the foundation prepared, move to Command Center and expand the durable Walkthrough. Ask the durable agent to recover L-417. The model reads the Hub and starts a supervised operation. Acceptance is not repair. Now inspect the actual pending review. The operation is awaiting approval. The review records revision three and its existing expiry. The lamp is still on. An operation identifier alone would not prove that approval was pending. Keep this review open for the restart experiment."
+    }
+  },
+  "shots": {
+    "lab15-02": [
+      {
+        "source": "../production-batch/assets/windows-15b-durable.mp4",
+        "start": 305,
+        "seconds": 6
+      },
+      {
+        "source": "../production-batch/assets/windows-15b-durable.mp4",
+        "start": 318,
+        "seconds": 5
+      },
+      {
+        "source": "../production-batch/assets/windows-15b-durable.mp4",
+        "start": 365,
+        "seconds": 1,
+        "focus": [
+          1056,
+          594,
+          864,
+          486
+        ],
+        "point": [
+          1570,
+          595,
+          320,
+          350
+        ],
+        "narration_anchor": "Now inspect the actual pending review"
+      }
+    ],
+    "lab15-03": [
+      {
+        "source": "../production-batch/assets/windows-15b-durable.mp4",
+        "start": 384,
+        "seconds": 1,
+        "focus": [
+          300,
+          330,
+          1320,
+          750
+        ],
+        "hold": 1
+      },
+      {
+        "source": "../production-batch/assets/windows-15b-durable.mp4",
+        "start": 391,
+        "seconds": 9,
+        "focus": [
+          300,
+          330,
+          1320,
+          750
+        ]
+      },
+      {
+        "source": "../production-batch/assets/windows-15b-durable.mp4",
+        "start": 419,
+        "seconds": 8,
+        "focus": [
+          1056,
+          300,
+          864,
+          486
+        ],
+        "narration_anchor": "Return to Command Center"
+      },
+      {
+        "source": "../production-batch/assets/windows-15b-durable.mp4",
+        "start": 436,
+        "seconds": 8,
+        "focus": [
+          1056,
+          486,
+          864,
+          486
+        ],
+        "narration_anchor": "The reply says"
+      }
+    ]
+  },
+  "phrase_markers": {}
+}

@@ -25,7 +25,10 @@ def source_filters(source, start=0, seconds=0):
         if b < start or a > start + seconds:
             continue
         x, y, width, height = mask['rect']
+        enabled = f'between(t,{max(0,a-start)},{b-start})'
+        for excluded_start, excluded_end in mask.get('reviewedFullscreenIntervals', []):
+            enabled += f'*not(between(t,{excluded_start-start},{excluded_end-start}))'
         filters.append(f"drawbox=x=iw*{x}/1920:y=ih*{y}/1080:"
                        f"w=iw*{width}/1920:h=ih*{height}/1080:color=0x252525:t=fill:"
-                       f"enable='between(t,{max(0,a-start)},{b-start})'")
+                       f"enable='{enabled}'")
     return ','.join(filters) + ','

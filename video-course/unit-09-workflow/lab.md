@@ -35,3 +35,7 @@ Reapply the daylight fixture after success. If a previous workflow card remains 
 - Why does denial not produce a maintenance work item?
 - Apply Security Operation, then run the workflow: why should it take a no-action path?
 - Which additional persistence and authorization properties would production require?
+
+## Framework reference in the revised video
+
+Read [Workflow human input](https://learn.microsoft.com/en-us/agent-framework/workflows/human-in-the-loop), then return to the repository. Identify the executor that requests input and the application response path. Contrast this recorded in-memory gate with Lab 15 durable recovery.

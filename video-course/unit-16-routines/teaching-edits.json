@@ -1,0 +1,103 @@
+{
+  "inserts": [],
+  "revisions": {},
+  "shots": {
+    "lab16-02": [
+      {
+        "source": "../production-batch/assets/windows-16-17.mp4",
+        "start": 30,
+        "seconds": 5,
+        "hold": 19,
+        "focus": [
+          30,
+          55,
+          1568,
+          882
+        ],
+        "point": [
+          90,
+          130,
+          1400,
+          350
+        ]
+      },
+      {
+        "source": "../production-batch/assets/windows-13-hosting.mp4",
+        "start": 380,
+        "seconds": 6,
+        "hold": 10,
+        "focus": [
+          30,
+          55,
+          1568,
+          882
+        ],
+        "point": [
+          90,
+          130,
+          1400,
+          350
+        ]
+      }
+    ],
+    "lab16-03": [
+      {
+        "source": "../production-batch/assets/windows-16-17.mp4",
+        "start": 44,
+        "seconds": 4,
+        "hold": 5
+      },
+      {
+        "source": "../production-batch/assets/windows-16-17.mp4",
+        "start": 60,
+        "seconds": 5,
+        "hold": 4,
+        "focus": [
+          0,
+          480,
+          1536,
+          600
+        ]
+      },
+      {
+        "source": "../production-batch/assets/windows-16-17.mp4",
+        "start": 70,
+        "seconds": 8,
+        "hold": 19,
+        "focus": [
+          0,
+          480,
+          1536,
+          600
+        ]
+      }
+    ],
+    "lab16-04": [
+      {
+        "source": "../production-batch/assets/windows-16-17.mp4",
+        "start": 99,
+        "seconds": 5,
+        "hold": 10,
+        "focus": [
+          20,
+          20,
+          1568,
+          882
+        ],
+        "point": [
+          30,
+          130,
+          1480,
+          80
+        ]
+      },
+      {
+        "source": "../production-batch/assets/windows-16-17.mp4",
+        "start": 43,
+        "seconds": 5,
+        "hold": 19
+      }
+    ]
+  },
+  "phrase_markers": {}
+}

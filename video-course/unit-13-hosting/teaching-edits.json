@@ -1,0 +1,144 @@
+{
+  "inserts": [
+    {
+      "before": "lab13-02",
+      "id": "lab13-clarity-prepare",
+      "title": "Locate, select and confirm Hosting",
+      "actions": "Actual source footage; deliberate close-up and editorial emphasis. Holds are labeled.",
+      "narration": "Let us make the preparation visible. In Demo Director, locate Hosting. Select that named capability. Read the preparation review before confirming. This stage makes the hosting comparison available. It does not deploy a cloud agent or change the Agent Habitat selector. We change that selector separately. The selected chip is a pending choice until confirmation. After applying it, check the stage and the readiness message, then return to Command Center.",
+      "shots": [
+        {
+          "source": "../production-batch/assets/windows-13-hosting.mp4",
+          "start": 29,
+          "seconds": 5
+        },
+        {
+          "source": "../production-batch/assets/windows-13-hosting.mp4",
+          "start": 33,
+          "seconds": 0.2,
+          "focus": [
+            1120,
+            630,
+            800,
+            450
+          ],
+          "narration_anchor": "Read the preparation review"
+        },
+        {
+          "source": "../production-batch/assets/windows-13-hosting.mp4",
+          "start": 34,
+          "seconds": 3,
+          "narration_anchor": "After applying it"
+        },
+        {
+          "source": "../production-batch/assets/windows-13-hosting.mp4",
+          "start": 41,
+          "seconds": 0.2
+        }
+      ]
+    },
+    {
+      "before": "lab13-03",
+      "id": "lab13-clarity-habitat",
+      "title": "Choose the habitat before the next question",
+      "actions": "Actual source footage; deliberate close-up and editorial emphasis. Holds are labeled.",
+      "narration": "Now locate Agent Habitat in Director. Local, Aspire is selected first. Foundry Hosted is the other choice. Watch the selection move before returning to Command Center. This routes the next question to the configured hosted agent; it does not move the local Hub or automatically transfer every local tool. The following recorded answer and error are the evidence for what this particular hosted runtime could actually do.",
+      "shots": [
+        {
+          "source": "../production-batch/assets/windows-13-hosting.mp4",
+          "start": 280,
+          "seconds": 1,
+          "focus": [
+            285,
+            450,
+            1344,
+            600
+          ]
+        },
+        {
+          "source": "../production-batch/assets/windows-13-hosting.mp4",
+          "start": 285,
+          "seconds": 0.7,
+          "focus": [
+            285,
+            450,
+            1344,
+            600
+          ],
+          "narration_anchor": "Watch the selection move"
+        },
+        {
+          "source": "../production-batch/assets/windows-13-hosting.mp4",
+          "start": 286,
+          "seconds": 0.067,
+          "focus": [
+            285,
+            450,
+            1344,
+            600
+          ]
+        }
+      ]
+    }
+  ],
+  "revisions": {
+    "lab13-02": {
+      "narration": "With the starting conditions prepared, let us follow the recorded run. Begin with Local habitat and ask about L-417 work records. The answer refers to the seeded work order and technician note. Inspect the provenance label: simulated work knowledge. This is a real model invocation over synthetic training evidence. The Energy Hub remains the operational authority. A useful explanation of a work order is not a command receipt, and it does not clear the override."
+    }
+  },
+  "shots": {
+    "lab13-03": [
+      {
+        "source": "../production-batch/assets/windows-13-hosting.mp4",
+        "start": 280,
+        "seconds": 4,
+        "hold": 0,
+        "focus": [
+          285,
+          350,
+          1344,
+          730
+        ]
+      },
+      {
+        "source": "../production-batch/assets/windows-13-hosting.mp4",
+        "start": 310,
+        "seconds": 3,
+        "hold": 0
+      },
+      {
+        "source": "../production-batch/assets/windows-13-hosting.mp4",
+        "start": 400,
+        "seconds": 7,
+        "hold": 0
+      },
+      {
+        "source": "../production-batch/assets/windows-13-hosting.mp4",
+        "start": 408,
+        "seconds": 11,
+        "hold": 18
+      }
+    ],
+    "lab13-04": [
+      {
+        "source": "../production-batch/assets/windows-13-hosting.mp4",
+        "start": 408,
+        "seconds": 12,
+        "hold": 27,
+        "focus": [
+          1056,
+          486,
+          864,
+          486
+        ],
+        "point": [
+          1570,
+          800,
+          330,
+          155
+        ]
+      }
+    ]
+  },
+  "phrase_markers": {}
+}

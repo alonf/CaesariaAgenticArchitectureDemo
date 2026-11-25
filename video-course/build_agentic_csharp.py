@@ -16,6 +16,7 @@ from pathlib import Path
 import build_foundations as speech_pipeline
 import build_intro as r
 import render_privacy
+import teaching_clarity
 
 UNIT = Path(__file__).resolve().parent / 'unit-00-agentic-csharp'
 lesson = runpy.run_path(str(UNIT / 'lesson.py'))
@@ -23,6 +24,7 @@ r.UNIT, r.ASSETS, r.OUT = UNIT, UNIT / 'assets', UNIT / 'output'
 r.SPEECH_RATE = '+0%'
 r.SCENES = [dict(id=f'agentic-{i:02}', title=t, visual=v, chapter=c, actions=a, narration=n)
             for i, (t, v, c, a, n) in enumerate(lesson['LESSON'], 1)]
+r.SCENES = teaching_clarity.scenes(UNIT, r.SCENES)
 
 # Seconds refer to actual, local, uninterrupted source recordings. Unneeded waits
 # and setup are cut. Motion remains at its captured speed. A hold is labeled.
@@ -48,6 +50,7 @@ SHOTS = {
 }
 # Rendering changes participate in the cache: old bordered frames must not survive.
 RENDER_VERSION = 'privacy-and-pacing-v4'
+SHOTS.update(teaching_clarity.edits(UNIT).get('motion', {}))
 
 # Editorial markers point to genuine pixels; no UI values are changed.
 # Phrase anchors use the synthesized word timings, keeping highlights in sync.
@@ -134,6 +137,16 @@ def render():
         if (r.ASSETS/(s['id']+'-voice.sha256')).read_text()!=expected_voice:
             raise RuntimeError(f"Stale narration for {s['title']}; run --phase audio first")
         shots = SHOTS.get(s['title'])
+        anchors = teaching_clarity.edits(UNIT).get('motion_anchors', {}).get(s['id'])
+        if shots and anchors:
+            timing = []
+            for shot, anchor in zip(shots, anchors, strict=True):
+                item = dict(seconds=shot[2], hold=shot[4] if len(shot)>4 else 0)
+                if anchor:
+                    item['narration_anchor'] = anchor
+                timing.append(item)
+            timing = teaching_clarity.timed_shots(UNIT, s, timing)
+            shots = [list(shot[:4])+[t.get('hold',0)] for shot,t in zip(shots,timing)]
         # Optional fifth field holds the final genuine frame for explanation.
         # Every such hold is labeled; motion is never slowed or synthesized.
         motion_total = sum(x[2] + (x[4] if len(x) > 4 else 0) for x in shots) if shots else 0
@@ -161,7 +174,7 @@ def render():
             inputs=['-loop','1','-framerate','15','-i',source]
             filters.append('[0:v]scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=0x141122,setsar=1[base]')
             ninputs=1
-        highlights = resolve_highlights(s)
+        highlights = resolve_highlights(s) + teaching_clarity.phrase_markers(UNIT, s)
         vf='[base]null'
         for h in highlights:
             x,y,w,hgt=h['rect']

@@ -76,17 +76,17 @@ Timing follows the rendered edit. Real motion is at captured speed; cuts omit wa
 
 ## 00:07:25,533–00:08:21,733 | Find your way around the repository
 
-**Screen:** Show actual GitHub root, README introduction cropped above conference details, then cumulative stages. Transition to the local Explorer tree.
+**Screen:** GitHub orientation, then a readable close-up of the actual local project tree.
 
-**Source:** `card:repository`; motion edits: `[('orientation-repo', 2, 18, None), ('orientation-repo', 48, 8, None), ('orientation-code', 24, 22, None)]`. Holds are labeled.
+**Source:** `card:repository`; motion edits: `[['orientation-repo', 2, 18, None], ['orientation-repo', 48, 8, None], ['orientation-code', 24, 22, [0, 70, 1280, 720]]]`. Holds are labeled.
 
 **Narration:** Before exploring the city, let us connect the moving parts. A repository is more than the agent class: it contains the executable system, its contracts, tests, and instructions for running it. Open the Caesarea Agentic Architecture Demo on GitHub. The README introduces the system and maps its cumulative stages. Main contains the implemented capabilities, selected at runtime. We do not maintain a separate application for each lesson. In the local solution, Apps contains the two user interfaces. Services contains the deterministic services and agent services. Each API boundary has its own Contracts project. The AppHost starts the local system, Tests verifies behavior, and docs explains the stage decisions. Keep the README and the companion lab nearby. The companion lab records the exact source commit and prerequisites. You now have a map from a visible component to the place where its implementation lives.
 
 ## 00:08:21,733–00:09:22,000 | Locate the project and its hosted agent
 
-**Screen:** Read-only Foundry portal recording: project home, Agents list, caesarea-operations, Details. No invocation, deployment or setting changes.
+**Screen:** Actual existing Foundry project, agent list and loaded details. Omit the loading-only interval.
 
-**Source:** `card:platform`; motion edits: `[('orientation-foundry', 2, 12, None), ('orientation-foundry', 28, 17, None), ('orientation-foundry', 47, 8, None), ('orientation-foundry', 57, 15, None)]`. Holds are labeled.
+**Source:** `card:platform`; motion edits: `[['orientation-foundry', 2, 10, None], ['orientation-foundry', 28, 8, [250, 65, 1600, 900]], ['orientation-foundry', 60, 12, [250, 65, 1600, 900]]]`. Holds are labeled.
 
 **Narration:** The platform is the next moving part. A Foundry project supplies the environment in which model and agent resources are organized. Here is this solution's existing project, caesarea dev. Open Agents. The list contains caesarea operations, with kind Hosted and status Running. Its details identify an active version, identity, and Responses endpoint. This is a real deployed agent, not a slide illustration. This visit is read-only: we are locating an existing deployment, not deploying one. Keep two execution paths distinct. Our upcoming debugger exercise runs the Operations Agent locally and calls remote model inference. The hosted agent runs in Foundry and uses the cloud Energy Hub; the local Director does not reset that cloud city. Later hosting lessons will explain its composition and identity boundaries. For now, recognize where the platform lives and how to locate an agent. You do not need to create a hosted agent to complete the local introductory exercise.
 
@@ -186,15 +186,15 @@ Timing follows the rendered edit. Real motion is at captured speed; cuts omit wa
 
 **Narration:** The Aspire graph makes the architecture visible as running services. Follow the application's dependencies and compare them with the slide diagram. The operator uses Command Center. The Operations Agent reaches domain information through its service clients and tools. The Energy Hub connects to the simulated device. These process boundaries matter when you choose a debugger target. Attaching to Command Center Web will not automatically stop inside the Operations Agent service. Likewise, an agent-side breakpoint does not pause every service in the city. We will attach to the process that owns the code we want to inspect and leave the rest of the environment running. Before moving on, locate the two web application links. One is the Director used to prepare the lesson, and the other is the main operator application where we will ask the question and inspect the result.
 
-## 00:21:19,400–00:22:14,333 | Director prepares the starting fixture
+## 00:21:19,400–00:22:04,333 | Director prepares the starting fixture
 
 **Screen:** Show actual Investigation Agent preparation preview, then ready state. Explain scenario versus stage.
 
-**Source:** `capture:director-preview`; motion edits: `[('director-live', 49, 20, (310, 230, 1300, 732))]`. Holds are labeled.
+**Source:** `capture:director-preview`; motion edits: `[['director-live', 10, 1, None, 15.475000000000001], ['director-live', 55, 2, [310, 180, 1300, 732], 0.0], ['director-live', 60, 0.2, [1120, 630, 800, 450], 7.175000000000001], ['director-live', 65, 6, None, 0]]`. Holds are labeled.
 
-**Narration:** The Demo Director is our laboratory control panel. A scenario sets the operational starting conditions. A stage controls which implemented capabilities participate. For this onboarding exercise, select Investigation Agent and review the preparation preview. It applies Lights On Reported by a Client and selects the read-only investigation stage. Confirm, then check the ready state. The scenario and the stage are related, but they are not the same thing. Reusing an already-repaired lamp without resetting the fixture would change the meaning of the next demonstration. The Director also provides teaching breakpoints and debugger attachment controls under Advanced controls. Those prepare the investigation; the Director is not where we perform the operator's work. Keep the local function and local Aspire habitat for this exercise. We do not need a cloud-hosted agent to learn how this local request crosses the service boundaries.
+**Narration:** The Demo Director prepares the teaching environment. Read the first scenario card: Lights On Reported by a Client. A scenario creates operational conditions; a capability stage controls what the application can do. The daylight fixture is already applied in this recording. We select Investigation Agent and inspect the preparation review. This review changes the stage only. It is not a repair and it is not a new investigation. Confirm the selection, then check Now playing and the readiness message. If you repaired the lamp in an earlier run, use Apply again to reset this fixture. Command Center is where we will ask the question and observe the result. Keep those two responsibilities separate: Director prepares; the main application demonstrates.
 
-## 00:22:14,333–00:23:20,800 | Command Center is the operator's application
+## 00:22:04,333–00:23:10,800 | Command Center is the operator's application
 
 **Screen:** Show main UI; point to L-417, reported/schedule/override, agent question, and deterministic action without clicking repair.
 
@@ -202,7 +202,7 @@ Timing follows the rendered edit. Real motion is at captured speed; cuts omit wa
 
 **Narration:** Now switch to the main Command Center. Open Walkthrough at the upper right. Read its starting conditions, numbered actions, code references, and the point of the demonstration. This is your in-app guide throughout the labs. Close the panel when you need the agent controls. The map identifies L four seventeen at North Promenade. The operational panel reports that the lamp is on, while the daylight schedule expects it to be off. The override is set and the controller is healthy. These are observations from the deterministic system. They do not yet prove why someone left the override in place. The agent panel asks a deliberately small question: is streetlight L four seventeen on? We will use that question to learn the debugging workflow. Leave Restore Scheduled Mode alone for now; repair is the first lab after onboarding. Notice that the operator workflow and the agent panel coexist. Enabling the agent did not replace the core. Before the debugger exercise, read the Energy Hub endpoint using the companion lab's command and save the process ID. Those checkpoints let us verify both operational state and detach behavior later.
 
-## 00:23:20,800–00:24:12,667 | Attach VS Code
+## 00:23:10,800–00:24:02,667 | Attach VS Code
 
 **Screen:** Show arming and attached captures. Explain attach versus launch and one-shot teaching stops.
 
@@ -210,7 +210,7 @@ Timing follows the rendered edit. Real motion is at captured speed; cuts omit wa
 
 **Narration:** Open the same checkout in Visual Studio Code. In the Director, expand Advanced controls and Demo Breakpoints. Verify that the attach extension is ready. Attach the Operations Agent row, then arm Agent Creation and Function Tool. The attached status matters: arming a checkbox by itself does not connect a debugger. These teaching stops are consumed on the next matching execution. We will also set an ordinary breakpoint in Foundry Operations Agent, immediately after the awaited Run Async call, so we can inspect its returned result. This is an attach session to an existing process started by Aspire. We are not launching a second copy of the application. Prepare the expressions you want to inspect before asking the question. Keep the live pauses short; we can freeze the edited video to explain the source without holding a real HTTP request open for several minutes.
 
-## 00:24:12,667–00:25:04,600 | Stop and single-step in C sharp
+## 00:24:02,667–00:24:54,600 | Stop and single-step in C sharp
 
 **Screen:** Show actual breakpoint and F10 transition from Pause to AsAIAgent. Highlight question, stage and tools.
 
@@ -218,7 +218,7 @@ Timing follows the rendered edit. Real motion is at captured speed; cuts omit wa
 
 **Narration:** Click Ask agent in Command Center. Visual Studio Code stops at the Agent Creation teaching point. The yellow execution marker shows where this request is paused. Press F ten to step over to the next statement. In the captured request, the question variable is exactly: is streetlight L four seventeen on? The stage has already determined which capabilities were composed. Read the agent construction code: it supplies the model, instructions, tools, and any applicable context providers. This is the connection between the framework diagram and ordinary application code. We can inspect the request and admitted tools before allowing the model call to proceed. Press F five to continue. Because Function Tool is armed, the next relevant stop will show the C sharp method that the model selected, rather than asking us to infer tool execution from the final answer alone.
 
-## 00:25:04,600–00:26:04,000 | Inspect the tool boundary
+## 00:24:54,600–00:25:54,000 | Inspect the tool boundary
 
 **Screen:** Start at the visible EnergyTools breakpoint, source 120s. Highlight Locals assetId, method and parameter Description, then gateway call. Freeze holds labeled.
 
@@ -226,7 +226,7 @@ Timing follows the rendered edit. Real motion is at captured speed; cuts omit wa
 
 **Narration:** The yellow execution marker shows that the breakpoint has been reached. We are now in Energy Tools, inside Get Streetlight State Async. In Locals, the asset identifier is L four seventeen. Watch expressions from the caller are out of scope here; use this method's local values. Look at the Description attribute above the method, then the Description on the asset parameter. They provide the purpose and argument meaning we discussed on the short code slide. The enclosing Energy Tools class is ordinary C sharp. Registration through AI Function Factory happens in the capability composition code. Here we see execution: validate the input, get the correlation identifier, log the invocation, and call the Energy read gateway. The gateway reads through the Hub boundary. This is the deterministic part of the loop. The model selected a request; the framework brought us to this method, with these arguments. Continue with F five to the breakpoint after Run Async, where we can inspect the completed exchanges.
 
-## 00:26:04,000–00:26:44,733 | Inspect AI results and model exchanges
+## 00:25:54,000–00:26:34,733 | Inspect AI results and model exchanges
 
 **Screen:** Show post-RunAsync Watch then drill into Exchanges[0].Received. Hold the actual expanded tool request and highlight its name and arguments.
 
@@ -234,7 +234,7 @@ Timing follows the rendered edit. Real motion is at captured speed; cuts omit wa
 
 **Narration:** We have reached the breakpoint after Run Async. The recorded exchanges let us reconstruct what happened inside that one awaited call. There are two model round trips in this request. Expand the first exchange, item zero, then Received and its result. Step one: the model requested the get streetlight state tool, with asset ID L four seventeen. The highlighted row is the actual request and arguments. The framework dispatched the function we just inspected. This is the selection side of the Context Engineering loop. We can observe a tool request and its execution without claiming to see the model's private reasoning. The content-type placeholder is not a reasoning transcript.
 
-## 00:26:44,733–00:27:25,467 | The Hub result becomes the next context
+## 00:26:34,733–00:27:15,467 | The Hub result becomes the next context
 
 **Screen:** Show actual Debug Console evaluation of Exchanges[1].Sent[0], source 322–329.8. Highlight actual booleans with narration.
 
@@ -242,7 +242,7 @@ Timing follows the rendered edit. Real motion is at captured speed; cuts omit wa
 
 **Narration:** Now inspect what went into the second model call. In the Debug Console, evaluate the first Sent string of exchange one. The visible payload is the tool result sent back as context. Reported Is On is true: the device reports that the lamp is on. Is Daylight is true. The expected scheduled state is false: the schedule expects the lamp to be off. Manual Override is true. Those are separate observations, and together they explain why this incident deserves investigation. They came through the Energy Hub, not from the model's memory. This is the return arrow on our Context Engineering slide: deterministic execution contributes evidence to the next model interaction.
 
-## 00:27:25,467–00:28:07,267 | The second exchange produces the answer
+## 00:27:15,467–00:27:57,267 | The second exchange produces the answer
 
 **Screen:** Show expanded second exchange Sent and Received plus response.Text. Highlight received answer. Then detach in a separate scene.
 
@@ -250,7 +250,7 @@ Timing follows the rendered edit. Real motion is at captured speed; cuts omit wa
 
 **Narration:** Step two: the model receives that evidence and produces the answer. In the second exchange, compare Sent, containing the tool result, with Received, summarized on the exchange row as the statement that L four seventeen is currently reported on. The response text agrees. We can now explain both parts of the behavior: an agentic choice to request a useful capability, followed by deterministic execution, followed by a model answer grounded in the returned data. That is what the debugger adds beyond seeing a sentence in the browser. This recording has two model calls; another question could require a different number. An answer about the lamp does not mean we repaired it. We asked a read-only question.
 
-## 00:28:07,267–00:28:24,867 | Detach VS Code through the Director
+## 00:27:57,267–00:28:14,867 | Detach VS Code through the Director
 
 **Screen:** Show source 400–414 Director Detach VS Code and resulting status.
 
@@ -258,7 +258,7 @@ Timing follows the rendered edit. Real motion is at captured speed; cuts omit wa
 
 **Narration:** Finish the request and remove the ordinary breakpoint. Return to the Director and choose Detach VS Code. Check that the debugger is no longer attached. The service remains available. Use the Director for this lifecycle so the demo controls and the debugger status stay in agreement.
 
-## 00:28:24,867–00:29:11,200 | A real timeout and recovery
+## 00:28:14,867–00:29:01,200 | A real timeout and recovery
 
 **Screen:** Explain the recorded 100-second web timeout and distinguish the debugger take from the fresh detached retry.
 
@@ -266,7 +266,7 @@ Timing follows the rendered edit. Real motion is at captured speed; cuts omit wa
 
 **Narration:** There is a useful failure case here. A long debugger pause can outlast the web client's one hundred second attempt timeout, even though the agent service relaxes its own budget when a debugger is attached. Our recording encountered this. The debugger returned a model answer, while the browser had already stopped waiting. That does not prove a deployment failure. Continue the paused request, remove ordinary breakpoints, detach, and verify the Hub. Then retry this read-only question as a fresh request. The later browser answer belongs to that fresh retry. For write tools, do not generalize this advice into blindly resending commands. First reconcile the receipt and current state. Pause the video to study the code; keep pauses in your live HTTP request short.
 
-## 00:29:11,200–00:30:46,067 | Switch debuggers without restarting the service
+## 00:29:01,200–00:30:36,067 | Switch debuggers without restarting the service
 
 **Screen:** Show the actual Visual Studio attach, breakpoint, F10, Watch values, result and detach. Windows only.
 
@@ -274,7 +274,7 @@ Timing follows the rendered edit. Real motion is at captured speed; cuts omit wa
 
 **Narration:** Choose the debugger that suits you. On a Mac, use VS Code. On Windows, either VS Code or Visual Studio twenty twenty-six is suitable. Visual Studio twenty twenty-six is Windows only. Both editors inspect the same C sharp request. First detach VS Code. In the Director, choose Attach Visual Studio twenty twenty-six on the Operations Agent row. Watch the status become attached. Arm Agent Creation and Function Tool, and set the ordinary breakpoint after Run Async. Ask the same read-only question in Command Center. The yellow marker shows the creation stop; Watch contains the operator question. F ten steps over a statement, and F five continues to the selected function. At Energy Tools, the inline asset ID is L four seventeen. Continue to the returned response. Watch now contains the answer and two exchanges. Expand Exchanges, item zero, then Received. This is the model response containing the tool request. Collapse that item and open item one, then Sent. This is the next model request containing the tool result. The tree gives you the path; the string visualizer can show longer values. In the VS Code take we inspected the full payload. These are observable messages, arguments, and data from the running request. Continue, remove the ordinary breakpoint, and click Detach Visual Studio twenty twenty-six in the Director. The row returns to debugger not attached. We have followed the same request through creation, tool invocation, and model response with the editor of our choice. The service remains running.
 
-## 00:30:46,067–00:31:35,400 | Verify the outcome at the Hub
+## 00:30:36,067–00:31:25,400 | Verify the outcome at the Hub
 
 **Screen:** Show real detached retry answer and RAN trace. Pair with saved Hub and PID evidence in lab.
 
@@ -282,15 +282,15 @@ Timing follows the rendered edit. Real motion is at captured speed; cuts omit wa
 
 **Narration:** The main application now shows the answer from the fresh read-only retry. The trace marks get streetlight state as ran. The Hub still reports that the lamp is on, and the operator has not issued a repair command. The Operations Agent process is still alive after detaching the debugger. These observations answer our four questions. The Hub supplied operational state. The model selected a read tool and formed an answer from its result. No authority to change the lamp was exercised in this onboarding request. And the fresh Hub read confirms that we did not silently turn the investigation into a repair. This is how the course will treat results: a UI message, a tool trace, and authoritative state each contribute evidence, but they answer different questions. Keep that habit when later labs introduce actions that can actually change the city.
 
-## 00:31:35,400–00:32:36,200 | Pause, practice, and prepare Lab 01
+## 00:31:25,400–00:32:26,200 | Pause, practice, and prepare Lab 01
 
 **Screen:** Hold the exercise card; learner repeats an IDE cycle, checks Hub/PID, resets Deterministic fixture. Stop after Unit00 review.
 
-**Source:** `card:practice`; motion edits: `[('reset-live', 15, 20, None), ('reset-live', 52, 10, None), ('card:practice', 0, 26, None)]`. Holds are labeled.
+**Source:** `card:practice`; motion edits: `[['card:practice', 0, 1, None, 31.424999999999997], ['reset-live', 15, 5, None, 3.125], ['reset-live', 52, 10, None, 0]]`. Holds are labeled.
 
 **Narration:** Pause here and repeat one attach, stop, inspect, continue, and detach cycle without following the video. Use the companion lab's copyable commands to check the Hub and the process ID. Explain aloud where the operational truth lives, what the model selected, and why an answer did not repair the lamp. On Windows, you may repeat with the other IDE after the first is detached. On a Mac, complete the exercise in VS Code. If the user interface times out during a long pause, use the read-only recovery procedure we just demonstrated. When you are ready for Lab one, finish outstanding requests, clear the teaching stops and ordinary breakpoints, and choose Deterministic in the Director. Review and confirm the preparation preview, then verify the daylight anomaly again. A reset can change the revision, so discard old snapshots before the next exercise. You now have the architectural foundation and an inspectable environment. The next lab begins with the deterministic system and proves a repair through the Energy Hub.
 
-## 00:32:36,200–00:33:27,867 | Investigate before the next lab
+## 00:32:26,200–00:33:17,867 | Investigate before the next lab
 
 **Screen:** End on code, documentation and AI investigation questions. Stop after Unit 00 for review.
 

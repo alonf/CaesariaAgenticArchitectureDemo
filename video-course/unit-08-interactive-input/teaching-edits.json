@@ -1,0 +1,165 @@
+{
+  "inserts": [
+    {
+      "before": "lab08-02",
+      "id": "lab08-clarity-prepare",
+      "title": "Locate, select and confirm Interactive Input",
+      "actions": "Actual source footage; deliberate close-up and editorial emphasis. Holds are labeled.",
+      "narration": "Let us make the preparation visible. In Demo Director, locate Interactive Input. Select that named capability. Read the preparation review before confirming. The remote restore tool is available in this stage. Keep MCP remote selected and check that the lamp is on under an override before starting. The selected chip is a pending choice until confirmation. After applying it, check the stage and the readiness message, then return to Command Center.",
+      "shots": [
+        {
+          "source": "../production-batch/assets/windows-07-08.mp4",
+          "start": 431,
+          "seconds": 5,
+          "focus": [
+            285,
+            40,
+            1344,
+            756
+          ]
+        },
+        {
+          "source": "../production-batch/assets/windows-07-08.mp4",
+          "start": 439,
+          "seconds": 0.2,
+          "focus": [
+            1120,
+            630,
+            800,
+            450
+          ],
+          "narration_anchor": "Read the preparation review"
+        },
+        {
+          "source": "../production-batch/assets/windows-07-08.mp4",
+          "start": 440,
+          "seconds": 3,
+          "narration_anchor": "After applying it"
+        },
+        {
+          "source": "../production-batch/assets/windows-07-08.mp4",
+          "start": 447,
+          "seconds": 0.2
+        }
+      ]
+    }
+  ],
+  "revisions": {
+    "lab08-02": {
+      "narration": "With the starting conditions prepared, let us follow the recorded run. L-417 must start on in daylight with a manual override. Read the main application Walkthrough and choose Restore L-417 to scheduled mode, agent. Wait until Operator input required actually appears. The agent has selected restore scheduled mode; the remote tool is waiting for input. Deny first. A refusal is a successful exercise of control, not a broken demo. We are looking for a cancellation answer and an unchanged Hub command receipt, not simply a button that disappears."
+    }
+  },
+  "shots": {
+    "lab08-04": [
+      {
+        "source": "../production-batch/assets/windows-07-08.mp4",
+        "start": 551,
+        "seconds": 3,
+        "hold": 30,
+        "focus": [
+          30,
+          55,
+          1568,
+          882
+        ],
+        "point": [
+          90,
+          120,
+          1300,
+          460
+        ]
+      }
+    ],
+    "lab08-02": [
+      {
+        "source": "../production-batch/assets/windows-07-08.mp4",
+        "start": 432,
+        "seconds": 7,
+        "hold": 0
+      },
+      {
+        "source": "../production-batch/assets/windows-07-08.mp4",
+        "start": 453,
+        "seconds": 4,
+        "hold": 0
+      },
+      {
+        "source": "../production-batch/assets/windows-07-08.mp4",
+        "start": 459,
+        "seconds": 3,
+        "hold": 0
+      },
+      {
+        "source": "../production-batch/assets/windows-07-08.mp4",
+        "start": 473,
+        "seconds": 3,
+        "hold": 6,
+        "focus": [
+          1056,
+          486,
+          864,
+          486
+        ]
+      },
+      {
+        "source": "../production-batch/assets/windows-07-08.mp4",
+        "start": 477,
+        "seconds": 4,
+        "hold": 3,
+        "focus": [
+          1056,
+          486,
+          864,
+          486
+        ]
+      }
+    ],
+    "lab08-03": [
+      {
+        "source": "../production-batch/assets/windows-07-08.mp4",
+        "start": 492,
+        "seconds": 6
+      },
+      {
+        "source": "../production-batch/assets/windows-07-08.mp4",
+        "start": 497,
+        "seconds": 5
+      },
+      {
+        "source": "../production-batch/assets/windows-07-08.mp4",
+        "start": 516,
+        "seconds": 9,
+        "focus": [
+          1056,
+          486,
+          864,
+          486
+        ]
+      },
+      {
+        "source": "../production-batch/assets/windows-07-08.mp4",
+        "start": 525,
+        "seconds": 5,
+        "focus": [
+          1056,
+          486,
+          864,
+          486
+        ]
+      },
+      {
+        "source": "../production-batch/assets/windows-07-08.mp4",
+        "start": 537,
+        "seconds": 8,
+        "hold": 4,
+        "focus": [
+          1056,
+          486,
+          864,
+          486
+        ]
+      }
+    ]
+  },
+  "phrase_markers": {}
+}
