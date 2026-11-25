@@ -1,0 +1,106 @@
+{
+  "lab08-01": [
+    {
+      "source": "../unit-00-agentic-csharp/assets/deck-14.png",
+      "seconds": 16
+    },
+    {
+      "source": "../production-batch/assets/windows-07-08.mp4",
+      "start": 453,
+      "seconds": 5,
+      "hold": 12
+    }
+  ],
+  "lab08-02": [
+    {
+      "source": "../production-batch/assets/windows-07-08.mp4",
+      "start": 432,
+      "seconds": 10
+    },
+    {
+      "source": "../production-batch/assets/windows-07-08.mp4",
+      "start": 453,
+      "seconds": 7
+    },
+    {
+      "source": "../production-batch/assets/windows-07-08.mp4",
+      "start": 459,
+      "seconds": 5
+    },
+    {
+      "source": "../production-batch/assets/windows-07-08.mp4",
+      "start": 474,
+      "seconds": 8
+    }
+  ],
+  "lab08-03": [
+    {
+      "source": "../production-batch/assets/windows-07-08.mp4",
+      "start": 492,
+      "seconds": 6
+    },
+    {
+      "source": "../production-batch/assets/windows-07-08.mp4",
+      "start": 497,
+      "seconds": 5
+    },
+    {
+      "source": "../production-batch/assets/windows-07-08.mp4",
+      "start": 516,
+      "seconds": 9
+    },
+    {
+      "source": "../production-batch/assets/windows-07-08.mp4",
+      "start": 525,
+      "seconds": 5
+    },
+    {
+      "source": "../production-batch/assets/windows-07-08.mp4",
+      "start": 537,
+      "seconds": 8,
+      "hold": 4
+    }
+  ],
+  "lab08-04": [
+    {
+      "source": "../production-batch/assets/windows-07-08.mp4",
+      "start": 551,
+      "seconds": 3,
+      "hold": 30
+    }
+  ],
+  "lab08-05": [
+    {
+      "source": "../production-batch/assets/windows-07-08.mp4",
+      "start": 556,
+      "seconds": 7,
+      "hold": 11
+    },
+    {
+      "source": "../production-batch/assets/windows-07-08.mp4",
+      "start": 563,
+      "seconds": 10,
+      "hold": 10
+    }
+  ],
+  "lab08-06": [
+    {
+      "source": "../production-batch/assets/windows-07-08.mp4",
+      "start": 580,
+      "seconds": 10,
+      "hold": 8
+    },
+    {
+      "source": "../production-batch/assets/windows-07-08.mp4",
+      "start": 596,
+      "seconds": 8,
+      "hold": 13
+    }
+  ],
+  "lab08-07": [
+    {
+      "source": "assets/exercise.png",
+      "seconds": 38
+    }
+  ]
+}

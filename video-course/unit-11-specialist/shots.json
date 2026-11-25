@@ -1,0 +1,90 @@
+{
+  "lab11-01": [
+    {
+      "source": "../unit-00-agentic-csharp/assets/deck-14.png",
+      "seconds": 16
+    },
+    {
+      "source": "../production-batch/assets/windows-11-12.mp4",
+      "start": 33,
+      "seconds": 8,
+      "hold": 9
+    }
+  ],
+  "lab11-02": [
+    {
+      "source": "../production-batch/assets/windows-11-12.mp4",
+      "start": 33,
+      "seconds": 8,
+      "hold": 9
+    },
+    {
+      "source": "../production-batch/assets/windows-10b-11.mp4",
+      "start": 413,
+      "seconds": 9
+    },
+    {
+      "source": "../production-batch/assets/windows-10b-11.mp4",
+      "start": 431,
+      "seconds": 7,
+      "hold": 5
+    }
+  ],
+  "lab11-03": [
+    {
+      "source": "../production-batch/assets/windows-11-12.mp4",
+      "start": 68,
+      "seconds": 6
+    },
+    {
+      "source": "../production-batch/assets/windows-11-12.mp4",
+      "start": 76,
+      "seconds": 6
+    },
+    {
+      "source": "../production-batch/assets/windows-11-12.mp4",
+      "start": 110,
+      "seconds": 8
+    },
+    {
+      "source": "../production-batch/assets/windows-11-12.mp4",
+      "start": 116,
+      "seconds": 9,
+      "hold": 15
+    }
+  ],
+  "lab11-04": [
+    {
+      "source": "../production-batch/assets/windows-11-12.mp4",
+      "start": 160,
+      "seconds": 9,
+      "hold": 8
+    },
+    {
+      "source": "../production-batch/assets/windows-11-12.mp4",
+      "start": 180,
+      "seconds": 10,
+      "hold": 10
+    }
+  ],
+  "lab11-05": [
+    {
+      "source": "../production-batch/assets/windows-11-12.mp4",
+      "start": 193,
+      "seconds": 10,
+      "hold": 12
+    },
+    {
+      "source": "../production-batch/assets/windows-11-12.mp4",
+      "start": 209,
+      "seconds": 9,
+      "hold": 12
+    }
+  ],
+  "lab11-06": [
+    {
+      "source": "assets/exercise.png",
+      "seconds": 40
+    }
+  ]
+}

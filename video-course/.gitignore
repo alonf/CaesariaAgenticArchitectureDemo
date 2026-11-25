@@ -2,3 +2,5 @@
 unit-*/assets/
 unit-*/output/
 __pycache__/
+production-batch/assets/
+production-batch/evidence/

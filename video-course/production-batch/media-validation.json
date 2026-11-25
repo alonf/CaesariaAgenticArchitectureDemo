@@ -1,0 +1,130 @@
+[
+  {
+    "unit": "unit-02-agent-tool",
+    "duration": 379.42,
+    "chapters": 8,
+    "captions": 84,
+    "decode": "passed",
+    "streams": "1080p video + audio + English subtitles"
+  },
+  {
+    "unit": "unit-03-sessions",
+    "duration": 240.09,
+    "chapters": 7,
+    "captions": 54,
+    "decode": "passed",
+    "streams": "1080p video + audio + English subtitles"
+  },
+  {
+    "unit": "unit-04-knowledge",
+    "duration": 253.35,
+    "chapters": 7,
+    "captions": 53,
+    "decode": "passed",
+    "streams": "1080p video + audio + English subtitles"
+  },
+  {
+    "unit": "unit-05-memory",
+    "duration": 247.22,
+    "chapters": 7,
+    "captions": 53,
+    "decode": "passed",
+    "streams": "1080p video + audio + English subtitles"
+  },
+  {
+    "unit": "unit-06-skills",
+    "duration": 217.15,
+    "chapters": 6,
+    "captions": 46,
+    "decode": "passed",
+    "streams": "1080p video + audio + English subtitles"
+  },
+  {
+    "unit": "unit-07-mcp",
+    "duration": 221.22,
+    "chapters": 6,
+    "captions": 47,
+    "decode": "passed",
+    "streams": "1080p video + audio + English subtitles"
+  },
+  {
+    "unit": "unit-08-interactive-input",
+    "duration": 256.02,
+    "chapters": 7,
+    "captions": 54,
+    "decode": "passed",
+    "streams": "1080p video + audio + English subtitles"
+  },
+  {
+    "unit": "unit-09-workflow",
+    "duration": 276.82,
+    "chapters": 7,
+    "captions": 55,
+    "decode": "passed",
+    "streams": "1080p video + audio + English subtitles"
+  },
+  {
+    "unit": "unit-10-tool-approval",
+    "duration": 300.02,
+    "chapters": 7,
+    "captions": 54,
+    "decode": "passed",
+    "streams": "1080p video + audio + English subtitles"
+  },
+  {
+    "unit": "unit-11-specialist",
+    "duration": 235.02,
+    "chapters": 6,
+    "captions": 45,
+    "decode": "passed",
+    "streams": "1080p video + audio + English subtitles"
+  },
+  {
+    "unit": "unit-12-a2a",
+    "duration": 269.22,
+    "chapters": 7,
+    "captions": 53,
+    "decode": "passed",
+    "streams": "1080p video + audio + English subtitles"
+  },
+  {
+    "unit": "unit-13-hosting",
+    "duration": 260.02,
+    "chapters": 6,
+    "captions": 44,
+    "decode": "passed",
+    "streams": "1080p video + audio + English subtitles"
+  },
+  {
+    "unit": "unit-14-evaluation",
+    "duration": 252.02,
+    "chapters": 6,
+    "captions": 46,
+    "decode": "passed",
+    "streams": "1080p video + audio + English subtitles"
+  },
+  {
+    "unit": "unit-15-durable-recovery",
+    "duration": 323.02,
+    "chapters": 7,
+    "captions": 56,
+    "decode": "passed",
+    "streams": "1080p video + audio + English subtitles"
+  },
+  {
+    "unit": "unit-16-routines",
+    "duration": 204.22,
+    "chapters": 5,
+    "captions": 41,
+    "decode": "passed",
+    "streams": "1080p video + audio + English subtitles"
+  },
+  {
+    "unit": "unit-17-insights",
+    "duration": 200.09,
+    "chapters": 5,
+    "captions": 41,
+    "decode": "passed",
+    "streams": "1080p video + audio + English subtitles"
+  }
+]

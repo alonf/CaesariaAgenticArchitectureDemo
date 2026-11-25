@@ -1,0 +1,149 @@
+{
+  "lab15-01": [
+    {
+      "source": "../production-batch/assets/windows-15b-durable.mp4",
+      "start": 310,
+      "seconds": 9,
+      "hold": 10
+    },
+    {
+      "source": "../production-batch/assets/windows-15b-durable.mp4",
+      "start": 548,
+      "seconds": 7,
+      "hold": 13
+    }
+  ],
+  "lab15-02": [
+    {
+      "source": "../production-batch/assets/windows-15b-durable.mp4",
+      "start": 260,
+      "seconds": 7
+    },
+    {
+      "source": "../production-batch/assets/windows-15b-durable.mp4",
+      "start": 305,
+      "seconds": 9
+    },
+    {
+      "source": "../production-batch/assets/windows-15b-durable.mp4",
+      "start": 318,
+      "seconds": 8
+    },
+    {
+      "source": "../production-batch/assets/windows-15b-durable.mp4",
+      "start": 350,
+      "seconds": 9,
+      "hold": 12
+    }
+  ],
+  "lab15-03": [
+    {
+      "source": "../production-batch/assets/windows-15b-durable.mp4",
+      "start": 384,
+      "seconds": 10
+    },
+    {
+      "source": "../production-batch/assets/windows-15b-durable.mp4",
+      "start": 400,
+      "seconds": 9
+    },
+    {
+      "source": "../production-batch/assets/windows-15b-durable.mp4",
+      "start": 419,
+      "seconds": 9
+    },
+    {
+      "source": "../production-batch/assets/windows-15b-durable.mp4",
+      "start": 436,
+      "seconds": 8
+    },
+    {
+      "source": "../production-batch/assets/windows-15b-durable.mp4",
+      "start": 449,
+      "seconds": 4,
+      "hold": 7
+    }
+  ],
+  "lab15-04": [
+    {
+      "source": "../production-batch/assets/windows-15b-durable.mp4",
+      "start": 449,
+      "seconds": 9
+    },
+    {
+      "source": "../production-batch/assets/windows-15b-durable.mp4",
+      "start": 479,
+      "seconds": 8,
+      "hold": 5
+    },
+    {
+      "source": "../production-batch/assets/windows-15b-durable.mp4",
+      "start": 489,
+      "seconds": 6,
+      "hold": 4,
+      "crop": [
+        2300,
+        1250,
+        1540,
+        866
+      ]
+    },
+    {
+      "source": "../production-batch/assets/windows-15b-durable.mp4",
+      "start": 515,
+      "seconds": 4,
+      "hold": 13
+    }
+  ],
+  "lab15-05": [
+    {
+      "source": "../production-batch/assets/windows-15b-durable.mp4",
+      "start": 548,
+      "seconds": 7
+    },
+    {
+      "source": "../production-batch/assets/windows-15b-durable.mp4",
+      "start": 562,
+      "seconds": 8,
+      "hold": 6
+    },
+    {
+      "source": "../production-batch/assets/windows-15b-durable.mp4",
+      "start": 576,
+      "seconds": 7,
+      "hold": 8
+    },
+    {
+      "source": "../production-batch/assets/windows-15b-durable.mp4",
+      "start": 586,
+      "seconds": 7,
+      "hold": 6
+    }
+  ],
+  "lab15-06": [
+    {
+      "source": "../production-batch/assets/windows-15b-durable.mp4",
+      "start": 595,
+      "seconds": 6,
+      "hold": 9
+    },
+    {
+      "source": "../production-batch/assets/windows-15b-durable.mp4",
+      "start": 602,
+      "seconds": 8,
+      "hold": 10
+    },
+    {
+      "source": "../production-batch/assets/windows-15b-durable.mp4",
+      "start": 620,
+      "seconds": 4,
+      "hold": 14
+    }
+  ],
+  "lab15-07": [
+    {
+      "source": "assets/exercise.png",
+      "seconds": 43
+    }
+  ]
+}

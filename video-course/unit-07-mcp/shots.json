@@ -1,0 +1,103 @@
+{
+  "lab07-01": [
+    {
+      "source": "../unit-00-agentic-csharp/assets/deck-14.png",
+      "seconds": 18
+    },
+    {
+      "source": "../production-batch/assets/windows-07-08.mp4",
+      "start": 90,
+      "seconds": 10,
+      "hold": 6
+    }
+  ],
+  "lab07-02": [
+    {
+      "source": "../production-batch/assets/windows-07-08.mp4",
+      "start": 27,
+      "seconds": 7
+    },
+    {
+      "source": "../production-batch/assets/windows-07-08.mp4",
+      "start": 90,
+      "seconds": 9
+    },
+    {
+      "source": "../production-batch/assets/windows-07-08.mp4",
+      "start": 109,
+      "seconds": 8
+    },
+    {
+      "source": "../production-batch/assets/windows-07-08.mp4",
+      "start": 252,
+      "seconds": 9
+    }
+  ],
+  "lab07-03": [
+    {
+      "source": "../production-batch/assets/windows-07-08.mp4",
+      "start": 375,
+      "seconds": 10,
+      "hold": 6
+    },
+    {
+      "source": "../production-batch/assets/windows-07-08.mp4",
+      "start": 391,
+      "seconds": 10,
+      "hold": 8
+    }
+  ],
+  "lab07-04": [
+    {
+      "source": "../production-batch/assets/windows-07-08.mp4",
+      "start": 270,
+      "seconds": 11
+    },
+    {
+      "source": "../production-batch/assets/windows-07-08.mp4",
+      "start": 313,
+      "seconds": 8
+    },
+    {
+      "source": "../production-batch/assets/windows-07-08.mp4",
+      "start": 322,
+      "seconds": 7
+    },
+    {
+      "source": "../production-batch/assets/windows-07-08.mp4",
+      "start": 327,
+      "seconds": 6
+    },
+    {
+      "source": "../production-batch/assets/windows-07-08.mp4",
+      "start": 333,
+      "seconds": 5,
+      "hold": 6
+    }
+  ],
+  "lab07-05": [
+    {
+      "source": "../production-batch/assets/windows-07-08.mp4",
+      "start": 341,
+      "seconds": 8,
+      "hold": 4
+    },
+    {
+      "source": "../production-batch/assets/windows-07-08.mp4",
+      "start": 359,
+      "seconds": 9
+    },
+    {
+      "source": "../production-batch/assets/windows-07-08.mp4",
+      "start": 402,
+      "seconds": 9,
+      "hold": 6
+    }
+  ],
+  "lab07-06": [
+    {
+      "source": "assets/exercise.png",
+      "seconds": 38
+    }
+  ]
+}

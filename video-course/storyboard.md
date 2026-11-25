@@ -3,6 +3,9 @@
 **Building C# Agentic Systems with MAF and Foundry by Alon Fliess**.
 The smart city is the teaching example; transferable engineering judgment is the goal.
 
+Production review: [Labs 02–17 local videos, captions and companion labs](review-index.md).
+The review index records actual execution, optional preparation-only lessons and remaining pickups.
+
 Audience: C#/.NET developers who need to architect, design and implement new agentic systems,
 or add agentic capabilities to existing applications. No prior agent-development knowledge is
 assumed. Developers who already use the APIs should gain the architectural judgment to decide
@@ -90,7 +93,7 @@ The numbers are navigation anchors into the Director, not a requirement for seve
 weighted videos. The learning path is **operate and verify → investigate with evidence → control
 consequential actions → collaborate across boundaries → prove and operate the system**.
 Combine or split later lessons after reviewing the pilot. Unit 00 is approved. Production is now
-authorized through **Lab 01**, then stops for review. Hosting, Routines, Insights and other cloud or preview experiences are optional labs
+authorized through the remaining lessons for a batch review when Alon returns. Hosting, Routines, Insights and other cloud or preview experiences are optional labs
 with explicit prerequisites and availability labels. No cloud deployment, shared-setting change,
 or publishing is authorized as part of this local course-production task.
 

@@ -1,0 +1,114 @@
+{
+  "lab05-01": [
+    {
+      "source": "../unit-00-agentic-csharp/assets/deck-14.png",
+      "seconds": 19
+    },
+    {
+      "source": "../production-batch/assets/windows-05-06.mp4",
+      "start": 36,
+      "seconds": 3,
+      "hold": 9
+    }
+  ],
+  "lab05-02": [
+    {
+      "source": "../production-batch/assets/windows-05-06.mp4",
+      "start": 124,
+      "seconds": 4,
+      "hold": 0
+    },
+    {
+      "source": "../production-batch/assets/windows-05-06.mp4",
+      "start": 168,
+      "seconds": 8,
+      "hold": 0
+    },
+    {
+      "source": "../production-batch/assets/windows-05-06.mp4",
+      "start": 179,
+      "seconds": 5,
+      "hold": 14
+    }
+  ],
+  "lab05-03": [
+    {
+      "source": "../production-batch/assets/windows-05-06.mp4",
+      "start": 183,
+      "seconds": 5,
+      "hold": 0
+    },
+    {
+      "source": "../production-batch/assets/windows-05-06.mp4",
+      "start": 219,
+      "seconds": 7,
+      "hold": 18
+    }
+  ],
+  "lab05-04": [
+    {
+      "source": "../production-batch/assets/windows-05-06.mp4",
+      "start": 225,
+      "seconds": 6,
+      "hold": 0
+    },
+    {
+      "source": "../production-batch/assets/windows-05-06.mp4",
+      "start": 231,
+      "seconds": 9,
+      "hold": 0
+    },
+    {
+      "source": "../production-batch/assets/windows-05-06.mp4",
+      "start": 243,
+      "seconds": 10,
+      "hold": 5
+    }
+  ],
+  "lab05-05": [
+    {
+      "source": "../production-batch/assets/windows-05-06.mp4",
+      "start": 264,
+      "seconds": 7,
+      "hold": 9
+    },
+    {
+      "source": "../production-batch/assets/windows-05-06.mp4",
+      "start": 273,
+      "seconds": 12,
+      "hold": 5
+    }
+  ],
+  "lab05-06": [
+    {
+      "source": "../production-batch/assets/windows-05-06.mp4",
+      "start": 299,
+      "seconds": 5,
+      "hold": 0
+    },
+    {
+      "source": "../production-batch/assets/windows-05-06.mp4",
+      "start": 309,
+      "seconds": 5,
+      "hold": 0
+    },
+    {
+      "source": "../production-batch/assets/windows-05-06.mp4",
+      "start": 345,
+      "seconds": 8,
+      "hold": 0
+    },
+    {
+      "source": "../production-batch/assets/windows-05-06.mp4",
+      "start": 351,
+      "seconds": 7,
+      "hold": 10
+    }
+  ],
+  "lab05-07": [
+    {
+      "source": "assets/exercise.png",
+      "seconds": 40
+    }
+  ]
+}

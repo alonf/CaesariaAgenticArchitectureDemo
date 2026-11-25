@@ -1,0 +1,188 @@
+{
+  "lab02-01": [
+    {
+      "source": "../unit-00-agentic-csharp/assets/deck-12.png",
+      "seconds": 13
+    },
+    {
+      "source": "../unit-00-agentic-csharp/assets/deck-14.png",
+      "seconds": 14
+    },
+    {
+      "source": "../production-batch/assets/windows-02-03.mp4",
+      "start": 420,
+      "seconds": 12,
+      "hold": 0
+    }
+  ],
+  "lab02-02": [
+    {
+      "source": "../unit-00-agentic-csharp/assets/deck-14.png",
+      "seconds": 28
+    },
+    {
+      "source": "../production-batch/assets/windows-02-03.mp4",
+      "start": 418,
+      "seconds": 14,
+      "hold": 0
+    }
+  ],
+  "lab02-03": [
+    {
+      "source": "../production-batch/assets/windows-02-03.mp4",
+      "start": 30,
+      "seconds": 11,
+      "hold": 0
+    },
+    {
+      "source": "../production-batch/assets/windows-02-03.mp4",
+      "start": 385,
+      "seconds": 4,
+      "hold": 0
+    },
+    {
+      "source": "../production-batch/assets/windows-02-03.mp4",
+      "start": 404,
+      "seconds": 16,
+      "hold": 0
+    },
+    {
+      "source": "../production-batch/assets/windows-02-03.mp4",
+      "start": 420,
+      "seconds": 16,
+      "hold": 0
+    }
+  ],
+  "lab02-04": [
+    {
+      "source": "../production-batch/assets/windows-02-03.mp4",
+      "start": 469,
+      "seconds": 12,
+      "hold": 0
+    },
+    {
+      "source": "../production-batch/assets/windows-02-03.mp4",
+      "start": 509,
+      "seconds": 5,
+      "hold": 0
+    },
+    {
+      "source": "../production-batch/assets/windows-02-03.mp4",
+      "start": 531,
+      "seconds": 24,
+      "hold": 0
+    }
+  ],
+  "lab02-05": [
+    {
+      "source": "../production-batch/assets/windows-02-03.mp4",
+      "start": 562,
+      "seconds": 18,
+      "hold": 0
+    },
+    {
+      "source": "../production-batch/assets/windows-02-03.mp4",
+      "start": 585,
+      "seconds": 28,
+      "hold": 0
+    }
+  ],
+  "lab02-06": [
+    {
+      "source": "../production-batch/assets/windows-02-03.mp4",
+      "start": 745,
+      "seconds": 10,
+      "hold": 0
+    },
+    {
+      "source": "../production-batch/assets/windows-02-03.mp4",
+      "start": 764,
+      "seconds": 9,
+      "hold": 0
+    },
+    {
+      "source": "../production-batch/assets/windows-02-03.mp4",
+      "start": 779,
+      "seconds": 3,
+      "hold": 6
+    },
+    {
+      "source": "../production-batch/assets/windows-02-03.mp4",
+      "start": 785,
+      "seconds": 3,
+      "hold": 6
+    },
+    {
+      "source": "../production-batch/assets/windows-02-03.mp4",
+      "start": 789,
+      "seconds": 3,
+      "hold": 10
+    }
+  ],
+  "lab02-07": [
+    {
+      "source": "../production-batch/assets/windows-02-03.mp4",
+      "start": 808,
+      "seconds": 5,
+      "hold": 8
+    },
+    {
+      "source": "../production-batch/assets/windows-02-03.mp4",
+      "start": 815,
+      "seconds": 5,
+      "hold": 0
+    },
+    {
+      "source": "../production-batch/assets/windows-02-03.mp4",
+      "start": 829,
+      "seconds": 5,
+      "hold": 13
+    },
+    {
+      "source": "../production-batch/assets/windows-02-03.mp4",
+      "start": 865,
+      "seconds": 12,
+      "hold": 0
+    }
+  ],
+  "lab02-08": [
+    {
+      "source": "assets/exercise.png",
+      "seconds": 63
+    }
+  ],
+  "highlights": {
+    "lab02-06": [
+      {
+        "start": 19,
+        "end": 28,
+        "rect": [
+          1000,
+          955,
+          850,
+          55
+        ]
+      },
+      {
+        "start": 31,
+        "end": 37,
+        "rect": [
+          609,
+          730,
+          1270,
+          72
+        ]
+      },
+      {
+        "start": 40,
+        "end": 50,
+        "rect": [
+          609,
+          980,
+          700,
+          32
+        ]
+      }
+    ]
+  }
+}
