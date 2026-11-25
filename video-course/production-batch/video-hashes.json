@@ -1,82 +1,92 @@
 [
   {
+    "file": "unit-00-agentic-csharp/output/agentic-csharp-unit-00-rough-cut.mp4",
+    "bytes": 67053174,
+    "sha256": "ad7661070c251fe95a044c0870c24606095288a2689092e031e28c03add8aadd"
+  },
+  {
+    "file": "unit-01-deterministic-foundation/output/agentic-csharp-lab-01-rough-cut.mp4",
+    "bytes": 22628907,
+    "sha256": "3274e94a090dec5b8aa8839b7fda213e400c4952537a8a016a94416ce9dec56b"
+  },
+  {
     "file": "unit-02-agent-tool/output/agentic-csharp-lab-02-rough-cut.mp4",
-    "bytes": 17031615,
-    "sha256": "937f63fca30c5234910d7aa6bb2fba0f420947fecfcb21d81afaacb906437a1c"
+    "bytes": 14360040,
+    "sha256": "57aa31b4eb172ae9c83314d8fe0023a437bd474f31ffa40c0ac0399a2935a1c9"
   },
   {
     "file": "unit-03-sessions/output/agentic-csharp-lab-03-rough-cut.mp4",
-    "bytes": 8476645,
-    "sha256": "4544be6e382bd9da2bd82641e419d2a463936d80a404dd77752b4dd8e40df5af"
+    "bytes": 7787861,
+    "sha256": "fc434d2b78c5ec0a1b6654a47964fc83667a3fad670ceb233a174de0543bd86b"
   },
   {
     "file": "unit-04-knowledge/output/agentic-csharp-lab-04-rough-cut.mp4",
-    "bytes": 8766636,
-    "sha256": "7fce9610c4b70fd8dd7524795d666bee63b2809378e9ee4df6f0ff6c7e4a1c0a"
+    "bytes": 8689586,
+    "sha256": "d2b891057f654328011b8ff07265a2fa6fbbdb9729b710123aa1d668d41d91a6"
   },
   {
     "file": "unit-05-memory/output/agentic-csharp-lab-05-rough-cut.mp4",
-    "bytes": 8367341,
-    "sha256": "c626a0ae3b89a557f9a34e3d1e583e8b28f2fa309696759bc711d8547ddd1084"
+    "bytes": 9002976,
+    "sha256": "ac71b503707ec96e3df3574cf7e2c5574df6f4b96d874b3ac8e4a09daf9d4494"
   },
   {
     "file": "unit-06-skills/output/agentic-csharp-lab-06-rough-cut.mp4",
-    "bytes": 7282216,
-    "sha256": "1ed1a7960c5bb7023293e399ae794cf9e16b4afa64d4dd4dfd077846a2938eac"
+    "bytes": 7885881,
+    "sha256": "09fb8964e3ca439e62fdc39b9be6b903b426f98d45183e18f25b8e4596bcbea2"
   },
   {
     "file": "unit-07-mcp/output/agentic-csharp-lab-07-rough-cut.mp4",
-    "bytes": 9249792,
-    "sha256": "c04322b0d653f5542ab74dcc8c454477e2bd03b5e79a143ac489e59f21e647ad"
+    "bytes": 8791749,
+    "sha256": "c6c78e17c721f68e7ae68b7ae0a7bf755cfedb3493ead4a6a2680629ca52ec6f"
   },
   {
     "file": "unit-08-interactive-input/output/agentic-csharp-lab-08-rough-cut.mp4",
-    "bytes": 8892197,
-    "sha256": "17a0370a8d6997f8f862bf565eebe8148454a7d1f5438b93e30e34b15992e90c"
+    "bytes": 8230228,
+    "sha256": "ce991ab95c31aa42a733406681a4d1492953dd9b8f1f32984e3faffacd9b8599"
   },
   {
     "file": "unit-09-workflow/output/agentic-csharp-lab-09-rough-cut.mp4",
-    "bytes": 9979872,
-    "sha256": "f1740b1a39f40fb7e1dfef0df0b8fb3e43ccb40b38bb0ceca8df4b868b9e643f"
+    "bytes": 9628841,
+    "sha256": "0d10ce270dcc20a991dea3140205cf06eed12542960004664634eb1815d5fea3"
   },
   {
     "file": "unit-10-tool-approval/output/agentic-csharp-lab-10-rough-cut.mp4",
-    "bytes": 10366936,
-    "sha256": "833a8c6d4731c4f7dbcb60aaaf9ab2f3a17ea78056e925e09caa28e190d57efd"
+    "bytes": 8703654,
+    "sha256": "5e3518021b1635089a6d78df93c0094b9c503003d47c096db9c71b34600fa024"
   },
   {
     "file": "unit-11-specialist/output/agentic-csharp-lab-11-rough-cut.mp4",
-    "bytes": 8439868,
-    "sha256": "adcff1c0cb2fa014f94c6c1cd966d01a6ef154e126e881fe1b976a3e31ff3330"
+    "bytes": 7255540,
+    "sha256": "63cb29c015be79127710f067e22dda89e8bb3926c4e7f445e99c2b46e4c3bef2"
   },
   {
     "file": "unit-12-a2a/output/agentic-csharp-lab-12-rough-cut.mp4",
-    "bytes": 10184271,
-    "sha256": "94473ddeb9d1ac7752065eededd104fb5b9639bfa0c54159ee7da1b02eb36fef"
+    "bytes": 8871739,
+    "sha256": "3920484fbfbd92955a5246ba01e9defae77dda34077b00e34cf4260532af945f"
   },
   {
     "file": "unit-13-hosting/output/agentic-csharp-lab-13-rough-cut.mp4",
-    "bytes": 10040977,
-    "sha256": "adbec303cf5c8649d96a8f3960fcdb7879539d29e628db6eba773ac21335ed50"
+    "bytes": 8097005,
+    "sha256": "3bbb36cc5ff7f338393d519a1ae786404d356896ec7039b824394ca7edf31ee5"
   },
   {
     "file": "unit-14-evaluation/output/agentic-csharp-lab-14-rough-cut.mp4",
-    "bytes": 7965908,
-    "sha256": "8a8ac0b4879c9695387069c346e0c72e67f8f36a8bc4f496f54fa316c8773113"
+    "bytes": 7000866,
+    "sha256": "6c50a269a8daecf659f0be1288e3012ca84cd10ff2ec79646875e3f1729b9f4b"
   },
   {
     "file": "unit-15-durable-recovery/output/agentic-csharp-lab-15-rough-cut.mp4",
-    "bytes": 12285790,
-    "sha256": "173ee8ca39a85826f62710ae7990a445cf82e59c580b4f8d1546a2a0a393c08e"
+    "bytes": 10550678,
+    "sha256": "f2863a87abcde07c16acc07c3e8256857631550bee21cb8d1167dd68d9c358c9"
   },
   {
     "file": "unit-16-routines/output/agentic-csharp-lab-16-rough-cut.mp4",
-    "bytes": 6630289,
-    "sha256": "0482779957435c8a91e258649e375b5ef3e943fbe8e45eab8137bdd56592b815"
+    "bytes": 5885220,
+    "sha256": "ec1987fda84078714c882925ab3186735f640ba048ce25b164a7a64c0ea89a26"
   },
   {
     "file": "unit-17-insights/output/agentic-csharp-lab-17-rough-cut.mp4",
-    "bytes": 6544285,
-    "sha256": "3959c774ad1ab7e65f35c024b71f5a9f3094291e5403cfd437191fc44e5d6b72"
+    "bytes": 6372319,
+    "sha256": "8e86c8122b5669d364fdc96b4f25565bbdb19a8388fd03288ef7f70f3516548b"
   }
 ]

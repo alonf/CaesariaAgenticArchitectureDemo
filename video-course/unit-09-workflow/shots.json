@@ -36,8 +36,9 @@
     },
     {
       "source": "../production-batch/assets/windows-09-10.mp4",
-      "start": 99,
-      "seconds": 7
+      "start": 90,
+      "seconds": 4,
+      "hold": 3
     }
   ],
   "lab09-03": [
@@ -88,26 +89,34 @@
     {
       "source": "../production-batch/assets/windows-09-10.mp4",
       "start": 252,
-      "seconds": 6,
-      "hold": 10,
+      "seconds": 4,
+      "hold": 0,
       "crop": [
         500,
         80,
         3340,
         1878
       ]
+    },
+    {
+      "source": "../production-batch/assets/windows-09-10.mp4",
+      "start": 625,
+      "seconds": 3,
+      "hold": 9
     }
   ],
   "lab09-05": [
     {
       "source": "../production-batch/assets/windows-09-10.mp4",
       "start": 635,
-      "seconds": 6
+      "seconds": 6,
+      "hold": 0
     },
     {
       "source": "../production-batch/assets/windows-09-10.mp4",
       "start": 642,
       "seconds": 10,
+      "hold": 0,
       "crop": [
         500,
         80,
@@ -118,7 +127,8 @@
     {
       "source": "../production-batch/assets/windows-09-10.mp4",
       "start": 653,
-      "seconds": 9,
+      "seconds": 6,
+      "hold": 0,
       "crop": [
         500,
         80,
@@ -129,7 +139,8 @@
     {
       "source": "../production-batch/assets/windows-09-10.mp4",
       "start": 662,
-      "seconds": 8,
+      "seconds": 5,
+      "hold": 0,
       "crop": [
         500,
         80,
@@ -139,14 +150,14 @@
     },
     {
       "source": "../production-batch/assets/windows-09-10.mp4",
-      "start": 677,
-      "seconds": 7,
-      "hold": 4,
+      "start": 679,
+      "seconds": 2,
+      "hold": 15,
       "crop": [
         500,
-        80,
-        3340,
-        1878
+        1100,
+        1700,
+        956
       ]
     }
   ],
@@ -155,13 +166,13 @@
       "source": "../production-batch/assets/windows-09-10.mp4",
       "start": 690,
       "seconds": 9,
-      "hold": 6
+      "hold": 1
     },
     {
       "source": "../production-batch/assets/windows-09-10.mp4",
       "start": 728,
       "seconds": 8,
-      "hold": 14
+      "hold": 19
     }
   ],
   "lab09-07": [
@@ -169,5 +180,19 @@
       "source": "assets/exercise.png",
       "seconds": 44
     }
-  ]
+  ],
+  "highlights": {
+    "lab09-05": [
+      {
+        "start": 28,
+        "end": 35,
+        "rect": [
+          250,
+          580,
+          700,
+          100
+        ]
+      }
+    ]
+  }
 }

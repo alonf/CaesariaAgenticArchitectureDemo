@@ -1,25 +1,51 @@
 [
   {
+    "unit": "unit-00-agentic-csharp",
+    "duration": 2007.89,
+    "chapters": 7,
+    "captions": 425,
+    "maxNarrationTailSeconds": 1.142,
+    "silencesOver2_5Seconds": 0,
+    "decode": "passed",
+    "streams": "1080p video + audio + English subtitles"
+  },
+  {
+    "unit": "unit-01-deterministic-foundation",
+    "duration": 663.95,
+    "chapters": 12,
+    "captions": 148,
+    "maxNarrationTailSeconds": 1.138,
+    "silencesOver2_5Seconds": 0,
+    "decode": "passed",
+    "streams": "1080p video + audio + English subtitles"
+  },
+  {
     "unit": "unit-02-agent-tool",
-    "duration": 379.42,
+    "duration": 372.62,
     "chapters": 8,
     "captions": 84,
+    "maxNarrationTailSeconds": 1.138,
+    "silencesOver2_5Seconds": 0,
     "decode": "passed",
     "streams": "1080p video + audio + English subtitles"
   },
   {
     "unit": "unit-03-sessions",
-    "duration": 240.09,
+    "duration": 239.82,
     "chapters": 7,
     "captions": 54,
+    "maxNarrationTailSeconds": 1.142,
+    "silencesOver2_5Seconds": 0,
     "decode": "passed",
     "streams": "1080p video + audio + English subtitles"
   },
   {
     "unit": "unit-04-knowledge",
-    "duration": 253.35,
+    "duration": 238.82,
     "chapters": 7,
     "captions": 53,
+    "maxNarrationTailSeconds": 1.117,
+    "silencesOver2_5Seconds": 0,
     "decode": "passed",
     "streams": "1080p video + audio + English subtitles"
   },
@@ -28,102 +54,128 @@
     "duration": 247.22,
     "chapters": 7,
     "captions": 53,
+    "maxNarrationTailSeconds": 1.133,
+    "silencesOver2_5Seconds": 0,
     "decode": "passed",
     "streams": "1080p video + audio + English subtitles"
   },
   {
     "unit": "unit-06-skills",
-    "duration": 217.15,
+    "duration": 208.09,
     "chapters": 6,
     "captions": 46,
+    "maxNarrationTailSeconds": 1.137,
+    "silencesOver2_5Seconds": 0,
     "decode": "passed",
     "streams": "1080p video + audio + English subtitles"
   },
   {
     "unit": "unit-07-mcp",
-    "duration": 221.22,
+    "duration": 214.95,
     "chapters": 6,
     "captions": 47,
+    "maxNarrationTailSeconds": 1.142,
+    "silencesOver2_5Seconds": 0,
     "decode": "passed",
     "streams": "1080p video + audio + English subtitles"
   },
   {
     "unit": "unit-08-interactive-input",
-    "duration": 256.02,
+    "duration": 246.09,
     "chapters": 7,
     "captions": 54,
+    "maxNarrationTailSeconds": 1.125,
+    "silencesOver2_5Seconds": 0,
     "decode": "passed",
     "streams": "1080p video + audio + English subtitles"
   },
   {
     "unit": "unit-09-workflow",
-    "duration": 276.82,
+    "duration": 251.62,
     "chapters": 7,
     "captions": 55,
+    "maxNarrationTailSeconds": 1.138,
+    "silencesOver2_5Seconds": 0,
     "decode": "passed",
     "streams": "1080p video + audio + English subtitles"
   },
   {
     "unit": "unit-10-tool-approval",
-    "duration": 300.02,
+    "duration": 242.69,
     "chapters": 7,
     "captions": 54,
+    "maxNarrationTailSeconds": 1.121,
+    "silencesOver2_5Seconds": 0,
     "decode": "passed",
     "streams": "1080p video + audio + English subtitles"
   },
   {
     "unit": "unit-11-specialist",
-    "duration": 235.02,
+    "duration": 205.29,
     "chapters": 6,
     "captions": 45,
+    "maxNarrationTailSeconds": 1.129,
+    "silencesOver2_5Seconds": 0,
     "decode": "passed",
     "streams": "1080p video + audio + English subtitles"
   },
   {
     "unit": "unit-12-a2a",
-    "duration": 269.22,
+    "duration": 242.49,
     "chapters": 7,
     "captions": 53,
+    "maxNarrationTailSeconds": 1.129,
+    "silencesOver2_5Seconds": 0,
     "decode": "passed",
     "streams": "1080p video + audio + English subtitles"
   },
   {
     "unit": "unit-13-hosting",
-    "duration": 260.02,
+    "duration": 208.35,
     "chapters": 6,
     "captions": 44,
+    "maxNarrationTailSeconds": 1.133,
+    "silencesOver2_5Seconds": 0,
     "decode": "passed",
     "streams": "1080p video + audio + English subtitles"
   },
   {
     "unit": "unit-14-evaluation",
-    "duration": 252.02,
+    "duration": 212.55,
     "chapters": 6,
     "captions": 46,
+    "maxNarrationTailSeconds": 1.121,
+    "silencesOver2_5Seconds": 0,
     "decode": "passed",
     "streams": "1080p video + audio + English subtitles"
   },
   {
     "unit": "unit-15-durable-recovery",
-    "duration": 323.02,
+    "duration": 266.35,
     "chapters": 7,
     "captions": 56,
+    "maxNarrationTailSeconds": 1.133,
+    "silencesOver2_5Seconds": 0,
     "decode": "passed",
     "streams": "1080p video + audio + English subtitles"
   },
   {
     "unit": "unit-16-routines",
-    "duration": 204.22,
+    "duration": 187.95,
     "chapters": 5,
     "captions": 41,
+    "maxNarrationTailSeconds": 1.129,
+    "silencesOver2_5Seconds": 0,
     "decode": "passed",
     "streams": "1080p video + audio + English subtitles"
   },
   {
     "unit": "unit-17-insights",
-    "duration": 200.09,
+    "duration": 186.89,
     "chapters": 5,
     "captions": 41,
+    "maxNarrationTailSeconds": 1.138,
+    "silencesOver2_5Seconds": 0,
     "decode": "passed",
     "streams": "1080p video + audio + English subtitles"
   }

@@ -22,19 +22,21 @@
   "lab01-02": [
     {
       "source": "assets/mac-editor.mp4",
-      "seconds": 16,
-      "start": 40
+      "seconds": 14,
+      "start": 40,
+      "hold": 2
     },
     {
       "source": "assets/mac-editor.mp4",
-      "seconds": 18,
+      "seconds": 11,
       "start": 62,
       "crop": [
         0,
         55,
         2400,
         1350
-      ]
+      ],
+      "hold": 7
     },
     {
       "source": "assets/mac-editor.mp4",
@@ -115,25 +117,26 @@
     {
       "source": "assets/mac-main.mp4",
       "start": 21,
-      "seconds": 6,
+      "seconds": 4,
       "crop": [
         1250,
         50,
         670,
         376
-      ]
+      ],
+      "hold": 2
     },
     {
       "source": "assets/mac-proof.mp4",
-      "seconds": 8,
-      "start": 3,
+      "seconds": 3,
+      "start": 8,
       "crop": [
         700,
         140,
         2304,
         1296
       ],
-      "hold": 9
+      "hold": 14
     }
   ],
   "lab01-06": [
@@ -186,9 +189,9 @@
     },
     {
       "source": "assets/mac-main.mp4",
-      "seconds": 10,
+      "seconds": 6,
       "start": 148,
-      "hold": 6
+      "hold": 10
     }
   ],
   "lab01-08": [
@@ -249,7 +252,7 @@
     },
     {
       "source": "assets/windows-screen.mp4",
-      "seconds": 16,
+      "seconds": 8,
       "start": 191,
       "crop": [
         120,
@@ -257,7 +260,7 @@
         2880,
         1620
       ],
-      "hold": 22
+      "hold": 30
     }
   ],
   "lab01-09": [
@@ -274,14 +277,15 @@
     },
     {
       "source": "assets/windows-orientation.mp4",
-      "seconds": 4,
+      "seconds": 1,
       "start": 44,
       "crop": [
         640,
         200,
         2600,
         1462
-      ]
+      ],
+      "hold": 3
     },
     {
       "source": "assets/windows-screen.mp4",
@@ -296,14 +300,15 @@
     },
     {
       "source": "assets/windows-screen.mp4",
-      "seconds": 5,
-      "start": 214,
+      "seconds": 2,
+      "start": 217,
       "crop": [
         640,
         0,
         2600,
         1462
-      ]
+      ],
+      "hold": 3
     },
     {
       "source": "assets/windows-vs-hq.mp4",
@@ -408,9 +413,9 @@
     },
     {
       "source": "assets/mac-reset.mp4",
-      "seconds": 12,
+      "seconds": 7,
       "start": 43,
-      "hold": 6
+      "hold": 11
     }
   ],
   "lab01-11": [

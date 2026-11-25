@@ -14,7 +14,7 @@
   "lab06-02": [
     {
       "source": "../production-batch/assets/windows-05-06.mp4",
-      "start": 372,
+      "start": 366,
       "seconds": 5,
       "hold": 0
     },
@@ -56,27 +56,21 @@
       "source": "../production-batch/assets/windows-05-06.mp4",
       "start": 477,
       "seconds": 8,
-      "hold": 9
+      "hold": 2
     },
     {
       "source": "../production-batch/assets/windows-05-06.mp4",
       "start": 498,
       "seconds": 11,
-      "hold": 4
+      "hold": 11
     }
   ],
   "lab06-05": [
     {
       "source": "../production-batch/assets/windows-05-06.mp4",
-      "start": 505,
-      "seconds": 6,
-      "hold": 10
-    },
-    {
-      "source": "../production-batch/assets/windows-05-06.mp4",
       "start": 515,
       "seconds": 12,
-      "hold": 8
+      "hold": 24
     }
   ],
   "lab06-06": [

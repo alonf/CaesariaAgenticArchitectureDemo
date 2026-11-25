@@ -14,7 +14,7 @@
   "lab05-02": [
     {
       "source": "../production-batch/assets/windows-05-06.mp4",
-      "start": 124,
+      "start": 26,
       "seconds": 4,
       "hold": 0
     },
@@ -101,8 +101,8 @@
     {
       "source": "../production-batch/assets/windows-05-06.mp4",
       "start": 351,
-      "seconds": 7,
-      "hold": 10
+      "seconds": 5,
+      "hold": 12
     }
   ],
   "lab05-07": [

@@ -14,6 +14,7 @@ from pathlib import Path
 
 import build_foundations as speech
 import build_intro as r
+import render_privacy
 
 import os
 UNIT = Path(os.environ['COURSE_UNIT']).resolve()
@@ -60,7 +61,8 @@ def render():
                     raise ValueError(f'Shot exceeds recording: {source}')
                 inputs += ['-ss', start, '-t', duration, '-i', source]
             crop = shot.get('crop')
-            prefix = f'crop={crop[2]}:{crop[3]}:{crop[0]}:{crop[1]},' if crop else ''
+            prefix = render_privacy.source_filters(source, shot.get('start', 0), duration)
+            prefix += f'crop={crop[2]}:{crop[3]}:{crop[0]}:{crop[1]},' if crop else ''
             shot_filter = (f'[{i}:v]{prefix}scale=1920:1080:force_original_aspect_ratio=decrease,'
                            f'pad=1920:1080:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=15,setpts=PTS-STARTPTS')
             if hold:
@@ -68,10 +70,11 @@ def render():
                                 "drawtext=fontfile=sans.ttf:text='Paused for explanation':fontcolor=white:fontsize=24:"
                                 f"box=1:boxcolor=0x222222:x=w-tw-24:y=h-th-22:enable='gte(t,{duration})'")
             filters.append(shot_filter + f'[v{i}]')
-        length = math.ceil(max(r.duration(audio) + 1, motion_seconds) * 15) / 15
+        # Narration determines the cut. Extra visual handles must not create silent tails.
+        length = math.ceil((r.duration(audio) + 1) * 15) / 15
         chain = ''.join(f'[v{i}]' for i in range(len(shots)))
         filters.append(f'{chain}concat=n={len(shots)}:v=1:a=0,'
-                       f'tpad=stop_mode=clone:stop_duration={length-motion_seconds}[base]')
+                       f'tpad=stop_mode=clone:stop_duration={max(0, length-motion_seconds)}[base]')
         marker = '[base]null'
         if length > motion_seconds and Path(shots[-1]['source']).suffix.lower() not in ['.png', '.jpg']:
             marker += ",drawtext=fontfile=sans.ttf:text='Paused for explanation':fontcolor=white:fontsize=24:" \

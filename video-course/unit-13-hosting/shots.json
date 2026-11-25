@@ -15,46 +15,52 @@
     {
       "source": "../production-batch/assets/windows-13-hosting.mp4",
       "start": 34,
-      "seconds": 8
+      "seconds": 4,
+      "hold": 0
     },
     {
       "source": "../production-batch/assets/windows-13-hosting.mp4",
       "start": 46,
-      "seconds": 5
+      "seconds": 4,
+      "hold": 0
     },
     {
       "source": "../production-batch/assets/windows-13-hosting.mp4",
       "start": 86,
-      "seconds": 7
+      "seconds": 7,
+      "hold": 0
     },
     {
       "source": "../production-batch/assets/windows-13-hosting.mp4",
       "start": 95,
       "seconds": 7,
-      "hold": 12
+      "hold": 17
     }
   ],
   "lab13-03": [
     {
       "source": "../production-batch/assets/windows-13-hosting.mp4",
       "start": 280,
-      "seconds": 7
+      "seconds": 4,
+      "hold": 0
     },
     {
       "source": "../production-batch/assets/windows-13-hosting.mp4",
       "start": 310,
-      "seconds": 6
+      "seconds": 3,
+      "hold": 0
     },
     {
       "source": "../production-batch/assets/windows-13-hosting.mp4",
       "start": 400,
-      "seconds": 7
+      "seconds": 7,
+      "hold": 0
     },
     {
       "source": "../production-batch/assets/windows-13-hosting.mp4",
       "start": 408,
       "seconds": 11,
-      "hold": 12
+      "hold": 18
     }
   ],
   "lab13-04": [
@@ -69,32 +75,32 @@
     {
       "source": "../production-batch/assets/windows-13-hosting.mp4",
       "start": 366,
-      "seconds": 8,
-      "hold": 3
+      "seconds": 3,
+      "hold": 0
     },
     {
       "source": "../production-batch/assets/windows-13-hosting.mp4",
       "start": 380,
-      "seconds": 6,
-      "hold": 6
+      "seconds": 5,
+      "hold": 7
     },
     {
       "source": "../production-batch/assets/windows-13-hosting.mp4",
       "start": 389,
-      "seconds": 5,
+      "seconds": 2,
       "hold": 3
     },
     {
       "source": "../production-batch/assets/windows-13-hosting.mp4",
-      "start": 430,
-      "seconds": 8,
-      "hold": 4
+      "start": 434,
+      "seconds": 4,
+      "hold": 2
     },
     {
       "source": "../production-batch/assets/windows-13-hosting.mp4",
       "start": 442,
       "seconds": 7,
-      "hold": 8
+      "hold": 25
     }
   ],
   "lab13-06": [

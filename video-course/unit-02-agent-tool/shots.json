@@ -10,47 +10,47 @@
     },
     {
       "source": "../production-batch/assets/windows-02-03.mp4",
-      "start": 420,
-      "seconds": 12,
-      "hold": 0
+      "start": 418,
+      "seconds": 4,
+      "hold": 8
     }
   ],
   "lab02-02": [
     {
       "source": "../unit-00-agentic-csharp/assets/deck-14.png",
-      "seconds": 28
+      "seconds": 22
     },
     {
       "source": "../production-batch/assets/windows-02-03.mp4",
       "start": 418,
-      "seconds": 14,
-      "hold": 0
+      "seconds": 4,
+      "hold": 16
     }
   ],
   "lab02-03": [
     {
       "source": "../production-batch/assets/windows-02-03.mp4",
       "start": 30,
-      "seconds": 11,
+      "seconds": 1,
+      "hold": 15
+    },
+    {
+      "source": "../production-batch/assets/windows-02-03.mp4",
+      "start": 400,
+      "seconds": 1,
+      "hold": 12
+    },
+    {
+      "source": "../production-batch/assets/windows-02-03.mp4",
+      "start": 400,
+      "seconds": 8,
       "hold": 0
     },
     {
       "source": "../production-batch/assets/windows-02-03.mp4",
-      "start": 385,
+      "start": 418,
       "seconds": 4,
-      "hold": 0
-    },
-    {
-      "source": "../production-batch/assets/windows-02-03.mp4",
-      "start": 404,
-      "seconds": 16,
-      "hold": 0
-    },
-    {
-      "source": "../production-batch/assets/windows-02-03.mp4",
-      "start": 420,
-      "seconds": 16,
-      "hold": 0
+      "hold": 6
     }
   ],
   "lab02-04": [
@@ -58,7 +58,7 @@
       "source": "../production-batch/assets/windows-02-03.mp4",
       "start": 469,
       "seconds": 12,
-      "hold": 0
+      "hold": 6
     },
     {
       "source": "../production-batch/assets/windows-02-03.mp4",
@@ -69,7 +69,7 @@
     {
       "source": "../production-batch/assets/windows-02-03.mp4",
       "start": 531,
-      "seconds": 24,
+      "seconds": 18,
       "hold": 0
     }
   ],
@@ -77,14 +77,14 @@
     {
       "source": "../production-batch/assets/windows-02-03.mp4",
       "start": 562,
-      "seconds": 18,
-      "hold": 0
+      "seconds": 10,
+      "hold": 17
     },
     {
       "source": "../production-batch/assets/windows-02-03.mp4",
       "start": 585,
-      "seconds": 28,
-      "hold": 0
+      "seconds": 7,
+      "hold": 12
     }
   ],
   "lab02-06": [
@@ -130,13 +130,19 @@
       "source": "../production-batch/assets/windows-02-03.mp4",
       "start": 829,
       "seconds": 5,
-      "hold": 13
+      "hold": 4
     },
     {
       "source": "../production-batch/assets/windows-02-03.mp4",
       "start": 865,
-      "seconds": 12,
+      "seconds": 8,
       "hold": 0
+    },
+    {
+      "source": "../production-batch/assets/windows-02-03.mp4",
+      "start": 829,
+      "seconds": 4,
+      "hold": 9
     }
   ],
   "lab02-08": [

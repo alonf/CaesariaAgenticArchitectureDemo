@@ -7,78 +7,94 @@
     {
       "source": "../production-batch/assets/windows-11-12.mp4",
       "start": 33,
-      "seconds": 8,
-      "hold": 9
+      "seconds": 4,
+      "hold": 13
     }
   ],
   "lab11-02": [
     {
       "source": "../production-batch/assets/windows-11-12.mp4",
+      "start": 40,
+      "seconds": 4,
+      "hold": 2
+    },
+    {
+      "source": "../production-batch/assets/windows-11-12.mp4",
       "start": 33,
-      "seconds": 8,
-      "hold": 9
+      "seconds": 4,
+      "hold": 7
     },
     {
       "source": "../production-batch/assets/windows-10b-11.mp4",
       "start": 413,
-      "seconds": 9
+      "seconds": 9,
+      "hold": 0
     },
     {
       "source": "../production-batch/assets/windows-10b-11.mp4",
       "start": 431,
-      "seconds": 7,
-      "hold": 5
+      "seconds": 4,
+      "hold": 8
     }
   ],
   "lab11-03": [
     {
       "source": "../production-batch/assets/windows-11-12.mp4",
-      "start": 68,
-      "seconds": 6
+      "start": 55,
+      "seconds": 4,
+      "hold": 0
     },
     {
       "source": "../production-batch/assets/windows-11-12.mp4",
-      "start": 76,
-      "seconds": 6
+      "start": 65,
+      "seconds": 4,
+      "hold": 0
     },
     {
       "source": "../production-batch/assets/windows-11-12.mp4",
       "start": 110,
-      "seconds": 8
+      "seconds": 5,
+      "hold": 0
     },
     {
       "source": "../production-batch/assets/windows-11-12.mp4",
       "start": 116,
       "seconds": 9,
-      "hold": 15
+      "hold": 22
     }
   ],
   "lab11-04": [
     {
       "source": "../production-batch/assets/windows-11-12.mp4",
-      "start": 160,
-      "seconds": 9,
-      "hold": 8
+      "start": 155,
+      "seconds": 7,
+      "hold": 2
     },
     {
       "source": "../production-batch/assets/windows-11-12.mp4",
-      "start": 180,
-      "seconds": 10,
-      "hold": 10
+      "start": 172,
+      "seconds": 8,
+      "hold": 12
+    },
+    {
+      "source": "../production-batch/assets/windows-11-12.mp4",
+      "start": 187,
+      "seconds": 3,
+      "hold": 5
     }
   ],
   "lab11-05": [
     {
       "source": "../production-batch/assets/windows-11-12.mp4",
-      "start": 193,
-      "seconds": 10,
+      "start": 187,
+      "seconds": 4,
       "hold": 12
     },
     {
       "source": "../production-batch/assets/windows-11-12.mp4",
       "start": 209,
       "seconds": 9,
-      "hold": 12
+      "hold": 18
     }
   ],
   "lab11-06": [

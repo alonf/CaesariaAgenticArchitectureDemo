@@ -43,8 +43,8 @@
     {
       "source": "../production-batch/assets/windows-09-10.mp4",
       "start": 1020,
-      "seconds": 10,
-      "hold": 9
+      "seconds": 5,
+      "hold": 14
     },
     {
       "source": "../production-batch/assets/windows-09-10.mp4",
@@ -68,34 +68,34 @@
     {
       "source": "../production-batch/assets/windows-10b-11.mp4",
       "start": 18,
-      "seconds": 8,
-      "hold": 12
+      "seconds": 5,
+      "hold": 5
     },
     {
       "source": "../production-batch/assets/windows-10b-11.mp4",
       "start": 29,
       "seconds": 8,
-      "hold": 8
+      "hold": 18
     }
   ],
   "lab10-05": [
     {
       "source": "../production-batch/assets/windows-10b-11.mp4",
-      "start": 56,
-      "seconds": 9,
-      "hold": 6
+      "start": 61,
+      "seconds": 4,
+      "hold": 5
     },
     {
       "source": "../production-batch/assets/windows-10b-11.mp4",
-      "start": 68,
-      "seconds": 9,
-      "hold": 6
+      "start": 72,
+      "seconds": 4,
+      "hold": 7
     },
     {
       "source": "../production-batch/assets/windows-10b-11.mp4",
       "start": 86,
       "seconds": 8,
-      "hold": 6
+      "hold": 16
     }
   ],
   "lab10-06": [

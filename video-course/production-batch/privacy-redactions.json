@@ -1,0 +1,624 @@
+{
+  "coordinates": "1920x1080 normalized source pixels; applied before crop and hold",
+  "sources": {
+    "unit-01-deterministic-foundation/assets/mac-main.mp4": [],
+    "unit-01-deterministic-foundation/assets/mac-editor.mp4": [
+      {
+        "rect": [
+          0,
+          960,
+          45,
+          45
+        ],
+        "reason": "Incidental editor account avatar"
+      }
+    ],
+    "unit-01-deterministic-foundation/assets/mac-foundry.mp4": [
+      {
+        "rect": [
+          0,
+          960,
+          45,
+          45
+        ],
+        "reason": "Incidental editor account avatar"
+      },
+      {
+        "start": 64,
+        "end": 74,
+        "rect": [
+          370,
+          75,
+          140,
+          15
+        ],
+        "reason": "Local shell user and machine name; command and result remain visible"
+      },
+      {
+        "start": 64,
+        "end": 74,
+        "rect": [
+          370,
+          104,
+          140,
+          15
+        ],
+        "reason": "Local shell user and machine name; command and result remain visible"
+      },
+      {
+        "start": 64,
+        "end": 74,
+        "rect": [
+          370,
+          132,
+          140,
+          16
+        ],
+        "reason": "Local shell user and machine name; command and result remain visible"
+      },
+      {
+        "start": 24,
+        "end": 56,
+        "rect": [
+          380,
+          330,
+          750,
+          36
+        ],
+        "reason": "Incidental container registry asset identifier"
+      }
+    ],
+    "unit-01-deterministic-foundation/assets/aspire17-overview.mp4": [],
+    "unit-01-deterministic-foundation/assets/mac-proof.mp4": [
+      {
+        "rect": [
+          0,
+          960,
+          45,
+          45
+        ],
+        "reason": "Incidental editor account avatar"
+      }
+    ],
+    "unit-01-deterministic-foundation/assets/windows-screen.mp4": [
+      {
+        "rect": [
+          0,
+          1040,
+          1920,
+          40
+        ],
+        "reason": "Incidental editor status-bar account/profile identifiers"
+      },
+      {
+        "rect": [
+          1740,
+          0,
+          180,
+          75
+        ],
+        "reason": "Incidental browser or IDE account avatar and identity controls"
+      },
+      {
+        "start": 210,
+        "end": 216.8,
+        "rect": [
+          55,
+          30,
+          1610,
+          340
+        ],
+        "reason": "Browser address-bar suggestions and navigation history"
+      }
+    ],
+    "unit-01-deterministic-foundation/assets/windows-orientation.mp4": [
+      {
+        "rect": [
+          1740,
+          0,
+          180,
+          75
+        ],
+        "reason": "Incidental browser or IDE account avatar and identity controls"
+      },
+      {
+        "start": 45.5,
+        "end": 50,
+        "rect": [
+          55,
+          30,
+          1610,
+          320
+        ],
+        "reason": "Browser address-bar suggestions and navigation history"
+      }
+    ],
+    "unit-01-deterministic-foundation/assets/windows-vs-hq.mp4": [
+      {
+        "rect": [
+          1740,
+          0,
+          180,
+          75
+        ],
+        "reason": "Incidental browser or IDE account avatar and identity controls"
+      }
+    ],
+    "unit-01-deterministic-foundation/assets/mac-reset.mp4": [],
+    "production-batch/assets/windows-02-03.mp4": [
+      {
+        "rect": [
+          0,
+          1040,
+          1920,
+          40
+        ],
+        "reason": "Incidental editor status-bar account/profile identifiers"
+      },
+      {
+        "rect": [
+          1740,
+          0,
+          180,
+          75
+        ],
+        "reason": "Incidental browser or IDE account avatar and identity controls"
+      },
+      {
+        "start": 31.5,
+        "end": 36,
+        "rect": [
+          55,
+          30,
+          1610,
+          640
+        ],
+        "reason": "Browser address-bar suggestions and navigation history"
+      },
+      {
+        "start": 423,
+        "end": 440,
+        "rect": [
+          55,
+          30,
+          1610,
+          640
+        ],
+        "reason": "Browser address-bar suggestions and navigation history"
+      }
+    ],
+    "production-batch/assets/windows-03-06.mp4": [
+      {
+        "rect": [
+          0,
+          1040,
+          1920,
+          40
+        ],
+        "reason": "Incidental editor status-bar account/profile identifiers"
+      },
+      {
+        "rect": [
+          1740,
+          0,
+          180,
+          75
+        ],
+        "reason": "Incidental browser or IDE account avatar and identity controls"
+      }
+    ],
+    "production-batch/assets/windows-05-06.mp4": [
+      {
+        "rect": [
+          0,
+          1040,
+          1920,
+          40
+        ],
+        "reason": "Incidental editor status-bar account/profile identifiers"
+      },
+      {
+        "rect": [
+          1740,
+          0,
+          180,
+          75
+        ],
+        "reason": "Incidental browser or IDE account avatar and identity controls"
+      }
+    ],
+    "production-batch/assets/windows-07-08.mp4": [
+      {
+        "rect": [
+          0,
+          1040,
+          1920,
+          40
+        ],
+        "reason": "Incidental editor status-bar account/profile identifiers"
+      },
+      {
+        "rect": [
+          1740,
+          0,
+          180,
+          75
+        ],
+        "reason": "Incidental browser or IDE account avatar and identity controls"
+      }
+    ],
+    "production-batch/assets/windows-09-10.mp4": [
+      {
+        "rect": [
+          0,
+          1040,
+          1920,
+          40
+        ],
+        "reason": "Incidental editor status-bar account/profile identifiers"
+      },
+      {
+        "rect": [
+          1740,
+          0,
+          180,
+          75
+        ],
+        "reason": "Incidental browser or IDE account avatar and identity controls"
+      }
+    ],
+    "production-batch/assets/windows-10b-11.mp4": [
+      {
+        "rect": [
+          0,
+          1040,
+          1920,
+          40
+        ],
+        "reason": "Incidental editor status-bar account/profile identifiers"
+      },
+      {
+        "rect": [
+          1740,
+          0,
+          180,
+          75
+        ],
+        "reason": "Incidental browser or IDE account avatar and identity controls"
+      }
+    ],
+    "production-batch/assets/windows-11-12.mp4": [
+      {
+        "rect": [
+          0,
+          1040,
+          1920,
+          40
+        ],
+        "reason": "Incidental editor status-bar account/profile identifiers"
+      },
+      {
+        "rect": [
+          1740,
+          0,
+          180,
+          75
+        ],
+        "reason": "Incidental browser or IDE account avatar and identity controls"
+      }
+    ],
+    "production-batch/assets/windows-13-hosting.mp4": [
+      {
+        "rect": [
+          0,
+          1040,
+          1920,
+          40
+        ],
+        "reason": "Incidental editor status-bar account/profile identifiers"
+      },
+      {
+        "rect": [
+          1740,
+          0,
+          180,
+          75
+        ],
+        "reason": "Incidental browser or IDE account avatar and identity controls"
+      }
+    ],
+    "production-batch/assets/windows-14-evaluation.mp4": [
+      {
+        "rect": [
+          0,
+          1040,
+          1920,
+          40
+        ],
+        "reason": "Incidental editor status-bar account/profile identifiers"
+      },
+      {
+        "rect": [
+          1740,
+          0,
+          180,
+          75
+        ],
+        "reason": "Incidental browser or IDE account avatar and identity controls"
+      },
+      {
+        "start": 172.5,
+        "end": 176,
+        "rect": [
+          0,
+          0,
+          1920,
+          1080
+        ],
+        "reason": "Excluded personal browser new-tab and navigation interval; keep out of the edit"
+      }
+    ],
+    "production-batch/assets/windows-15b-durable.mp4": [
+      {
+        "rect": [
+          0,
+          1040,
+          1920,
+          40
+        ],
+        "reason": "Incidental editor status-bar account/profile identifiers"
+      },
+      {
+        "rect": [
+          1740,
+          0,
+          180,
+          75
+        ],
+        "reason": "Incidental browser or IDE account avatar and identity controls"
+      }
+    ],
+    "production-batch/assets/windows-16-17.mp4": [
+      {
+        "rect": [
+          0,
+          1040,
+          1920,
+          40
+        ],
+        "reason": "Incidental editor status-bar account/profile identifiers"
+      },
+      {
+        "rect": [
+          1740,
+          0,
+          180,
+          75
+        ],
+        "reason": "Incidental browser or IDE account avatar and identity controls"
+      }
+    ],
+    ".build/orientation-repo.mp4": [
+      {
+        "rect": [
+          0,
+          1040,
+          1920,
+          40
+        ],
+        "reason": "Incidental editor status-bar account/profile identifiers"
+      },
+      {
+        "rect": [
+          1740,
+          0,
+          180,
+          75
+        ],
+        "reason": "Incidental browser or IDE account avatar and identity controls"
+      }
+    ],
+    ".build/orientation-code.mp4": [
+      {
+        "rect": [
+          0,
+          1040,
+          1920,
+          40
+        ],
+        "reason": "Incidental editor status-bar account/profile identifiers"
+      },
+      {
+        "rect": [
+          1740,
+          0,
+          180,
+          75
+        ],
+        "reason": "Incidental browser or IDE account avatar and identity controls"
+      }
+    ],
+    ".build/orientation-foundry.mp4": [
+      {
+        "rect": [
+          0,
+          1040,
+          1920,
+          40
+        ],
+        "reason": "Incidental editor status-bar account/profile identifiers"
+      },
+      {
+        "rect": [
+          1740,
+          0,
+          180,
+          75
+        ],
+        "reason": "Incidental browser or IDE account avatar and identity controls"
+      },
+      {
+        "rect": [
+          65,
+          35,
+          1590,
+          34
+        ],
+        "reason": "Portal address containing environment identifiers",
+        "start": 0,
+        "end": 15
+      },
+      {
+        "start": 0,
+        "end": 15,
+        "rect": [
+          860,
+          450,
+          850,
+          45
+        ],
+        "reason": "Incidental cloud endpoint identifiers on project home"
+      }
+    ],
+    ".build/orientation-learn.mp4": [
+      {
+        "rect": [
+          0,
+          1040,
+          1920,
+          40
+        ],
+        "reason": "Incidental editor status-bar account/profile identifiers"
+      },
+      {
+        "rect": [
+          1740,
+          0,
+          180,
+          75
+        ],
+        "reason": "Incidental browser or IDE account avatar and identity controls"
+      }
+    ],
+    ".build/aspire-live.mp4": [
+      {
+        "rect": [
+          0,
+          1040,
+          1920,
+          40
+        ],
+        "reason": "Incidental editor status-bar account/profile identifiers"
+      },
+      {
+        "rect": [
+          1740,
+          0,
+          180,
+          75
+        ],
+        "reason": "Incidental browser or IDE account avatar and identity controls"
+      }
+    ],
+    ".build/director-live.mp4": [
+      {
+        "rect": [
+          0,
+          1040,
+          1920,
+          40
+        ],
+        "reason": "Incidental editor status-bar account/profile identifiers"
+      },
+      {
+        "rect": [
+          1740,
+          0,
+          180,
+          75
+        ],
+        "reason": "Incidental browser or IDE account avatar and identity controls"
+      }
+    ],
+    ".build/retry-live.mp4": [
+      {
+        "rect": [
+          0,
+          1040,
+          1920,
+          40
+        ],
+        "reason": "Incidental editor status-bar account/profile identifiers"
+      },
+      {
+        "rect": [
+          1740,
+          0,
+          180,
+          75
+        ],
+        "reason": "Incidental browser or IDE account avatar and identity controls"
+      }
+    ],
+    ".build/vscode-values.mp4": [
+      {
+        "rect": [
+          0,
+          1040,
+          1920,
+          40
+        ],
+        "reason": "Incidental editor status-bar account/profile identifiers"
+      },
+      {
+        "rect": [
+          1740,
+          0,
+          180,
+          75
+        ],
+        "reason": "Incidental browser or IDE account avatar and identity controls"
+      }
+    ],
+    ".build/vs-values.mp4": [
+      {
+        "rect": [
+          0,
+          1040,
+          1920,
+          40
+        ],
+        "reason": "Incidental editor status-bar account/profile identifiers"
+      },
+      {
+        "rect": [
+          1740,
+          0,
+          180,
+          75
+        ],
+        "reason": "Incidental browser or IDE account avatar and identity controls"
+      }
+    ],
+    ".build/reset-live.mp4": [
+      {
+        "rect": [
+          0,
+          1040,
+          1920,
+          40
+        ],
+        "reason": "Incidental editor status-bar account/profile identifiers"
+      },
+      {
+        "rect": [
+          1740,
+          0,
+          180,
+          75
+        ],
+        "reason": "Incidental browser or IDE account avatar and identity controls"
+      }
+    ]
+  }
+}

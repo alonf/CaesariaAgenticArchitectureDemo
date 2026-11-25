@@ -15,6 +15,7 @@ from pathlib import Path
 
 import build_foundations as speech_pipeline
 import build_intro as r
+import render_privacy
 
 UNIT = Path(__file__).resolve().parent / 'unit-00-agentic-csharp'
 lesson = runpy.run_path(str(UNIT / 'lesson.py'))
@@ -46,7 +47,7 @@ SHOTS = {
  'Pause, practice, and prepare Lab 01': [('reset-live', 15, 20, None), ('reset-live', 52, 10, None), ('card:practice', 0, 26, None)],
 }
 # Rendering changes participate in the cache: old bordered frames must not survive.
-RENDER_VERSION = 'context-engineering-v3'
+RENDER_VERSION = 'privacy-and-pacing-v4'
 
 # Editorial markers point to genuine pixels; no UI values are changed.
 # Phrase anchors use the synthesized word timings, keeping highlights in sync.
@@ -136,7 +137,7 @@ def render():
         # Optional fifth field holds the final genuine frame for explanation.
         # Every such hold is labeled; motion is never slowed or synthesized.
         motion_total = sum(x[2] + (x[4] if len(x) > 4 else 0) for x in shots) if shots else 0
-        length = math.ceil(max(r.duration(audio)+.8, motion_total+.8)*15)/15
+        length = math.ceil((r.duration(audio)+1)*15)/15
         inputs, filters = [], []
         if shots:
             for i,shot in enumerate(shots):
@@ -146,11 +147,12 @@ def render():
                     inputs += ['-loop','1','-framerate','15','-t',str(seconds),'-i',r.ASSETS/(name.replace(':','-')+'.png')]
                 else:
                     inputs += ['-ss',str(start),'-t',str(seconds),'-i',r.BUILD/(name+'.mp4')]
-                cut = f'crop={crop[2]}:{crop[3]}:{crop[0]}:{crop[1]},' if crop else ''
+                cut = '' if name.startswith('card:') else render_privacy.source_filters(r.BUILD/(name+'.mp4'), start, seconds)
+                cut += f'crop={crop[2]}:{crop[3]}:{crop[0]}:{crop[1]},' if crop else ''
                 hold_filter = (f",tpad=stop_mode=clone:stop_duration={hold},drawtext=fontfile=sans.ttf:text='Paused for explanation':fontcolor=white:fontsize=24:box=1:boxcolor=0x222222:x=w-tw-24:y=h-th-22:enable='gte(t,{seconds})'" if hold else '')
                 filters.append(f'[{i}:v]{cut}scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=0x141122,setsar=1,fps=15,setpts=PTS-STARTPTS{hold_filter}[v{i}]')
             labels=''.join(f'[v{i}]' for i in range(len(shots)))
-            filters.append(f'{labels}concat=n={len(shots)}:v=1:a=0,tpad=stop_mode=clone:stop_duration={length-motion_total}[base]')
+            filters.append(f'{labels}concat=n={len(shots)}:v=1:a=0,tpad=stop_mode=clone:stop_duration={max(0, length-motion_total)}[base]')
             ninputs=len(shots)
         else:
             kind,key=s['visual'].split(':')
@@ -168,7 +170,7 @@ def render():
             vf+=f",drawtext=fontfile=sans.ttf:text='Paused for explanation':fontcolor=white:fontsize=24:box=1:boxcolor=0x222222:x=w-tw-24:y=h-th-22:enable='gte(t,{motion_total})'"
         filters.append(vf+'[out]')
         clip=r.BUILD/(s['id']+'.mp4')
-        digest=hashlib.sha256(json.dumps([RENDER_VERSION,s,SHOTS.get(s['title']),length,highlights, hashlib.sha256(source.read_bytes()).hexdigest() if not shots else None]).encode()).hexdigest()
+        digest=hashlib.sha256(json.dumps([RENDER_VERSION,s,SHOTS.get(s['title']),length,filters,highlights, hashlib.sha256(source.read_bytes()).hexdigest() if not shots else None]).encode()).hexdigest()
         stamp=clip.with_suffix('.sha256')
         if not clip.exists() or not stamp.exists() or stamp.read_text()!=digest:
             r.run('ffmpeg','-y','-v','error',*inputs,'-i',audio,'-filter_complex',';'.join(filters),'-map','[out]','-map',f'{ninputs}:a','-af','adelay=300:all=1,apad','-t',length,'-c:v','libx264','-preset','veryfast','-crf','21','-pix_fmt','yuv420p','-c:a','aac','-b:a','128k','-ar','48000','-ac','2',clip)

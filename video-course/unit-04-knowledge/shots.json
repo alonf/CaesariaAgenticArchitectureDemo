@@ -38,7 +38,7 @@
     },
     {
       "source": "../production-batch/assets/windows-03-06.mp4",
-      "start": 423,
+      "start": 480,
       "seconds": 5,
       "hold": 7
     }
@@ -46,29 +46,23 @@
   "lab04-03": [
     {
       "source": "../production-batch/assets/windows-03-06.mp4",
-      "start": 480,
-      "seconds": 10,
-      "hold": 0
-    },
-    {
-      "source": "../production-batch/assets/windows-03-06.mp4",
       "start": 486,
-      "seconds": 6,
+      "seconds": 5,
       "hold": 0
     },
     {
       "source": "../production-batch/assets/windows-03-06.mp4",
-      "start": 492,
-      "seconds": 14,
-      "hold": 8
+      "start": 496,
+      "seconds": 6,
+      "hold": 27
     }
   ],
   "lab04-04": [
     {
       "source": "../production-batch/assets/windows-03-06.mp4",
-      "start": 608,
-      "seconds": 13,
-      "hold": 0
+      "start": 612,
+      "seconds": 6,
+      "hold": 7
     },
     {
       "source": "../production-batch/assets/windows-03-06.mp4",

@@ -44,38 +44,40 @@
     {
       "source": "../production-batch/assets/windows-14-evaluation.mp4",
       "start": 315,
-      "seconds": 6
+      "seconds": 4,
+      "hold": 0
     },
     {
       "source": "../production-batch/assets/windows-14-evaluation.mp4",
       "start": 322,
-      "seconds": 7
+      "seconds": 7,
+      "hold": 9
     },
     {
       "source": "../production-batch/assets/windows-14-evaluation.mp4",
-      "start": 330,
-      "seconds": 10,
-      "hold": 15
+      "start": 334,
+      "seconds": 6,
+      "hold": 12
     }
   ],
   "lab14-05": [
     {
       "source": "../production-batch/assets/windows-14-evaluation.mp4",
       "start": 345,
-      "seconds": 10,
-      "hold": 8
-    },
-    {
-      "source": "../production-batch/assets/windows-14-evaluation.mp4",
-      "start": 151,
       "seconds": 8,
-      "hold": 9
+      "hold": 6
     },
     {
       "source": "../production-batch/assets/windows-14-evaluation.mp4",
-      "start": 164,
+      "start": 154,
       "seconds": 7,
-      "hold": 9
+      "hold": 4
+    },
+    {
+      "source": "../production-batch/assets/windows-14-evaluation.mp4",
+      "start": 170,
+      "seconds": 2,
+      "hold": 24
     }
   ],
   "lab14-06": [

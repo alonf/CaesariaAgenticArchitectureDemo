@@ -15,22 +15,32 @@
     {
       "source": "../production-batch/assets/windows-07-08.mp4",
       "start": 27,
-      "seconds": 7
+      "seconds": 4,
+      "hold": 0
+    },
+    {
+      "source": "../production-batch/assets/windows-07-08.mp4",
+      "start": 40,
+      "seconds": 3,
+      "hold": 0
     },
     {
       "source": "../production-batch/assets/windows-07-08.mp4",
       "start": 90,
-      "seconds": 9
+      "seconds": 3,
+      "hold": 1
     },
     {
       "source": "../production-batch/assets/windows-07-08.mp4",
       "start": 109,
-      "seconds": 8
+      "seconds": 4,
+      "hold": 0
     },
     {
       "source": "../production-batch/assets/windows-07-08.mp4",
       "start": 252,
-      "seconds": 9
+      "seconds": 9,
+      "hold": 9
     }
   ],
   "lab07-03": [
@@ -38,41 +48,39 @@
       "source": "../production-batch/assets/windows-07-08.mp4",
       "start": 375,
       "seconds": 10,
-      "hold": 6
+      "hold": 0
     },
     {
       "source": "../production-batch/assets/windows-07-08.mp4",
       "start": 391,
       "seconds": 10,
-      "hold": 8
+      "hold": 14
     }
   ],
   "lab07-04": [
     {
       "source": "../production-batch/assets/windows-07-08.mp4",
-      "start": 270,
-      "seconds": 11
+      "start": 276,
+      "seconds": 6,
+      "hold": 1
     },
     {
       "source": "../production-batch/assets/windows-07-08.mp4",
-      "start": 313,
-      "seconds": 8
+      "start": 315,
+      "seconds": 5,
+      "hold": 10
     },
     {
       "source": "../production-batch/assets/windows-07-08.mp4",
       "start": 322,
-      "seconds": 7
-    },
-    {
-      "source": "../production-batch/assets/windows-07-08.mp4",
-      "start": 327,
-      "seconds": 6
+      "seconds": 4,
+      "hold": 0
     },
     {
       "source": "../production-batch/assets/windows-07-08.mp4",
       "start": 333,
       "seconds": 5,
-      "hold": 6
+      "hold": 12
     }
   ],
   "lab07-05": [
@@ -84,14 +92,15 @@
     },
     {
       "source": "../production-batch/assets/windows-07-08.mp4",
-      "start": 359,
-      "seconds": 9
+      "start": 353,
+      "seconds": 4,
+      "hold": 0
     },
     {
       "source": "../production-batch/assets/windows-07-08.mp4",
       "start": 402,
       "seconds": 9,
-      "hold": 6
+      "hold": 11
     }
   ],
   "lab07-06": [

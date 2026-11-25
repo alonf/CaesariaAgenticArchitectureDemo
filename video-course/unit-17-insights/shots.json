@@ -25,8 +25,8 @@
     {
       "source": "../production-batch/assets/windows-16-17.mp4",
       "start": 146,
-      "seconds": 8,
-      "hold": 9
+      "seconds": 6,
+      "hold": 11
     },
     {
       "source": "../production-batch/assets/windows-16-17.mp4",
@@ -39,14 +39,14 @@
     {
       "source": "../production-batch/assets/windows-16-17.mp4",
       "start": 178,
-      "seconds": 8,
-      "hold": 9
+      "seconds": 5,
+      "hold": 1
     },
     {
       "source": "../production-batch/assets/windows-16-17.mp4",
       "start": 198,
       "seconds": 9,
-      "hold": 15
+      "hold": 26
     }
   ],
   "lab17-05": [
