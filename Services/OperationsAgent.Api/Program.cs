@@ -77,11 +77,24 @@ builder.Services.AddHttpClient(SecurityAgentWarmup.HttpClientName, (serviceProvi
 });
 // The HTTP client the Security Agent's MCP transport rides on. Note what is absent: this service
 // has no client for the Security Hub itself.
+#pragma warning disable EXTEXP0001 // Replace the default short-request pipeline for a whole specialist run.
 builder.Services.AddHttpClient("securityagent-mcp", (serviceProvider, client) =>
-{
-    var options = serviceProvider.GetRequiredService<IOptions<OperationsAgentApiOptions>>().Value;
-    client.BaseAddress = new Uri(options.SecurityAgentBaseUri, UriKind.Absolute);
-});
+    {
+        var options = serviceProvider.GetRequiredService<IOptions<OperationsAgentApiOptions>>().Value;
+        client.BaseAddress = new Uri(options.SecurityAgentBaseUri, UriKind.Absolute);
+    })
+    // The specialist has a 45-second execution budget. The default 10-second attempt timeout
+    // cancels its model call before it can answer. Keep transport bounded just outside that
+    // budget, and never retry a POST that would start the specialist's investigation again.
+    .RemoveAllResilienceHandlers()
+    .AddStandardResilienceHandler(resilience =>
+    {
+        resilience.Retry.DisableForUnsafeHttpMethods();
+        resilience.AttemptTimeout.Timeout = TimeSpan.FromSeconds(50);
+        resilience.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(55);
+        resilience.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(100);
+    });
+#pragma warning restore EXTEXP0001
 builder.Services.AddSingleton<WorkforceAgentWarmup>();
 builder.Services.AddHttpClient(WorkforceAgentWarmup.HttpClientName, (serviceProvider, client) =>
 {

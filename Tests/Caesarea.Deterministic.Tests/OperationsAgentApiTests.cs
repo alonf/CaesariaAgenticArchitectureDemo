@@ -23,6 +23,36 @@ public sealed class OperationsAgentApiTests
     private static readonly JsonSerializerOptions JsonOptions = CaesareaJsonDefaults.CreateSerializerOptions();
 
     [Fact]
+    public async Task ASpecialistCallCanOutliveTheDefaultShortRequestTimeout()
+    {
+        using var handler = new SpecialistResponseHandler(TimeSpan.FromSeconds(11), HttpStatusCode.OK);
+        await using var world = new ApiWorld(configureServices: services =>
+            services.AddHttpClient("securityagent-mcp").ConfigurePrimaryHttpMessageHandler(() => handler));
+        using var client = world.Services.GetRequiredService<IHttpClientFactory>().CreateClient("securityagent-mcp");
+
+        using var response = await client.PostAsync(
+            new Uri("http://localhost/mcp"), new StringContent("specialist request"), TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(1, handler.Calls);
+    }
+
+    [Fact]
+    public async Task AFailedSpecialistPostIsNotAutomaticallyRepeated()
+    {
+        using var handler = new SpecialistResponseHandler(TimeSpan.Zero, HttpStatusCode.ServiceUnavailable);
+        await using var world = new ApiWorld(configureServices: services =>
+            services.AddHttpClient("securityagent-mcp").ConfigurePrimaryHttpMessageHandler(() => handler));
+        using var client = world.Services.GetRequiredService<IHttpClientFactory>().CreateClient("securityagent-mcp");
+
+        using var response = await client.PostAsync(
+            new Uri("http://localhost/mcp"), new StringContent("specialist request"), TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        Assert.Equal(1, handler.Calls);
+    }
+
+    [Fact]
     public async Task AnUnresolvableApprovalLoopIsReportedAsAConflict()
     {
         // A model that keeps re-requesting a capability exhausts the bounded rounds. Returning its
@@ -394,7 +424,7 @@ public sealed class OperationsAgentApiTests
     {
         private readonly WebApplicationFactory<FoundryOperationsAgent> _factory;
 
-        public ApiWorld(DemoStage stage = DemoStage.ToolApproval)
+        public ApiWorld(DemoStage stage = DemoStage.ToolApproval, Action<IServiceCollection>? configureServices = null)
         {
             _factory = new WebApplicationFactory<FoundryOperationsAgent>().WithWebHostBuilder(builder =>
             {
@@ -423,6 +453,8 @@ public sealed class OperationsAgentApiTests
                     {
                         services.Remove(synchronizer);
                     }
+
+                    configureServices?.Invoke(services);
                 });
             });
         }
@@ -456,6 +488,18 @@ public sealed class OperationsAgentApiTests
             LastReportedAt: DateTimeOffset.UtcNow,
             OperationalContext.None,
             StateRevision: 1);
+    }
+
+    private sealed class SpecialistResponseHandler(TimeSpan delay, HttpStatusCode status) : HttpMessageHandler
+    {
+        public int Calls { get; private set; }
+
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Calls++;
+            await Task.Delay(delay, cancellationToken);
+            return new HttpResponseMessage(status) { Content = new StringContent("specialist result") };
+        }
     }
 }
 

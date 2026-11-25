@@ -21,18 +21,18 @@ builder.Services.AddHttpClient<OperationsAgentApiClient>((serviceProvider, clien
     {
         var options = serviceProvider.GetRequiredService<IOptions<CommandCenterWebOptions>>().Value;
         client.BaseAddress = new Uri(options.OperationsAgentBaseUri, UriKind.Absolute);
-        client.Timeout = TimeSpan.FromSeconds(120);
+        client.Timeout = TimeSpan.FromSeconds(210);
     })
-    // The agent's server-side execution budget is 90 seconds and a cold model call can take about a
-    // minute; the default resilience pipeline (10 s attempt timeout, retries) would abort and then
-    // duplicate the model invocation. Give this client budget-aligned timeouts and no unsafe retries.
+    // The agent's configured execution budget is 150 seconds (validated maximum 180), including
+    // operator waits. Let the server finish or report its own timeout before abandoning the HTTP
+    // response, especially after an approved write. Never retry a model invocation automatically.
     .RemoveAllResilienceHandlers()
     .AddStandardResilienceHandler(resilience =>
     {
         resilience.Retry.DisableForUnsafeHttpMethods();
-        resilience.AttemptTimeout.Timeout = TimeSpan.FromSeconds(100);
-        resilience.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(110);
-        resilience.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(200);
+        resilience.AttemptTimeout.Timeout = TimeSpan.FromSeconds(190);
+        resilience.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(200);
+        resilience.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(380);
     });
 
 // The presenter's own credential, resolved at call time: az login on a laptop, anything else
