@@ -23,6 +23,8 @@
 
 ## How to review
 
+Lab 02 has been revised after review: debugger footage and highlights are synchronized at 03:38–04:28, and the exercise card from 05:16 uses the course background and signature. Reopen the same video link to load the revised file. Other lessons have not been changed in this revision.
+
 Use `lab number — video timestamp — requested change`. The timed script provides scene ranges, and each `shots.json` identifies the source recording. Read the lab's expected result and recovery exercise when assessing whether a learner can reproduce the lesson. Embedded subtitles can be enabled in VLC; SRT and VTT files are also beside every MP4.
 
 ## Important review boundaries

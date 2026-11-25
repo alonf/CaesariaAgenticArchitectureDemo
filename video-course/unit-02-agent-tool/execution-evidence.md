@@ -9,3 +9,10 @@ Baseline `843e0d0`, Windows, local Aspire and real Foundry model inference; Smar
 - `lab02-config-check.json` is an off-camera API smoke check, not substituted for UI evidence. `lab02-before.json` is from the prior AppHost process and is not comparable to the restarted fixture.
 
 Post-production: synthetic review narration; cuts remove waits; held frames are labeled. Automated decoding/caption/chapter checks and visual scene checks completed. The cut awaits Alon's full content review; see [review index](../review-index.md).
+
+## Review correction — debugger synchronization and course background
+
+- Recut 03:38.4–04:28.4 against the existing narration's word timings: Watch values, first received tool call, second sent tool result, then second received answer. The old final source clip crossed into the browser at raw 791 seconds and held that wrong screen. All replacement clips finish before that transition; holds remain labeled.
+- Highlight boxes now follow the spoken values and the actual debugger layout. The browser returns only at 04:28.4, when the timeout explanation begins. Narration, total duration and later timestamps are unchanged.
+- Rebuilt the exercise card at 05:16.4–06:19.4 (including the reported 05:24 frame) with the approved `signature-background.png`, keeping the signature clear of the text. Reproduce it with `python video-course/unit-02-agent-tool/build-exercise.py` before rendering.
+- Reviewed exported frames through the debugger section and into the browser, and the card at 05:24. Full audio/video decoding, chapter boundaries and 84 caption cues pass. Other lessons are unchanged pending review.

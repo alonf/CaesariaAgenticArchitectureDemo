@@ -1,9 +1,25 @@
 [
   {
+    "unit": "unit-02-agent-tool",
+    "duration": 379.42,
+    "chapters": 8,
+    "captions": 84,
+    "decode": "passed",
+    "streams": "1080p video + audio + English subtitles"
+  },
+  {
     "unit": "unit-08-interactive-input",
     "duration": 256.02,
     "chapters": 7,
     "captions": 54,
+    "decode": "passed",
+    "streams": "1080p video + audio + English subtitles"
+  },
+  {
+    "unit": "unit-15-durable-recovery",
+    "duration": 323.02,
+    "chapters": 7,
+    "captions": 56,
     "decode": "passed",
     "streams": "1080p video + audio + English subtitles"
   },
@@ -20,14 +36,6 @@
     "duration": 200.09,
     "chapters": 5,
     "captions": 41,
-    "decode": "passed",
-    "streams": "1080p video + audio + English subtitles"
-  },
-  {
-    "unit": "unit-15-durable-recovery",
-    "duration": 323.02,
-    "chapters": 7,
-    "captions": 56,
     "decode": "passed",
     "streams": "1080p video + audio + English subtitles"
   }
