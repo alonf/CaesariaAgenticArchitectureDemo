@@ -1,9 +1,14 @@
 {
   "lab18-01": [
     {
+      "source": "../unit-00-agentic-csharp/assets/deck-12.png",
+      "seconds": 1
+    },
+    {
       "source": "../unit-01-deterministic-foundation/output/agentic-csharp-lab-01-rough-cut.mp4",
       "start": 0.0,
-      "seconds": 4
+      "seconds": 4,
+      "narration_anchor": "We began"
     },
     {
       "source": "assets/journey.png",

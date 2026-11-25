@@ -10,7 +10,7 @@ The learner can explain the architecture journey and write a first design brief 
 
 | Beat | Screen | Why this belongs in the conclusion |
 |---|---|---|
-| Look how far you have come | Earlier daylight anomaly, then journey map | Return to the familiar incident and show the change in the learner's understanding. Explicitly identify separate recorded experiments. |
+| Introduce the course summary, then look how far you have come | Architecture slide 12, then earlier daylight anomaly and journey map | First orient viewers: connect the lessons, revisit the design decisions, and choose a next step for their own system. Hold the architecture overview through this introduction before returning to the familiar incident. Explicitly identify separate recorded experiments. |
 | Keep the useful system at the center | Slide 12, Mac deterministic restore, Hub receipt/state | The course began with a useful system whose authority remains intact after agents are added. |
 | Understand the loop behind an answer | Slide 14, debugger exchanges from Unit 00 | Connect context, model-selected function, C# execution, tool result and final answer; explain observable protocol rather than hidden reasoning. |
 | Give context a meaning and a source | Work-order evidence, empty search, context-role card | Contrast conversation, knowledge, remembered cases and procedures without listing API features. |

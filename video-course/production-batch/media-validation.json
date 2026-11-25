@@ -181,9 +181,9 @@
   },
   {
     "unit": "unit-18-summary",
-    "duration": 549.02,
+    "duration": 572.76,
     "chapters": 13,
-    "captions": 124,
+    "captions": 129,
     "maxNarrationTailSeconds": 1.142,
     "silencesOver2_5Seconds": 0,
     "decode": "passed",

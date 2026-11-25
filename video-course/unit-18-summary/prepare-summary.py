@@ -49,10 +49,10 @@ def add(title, picture, narration, shots):
     SCENES.append(dict(title=title, picture=picture, narration=narration, shots=shots))
 
 
-add('Look how far you have come',
-    'Earlier Lab 01: daylight anomaly. Cut to the branded journey map as the recap is introduced.',
-    'We began with a light that was on during daylight. By the end, you could explain far more than whether it was on. You could identify the service that owns the facts, inspect the evidence behind an explanation, locate the decision that permits an action, and prove what actually happened. Let us retrace that journey using excerpts from our earlier labs. These are separate recorded experiments, with their own starting fixtures, not one uninterrupted run. The smart city gave us a concrete example. The skills you have developed apply to the C sharp systems you already own, and to the systems you will build next.',
-    [excerpt(1,'lab01-01',0,4), still('journey',anchor='Let us retrace')])
+add('Course summary: look how far you have come',
+    'Open on architecture slide 12 (previously shown around 00:42) and introduce the purpose of the course summary. Hold the complete picture throughout the introduction. At “We began”, return to the earlier Lab 01 daylight anomaly, then the branded journey map.',
+    'Welcome to the course summary. Before we finish, let us step back and look at the complete picture. Throughout Agentic C sharp, we have explored how to architect, design and implement agentic systems using Microsoft Agent Framework and Microsoft Foundry. In this final chapter, we will connect the lessons, revisit the decisions behind the code, and turn what you have learned into a practical next step for your own system. We began with a light that was on during daylight. By the end, you could explain far more than whether it was on. You could identify the service that owns the facts, inspect the evidence behind an explanation, locate the decision that permits an action, and prove what actually happened. Let us retrace that journey using excerpts from our earlier labs. These are separate recorded experiments, with their own starting fixtures, not one uninterrupted run. The smart city gave us a concrete example. The skills you have developed apply to the C sharp systems you already own, and to the systems you will build next.',
+    [deck(12), excerpt(1,'lab01-01',0,4,anchor='We began'), still('journey',anchor='Let us retrace')])
 
 add('Keep the useful system at the center',
     'Slide 12 establishes the Hubs. Earlier Mac restore action, then genuine Hub JSON. End on the three-role card.',

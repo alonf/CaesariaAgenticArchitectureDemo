@@ -2,7 +2,7 @@
 
 **Introduction and Labs 01–17 revised for teaching clarity, timing, privacy and visual consistency.** These local rough cuts use real application/code footage, synthetic review narration, chapters and English captions, plus companion labs. Reopen the same video files to load the revisions. Media and raw evidence are intentionally excluded from git.
 
-**New: closing chapter, 09:09.** Retrace the journey through earlier recorded examples, then choose between adding an agentic layer to an existing application and designing a new C# agentic system. Finish with a design brief and an invitation to share the course. [Closing storyboard](unit-18-summary/storyboard.md) · [Review notes and chapter ranges](unit-18-summary/review-notes.md).
+**New: closing chapter, 09:32.** Retrace the journey through earlier recorded examples, then choose between adding an agentic layer to an existing application and designing a new C# agentic system. Finish with a design brief and an invitation to share the course. [Closing storyboard](unit-18-summary/storyboard.md) · [Review notes and chapter ranges](unit-18-summary/review-notes.md).
 
 [Teaching clarity analysis and decisions](production-batch/review-teaching-clarity.md) · [New viewing ranges](production-batch/review-teaching-ranges.md) · [Earlier privacy/pacing review](production-batch/review-privacy-pacing.md)
 
@@ -26,7 +26,7 @@
 | 15 | [Durable recovery](unit-15-durable-recovery/output/agentic-csharp-lab-15-rough-cut.mp4) | 04:50 | [Lab](unit-15-durable-recovery/lab.md) · [Timed script](unit-15-durable-recovery/output/timed-shooting-script.md) · [Captions](unit-15-durable-recovery/output/agentic-csharp-lab-15.en.srt) |
 | 16 | [Routines preparation (optional)](unit-16-routines/output/agentic-csharp-lab-16-rough-cut.mp4) | 03:07 | [Lab](unit-16-routines/lab.md) · [Timed script](unit-16-routines/output/timed-shooting-script.md) · [Captions](unit-16-routines/output/agentic-csharp-lab-16.en.srt) |
 | 17 | [Insights preparation (optional)](unit-17-insights/output/agentic-csharp-lab-17-rough-cut.mp4) | 03:06 | [Lab](unit-17-insights/lab.md) · [Timed script](unit-17-insights/output/timed-shooting-script.md) · [Captions](unit-17-insights/output/agentic-csharp-lab-17.en.srt) |
-| 18 | [The journey and your next step](unit-18-summary/output/agentic-csharp-lab-18-rough-cut.mp4) | 09:09 | [Exercise](unit-18-summary/lab.md) · [Timed script](unit-18-summary/output/timed-shooting-script.md) · [Captions](unit-18-summary/output/agentic-csharp-lab-18.en.srt) |
+| 18 | [The journey and your next step](unit-18-summary/output/agentic-csharp-lab-18-rough-cut.mp4) | 09:32 | [Exercise](unit-18-summary/lab.md) · [Timed script](unit-18-summary/output/timed-shooting-script.md) · [Captions](unit-18-summary/output/agentic-csharp-lab-18.en.srt) |
 
 ## How to review
 

@@ -2,11 +2,11 @@
 
 New synthetic review narration over explicitly retrospective course excerpts. No new live run or cloud deployment. Exact final timestamps are generated in output/timed-shooting-script.md.
 
-## 01 — Look how far you have come
+## 01 — Course summary: look how far you have come
 
-**Picture:** Earlier Lab 01: daylight anomaly. Cut to the branded journey map as the recap is introduced.
+**Picture:** Open on architecture slide 12 (previously shown around 00:42) and introduce the purpose of the course summary. Hold the complete picture throughout the introduction. At “We began”, return to the earlier Lab 01 daylight anomaly, then the branded journey map.
 
-**Narration:** We began with a light that was on during daylight. By the end, you could explain far more than whether it was on. You could identify the service that owns the facts, inspect the evidence behind an explanation, locate the decision that permits an action, and prove what actually happened. Let us retrace that journey using excerpts from our earlier labs. These are separate recorded experiments, with their own starting fixtures, not one uninterrupted run. The smart city gave us a concrete example. The skills you have developed apply to the C sharp systems you already own, and to the systems you will build next.
+**Narration:** Welcome to the course summary. Before we finish, let us step back and look at the complete picture. Throughout Agentic C sharp, we have explored how to architect, design and implement agentic systems using Microsoft Agent Framework and Microsoft Foundry. In this final chapter, we will connect the lessons, revisit the decisions behind the code, and turn what you have learned into a practical next step for your own system. We began with a light that was on during daylight. By the end, you could explain far more than whether it was on. You could identify the service that owns the facts, inspect the evidence behind an explanation, locate the decision that permits an action, and prove what actually happened. Let us retrace that journey using excerpts from our earlier labs. These are separate recorded experiments, with their own starting fixtures, not one uninterrupted run. The smart city gave us a concrete example. The skills you have developed apply to the C sharp systems you already own, and to the systems you will build next.
 
 ## 02 — Keep the useful system at the center
 
