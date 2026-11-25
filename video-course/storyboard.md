@@ -43,7 +43,9 @@ Teach in present tense without historical date comparisons. Keep exact version p
 the setup/source notes. Spoken version guidance: the lab code is .NET 11; the same Agent
 Framework concepts and patterns apply on .NET 10 LTS. This checkout still requires its declared SDK.
 Always say **Microsoft Agent Framework** or **Agent Framework**, never the acronym.
-Keep the Mac recording for a later lesson; Unit 00 explains the IDE choice without a Mac take.
+Unit 00 explains the IDE choice without a Mac take. Lab 01 introduces the actual Mac checkout,
+C# Dev Kit and Foundry Toolkit before the deterministic exercise; see its
+[shooting plan](unit-01-deterministic-foundation/storyboard.md).
 
 Context Engineering is the recurring model for later lessons: application/framework assemble
 instructions, user request, history, knowledge and admitted tool definitions; the model may request
@@ -87,15 +89,15 @@ minutes. Do not speed through code or time-critical approvals to hit a fixed dur
 The numbers are navigation anchors into the Director, not a requirement for seventeen equally
 weighted videos. The learning path is **operate and verify → investigate with evidence → control
 consequential actions → collaborate across boundaries → prove and operate the system**.
-Combine or split later lessons after reviewing the pilot. Produce **only Unit 00 now**, then stop
-for review. Hosting, Routines, Insights and other cloud or preview experiences are optional labs
+Combine or split later lessons after reviewing the pilot. Unit 00 is approved. Production is now
+authorized through **Lab 01**, then stops for review. Hosting, Routines, Insights and other cloud or preview experiences are optional labs
 with explicit prerequisites and availability labels. No cloud deployment, shared-setting change,
 or publishing is authorized as part of this local course-production task.
 
 | Unit | Title / purpose | Published slide pages | Scenario / stage | Code anchor and completion evidence |
 |---|---|---|---|---|
 | 00 | Understand, run and debug the system | Alon-branded deck; book rationale; GitHub; Microsoft Learn; real app/Foundry/IDE recordings | Foundations, then Lights On / InvestigationAgent for a read-only debugger exercise | Audience and purpose; MAF/Foundry; repo/README/code map; slide 12 Hubs/twins → 13 agentic layer → 14 context loop → 16/18 simple C#; Aspire → Director → Command Center → Director attach/inspect/detach in either IDE; actual model/tool/result evidence |
-| 01 | The deterministic foundation | Deck 7, 11–13 | Lights On / Deterministic | `CommandCenterService.cs`, `HttpEnergyHubGateway.cs`; restore schedule, receipt succeeds, lamp off, no invented investigation |
+| 01 | Operate and verify before adding an agent | Deck 12; 14 for recap; 6 for decisions | Lights On / Deterministic, then Controller Fault | Mac VS Code and Foundry Toolkit orientation; `CommandCenterService.cs`, `HttpEnergyHubGateway.cs`, `EnergyHubService.cs`; restore schedule, verify Hub receipt and reported state, demonstrate failure, reset |
 | 02 | The first agent and its function tool | Deck 15–18 | Lights On / InvestigationAgent | `AGENT_CREATION`, `FUNCTION_TOOL`; real `get_streetlight_state` invocation and unchanged authoritative state |
 | 03 | A conversation that remembers | Deck 20–21 | Lights On / Session | `AGENT_SESSION`, `AgentSessionStore.cs`; ask then Why in the same session, compare a new session |
 | 04 | Knowledge with evidence | Deck 22–23 | Lights On / Knowledge, evidence present | `KNOWLEDGE_RETRIEVAL`, `WorkKnowledge.cs`; cite WO-8732, then withhold evidence and show uncertainty |
@@ -346,5 +348,12 @@ Every lab ends with a code investigation, an official-documentation check, or a 
 | 17 | When is an Insight a hypothesis, and how does it become a regression test? | Linked finding evidence and a reviewed bounded case. |
 
 ## Current production baseline
+
+Lab 01 application baseline is `843e0d0`: GitHub main, Windows and Mac are synchronized on
+.NET 11 and Aspire 17. Course edits use `video-course/lab01-cross-platform`. Alternate Mac and
+Windows across teaching beats without repeating the same demo; VS Code is the primary editor
+on both, with occasional Visual Studio 2026 on Windows. Explicitly establish the fixture after
+switching machines because their local operational state is independent. The paragraph below
+records Unit 00's historical production baseline, not the current state of GitHub main.
 
 Unit 00 uses the local `main` application merge `9d2f766cc19050495c52a601075df15870c4c0af`; expanded captures were made at `90f14e6` after course-only changes. The .NET 11 upgrade and durable UI are merged. All media remains local; remote main has not been updated by this production task. The companion lab includes a release gate before distributing clone instructions. Use the new Alon-branded deck, not conference-branded frames. Older pilots and the preceding branded cut remain archived review material.

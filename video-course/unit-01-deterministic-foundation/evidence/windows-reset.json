@@ -1,0 +1,33 @@
+{
+  "assetId": "L-417",
+  "area": "North Promenade",
+  "reportedIsOn": true,
+  "desiredIsOn": true,
+  "isDaylight": true,
+  "expectedScheduledState": false,
+  "manualOverride": true,
+  "controllerHealth": {
+    "status": "Healthy",
+    "summary": "Controller healthy"
+  },
+  "lastCommand": {
+    "operation": "Apply scenario",
+    "desiredIsOn": true,
+    "status": "Succeeded",
+    "correlationId": "f88515550c2843f398a1a12379594dab",
+    "requestedAt": "2026-11-25T04:09:21.5233253+02:00",
+    "completedAt": "2026-11-25T04:09:21.5233253+02:00",
+    "summary": "Scenario state applied to the SmartPole simulator."
+  },
+  "lastMaintenanceTime": "2026-11-25T03:39:21.4975408+02:00",
+  "hasRecentMaintenance": true,
+  "openIncidentId": null,
+  "lastReportedAt": "2026-11-25T04:09:21.5233253+02:00",
+  "operationContext": {
+    "requiresLighting": false,
+    "summary": "No cross-domain lighting requirement."
+  },
+  "stateRevision": 21,
+  "effectiveTargetIsOn": false,
+  "isAnomalous": true
+}

@@ -1,0 +1,590 @@
+WEBVTT
+
+00:00:00.400 --> 00:00:05.562
+Welcome back to Agentic C sharp In the
+introduction we separated three
+responsibilities
+
+00:00:05.812 --> 00:00:10.775
+the operational system the Agent Framework
+that coordinates model and tool interaction
+
+00:00:11.163 --> 00:00:14.812
+and Foundry as the platform We also followed
+a real request in a
+
+00:00:14.825 --> 00:00:19.488
+debugger The model selected a function tool
+ordinary C sharp code read the
+
+00:00:19.500 --> 00:00:23.662
+Energy Hub and the returned facts became
+context for the next model call
+
+00:00:24.025 --> 00:00:28.075
+The agent answered but the lamp did not
+change Here is our continuing
+
+00:00:28.088 --> 00:00:32.775
+incident L-417 is on in daylight Before we
+give an agent a way
+
+00:00:32.787 --> 00:00:36.750
+to request a repair we need to understand
+the operation itself and how
+
+00:00:36.762 --> 00:00:39.262
+to prove its result That is our first lab
+
+00:00:40.800 --> 00:00:45.125
+We are now in Visual Studio Code on macOS
+The repository is the
+
+00:00:45.137 --> 00:00:49.775
+same cumulative C sharp solution We select a
+runtime stage we do not
+
+00:00:49.787 --> 00:00:53.850
+maintain a different branch for each lesson
+Start with the README then locate
+
+00:00:53.862 --> 00:00:59.700
+Apps Services Contracts the Aspire AppHost
+and Tests Apps contains the two web
+
+00:00:59.712 --> 00:01:04.675
+interfaces Services contains the operational
+services and the agent services
+
+00:01:05.037 --> 00:01:10.225
+Each boundary has focused contracts AppHost
+starts and connects the local processes
+
+00:01:10.587 --> 00:01:15.150
+The tests check behavior that must remain
+reliable as we add intelligence The
+
+00:01:15.162 --> 00:01:19.650
+lab code is dot net eleven The same Agent
+Framework concepts and patterns
+
+00:01:19.662 --> 00:01:24.150
+apply on dot net ten LTS but this checkout
+needs the SDK declared
+
+00:01:24.162 --> 00:01:29.100
+here Check the version before
+troubleshooting application errors C sharp
+Dev
+
+00:01:29.112 --> 00:01:33.462
+Kit supplies the C sharp development
+experience in VS Code On a Mac
+
+00:01:33.475 --> 00:01:38.375
+we use VS Code on Windows you can also
+choose Visual Studio 2026
+
+00:01:38.738 --> 00:01:42.950
+We already introduced debugging in Unit zero
+Today we will use the editor
+
+00:01:42.975 --> 00:01:45.012
+to follow the deterministic command path
+
+00:01:46.800 --> 00:01:51.550
+In the introduction we visited Foundry in a
+browser Foundry Toolkit brings supported
+
+00:01:51.562 --> 00:01:56.175
+project resources into VS Code so we can
+orient ourselves without leaving the
+
+00:01:56.188 --> 00:02:00.663
+editor Here is our existing project and here
+is the hosted Operations Agent
+
+00:02:01.025 --> 00:02:05.300
+These are cloud resources opening this view
+does not create another local agent
+
+00:02:05.662 --> 00:02:09.825
+The portal and Toolkit are clients for the
+same platform although their available
+
+00:02:09.838 --> 00:02:14.712
+views and features are not identical This
+distinction matters for today's exercise
+
+00:02:15.075 --> 00:02:19.138
+We are about to operate the local
+deterministic system We are not invoking
+
+00:02:19.150 --> 00:02:23.638
+this hosted agent and the exercise needs no
+model credentials If you do
+
+00:02:23.650 --> 00:02:28.550
+not have access to a Foundry project follow
+the recorded orientation and continue
+
+00:02:28.562 --> 00:02:32.312
+with the local lab We will return to hosting
+when the architecture needs
+
+00:02:32.325 --> 00:02:37.562
+it For now remember the division the editor
+is our development environment Foundry
+
+00:02:37.575 --> 00:02:42.338
+supplies platform services and the Energy
+Hub remains responsible for the operational
+
+00:02:42.350 --> 00:02:43.825
+state we are about to change
+
+00:02:45.333 --> 00:02:48.096
+By the end of this module you should be able
+to trace one
+
+00:02:48.108 --> 00:02:52.221
+command from the operator interface to the
+Hub and controller distinguish an
+
+00:02:52.233 --> 00:02:56.871
+intended state from a confirmed state and
+prove both success and failure You
+
+00:02:56.883 --> 00:03:00.308
+should also be able to reset the lab for
+another attempt This is
+
+00:03:00.321 --> 00:03:04.596
+why we start with deterministic code
+Restoring a known schedule is a bounded
+
+00:03:04.608 --> 00:03:09.246
+operation with explicit rules A language
+model does not improve the definition
+
+00:03:09.258 --> 00:03:13.358
+of success Later an agent may help
+investigate why the lamp is on
+
+00:03:13.671 --> 00:03:16.433
+that does not transfer ownership of the
+repair to the model
+
+00:03:18.333 --> 00:03:23.321
+Start the AppHost and use its printed
+dashboard URL Aspire shows the processes
+
+00:03:23.333 --> 00:03:27.883
+and their endpoints Open the Director and
+Command Center The Director prepares
+
+00:03:27.896 --> 00:03:32.746
+our fixture Command Center is the operator's
+application Select the Deterministic
+
+00:03:32.758 --> 00:03:37.008
+stage and prepare Lights On Reported by a
+Client Now read the walkthrough
+
+00:03:37.021 --> 00:03:42.671
+in the main application Check the facts
+before acting L-417 is reported on
+
+00:03:43.033 --> 00:03:46.758
+It is daylight the scheduled target is off
+and this fixture has a
+
+00:03:46.771 --> 00:03:51.196
+manual override with a healthy controller
+The Hub read provides our independent
+
+00:03:51.208 --> 00:03:55.608
+starting checkpoint These are seeded
+conditions for this exercise We are not
+
+00:03:55.621 --> 00:03:59.996
+concluding that every daylight anomaly is an
+abandoned override In the later
+
+00:04:00.008 --> 00:04:03.471
+investigation lessons explanations will need
+their own evidence
+
+00:04:05.333 --> 00:04:09.858
+Before we click notice what Restore
+Scheduled Mode means restore the schedule
+
+00:04:10.171 --> 00:04:14.108
+not set an arbitrary Boolean selected by a
+model The Hub reads the
+
+00:04:14.121 --> 00:04:18.446
+controller state and computes the scheduled
+target It records a pending command
+
+00:04:18.508 --> 00:04:22.546
+and sends the request through its controller
+boundary Only a confirmed result
+
+00:04:22.558 --> 00:04:26.596
+allows it to update the reported state We
+will locate the pending transition
+
+00:04:26.608 --> 00:04:31.083
+in the code because this operation completes
+too quickly to inspect that intermediate
+
+00:04:31.096 --> 00:04:36.158
+state in the interface Now the operator
+requests Restore Scheduled Mode The response
+
+00:04:36.171 --> 00:04:40.396
+arrives and the reported state changes to
+off Read the outcome in Command
+
+00:04:40.408 --> 00:04:44.983
+Center then verify it at the Hub The
+interface is useful feedback but
+
+00:04:44.996 --> 00:04:48.608
+it is not our only evidence This discipline
+will stay the same when
+
+00:04:48.621 --> 00:04:53.021
+an agent starts selecting tools a convincing
+sentence is not a command receipt
+
+00:04:54.533 --> 00:04:58.133
+Read these fields with me Desired is off
+that is the target we
+
+00:04:58.146 --> 00:05:02.871
+requested Reported is off that is the state
+confirmed by the controller response
+
+00:05:03.233 --> 00:05:08.021
+Manual override is cleared and the latest
+command receipt says Succeeded Follow
+
+00:05:08.033 --> 00:05:11.958
+its correlation identifier into the Hub
+activity to connect the request with
+
+00:05:11.971 --> 00:05:16.246
+its outcome Do not compare an unrelated
+earlier receipt with the new request
+
+00:05:16.608 --> 00:05:20.546
+Our physical device in this lab is a
+simulator We have verified a
+
+00:05:20.558 --> 00:05:24.771
+real software command path and a real
+response from that simulator we have
+
+00:05:24.783 --> 00:05:29.346
+not claimed to operate a streetlight in a
+deployed city The architectural lesson
+
+00:05:29.358 --> 00:05:33.633
+is transferable Keep the source of truth
+clear and make the confirmation boundary
+
+00:05:33.646 --> 00:05:37.858
+visible We have now moved from a requested
+target to a confirmed outcome
+
+00:05:38.121 --> 00:05:40.596
+with evidence independent of the operator's
+display
+
+00:05:42.533 --> 00:05:46.121
+We are switching to VS Code on Windows to
+inspect the same code
+
+00:05:46.508 --> 00:05:50.971
+not to repeat the successful demonstration
+Each machine runs its own local lab
+
+00:05:51.333 --> 00:05:54.833
+You can follow this entire lesson on either
+platform Let us find the
+
+00:05:54.846 --> 00:05:59.333
+mechanism behind that result Command Center
+receives the operator's request and
+
+00:05:59.346 --> 00:06:04.846
+calls its Energy Hub gateway The gateway
+crosses the focused HTTP boundary carrying
+
+00:06:04.858 --> 00:06:09.446
+the correlation identifier Command Center
+does not reach around the Hub and write
+
+00:06:09.458 --> 00:06:15.021
+the simulator directly Inside the Hub find
+RestoreScheduledModeAsync The optional
+
+00:06:15.033 --> 00:06:18.546
+expected revision is checked under the same
+lock as the new revision claim
+
+00:06:18.908 --> 00:06:23.333
+The method rereads physical state computes
+the scheduled target and records a
+
+00:06:23.346 --> 00:06:28.083
+pending command Now follow the call to
+SetLampStateAsync That is the controller
+
+00:06:28.096 --> 00:06:32.621
+boundary The confirmation guard below it is
+the critical part the result must
+
+00:06:32.633 --> 00:06:36.783
+be Succeeded and must include the actual
+state Only then does this path
+
+00:06:36.796 --> 00:06:41.571
+assign reported state and clear the override
+A success label without confirmation
+
+00:06:41.583 --> 00:06:46.483
+is handled as failure A superseded operation
+must not overwrite a newer revision
+
+00:06:46.846 --> 00:06:51.296
+These are ordinary C sharp rules The
+language model is not responsible for
+
+00:06:51.308 --> 00:06:55.896
+remembering them When we later expose a
+capability to an agent the deterministic
+
+00:06:55.908 --> 00:07:00.283
+service still enforces its own contract The
+debugger and source view help us
+
+00:07:00.296 --> 00:07:04.721
+identify where an outcome becomes true
+rather than trusting what the caller hoped
+
+00:07:04.733 --> 00:07:05.208
+would happen
+
+00:07:06.733 --> 00:07:12.008
+A successful demonstration is only half the
+lesson On Windows attach Visual Studio
+
+00:07:12.021 --> 00:07:16.246
+2026 to the Energy Hub through the Director
+This is an optional debugger
+
+00:07:16.258 --> 00:07:20.271
+choice you can inspect the same C sharp with
+VS Code Set an
+
+00:07:20.283 --> 00:07:24.808
+ordinary breakpoint at the confirmation
+guard Prepare Controller Fault return
+
+00:07:24.821 --> 00:07:29.121
+to Command Center and request Restore
+Scheduled Mode The breakpoint has stopped
+
+00:07:29.133 --> 00:07:34.896
+after the controller call Expand command
+Result in Locals Status is Failed Actual
+
+00:07:34.908 --> 00:07:39.433
+Is On is null The summary says the
+controller rejected the command Step
+
+00:07:39.446 --> 00:07:43.883
+over the condition Execution skips the
+successful update and reaches the failure
+
+00:07:43.896 --> 00:07:48.333
+path This is the value of debugging we can
+connect the observed behavior
+
+00:07:48.346 --> 00:07:52.408
+to the exact rule that enforces it A
+selected operation is not a
+
+00:07:52.421 --> 00:07:56.983
+confirmed repair There is another useful
+observation in this take Holding the
+
+00:07:56.996 --> 00:08:00.871
+Hub at a breakpoint caused the caller to
+time out After continuing the
+
+00:08:00.883 --> 00:08:05.496
+Hub still recorded the controller's failed
+result A timeout alone does not establish
+
+00:08:05.508 --> 00:08:09.908
+the outcome Read the receipt before retrying
+Now detach through the Director
+
+00:08:10.271 --> 00:08:14.358
+Having verified the previous failure make
+another request without the debugger
+
+00:08:14.371 --> 00:08:19.233
+pause Command Center reports the rejection
+immediately Here is the freshly saved
+
+00:08:19.246 --> 00:08:23.896
+Hub response reported is still on desired is
+off and the new receipt
+
+00:08:23.908 --> 00:08:28.758
+says Failed Its correlation identifier
+differs from the paused attempt A later
+
+00:08:28.771 --> 00:08:32.833
+agent must preserve this distinction too
+requesting the right operation does
+
+00:08:32.846 --> 00:08:34.508
+not guarantee that it succeeded
+
+00:08:36.733 --> 00:08:41.446
+Recover through a known fixture Reapply
+Lights On Reported by a Client Check
+
+00:08:41.458 --> 00:08:45.433
+that the controller is healthy and the
+original on-in-daylight condition is back
+
+00:08:45.796 --> 00:08:49.646
+This reset is a lab operation it is not our
+advice for repairing
+
+00:08:49.658 --> 00:08:53.996
+real infrastructure It makes the exercise
+repeatable and keeps the next lesson's
+
+00:08:54.008 --> 00:08:58.458
+starting point honest If a request appears
+stuck check service health and whether
+
+00:08:58.471 --> 00:09:02.921
+a debugger is paused before clicking again
+Inspect the latest receipt before
+
+00:09:02.933 --> 00:09:06.783
+repeating a write with an unknown outcome We
+end with the original anomaly
+
+00:09:06.796 --> 00:09:10.971
+ready for the next investigation A repair in
+one lesson does not silently
+
+00:09:10.983 --> 00:09:14.933
+disappear between videos we show the reset
+that recreates the problem
+
+00:09:16.733 --> 00:09:21.558
+Pause the video and do the lab yourself
+Prepare the deterministic starting fixture
+
+00:09:21.921 --> 00:09:25.983
+Restore the schedule in Command Center and
+verify the Hub's state and receipt
+
+00:09:26.346 --> 00:09:30.733
+Then prepare Controller Fault repeat the
+request and prove that the failure did
+
+00:09:30.746 --> 00:09:35.633
+not become a reported repair Finally reset
+the original anomaly Your evidence
+
+00:09:35.646 --> 00:09:40.308
+note should contain starting facts a
+successful command's correlation identifier
+
+00:09:40.633 --> 00:09:44.983
+a failed command's correlation identifier
+the corresponding reported states and
+
+00:09:44.996 --> 00:09:49.496
+the source location that enforces
+confirmation The expected successful result
+
+00:09:49.571 --> 00:09:54.721
+is desired off reported off override cleared
+and Succeeded The failure keeps
+
+00:09:54.733 --> 00:09:59.383
+reported on and records Failed Your final
+reset should leave the healthy controller
+
+00:09:59.708 --> 00:10:04.433
+reported on and override enabled If your
+results differ use the receipt detail
+
+00:10:04.446 --> 00:10:08.446
+and Aspire logs to explain the difference
+before moving on Resume when you
+
+00:10:08.458 --> 00:10:10.296
+can explain what each field proves
+
+00:10:12.733 --> 00:10:17.108
+Now investigate the code Where is the
+scheduled target computed What happens
+
+00:10:17.121 --> 00:10:21.583
+if a response says success but omits actual-
+state confirmation Where does a stale
+
+00:10:21.596 --> 00:10:26.821
+revision get rejected You can consult
+documentation or ask an AI assistant but
+
+00:10:26.833 --> 00:10:31.408
+require file locations and compare its
+claims with your run Finally ask which
+
+00:10:31.421 --> 00:10:34.783
+new requirement would justify an agent here
+We did not need one to
+
+00:10:34.796 --> 00:10:39.421
+perform a fixed well-defined operation We
+may need help interpreting a report
+
+00:10:39.796 --> 00:10:44.471
+finding evidence choosing among capabilities
+or coordinating a longer investigation
+
+00:10:44.833 --> 00:10:49.746
+That is the decision map in practice This
+lab established the operational foundation
+
+00:10:50.121 --> 00:10:55.208
+requests cross a controlled boundary
+outcomes are confirmed failures remain
+visible
+
+00:10:55.221 --> 00:10:58.771
+and the exercise can be reset In the next
+module we add an
+
+00:10:58.783 --> 00:11:02.921
+investigation agent to this same system The
+agent gains a focused way to
+
+00:11:02.933 --> 00:11:06.321
+observe the world the Energy Hub keeps
+ownership of what is true

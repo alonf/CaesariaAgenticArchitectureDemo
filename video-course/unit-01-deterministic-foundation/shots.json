@@ -1,0 +1,571 @@
+{
+  "lab01-01": [
+    {
+      "source": "assets/mac-main.mp4",
+      "seconds": 4,
+      "start": 3
+    },
+    {
+      "source": "assets/deck-12.png",
+      "seconds": 10
+    },
+    {
+      "source": "assets/deck-14.png",
+      "seconds": 12
+    },
+    {
+      "source": "assets/mac-main.mp4",
+      "seconds": 14,
+      "start": 3
+    }
+  ],
+  "lab01-02": [
+    {
+      "source": "assets/mac-editor.mp4",
+      "seconds": 16,
+      "start": 40
+    },
+    {
+      "source": "assets/mac-editor.mp4",
+      "seconds": 18,
+      "start": 62,
+      "crop": [
+        0,
+        55,
+        2400,
+        1350
+      ]
+    },
+    {
+      "source": "assets/mac-editor.mp4",
+      "seconds": 15,
+      "start": 140,
+      "crop": [
+        650,
+        40,
+        2400,
+        1350
+      ]
+    },
+    {
+      "source": "assets/mac-foundry.mp4",
+      "seconds": 8,
+      "start": 65,
+      "crop": [
+        680,
+        60,
+        2400,
+        1350
+      ],
+      "hold": 9
+    }
+  ],
+  "lab01-03": [
+    {
+      "source": "assets/mac-foundry.mp4",
+      "seconds": 10,
+      "start": 25,
+      "crop": [
+        0,
+        50,
+        3300,
+        1856
+      ]
+    },
+    {
+      "source": "assets/mac-foundry.mp4",
+      "seconds": 15,
+      "start": 40,
+      "crop": [
+        650,
+        60,
+        3100,
+        1744
+      ],
+      "hold": 33
+    }
+  ],
+  "lab01-04": [
+    {
+      "source": "assets/card-outcomes.png",
+      "seconds": 33
+    }
+  ],
+  "lab01-05": [
+    {
+      "source": "assets/aspire17-overview.mp4",
+      "seconds": 10
+    },
+    {
+      "source": "assets/mac-foundry.mp4",
+      "seconds": 8,
+      "start": 135,
+      "crop": [
+        500,
+        180,
+        2850,
+        1600
+      ]
+    },
+    {
+      "source": "assets/mac-main.mp4",
+      "seconds": 6,
+      "start": 15
+    },
+    {
+      "source": "assets/mac-main.mp4",
+      "start": 21,
+      "seconds": 6,
+      "crop": [
+        1250,
+        50,
+        670,
+        376
+      ]
+    },
+    {
+      "source": "assets/mac-proof.mp4",
+      "seconds": 8,
+      "start": 3,
+      "crop": [
+        700,
+        140,
+        2304,
+        1296
+      ],
+      "hold": 9
+    }
+  ],
+  "lab01-06": [
+    {
+      "source": "assets/mac-main.mp4",
+      "seconds": 1,
+      "start": 139,
+      "hold": 27
+    },
+    {
+      "source": "assets/mac-main.mp4",
+      "seconds": 16,
+      "start": 140
+    },
+    {
+      "source": "assets/mac-proof.mp4",
+      "seconds": 2,
+      "start": 65,
+      "crop": [
+        700,
+        140,
+        2304,
+        1296
+      ]
+    }
+  ],
+  "lab01-07": [
+    {
+      "source": "assets/mac-proof.mp4",
+      "seconds": 14,
+      "start": 65,
+      "crop": [
+        700,
+        140,
+        2304,
+        1296
+      ]
+    },
+    {
+      "source": "assets/mac-proof.mp4",
+      "seconds": 8,
+      "start": 108,
+      "crop": [
+        700,
+        850,
+        2304,
+        1296
+      ],
+      "hold": 10
+    },
+    {
+      "source": "assets/mac-main.mp4",
+      "seconds": 10,
+      "start": 148,
+      "hold": 6
+    }
+  ],
+  "lab01-08": [
+    {
+      "source": "assets/windows-screen.mp4",
+      "seconds": 18,
+      "start": 110,
+      "crop": [
+        140,
+        180,
+        3440,
+        1934
+      ]
+    },
+    {
+      "source": "assets/windows-screen.mp4",
+      "seconds": 10,
+      "start": 130,
+      "crop": [
+        140,
+        180,
+        3440,
+        1934
+      ]
+    },
+    {
+      "source": "assets/windows-screen.mp4",
+      "seconds": 9,
+      "start": 149,
+      "crop": [
+        120,
+        580,
+        2688,
+        1512
+      ]
+    },
+    {
+      "source": "assets/windows-screen.mp4",
+      "seconds": 4,
+      "start": 165,
+      "crop": [
+        120,
+        560,
+        2688,
+        1512
+      ]
+    },
+    {
+      "source": "assets/windows-screen.mp4",
+      "seconds": 5,
+      "start": 177,
+      "crop": [
+        120,
+        410,
+        2880,
+        1620
+      ]
+    },
+    {
+      "source": "assets/windows-screen.mp4",
+      "seconds": 16,
+      "start": 191,
+      "crop": [
+        120,
+        420,
+        2880,
+        1620
+      ],
+      "hold": 22
+    }
+  ],
+  "lab01-09": [
+    {
+      "source": "assets/windows-orientation.mp4",
+      "seconds": 5,
+      "start": 32,
+      "crop": [
+        640,
+        200,
+        2600,
+        1462
+      ]
+    },
+    {
+      "source": "assets/windows-orientation.mp4",
+      "seconds": 4,
+      "start": 44,
+      "crop": [
+        640,
+        200,
+        2600,
+        1462
+      ]
+    },
+    {
+      "source": "assets/windows-screen.mp4",
+      "seconds": 7,
+      "start": 191,
+      "crop": [
+        120,
+        420,
+        2880,
+        1620
+      ]
+    },
+    {
+      "source": "assets/windows-screen.mp4",
+      "seconds": 5,
+      "start": 214,
+      "crop": [
+        640,
+        0,
+        2600,
+        1462
+      ]
+    },
+    {
+      "source": "assets/windows-vs-hq.mp4",
+      "seconds": 3,
+      "start": 58,
+      "crop": [
+        0,
+        0,
+        3340,
+        1878
+      ]
+    },
+    {
+      "source": "assets/windows-vs-hq.mp4",
+      "seconds": 8,
+      "start": 67,
+      "crop": [
+        0,
+        1072,
+        1660,
+        934
+      ]
+    },
+    {
+      "source": "assets/windows-vs-hq.mp4",
+      "seconds": 6,
+      "start": 85,
+      "crop": [
+        0,
+        250,
+        3000,
+        1686
+      ]
+    },
+    {
+      "source": "assets/windows-vs-hq.mp4",
+      "seconds": 8,
+      "start": 97,
+      "crop": [
+        0,
+        250,
+        3000,
+        1686
+      ]
+    },
+    {
+      "source": "assets/windows-screen.mp4",
+      "seconds": 15,
+      "start": 16
+    },
+    {
+      "source": "assets/windows-screen.mp4",
+      "seconds": 5,
+      "start": 53,
+      "crop": [
+        640,
+        200,
+        2600,
+        1462
+      ]
+    },
+    {
+      "source": "assets/windows-screen.mp4",
+      "seconds": 6,
+      "start": 79
+    },
+    {
+      "source": "assets/windows-screen.mp4",
+      "seconds": 7,
+      "start": 98,
+      "crop": [
+        120,
+        180,
+        2304,
+        1296
+      ],
+      "hold": 11
+    }
+  ],
+  "lab01-10": [
+    {
+      "source": "assets/windows-screen.mp4",
+      "seconds": 10,
+      "start": 219,
+      "crop": [
+        640,
+        0,
+        2600,
+        1462
+      ]
+    },
+    {
+      "source": "assets/windows-screen.mp4",
+      "seconds": 12,
+      "start": 239,
+      "crop": [
+        120,
+        180,
+        2304,
+        1296
+      ]
+    },
+    {
+      "source": "assets/mac-reset.mp4",
+      "seconds": 12,
+      "start": 43,
+      "hold": 6
+    }
+  ],
+  "lab01-11": [
+    {
+      "source": "assets/card-exercise.png",
+      "seconds": 56
+    }
+  ],
+  "lab01-12": [
+    {
+      "source": "assets/card-questions.png",
+      "seconds": 23
+    },
+    {
+      "source": "assets/deck-6.png",
+      "seconds": 23
+    },
+    {
+      "source": "assets/mac-reset.mp4",
+      "seconds": 9,
+      "start": 43
+    }
+  ],
+  "highlights": {
+    "lab01-01": [
+      {
+        "rect": [
+          350,
+          530,
+          920,
+          215
+        ],
+        "start": 5,
+        "end": 12
+      },
+      {
+        "rect": [
+          700,
+          735,
+          1050,
+          80
+        ],
+        "start": 18,
+        "end": 24
+      }
+    ],
+    "lab01-06": [
+      {
+        "rect": [
+          7,
+          825,
+          290,
+          65
+        ],
+        "start": 30,
+        "end": 38
+      }
+    ],
+    "lab01-07": [
+      {
+        "rect": [
+          36,
+          42,
+          620,
+          130
+        ],
+        "start": 0,
+        "end": 5
+      },
+      {
+        "rect": [
+          36,
+          170,
+          620,
+          60
+        ],
+        "start": 5,
+        "end": 8
+      },
+      {
+        "rect": [
+          36,
+          290,
+          850,
+          120
+        ],
+        "start": 8,
+        "end": 14
+      }
+    ],
+    "lab01-08": [
+      {
+        "rect": [
+          140,
+          235,
+          1450,
+          42
+        ],
+        "start": 47,
+        "end": 53
+      },
+      {
+        "rect": [
+          140,
+          635,
+          1100,
+          110
+        ],
+        "start": 53,
+        "end": 58
+      }
+    ],
+    "lab01-09": [
+      {
+        "rect": [
+          70,
+          380,
+          1240,
+          250
+        ],
+        "start": 27,
+        "end": 32
+      },
+      {
+        "rect": [
+          150,
+          168,
+          700,
+          78
+        ],
+        "start": 73,
+        "end": 78
+      },
+      {
+        "rect": [
+          150,
+          640,
+          1030,
+          110
+        ],
+        "start": 78,
+        "end": 87
+      }
+    ],
+    "lab01-10": [
+      {
+        "rect": [
+          150,
+          170,
+          1000,
+          285
+        ],
+        "start": 11,
+        "end": 21
+      }
+    ]
+  }
+}
