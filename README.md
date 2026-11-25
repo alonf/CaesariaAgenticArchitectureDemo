@@ -367,6 +367,12 @@ new URLs from its dashboard. Keep service discovery references instead of hardco
 See Aspire's [networking guidance](https://aspire.dev/fundamentals/networking-overview/)
 and [troubleshooting guide](https://aspire.dev/get-started/troubleshooting/).
 
+The durable recovery panel also uses Aspire discovery (`democontrol-web`) to reach this
+AppHost's Director. A different application on port 5187 must not receive recovery requests.
+If that panel returns 401 while the Director itself works, check the destination and the
+`WithReference(demoControlWeb)` dependency before changing credentials or stopping another app.
+This follows Aspire's [service-discovery configuration](https://aspire.dev/fundamentals/service-discovery/).
+
 ## Quality commands
 
 The [ASSERT evaluation example](evaluation/assert_demo/README.md) adds the **Evaluation** stage:

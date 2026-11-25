@@ -49,17 +49,11 @@ var demoScenarioApi = builder.AddDotnetProject("demoscenario-api", "../Services/
 
 // The web apps reference the Operations Agent but deliberately do not wait for it: a Foundry/agent
 // startup problem must never block the deterministic Stage 0 lecture path (Section 32 fallbacks).
-builder.AddDotnetProject("commandcenter-web", "../Apps/CommandCenter.Web/CommandCenter.Web.csproj")
-    .WithReference(commandCenterApi)
-    .WithReference(operationsAgentApi)
-    .WaitFor(commandCenterApi)
-    .WithExternalHttpEndpoints();
-
 // The switchboard also addresses the Energy Hub and the two peer agents directly, because demo
 // snippets live in the service whose code they pause and each is armed at its own boundary. Its
 // reference to the Workforce Hub is different in kind: it reads the work orders in full, which is
 // the presenter's own view of what the domain withheld, and is why that route is loopback only.
-builder.AddDotnetProject("democontrol-web", "../Apps/DemoControl.Web/DemoControl.Web.csproj")
+var demoControlWeb = builder.AddDotnetProject("democontrol-web", "../Apps/DemoControl.Web/DemoControl.Web.csproj")
     .WithReference(demoScenarioApi)
     .WithReference(operationsAgentApi)
     .WithReference(energyHub)
@@ -67,6 +61,13 @@ builder.AddDotnetProject("democontrol-web", "../Apps/DemoControl.Web/DemoControl
     .WithReference(workforceAgentApi)
     .WithReference(workforceHub)
     .WaitFor(demoScenarioApi)
+    .WithExternalHttpEndpoints();
+
+builder.AddDotnetProject("commandcenter-web", "../Apps/CommandCenter.Web/CommandCenter.Web.csproj")
+    .WithReference(commandCenterApi)
+    .WithReference(operationsAgentApi)
+    .WithReference(demoControlWeb)
+    .WaitFor(commandCenterApi)
     .WithExternalHttpEndpoints();
 
 await builder.Build().RunAsync();

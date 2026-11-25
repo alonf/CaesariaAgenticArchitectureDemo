@@ -57,6 +57,9 @@ does not repeat model turns, repair requests or supervisor decisions. A persiste
 still stops the action and retains evidence for inspection.
 
 Both pages read the same retained rehearsal. Page refresh does not start another operation.
+Command Center reaches the Director through Aspire service discovery (`democontrol-web`),
+not the launch-profile HTTP port. Start both pages under the same AppHost; a 401 from another
+local listener is a routing problem, not a reason to rotate the private recovery credentials.
 The Director owns process controls; Command Center exposes conversation/status/decision actions
 through a focused local API authenticated separately for operator and supervisor. The API does
 not expose shell commands, PIDs or process control. Both web apps restrict local Development

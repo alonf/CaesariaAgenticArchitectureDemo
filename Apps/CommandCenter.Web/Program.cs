@@ -55,7 +55,12 @@ builder.Services.AddHttpClient<HostedOperationsAgentClient>(client => client.Tim
     });
 #pragma warning restore EXTEXP0001
 #pragma warning disable EXTEXP0001 // Model turns and supervisor decisions must not be automatically retried.
-builder.Services.AddHttpClient<DurableRecoveryClient>(client => client.Timeout = TimeSpan.FromMinutes(5))
+builder.Services.AddHttpClient<DurableRecoveryClient>(client =>
+    {
+        // Resolve this AppHost's Director, never a fixed port that another local app may own.
+        client.BaseAddress = new UriBuilder("https+http", "democontrol-web").Uri;
+        client.Timeout = TimeSpan.FromMinutes(5);
+    })
     .RemoveAllResilienceHandlers();
 #pragma warning restore EXTEXP0001
 builder.Services.AddRazorComponents()

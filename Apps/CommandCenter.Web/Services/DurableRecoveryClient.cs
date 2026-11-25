@@ -7,7 +7,6 @@ namespace CommandCenter.Web.Services;
 /// <summary>Server-only adapter for the local recovery beat; no process controls or keys reach the browser.</summary>
 internal sealed class DurableRecoveryClient(HttpClient client, IHostEnvironment environment)
 {
-    private static readonly Uri DirectorAddress = new UriBuilder(Uri.UriSchemeHttp, "localhost", 5187).Uri;
     private static readonly JsonSerializerOptions JsonOptions = CaesareaJsonDefaults.CreateSerializerOptions();
     public bool Enabled => environment.IsDevelopment() && string.IsNullOrEmpty(Environment.GetEnvironmentVariable("WEBSITE_INSTANCE_ID"));
 
@@ -23,7 +22,7 @@ internal sealed class DurableRecoveryClient(HttpClient client, IHostEnvironment 
         var settings = FindSettings();
         using var document = JsonDocument.Parse(await File.ReadAllTextAsync(settings, cancellationToken));
         var key = document.RootElement.GetProperty("Values").GetProperty(supervisor ? "CAESAREA_SUPERVISOR_KEY" : "CAESAREA_OPERATOR_KEY").GetString();
-        using var request = new HttpRequestMessage(body is null ? HttpMethod.Get : HttpMethod.Post, new Uri(DirectorAddress, "api/recovery-demo/" + path));
+        using var request = new HttpRequestMessage(body is null ? HttpMethod.Get : HttpMethod.Post, "api/recovery-demo/" + path);
         request.Headers.Add("X-Caesarea-Key", key);
         request.Headers.Add(CorrelationHeaderNames.XCorrelationId, CorrelationIds.Create());
         if (body is not null) { request.Content = JsonContent.Create(body, options: JsonOptions); }

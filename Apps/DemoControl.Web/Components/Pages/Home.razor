@@ -347,12 +347,11 @@
             {
                 <p class="panel-intro">
                     Which habitat answers the Command Center's questions. FOUNDRY HOSTED is the same agent
-                    code on Microsoft Foundry's runtime: it reads the CLOUD Energy Hub and reaches the work
-                    order in the presenter's own OneDrive through Work IQ, asking as the signed-in person.
-                    The cloud city is NOT controlled from this switchboard - its demo surface is
-                    deliberately off, and it permanently shows the forgotten-override situation that work
-                    order WO-8732 explains. First hosted use per person shows a consent link in the
-                    Command Center - open it, consent, ask again. Requires the Hosting stage.
+                    code on Microsoft Foundry's runtime, with a separate deployed Energy Hub.
+                    When Work IQ is configured and authorized, it can retrieve work records as the signed-in
+                    person. The cloud city is not reset by this switchboard; verify its actual fixture and
+                    the sources used in each response. If a consent request appears, review it before
+                    proceeding. Requires the Hosting stage.
                 </p>
                 <div class="stage-switch-actions">
                     <button class="button @(_agentHabitat.Habitat == "Local" ? "primary" : "secondary")" @onclick='() => SetAgentHabitatAsync("Local")' disabled="@_agentHabitatBusy">

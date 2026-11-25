@@ -116,7 +116,7 @@ public sealed class StageCatalog
             [DemoPrerequisite.ForScenario(ScenarioId.ForgottenOverride, "Scenario: Lights On Reported by a Client")],
             [
                 new(DemoSurface.CommandCenter, "Click Ask agent.", "One tool call over 2 round trips."),
-                new(DemoSurface.CommandCenter, "Click Ask \"Why?\" (same session).", "Zero tool calls, one round trip - resolved from session context alone.")
+                new(DemoSurface.CommandCenter, "Click Ask \"Why?\" (same session).", "The session supplies the earlier question and answer. Inspect the trace: the model may reuse that context or request a fresh authoritative read.")
             ],
             "Conversation continuity is useful context, not evidence about reality: the agent did not re-check the city."),
 
@@ -233,7 +233,7 @@ public sealed class StageCatalog
                 new(DemoSurface.CommandCenter, "Click Ask about L-417's work records.", "The familiar local answer: evidence cards from the simulated store, labelled Simulated work knowledge."),
                 new(DemoSurface.Switchboard, "Flip Habitat: LOCAL to FOUNDRY HOSTED.", null),
                 new(DemoSurface.CommandCenter, "Click the same button again.", "The answer now arrives from Foundry's hosted runtime and cites the OneDrive work order - source of record: Microsoft 365, with the diffuser detail the simulated store never contained. First time only: a Work IQ consent link appears instead - open it, consent as yourself, ask again."),
-                new(DemoSurface.CommandCenter, "Point at the footnote under the answer.", "The hosted agent read the CLOUD Energy Hub and the presenter's own Microsoft 365 - not this laptop's city. The cloud city is not switchboard-driven: it permanently shows the forgotten-override situation WO-8732 explains, so the two cities agree at the start of the beat and diverge the moment the local one is restored."),
+                new(DemoSurface.CommandCenter, "Inspect the actual answer, sources and response identifier.", "The hosted composition uses separate deployed services. Work IQ requires a configured toolbox and authorized delegation; a habitat label does not prove retrieval. Verify the cloud fixture before comparison and report unavailable evidence explicitly."),
                 // The Command Center asks fixed questions only; a question in the presenter's own words
                 // goes through a chat client to the hosted agent.
                 new(DemoSurface.HostedChat, "Closing beat: in Copilot, Teams or the Foundry UI, ask the hosted agent to TURN THE LIGHT OFF (any phrasing).", "It investigates, looks for a control tool, reports that none is available to it, and escalates to a human - because the hosted composition carries no write capability at all. The strongest control on this ladder: not an instruction, not an approval gate, but a capability that was never composed and cannot be exploited."),
